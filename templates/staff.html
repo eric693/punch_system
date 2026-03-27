@@ -157,9 +157,11 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
       <div class="tab-bar">
         <button class="tab active" id="tab-punch"         onclick="switchTab('punch')">打卡</button>
         <button class="tab"        id="tab-sched"         onclick="switchTab('sched')">排休申請</button>
+        <button class="tab"        id="tab-leave"         onclick="switchTab('leave')">請假申請</button>
         <button class="tab"        id="tab-schedule-view" onclick="switchTab('schedule-view')">我的排班</button>
         <button class="tab"        id="tab-overtime"      onclick="switchTab('overtime')">加班申請</button>
         <button class="tab"        id="tab-attendance"    onclick="switchTab('attendance')">出勤月曆</button>
+        <button class="tab"        id="tab-payslip"       onclick="switchTab('payslip')">薪資單</button>
       </div>
 
       <!-- 打卡 tab -->
@@ -288,6 +290,52 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
         <div id="my-ot-list"><div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">載入中...</div></div>
       </div>
 
+
+      <!-- 請假申請 tab -->
+      <div id="panel-leave" class="tab-body" style="display:none">
+        <div class="month-row" style="margin-bottom:14px">
+          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">月份</span>
+          <input type="month" class="month-inp" id="leave-month-picker" onchange="loadMyLeaveHistory()">
+        </div>
+
+        <!-- 新增請假申請 -->
+        <div style="background:#fff;border-radius:10px;border:1.5px solid var(--border);padding:16px;margin-bottom:16px">
+          <div class="section-label" style="margin-bottom:12px">新增請假申請</div>
+          <div style="margin-bottom:10px">
+            <div class="fl">假別 *</div>
+            <select class="fi" id="leave-type-sel" style="width:100%;margin-bottom:0"></select>
+          </div>
+          <div id="leave-type-info" style="font-size:12px;color:var(--muted);margin-bottom:10px;min-height:16px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div><div class="fl">開始日期 *</div><input class="fi" type="date" id="leave-start" style="margin-bottom:0" onchange="previewLeaveStaff()"></div>
+            <div><div class="fl">結束日期 *</div><input class="fi" type="date" id="leave-end"   style="margin-bottom:0" onchange="previewLeaveStaff()"></div>
+          </div>
+          <div style="display:flex;gap:16px;margin-bottom:10px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="leave-start-half" onchange="previewLeaveStaff()"> 開始日下午請假</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="leave-end-half"   onchange="previewLeaveStaff()"> 結束日上午請假</label>
+          </div>
+          <div id="leave-days-preview" style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px;min-height:18px"></div>
+          <div id="leave-balance-info" style="font-size:12px;color:var(--muted);padding:8px 10px;background:var(--bg);border-radius:6px;margin-bottom:10px;min-height:32px"></div>
+          <div style="margin-bottom:10px"><div class="fl">請假原因 *</div><input class="fi" id="leave-reason" placeholder="例：身體不適、家庭事務" style="margin-bottom:0"></div>
+          <div style="margin-bottom:14px"><div class="fl">代理人（選填）</div><input class="fi" id="leave-sub" placeholder="例：王小明" style="margin-bottom:0"></div>
+          <button class="btn btn-primary" style="width:100%" onclick="submitLeaveRequest()">送出請假申請</button>
+        </div>
+
+        <!-- 我的請假記錄 -->
+        <div class="section-label" style="margin-bottom:10px">我的請假記錄</div>
+        <div id="my-leave-list"><div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">載入中...</div></div>
+      </div>
+
+      <!-- 薪資單 tab -->
+      <div id="panel-payslip" class="tab-body" style="display:none">
+        <div class="month-row" style="margin-bottom:16px">
+          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">月份</span>
+          <input type="month" class="month-inp" id="payslip-month" onchange="loadMyPayslip()">
+        </div>
+        <div id="payslip-wrap">
+          <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">請選擇月份查看薪資單</div>
+        </div>
+      </div>
       <!-- 出勤月曆 tab -->
       <div id="panel-attendance" class="tab-body" style="display:none">
         <div class="month-row" style="margin-bottom:14px">
@@ -380,15 +428,17 @@ function showMain(){
   switchTab('punch');
 }
 function switchTab(tab){
-  ['punch','sched','schedule-view','overtime','attendance'].forEach(t=>{
+  ['punch','sched','leave','schedule-view','overtime','attendance','payslip'].forEach(t=>{
     document.getElementById('tab-'+t).classList.toggle('active',t===tab);
     document.getElementById('panel-'+t).style.display=t===tab?'':'none';
   });
   if(tab==='punch'){startGPS();loadTodayLog();}
   if(tab==='sched')initSchedTab();
+  if(tab==='leave')initLeaveTab();
   if(tab==='schedule-view')initScheduleViewTab();
   if(tab==='overtime')initOTTab();
   if(tab==='attendance')initAttendanceTab();
+  if(tab==='payslip')initPayslipTab();
 }
 
 /* GPS */
@@ -740,6 +790,325 @@ function showSuccess(name,type,time,dist){
   ['so-name','so-type','so-time','so-dist'].forEach((id,i)=>{document.getElementById(id).textContent=[name,type+' 成功',time,dist][i];});
   const el=document.getElementById('sov');el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400);
 }
+
+// ══════════════════════════════════════════════════════════════
+// 請假申請模組
+// ══════════════════════════════════════════════════════════════
+let leaveTypeList = [], myLeaveList = [], leaveBalanceMap = {};
+
+async function initLeaveTab() {
+  const now = new Date();
+  const ym  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  if (!document.getElementById('leave-month-picker').value)
+    document.getElementById('leave-month-picker').value = ym;
+  // 載入假別
+  if (!leaveTypeList.length) {
+    try {
+      const res = await fetch('/api/leave/types/public');
+      if (res.ok) leaveTypeList = await res.json();
+    } catch(e) {}
+  }
+  // 填入假別選單
+  const sel = document.getElementById('leave-type-sel');
+  sel.innerHTML = leaveTypeList.map(t =>
+    `<option value="${t.id}" data-pay="${t.pay_rate}" data-max="${t.max_days||''}" data-color="${t.color}">${esc(t.name)}</option>`
+  ).join('');
+  sel.addEventListener('change', updateLeaveTypeInfo);
+  updateLeaveTypeInfo();
+  // 設定預設日期為今天
+  const today = new Date().toISOString().slice(0, 10);
+  if (!document.getElementById('leave-start').value) {
+    document.getElementById('leave-start').value = today;
+    document.getElementById('leave-end').value   = today;
+  }
+  previewLeaveStaff();
+  await loadMyLeaveBalance();
+  await loadMyLeaveHistory();
+}
+
+function updateLeaveTypeInfo() {
+  const sel = document.getElementById('leave-type-sel');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt) return;
+  const pay = parseFloat(opt.getAttribute('data-pay') || 1);
+  const max = opt.getAttribute('data-max');
+  const payLabel = pay === 1 ? '全薪' : pay === 0 ? '無薪（不給薪）' : `半薪（給薪 ${pay * 100}%）`;
+  const maxLabel = max ? `年度上限 ${max} 天` : '無天數限制';
+  const bal = leaveBalanceMap[sel.value];
+  const balStr = bal != null ? `　|　今年剩餘 <strong style="color:var(--green)">${bal} 天</strong>` : '';
+  document.getElementById('leave-type-info').innerHTML =
+    `<span style="color:var(--accent)">${payLabel}</span>　${maxLabel}${balStr}`;
+  previewLeaveStaff();
+}
+
+async function loadMyLeaveBalance() {
+  try {
+    const year = new Date().getFullYear();
+    const res  = await fetch(`/api/leave/balances?year=${year}&staff_id=` + (me ? me.id : ''));
+    if (!res.ok) return;
+    const list = await res.json();
+    leaveBalanceMap = {};
+    list.forEach(b => {
+      const remain = (b.total_days || 0) - (b.used_days || 0);
+      leaveBalanceMap[String(b.leave_type_id)] = remain;
+    });
+    updateLeaveTypeInfo();
+  } catch(e) {}
+}
+
+function previewLeaveStaff() {
+  const s  = document.getElementById('leave-start').value;
+  const e  = document.getElementById('leave-end').value;
+  const sh = document.getElementById('leave-start-half').checked;
+  const eh = document.getElementById('leave-end-half').checked;
+  const preview = document.getElementById('leave-days-preview');
+  const balInfo = document.getElementById('leave-balance-info');
+  if (!s || !e) { preview.textContent = ''; balInfo.innerHTML = ''; return; }
+  const start = new Date(s), end = new Date(e);
+  if (end < start) { preview.textContent = '結束日不能早於開始日'; return; }
+  let days = 0;
+  let cur  = new Date(start);
+  while (cur <= end) {
+    if (cur.getDay() !== 0) {  // 排除週日
+      const isFirst = cur.getTime() === start.getTime();
+      const isLast  = cur.getTime() === end.getTime();
+      if (isFirst && sh) days += 0.5;
+      else if (isLast && eh) days += 0.5;
+      else days += 1;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  preview.textContent = `預計請假：${days} 天（已排除週日）`;
+  // 檢查餘額
+  const sel = document.getElementById('leave-type-sel');
+  if (!sel.value) return;
+  const bal = leaveBalanceMap[sel.value];
+  if (bal != null) {
+    const color = days > bal ? 'var(--red)' : 'var(--green)';
+    balInfo.innerHTML = `今年此假別剩餘 <strong style="color:${color}">${bal} 天</strong>，本次申請 <strong>${days} 天</strong>${days > bal ? '　<span style="color:var(--red)">⚠️ 超過剩餘天數</span>' : '　<span style="color:var(--green)">✅ 足夠</span>'}`;
+  } else {
+    balInfo.innerHTML = '';
+  }
+}
+
+async function submitLeaveRequest() {
+  const leave_type_id = document.getElementById('leave-type-sel').value;
+  const start_date    = document.getElementById('leave-start').value;
+  const end_date      = document.getElementById('leave-end').value;
+  const start_half    = document.getElementById('leave-start-half').checked;
+  const end_half      = document.getElementById('leave-end-half').checked;
+  const reason        = document.getElementById('leave-reason').value.trim();
+  const substitute    = document.getElementById('leave-sub').value.trim();
+  if (!leave_type_id) { showToast('請選擇假別', 'err'); return; }
+  if (!start_date || !end_date) { showToast('請選擇請假日期', 'err'); return; }
+  if (!reason) { showToast('請填寫請假原因', 'err'); return; }
+  try {
+    const res  = await fetch('/api/leave/my-requests', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ leave_type_id: parseInt(leave_type_id), start_date, end_date, start_half, end_half, reason, substitute_name: substitute })
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || '送出失敗', 'err'); return; }
+    showToast('請假申請已送出，等待主管審核', 'ok');
+    document.getElementById('leave-reason').value = '';
+    document.getElementById('leave-sub').value    = '';
+    await loadMyLeaveBalance();
+    await loadMyLeaveHistory();
+  } catch(e) { showToast('網路錯誤', 'err'); }
+}
+
+async function loadMyLeaveHistory() {
+  try {
+    const res  = await fetch('/api/leave/my-requests');
+    if (!res.ok) return;
+    myLeaveList = await res.json();
+  } catch(e) { myLeaveList = []; }
+  renderMyLeaveList();
+}
+
+function renderMyLeaveList() {
+  const wrap = document.getElementById('my-leave-list');
+  if (!myLeaveList.length) {
+    wrap.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">尚無請假記錄</div>';
+    return;
+  }
+  const SL = { pending:'待審核', approved:'已核准', rejected:'已退回' };
+  const SC = { pending:'var(--orange)', approved:'var(--green)', rejected:'var(--red)' };
+  wrap.innerHTML = myLeaveList.map(r => {
+    const sc = SC[r.status] || 'var(--muted)';
+    const sl = SL[r.status] || r.status;
+    const sh = r.start_half ? '（下午）' : '';
+    const eh = r.end_half   ? '（上午）' : '';
+    const payLabel = r.pay_rate === 1 ? '全薪' : r.pay_rate === 0 ? '無薪' : '半薪';
+    return `<div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px">
+      <div style="padding:10px 14px;background:var(--bg);display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div>
+          <span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:${r.leave_color||'#4a7bda'}22;color:${r.leave_color||'#4a7bda'}">${esc(r.leave_type_name)}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:8px">${payLabel}</span>
+          <div style="font-size:12px;margin-top:4px;font-weight:600">
+            ${r.start_date}${sh} ～ ${r.end_date}${eh}
+            <span style="font-weight:400;color:var(--muted);margin-left:6px">${r.total_days} 天</span>
+          </div>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:${sc};white-space:nowrap">${sl}</span>
+      </div>
+      <div style="padding:8px 14px;font-size:12px;color:var(--muted)">
+        原因：${esc(r.reason || '')}
+        ${r.substitute_name ? `　代理人：${esc(r.substitute_name)}` : ''}
+        ${r.review_note ? `<div style="color:${sc};margin-top:4px">審核意見：${esc(r.review_note)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+// 薪資單模組
+// ══════════════════════════════════════════════════════════════
+async function initPayslipTab() {
+  const now = new Date();
+  const ym  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  if (!document.getElementById('payslip-month').value)
+    document.getElementById('payslip-month').value = ym;
+  await loadMyPayslip();
+}
+
+async function loadMyPayslip() {
+  const month = document.getElementById('payslip-month').value;
+  const wrap  = document.getElementById('payslip-wrap');
+  if (!month || !me) return;
+  wrap.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入中...</div>';
+  try {
+    // 找自己這個月的薪資記錄
+    const res  = await fetch(`/api/salary/my-payslip?month=${month}`);
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      wrap.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">${esc(d.error || '該月尚無薪資記錄')}</div>`;
+      return;
+    }
+    const data = await res.json();
+    renderPayslip(data, wrap);
+  } catch(e) {
+    wrap.innerHTML = '<div style="text-align:center;color:var(--red);font-size:13px;padding:40px">載入失敗，請重試</div>';
+  }
+}
+
+function renderPayslip(data, wrap) {
+  const items      = data.items || [];
+  const allowItems = items.filter(it => it.type === 'allowance');
+  const deductItems= items.filter(it => it.type === 'deduction');
+  const isHourly   = data.salary_type === 'hourly';
+
+  // 工時/出勤說明
+  const attendStr = isHourly
+    ? `實際工時 <strong>${data.actual_work_hours}h</strong> × 時薪 $${fmtNum(data.hourly_rate)}`
+    : `出勤 <strong>${data.actual_days} 天</strong> / 工作日 ${data.work_days} 天`;
+
+  let html = `
+  <div style="background:#fff;border-radius:12px;border:1.5px solid var(--border);overflow:hidden;margin-bottom:14px">
+    <!-- 標題 -->
+    <div style="background:var(--navy);padding:16px 20px;color:#fff">
+      <div style="font-size:16px;font-weight:700">${data.month?.replace('-','/')} 薪資單</div>
+      <div style="font-size:12px;opacity:.7;margin-top:3px">${esc(data.staff_name || '')} ${isHourly?'（時薪制）':'（月薪制）'}</div>
+    </div>
+    <!-- 出勤摘要 -->
+    <div style="padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)">
+      ${attendStr}
+      ${data.leave_days > 0  ? `　|　請假 <strong>${data.leave_days} 天</strong>` : ''}
+      ${data.unpaid_days > 0 ? `　|　無薪假 <strong style="color:var(--red)">${data.unpaid_days} 天</strong>` : ''}
+      ${data.ot_pay > 0      ? `　|　加班費 <strong style="color:var(--green)">$${fmtNum(data.ot_pay)}</strong>` : ''}
+    </div>
+    <!-- 金額總覽 -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border)">
+      <div style="padding:14px 12px;text-align:center;border-right:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">支付總額</div>
+        <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--green)">$${fmtNum(data.allowance_total)}</div>
+      </div>
+      <div style="padding:14px 12px;text-align:center;border-right:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">扣除總額</div>
+        <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--red)">$${fmtNum(data.deduction_total)}</div>
+      </div>
+      <div style="padding:14px 12px;text-align:center">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">實領金額</div>
+        <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:var(--navy)">$${fmtNum(data.net_pay)}</div>
+      </div>
+    </div>
+    <!-- 津貼明細 -->
+    <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:8px">津貼項目</div>
+      ${allowItems.map(it => `
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f2f8;font-size:13px">
+          <span>${esc(it.name)}</span>
+          <div style="text-align:right">
+            <span style="font-family:'DM Mono',monospace;font-weight:600">$${fmtNum(it.amount)}</span>
+            ${it.calc_note ? `<div style="font-size:10px;color:var(--muted)">${esc(it.calc_note)}</div>` : ''}
+          </div>
+        </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:700;font-size:13px;border-top:1.5px solid var(--border);margin-top:4px">
+        <span>合計</span>
+        <span style="font-family:'DM Mono',monospace;color:var(--green)">$${fmtNum(data.allowance_total)}</span>
+      </div>
+    </div>
+    <!-- 扣除明細 -->
+    <div style="padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:8px">扣除項目</div>
+      ${deductItems.map(it => `
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f2f8;font-size:13px">
+          <span>${esc(it.name)}</span>
+          <div style="text-align:right">
+            <span style="font-family:'DM Mono',monospace;font-weight:600">$${fmtNum(it.amount)}</span>
+            ${it.calc_note ? `<div style="font-size:10px;color:var(--muted)">${esc(it.calc_note)}</div>` : ''}
+          </div>
+        </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:700;font-size:13px;border-top:1.5px solid var(--border);margin-top:4px">
+        <span>合計</span>
+        <span style="font-family:'DM Mono',monospace;color:var(--red)">$${fmtNum(data.deduction_total)}</span>
+      </div>
+    </div>
+    <!-- 狀態 -->
+    <div style="padding:10px 16px;background:var(--bg);border-top:1px solid var(--border);font-size:12px;color:var(--muted);display:flex;justify-content:space-between">
+      <span>狀態：<strong style="color:${data.status==='confirmed'?'var(--green)':'var(--muted)'}">${data.status==='confirmed'?'✅ 已確認':'草稿（待確認）'}</strong></span>
+      ${data.confirmed_by ? `<span>確認人：${esc(data.confirmed_by)}</span>` : ''}
+    </div>
+  </div>
+
+  ${isHourly && data.punch_details && data.punch_details.length ? `
+  <!-- 打卡工時明細（時薪制） -->
+  <div style="background:#fff;border-radius:12px;border:1.5px solid var(--border);overflow:hidden;margin-bottom:14px">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--accent)">⏱ 每日工時明細</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--bg)">
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">日期</th>
+          <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">上班</th>
+          <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">下班</th>
+          <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">休息</th>
+          <th style="padding:8px 12px;text-align:right;border-bottom:1px solid var(--border)">工時</th>
+        </tr></thead>
+        <tbody>
+          ${data.punch_details.map(pd => `<tr style="border-bottom:1px solid #f0f2f8">
+            <td style="padding:6px 12px;font-family:'DM Mono',monospace">${pd.date.slice(5)}</td>
+            <td style="padding:6px 12px;text-align:center;color:var(--green)">${pd.clock_in}</td>
+            <td style="padding:6px 12px;text-align:center;color:var(--red)">${pd.clock_out}</td>
+            <td style="padding:6px 12px;text-align:center;color:var(--muted)">${pd.break_mins ? pd.break_mins + 'min' : '—'}</td>
+            <td style="padding:6px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:600">${pd.net_hours}h</td>
+          </tr>`).join('')}
+          <tr style="background:var(--bg);font-weight:700">
+            <td colspan="4" style="padding:8px 12px">月合計</td>
+            <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--accent)">${data.actual_work_hours}h</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>` : ''}`;
+
+  wrap.innerHTML = html;
+}
+
+function fmtNum(n) {
+  if (n === null || n === undefined) return '0';
+  return Number(n).toLocaleString('zh-TW', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+}
+
 function showToast(msg,type){
   const el=document.getElementById('toast');
   el.textContent=msg;el.className='toast show toast-'+(type==='ok'?'ok':'err');
