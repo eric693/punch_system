@@ -719,20 +719,38 @@ async function loadScheduleView(){
 /* 加班申請 */
 const OT_SL={pending:'審核中',approved:'已核准',rejected:'已退回'};
 const OT_SC={pending:'var(--orange)',approved:'var(--green)',rejected:'var(--red)'};
+let _otTabInited = false;
 function initOTTab(){
-  const n=new Date();const today=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
-  if(!document.getElementById('ot-date').value)document.getElementById('ot-date').value=today;
-  ['ot-start','ot-end'].forEach(id=>document.getElementById(id).addEventListener('change',updateOTHoursPreview));
+  const n=new Date();
+  const today=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+  document.getElementById('ot-date').value = today;
+  // 設定預設時間（當下時間整點，+2小時為結束）
+  const hh = String(n.getHours()).padStart(2,'0');
+  const h2 = String((n.getHours()+2)%24).padStart(2,'0');
+  if(!document.getElementById('ot-start').value) document.getElementById('ot-start').value = hh+':00';
+  if(!document.getElementById('ot-end').value)   document.getElementById('ot-end').value   = h2+':00';
+  // 避免重複綁定 listener
+  if(!_otTabInited){
+    ['ot-start','ot-end','ot-day-type'].forEach(id=>{
+      document.getElementById(id).addEventListener('input',  updateOTHoursPreview);
+      document.getElementById(id).addEventListener('change', updateOTHoursPreview);
+    });
+    _otTabInited = true;
+  }
+  updateOTHoursPreview();
   loadMyOTRequests();
 }
 function updateOTHoursPreview(){
-  const s=document.getElementById('ot-start').value;const e=document.getElementById('ot-end').value;
-  const dt=document.getElementById('ot-day-type')?.value||'weekday';
+  const s=document.getElementById('ot-start').value;
+  const e=document.getElementById('ot-end').value;
+  const dt=(document.getElementById('ot-day-type')?.value)||'weekday';
   const el=document.getElementById('ot-hours-preview');
   if(!s||!e){el.textContent='';return;}
-  const[sh,sm]=s.split(':').map(Number);const[eh,em]=e.split(':').map(Number);
-  let mins=(eh*60+em)-(sh*60+sm);if(mins<=0)mins+=24*60;
-  const hrs=(mins/60).toFixed(2)*1;
+  const[sh,sm]=s.split(':').map(Number);
+  const[eh,em]=e.split(':').map(Number);
+  let mins=(eh*60+em)-(sh*60+sm);
+  if(mins<=0)mins+=24*60;
+  const hrs=Math.round(mins/60*100)/100;
   const DT_LABEL={weekday:'平日',rest_day:'休息日',holiday:'國定假日',special:'例假日'};
   let detail='';
   if(dt==='rest_day'){const billed=Math.max(hrs,4);detail=`休息日（實際${hrs}h，計費${billed}h）`;}
@@ -741,19 +759,38 @@ function updateOTHoursPreview(){
   el.innerHTML=`<strong>加班時數：${hrs} 小時</strong>　<span style="color:var(--muted)">${detail}</span>`;
 }
 async function submitOTRequest(){
-  const request_date=document.getElementById('ot-date').value;
-  const start_time=document.getElementById('ot-start').value;
-  const end_time=document.getElementById('ot-end').value;
-  const reason=document.getElementById('ot-reason').value.trim();
-  if(!request_date||!start_time||!end_time){showToast('請填寫加班日期及時間','err');return;}
-  if(!reason){showToast('請填寫加班原因','err');return;}
+  const request_date = document.getElementById('ot-date').value;
+  const start_time   = document.getElementById('ot-start').value;
+  const end_time     = document.getElementById('ot-end').value;
+  const reason       = document.getElementById('ot-reason').value.trim();
+  const day_type     = document.getElementById('ot-day-type')?.value || 'weekday';
+
+  // 逐一檢查，給明確提示
+  if(!request_date){ showToast('請填寫加班日期','err'); return; }
+  if(!start_time)  { showToast('請填寫開始時間','err'); return; }
+  if(!end_time)    { showToast('請填寫結束時間','err'); return; }
+  if(!reason)      { showToast('請填寫加班原因','err'); return; }
+
+  // 確認時間格式 HH:MM
+  const timeRe = /^\d{2}:\d{2}$/;
+  if(!timeRe.test(start_time)||!timeRe.test(end_time)){
+    showToast('時間格式錯誤，請重新選擇','err'); return;
+  }
+
   try{
-    const day_type=document.getElementById('ot-day-type')?.value||'weekday';
-    const res=await fetch('/api/overtime/my-requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({request_date,start_time,end_time,reason,day_type})});
-    const d=await res.json();
-    if(!res.ok){showToast(d.error||'送出失敗','err');return;}
-    showToast('加班申請已送出','ok');document.getElementById('ot-reason').value='';await loadMyOTRequests();
-  }catch(e){showToast('網路錯誤','err');}
+    const res = await fetch('/api/overtime/my-requests', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({request_date, start_time, end_time, reason, day_type})
+    });
+    const d = await res.json();
+    if(!res.ok){ showToast(d.error || `送出失敗（${res.status}）`,'err'); return; }
+    showToast('加班申請已送出，等待主管審核','ok');
+    document.getElementById('ot-reason').value = '';
+    await loadMyOTRequests();
+  }catch(e){
+    showToast('網路錯誤，請重試','err');
+  }
 }
 async function loadMyOTRequests(){
   const res=await fetch('/api/overtime/my-requests');const list=await res.json();
