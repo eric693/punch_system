@@ -361,7 +361,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
           <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">月份</span>
           <input type="month" class="month-inp" id="att-month-picker" onchange="loadAttendance()">
         </div>
-        <div id="att-summary" style="display:flex;gap:0;border-radius:9px;overflow:hidden;margin-bottom:14px;border:1px solid var(--border)"></div>
+        <div id="att-summary" style="display:flex;border-radius:12px;overflow:hidden;margin-bottom:14px;border:1.5px solid var(--border);background:#fff"></div>
         <div id="att-calendar"></div>
       </div>
     </div>
@@ -812,34 +812,222 @@ function initAttendanceTab(){
   if(!document.getElementById('att-month-picker').value)document.getElementById('att-month-picker').value=ym;
   loadAttendance();
 }
+let _attRecords = {};  // cache for day detail popup
+
 async function loadAttendance(){
-  const month=document.getElementById('att-month-picker').value;if(!month)return;
-  document.getElementById('att-calendar').innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">載入中...</div>';
-  let data;
-  try{const res=await fetch('/api/punch/my-records?month='+month);data=await res.json();if(data.error)throw new Error(data.error);}
-  catch(e){document.getElementById('att-calendar').innerHTML=`<div style="text-align:center;color:var(--red);font-size:13px;padding:20px">${esc(e.message)}</div>`;return;}
-  const records=data.records||{};
-  const[y,m]=month.split('-').map(Number);const daysInMonth=new Date(y,m,0).getDate();
-  const today=new Date();today.setHours(0,0,0,0);
-  let totalIn=0;
-  for(let d=1;d<=daysInMonth;d++){const ds=month+'-'+String(d).padStart(2,'0');if((records[ds]||[]).some(r=>r.type==='in'))totalIn++;}
-  document.getElementById('att-summary').innerHTML=`<div style="flex:1;padding:10px 14px;text-align:center;border-right:1px solid var(--border)"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">出勤天數</div><div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:var(--navy)">${totalIn}</div></div><div style="flex:1;padding:10px 14px;text-align:center"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">月份</div><div style="font-size:14px;font-weight:700;color:var(--navy)">${y}/${String(m).padStart(2,'0')}</div></div>`;
-  const firstWd=new Date(y,m-1,1).getDay();
-  let html=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">${['日','一','二','三','四','五','六'].map((d,i)=>`<div style="text-align:center;font-size:10px;font-weight:700;padding:5px 0;color:${i===0?'var(--red)':i===6?'var(--accent)':'var(--muted)'}">${d}</div>`).join('')}</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">`;
-  for(let i=0;i<firstWd;i++)html+='<div></div>';
-  for(let day=1;day<=daysInMonth;day++){
-    const ds=month+'-'+String(day).padStart(2,'0');const dt=new Date(y,m-1,day);const wd=dt.getDay();
-    const isFuture=dt>today;const recs=records[ds]||[];
-    const hasIn=recs.some(r=>r.type==='in');
-    let cellBg='#fff',cellBorder='var(--border)';
-    if(recs.length>0){cellBg=hasIn?'#edfaf4':'#fef3e8';cellBorder=hasIn?'#a8dfc5':'#f5c0a0';}
-    if(isFuture){cellBg='#fafafa';cellBorder='var(--border)';}
-    const dayColor=wd===0?'var(--red)':wd===6?'var(--accent)':'var(--text)';
-    const recRows=recs.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:1px 3px;border-radius:3px;margin-top:2px;background:${ATT_BG[r.type]||'var(--bg)'}"><span style="font-size:9px;font-weight:700;color:${ATT_COLOR[r.type]||'var(--muted)'}">${r.label}</span><span style="font-family:'DM Mono',monospace;font-size:9px;font-weight:600;color:${ATT_COLOR[r.type]||'var(--muted)'}">${r.time}${r.is_manual?'補':''}</span></div>`).join('');
-    html+=`<div style="border:1.5px solid ${cellBorder};border-radius:8px;background:${cellBg};padding:5px 5px 4px;min-height:54px;opacity:${isFuture?'.4':'1'}"><div style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;color:${recs.length?'var(--navy)':dayColor};margin-bottom:1px">${day}</div>${recRows}${recs.length===0&&!isFuture?'<div style="font-size:9px;color:var(--border);margin-top:4px;text-align:center">—</div>':''}</div>`;
+  const month = document.getElementById('att-month-picker').value;
+  if (!month) return;
+  const cal = document.getElementById('att-calendar');
+  const sum = document.getElementById('att-summary');
+  cal.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:24px">載入中...</div>';
+
+  let records = {};
+  try {
+    const res  = await fetch('/api/punch/my-records?month=' + month);
+    const data = await res.json();
+    if (!res.ok) {
+      // Session 過期 → 重新登入
+      if (res.status === 401) {
+        cal.innerHTML = '<div style="text-align:center;color:var(--red);font-size:13px;padding:24px">登入已過期，請重新登入</div>';
+        sum.innerHTML = '';
+        // 自動跳回登入
+        setTimeout(() => { me = null; showLogin(); }, 1500);
+        return;
+      }
+      throw new Error(data.error || '載入失敗');
+    }
+    records = data.records || {};
+  } catch(e) {
+    cal.innerHTML = `<div style="text-align:center;color:var(--red);font-size:13px;padding:24px">${esc(e.message)}</div>`;
+    return;
   }
-  html+='</div>';
-  document.getElementById('att-calendar').innerHTML=html;
+
+  _attRecords = records;
+  const [y, m] = month.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // ── 統計摘要 ──────────────────────────────────────────────
+  let totalIn = 0, totalHours = 0, lateCount = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds   = month + '-' + String(d).padStart(2,'0');
+    const recs = records[ds] || [];
+    if (recs.some(r => r.type === 'in')) {
+      totalIn++;
+      const inRec  = recs.find(r => r.type === 'in');
+      const outRec = [...recs].reverse().find(r => r.type === 'out');
+      if (inRec && outRec) {
+        const [ih, im] = inRec.time.split(':').map(Number);
+        const [oh, om] = outRec.time.split(':').map(Number);
+        const mins = (oh * 60 + om) - (ih * 60 + im);
+        if (mins > 0) totalHours += mins / 60;
+      }
+    }
+  }
+  const avgHours = totalIn > 0 ? (totalHours / totalIn).toFixed(1) : '—';
+
+  sum.innerHTML = `
+    <div style="flex:1;padding:12px 10px;text-align:center;border-right:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">出勤天數</div>
+      <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:var(--navy)">${totalIn}</div>
+    </div>
+    <div style="flex:1;padding:12px 10px;text-align:center;border-right:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">總工時（估）</div>
+      <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:var(--green)">${totalHours.toFixed(1)}h</div>
+    </div>
+    <div style="flex:1;padding:12px 10px;text-align:center">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">日均工時</div>
+      <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:var(--accent)">${avgHours}h</div>
+    </div>`;
+
+  // ── 月曆 ──────────────────────────────────────────────────
+  const firstWd = new Date(y, m-1, 1).getDay();
+  const DAYS_LABEL = ['日','一','二','三','四','五','六'];
+  const PUNCH_TYPE_COLOR = {
+    in:        {bg:'#dcfce7', text:'#16a34a'},
+    out:       {bg:'#fee2e2', text:'#dc2626'},
+    break_out: {bg:'#ffedd5', text:'#ea580c'},
+    break_in:  {bg:'#dbeafe', text:'#2563eb'},
+  };
+  const PUNCH_TYPE_LABEL = {in:'上班', out:'下班', break_out:'休息', break_in:'回來'};
+
+  let html = `
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">
+    ${DAYS_LABEL.map((d,i) => `
+      <div style="text-align:center;font-size:11px;font-weight:700;padding:6px 0;
+        color:${i===0?'var(--red)':i===6?'var(--accent)':'var(--muted)'}">
+        ${d}
+      </div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">`;
+
+  for (let i = 0; i < firstWd; i++) html += '<div></div>';
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const ds      = month + '-' + String(day).padStart(2,'0');
+    const dt      = new Date(y, m-1, day);
+    const wd      = dt.getDay();
+    const isPast  = dt < today;
+    const isToday = dt.getTime() === today.getTime();
+    const recs    = records[ds] || [];
+    const hasIn   = recs.some(r => r.type === 'in');
+    const hasOut  = recs.some(r => r.type === 'out');
+    const isFuture= dt > today;
+
+    // Cell style
+    let bg = '#fff', border = 'var(--border)', opacity = '1';
+    if (isToday)        { border = 'var(--accent)'; bg = '#eef3fd'; }
+    else if (hasIn && hasOut) { border = '#a8dfc5'; bg = '#f0fdf4'; }
+    else if (hasIn)     { border = '#fbbf24'; bg = '#fffbeb'; }
+    else if (isPast && wd !== 0 && wd !== 6) { bg = '#fafafa'; }
+    if (isFuture) opacity = '0.4';
+
+    const dayColor = wd===0 ? 'var(--red)' : wd===6 ? 'var(--accent)' : 'var(--text)';
+
+    // Show clock_in ~ clock_out times compactly
+    const inTime  = recs.find(r => r.type === 'in')?.time   || '';
+    const outTime = [...recs].reverse().find(r => r.type === 'out')?.time || '';
+    const timeStr = inTime
+      ? `<div style="font-size:9px;font-family:'DM Mono',monospace;color:var(--green);margin-top:2px;line-height:1.3">
+           ▶ ${inTime}${outTime ? '<br>◀ '+outTime : ''}</div>`
+      : '';
+
+    // Punch count badge
+    const badge = recs.length > 0
+      ? `<div style="position:absolute;top:3px;right:3px;width:14px;height:14px;border-radius:50%;
+           background:${hasIn&&hasOut?'var(--green)':hasIn?'#f59e0b':'var(--muted)'};
+           color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center"
+         >${recs.length}</div>`
+      : '';
+
+    html += `
+    <div onclick="showDayDetail('${ds}')"
+      style="border:1.5px solid ${border};border-radius:8px;background:${bg};
+             padding:6px 5px 5px;min-height:62px;opacity:${opacity};
+             cursor:${recs.length||isToday?'pointer':'default'};
+             position:relative;transition:transform .1s;-webkit-tap-highlight-color:transparent"
+      ontouchstart="this.style.transform='scale(.96)'" ontouchend="this.style.transform=''">
+      ${badge}
+      <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;
+           color:${isToday?'var(--accent)':recs.length?'var(--navy)':dayColor}">
+        ${day}${isToday?'<span style="font-size:8px;color:var(--accent)"> 今</span>':''}
+      </div>
+      ${timeStr}
+      ${recs.length===0 && !isFuture && wd!==0
+        ? '<div style="font-size:9px;color:#d0d4de;margin-top:4px;text-align:center">—</div>'
+        : ''}
+    </div>`;
+  }
+  html += '</div>';
+  cal.innerHTML = html;
+}
+
+// ── Day detail popup ─────────────────────────────────────────
+function showDayDetail(ds) {
+  const recs = _attRecords[ds] || [];
+  const dt   = new Date(ds + 'T00:00:00');
+  const DAYS = ['日','一','二','三','四','五','六'];
+  const title= `${ds}（週${DAYS[dt.getDay()]}）`;
+
+  // Remove old popup
+  const old = document.getElementById('att-day-popup');
+  if (old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'att-day-popup';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,45,.55);z-index:300;display:flex;align-items:flex-end;justify-content:center;padding:0';
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+
+  const PCOLOR = { in:'#16a34a', out:'#dc2626', break_out:'#ea580c', break_in:'#2563eb' };
+  const PLABEL = { in:'上班打卡', out:'下班打卡', break_out:'休息開始', break_in:'休息結束' };
+
+  let rowsHtml = '';
+  if (!recs.length) {
+    rowsHtml = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">當天無打卡記錄</div>';
+  } else {
+    // Calculate work hours
+    const inRec  = recs.find(r => r.type === 'in');
+    const outRec = [...recs].reverse().find(r => r.type === 'out');
+    let workHoursStr = '';
+    if (inRec && outRec) {
+      const [ih, im] = inRec.time.split(':').map(Number);
+      const [oh, om] = outRec.time.split(':').map(Number);
+      const mins = (oh*60+om) - (ih*60+im);
+      if (mins > 0) {
+        const h = Math.floor(mins/60), mn = mins%60;
+        workHoursStr = `<div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:12px;padding:8px 12px;background:#f0fdf4;border-radius:8px">
+          ⏱ 工時：${h}小時${mn>0?mn+'分':''}（${inRec.time} ～ ${outRec.time}）</div>`;
+      }
+    }
+    rowsHtml = workHoursStr + recs.map(r => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="width:8px;height:8px;border-radius:50%;background:${PCOLOR[r.type]||'#888'};flex-shrink:0"></div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:${PCOLOR[r.type]||'var(--text)'}">${PLABEL[r.type]||r.type}</div>
+          ${r.gps_distance!=null?`<div style="font-size:11px;color:var(--muted)">📍 ${r.location_name||''} ${r.gps_distance}m</div>`:''}
+          ${r.is_manual?'<div style="font-size:11px;color:var(--accent)">✏️ 補打卡</div>':''}
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--navy)">${r.time}</div>
+      </div>`).join('');
+  }
+
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:460px;
+         max-height:80vh;overflow-y:auto;padding:0 0 32px">
+      <div style="padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;
+           border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:1">
+        <div>
+          <div style="font-size:16px;font-weight:700;color:var(--navy)">${title}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">打卡明細</div>
+        </div>
+        <button onclick="document.getElementById('att-day-popup').remove()"
+          style="width:28px;height:28px;border:none;background:var(--bg);border-radius:50%;
+                 font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">×</button>
+      </div>
+      <div style="padding:14px 20px">${rowsHtml}</div>
+    </div>`;
+
+  document.body.appendChild(overlay);
 }
 
 /* Utils */
