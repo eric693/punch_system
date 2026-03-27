@@ -722,7 +722,13 @@ def api_punch_staff_create():
             """, (name, username, _hash_pw(password), b.get('role', '').strip())).fetchone()
         return jsonify(punch_staff_row(row)), 201
     except psycopg.errors.UniqueViolation:
-        return jsonify({'error': '姓名或帳號已存在'}), 409
+        return jsonify({'error': '姓名或帳號已存在，請換一個'}), 409
+    except Exception as e:
+        print(f"[punch_staff_create] error: {e}")
+        # Check if it's a unique constraint in the error message
+        if 'unique' in str(e).lower() or 'duplicate' in str(e).lower():
+            return jsonify({'error': '姓名或帳號已存在，請換一個'}), 409
+        return jsonify({'error': f'新增失敗：{str(e)}'}), 500
 
 @app.route('/api/punch/staff/<int:sid>', methods=['PUT'])
 @login_required
