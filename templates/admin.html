@@ -363,6 +363,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <div class="page" id="page-punch">
     <div class="inv-tab-bar">
       <button class="inv-tab active" id="punchtab-summary"  onclick="switchPunchTab('summary')">出勤摘要</button>
+      <button class="inv-tab"        id="punchtab-anomaly"  onclick="switchPunchTab('anomaly')">異常告警<span class="tab-badge" id="tabdot-anomaly" style="display:none"></span></button>
+      <button class="inv-tab"        id="punchtab-mstats"   onclick="switchPunchTab('mstats')">月統計</button>
       <button class="inv-tab"        id="punchtab-records"  onclick="switchPunchTab('records')">打卡記錄</button>
       <button class="inv-tab"        id="punchtab-manual"   onclick="switchPunchTab('manual')">代補打卡</button>
       <button class="inv-tab"        id="punchtab-requests" onclick="switchPunchTab('requests')">補打申請<span class="tab-badge" id="tabdot-punchrq" style="display:none"></span></button>
@@ -612,6 +614,52 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         </div>
       </div>
     </div>
+    <!-- 異常告警 -->
+    <div id="punch-panel-anomaly" style="display:none">
+      <div class="filter-bar" style="margin-bottom:16px;gap:12px">
+        <span style="font-size:13px;color:var(--muted)">自動偵測近 7 天出勤異常（遲到、缺打卡、今日未出勤）</span>
+        <span style="flex:1"></span>
+        <button class="btn btn-outline btn-sm" onclick="loadPunchAnomalies()">重新整理</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>嚴重程度</th><th>員工</th><th>部門</th><th>日期</th><th>異常類型</th><th>說明</th></tr></thead>
+            <tbody id="anomaly-tbody"><tr><td colspan="6" class="empty-state"><div class="empty-state-text">請稍候...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 月統計 -->
+    <div id="punch-panel-mstats" style="display:none">
+      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+        <span class="filter-label">月份</span>
+        <input class="filter-input" type="month" id="mstats-month" onchange="loadMonthlyStats()">
+        <button class="btn btn-primary btn-sm" onclick="loadMonthlyStats()">查詢</button>
+        <span style="flex:1"></span>
+        <button class="btn btn-outline btn-sm" onclick="exportMonthlyStats()">匯出 CSV</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>姓名</th><th>部門</th>
+                <th style="text-align:center">出勤天數</th>
+                <th style="text-align:center">總工時</th>
+                <th style="text-align:center">平均時數/天</th>
+                <th style="text-align:center">遲到</th>
+                <th style="text-align:center">缺打卡</th>
+                <th>異常明細</th>
+              </tr>
+            </thead>
+            <tbody id="mstats-tbody"><tr><td colspan="8" class="empty-state"><div class="empty-state-text">請選擇月份</div></td></tr></tbody>
+          </table>
+        </div>
+        <div id="mstats-footer" style="display:none;padding:10px 18px;border-top:2px solid var(--border);background:#f7f9fd;font-size:13px;font-weight:700"></div>
+      </div>
+    </div>
   </div><!-- end page-punch -->
 
   <!-- ── 排班管理 ── -->
@@ -813,6 +861,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <span class="filter-label">月份</span>
         <input class="filter-input" type="month" id="sal-month" onchange="loadSalaryRecords()">
         <button class="btn btn-primary btn-sm" onclick="generateSalary()">自動產生薪資</button>
+        <button class="btn btn-outline btn-sm" id="sal-confirm-all-btn" onclick="confirmAllSalary()" style="display:none">全部確認</button>
+        <button class="btn btn-outline btn-sm" id="sal-bulk-print-btn" onclick="bulkPrintPayslips()" style="display:none">列印全部薪資單</button>
         <button class="btn btn-outline btn-sm" onclick="exportSalaryCSV()">匯出 CSV</button>
         <button class="btn btn-ghost btn-sm" onclick="exportLeaveCSV()">匯出請假 CSV</button>
         <span style="flex:1"></span>
@@ -821,7 +871,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>代碼</th><th>姓名</th><th>部門</th><th>津貼合計</th><th>扣除合計</th><th>實領金額</th><th>狀態</th><th>操作</th></tr></thead>
+            <thead><tr><th>代碼</th><th>姓名</th><th>部門</th><th>出勤</th><th>津貼合計</th><th>扣除合計</th><th>實領金額</th><th>狀態</th><th>操作</th></tr></thead>
             <tbody id="sal-tbody"></tbody>
           </table>
         </div>
@@ -1613,6 +1663,18 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       </div>
     </div>
     <div class="modal-body" id="sal-detail-body" style="padding:0"></div>
+    <div style="padding:10px 20px;border-top:1px solid var(--border);background:var(--bg)">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--muted);flex:1">手動調整：</span>
+        <input class="form-input" style="width:140px;font-size:12px" id="adj-name" placeholder="項目名稱（如：績效獎金）">
+        <select class="form-input" style="width:80px;font-size:12px" id="adj-type">
+          <option value="allowance">加項</option>
+          <option value="deduction">扣項</option>
+        </select>
+        <input class="form-input" style="width:100px;font-size:12px" type="number" min="0" id="adj-amount" placeholder="金額">
+        <button class="btn btn-outline btn-sm" onclick="addSalaryAdjustment()">加入</button>
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeSalDetail()">關閉</button>
       <button class="btn btn-ghost btn-sm" id="btn-sal-pdf" onclick="openSalaryPDF()">列印薪資單</button>
@@ -2549,11 +2611,13 @@ function initPunch() {
   const now = new Date();
   const ym  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   document.getElementById('sum-month').value = ym;
+  const mstatsEl = document.getElementById('mstats-month');
+  if (mstatsEl) mstatsEl.value = ym;
   switchPunchTab('summary');
 }
 
 function switchPunchTab(tab) {
-  ['summary','records','manual','requests','overtime','staff','gps','line'].forEach(t => {
+  ['summary','records','manual','requests','overtime','staff','gps','line','anomaly','mstats'].forEach(t => {
     document.getElementById('punchtab-' + t).classList.toggle('active', t === tab);
     document.getElementById('punch-panel-' + t).style.display = t === tab ? '' : 'none';
   });
@@ -2565,6 +2629,100 @@ function switchPunchTab(tab) {
   if (tab === 'overtime')  { otFilterChanged(); setTabDot('tabdot-overtime', 0); }
   if (tab === 'gps')       loadGpsSettings();
   if (tab === 'line')      loadLinePunchConfig();
+  if (tab === 'anomaly')   { loadPunchAnomalies(); setTabDot('tabdot-anomaly', 0); }
+  if (tab === 'mstats')    loadMonthlyStats();
+}
+
+// ── 異常告警（打卡面板） ──────────────────────────────────────
+let _mstatsData = [];
+
+async function loadPunchAnomalies() {
+  const tb = document.getElementById('anomaly-tbody');
+  tb.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>';
+  const { ok, data } = await api('/api/attendance/anomalies', {}, true);
+  if (!ok || !data.anomalies || !data.anomalies.length) {
+    tb.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-state-text">近 7 天無異常記錄</div></td></tr>';
+    return;
+  }
+  const SEV_LABEL = { error: '嚴重', warning: '警告', info: '提示' };
+  const SEV_COLOR = { error: 'var(--red)', warning: '#e07b2a', info: 'var(--accent)' };
+  const SEV_BG    = { error: '#fff5f5', warning: '#fffbeb', info: '#eff6ff' };
+  const dot = document.getElementById('tabdot-anomaly');
+  const errCount = data.anomalies.filter(a => a.severity === 'error').length;
+  if (dot) { dot.style.display = errCount ? '' : 'none'; dot.textContent = errCount || ''; }
+  tb.innerHTML = data.anomalies.map(a => `
+    <tr style="background:${SEV_BG[a.severity]||'#fff'}">
+      <td><span style="color:${SEV_COLOR[a.severity]||'inherit'};font-weight:700">${SEV_LABEL[a.severity]||a.severity}</span></td>
+      <td style="font-weight:600">${escHtml(a.name||'')}</td>
+      <td style="color:var(--muted)">${escHtml(a.department||a.role||'')}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${a.date||''}</td>
+      <td>${escHtml(a.label||'')}</td>
+      <td style="font-size:12px;color:var(--muted)">${escHtml(a.detail||'')}</td>
+    </tr>`).join('');
+}
+
+// ── 月出勤統計 ────────────────────────────────────────────────
+async function loadMonthlyStats() {
+  const month = document.getElementById('mstats-month').value;
+  const tb = document.getElementById('mstats-tbody');
+  const footer = document.getElementById('mstats-footer');
+  if (!month) { tb.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-state-text">請選擇月份</div></td></tr>'; return; }
+  tb.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>';
+  const { ok, data } = await api(`/api/attendance/monthly-stats?month=${month}`, {}, true);
+  if (!ok || !data.stats || !data.stats.length) {
+    tb.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-state-text">該月無出勤資料</div></td></tr>';
+    footer.style.display = 'none';
+    _mstatsData = [];
+    return;
+  }
+  _mstatsData = data.stats;
+  let totalDays = 0, totalHours = 0, totalLate = 0, totalMissing = 0;
+  tb.innerHTML = data.stats.map(r => {
+    totalDays   += r.days_worked || 0;
+    totalHours  += r.total_minutes || 0;
+    totalLate   += r.late_count || 0;
+    totalMissing += (r.missing_in_count || 0) + (r.missing_out_count || 0);
+    const anomalyTips = (r.anomaly_dates || []).slice(0, 5).map(a =>
+      `<span style="display:inline-block;margin:1px 3px 1px 0;padding:1px 6px;border-radius:10px;font-size:11px;
+       background:${a.type==='late'?'#fff3cd':a.type==='missing'?'#fff5f5':'#eff6ff'};
+       color:${a.type==='late'?'#92660c':a.type==='missing'?'var(--red)':'var(--accent)'}">
+       ${a.date} ${escHtml(a.label)}</span>`).join('');
+    const moreCount = (r.anomaly_dates || []).length - 5;
+    return `<tr>
+      <td style="font-weight:600">${escHtml(r.name||'')}</td>
+      <td style="color:var(--muted)">${escHtml(r.department||'')}</td>
+      <td style="text-align:center;font-weight:700">${r.days_worked||0}</td>
+      <td style="text-align:center;font-family:'DM Mono',monospace">${r.total_hm||'0h 0m'}</td>
+      <td style="text-align:center;font-family:'DM Mono',monospace">${r.avg_hours_day||'—'}</td>
+      <td style="text-align:center;color:${(r.late_count||0)>0?'#e07b2a':'inherit'};font-weight:${(r.late_count||0)>0?700:400}">${r.late_count||0}</td>
+      <td style="text-align:center;color:${((r.missing_in_count||0)+(r.missing_out_count||0))>0?'var(--red)':'inherit'}">${(r.missing_in_count||0)+(r.missing_out_count||0)}</td>
+      <td style="font-size:12px">${anomalyTips}${moreCount>0?`<span style="color:var(--muted)">+${moreCount}筆</span>`:''}</td>
+    </tr>`;
+  }).join('');
+  const th = Math.floor(totalHours / 60), tm = totalHours % 60;
+  footer.style.display = '';
+  footer.textContent = `合計：${data.stats.length} 人 ／ 出勤 ${totalDays} 天 ／ 總工時 ${th}h ${tm}m ／ 遲到 ${totalLate} 次 ／ 缺打卡 ${totalMissing} 次`;
+}
+
+function exportMonthlyStats() {
+  const month = document.getElementById('mstats-month').value;
+  if (!_mstatsData.length) { showToast('請先查詢月統計資料', true); return; }
+  const rows = [['姓名','部門','出勤天數','總工時','平均時數/天','遲到次數','缺打卡次數','異常明細']];
+  _mstatsData.forEach(r => {
+    const anomalyText = (r.anomaly_dates || []).map(a => `${a.date} ${a.label}`).join('; ');
+    rows.push([
+      r.name||'', r.department||'',
+      r.days_worked||0, r.total_hm||'0h 0m', r.avg_hours_day||'—',
+      r.late_count||0, (r.missing_in_count||0)+(r.missing_out_count||0),
+      anomalyText
+    ]);
+  });
+  const csv = rows.map(row => row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `出勤月統計_${month}.csv`; a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── 出勤摘要 ──────────────────────────────────────────────────
@@ -4048,17 +4206,33 @@ async function loadSalaryRecords() {
     document.getElementById('sal-total-row').style.display='none'; return;
   }
   let totAllow=0,totDeduct=0,totNet=0;
+  const hasDraft = salaryRecords.some(r=>r.status==='draft');
+  const hasConfirmed = salaryRecords.some(r=>r.status==='confirmed');
+  document.getElementById('sal-confirm-all-btn').style.display = hasDraft ? '' : 'none';
+  document.getElementById('sal-bulk-print-btn').style.display  = hasConfirmed ? '' : 'none';
   tb.innerHTML = salaryRecords.map(r=>{
     totAllow  += r.allowance_total||0;
     totDeduct += r.deduction_total||0;
     totNet    += r.net_pay||0;
     const sc = r.status==='confirmed'?'var(--green)':'var(--muted)';
     const sl = r.status==='confirmed'?'已確認':'草稿';
-    return `<tr>
+    // 出勤異常偵測
+    const unaccounted = Math.max(0, (r.work_days||0) - (r.actual_days||0) - (r.leave_days||0));
+    let anomalyBadge = '';
+    if (r.salary_type==='hourly') {
+      anomalyBadge = `<div style="font-family:'DM Mono',monospace;font-size:12px">${r.actual_work_hours||0}h</div>`;
+    } else {
+      anomalyBadge = `<div style="font-size:12px">${r.actual_days||0}/${r.work_days||0}天`;
+      if (r.leave_days>0) anomalyBadge += `<span style="color:var(--accent);margin-left:4px">假${r.leave_days}天</span>`;
+      if (unaccounted>0)  anomalyBadge += `<span style="color:var(--red);margin-left:4px;font-weight:700" title="疑似缺勤或補登">⚠ 缺${unaccounted}天</span>`;
+      anomalyBadge += '</div>';
+    }
+    return `<tr${unaccounted>0?' style="background:rgba(214,66,66,0.04)"':''}>
       <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${escHtml(r.employee_code||'')}</td>
       <td style="font-weight:600">${escHtml(r.staff_name)}<span style="font-size:10px;color:var(--muted);margin-left:6px">${r.salary_type==='hourly'?'時薪':'月薪'}</span></td>
       <td style="color:var(--muted)">${escHtml(r.department||'')}</td>
-      <td style="font-family:'DM Mono',monospace;color:var(--green)">$${fmtNum(r.allowance_total)}<div style="font-size:10px;color:var(--muted)">${r.salary_type==='hourly'?r.actual_work_hours+'h':r.actual_days+'天'}</div></td>
+      <td>${anomalyBadge}</td>
+      <td style="font-family:'DM Mono',monospace;color:var(--green)">$${fmtNum(r.allowance_total)}</td>
       <td style="font-family:'DM Mono',monospace;color:var(--red)">-$${fmtNum(r.deduction_total)}</td>
       <td style="font-family:'DM Mono',monospace;font-weight:700;color:var(--navy)">$${fmtNum(r.net_pay)}</td>
       <td><span style="font-size:12px;font-weight:700;color:${sc}">${sl}</span></td>
@@ -4180,6 +4354,114 @@ async function confirmSalary() {
   const {ok} = await api(`/api/salary/records/${id}/confirm`, apiJSON({confirmed_by:by}));
   if (!ok) return;
   showToast('薪資已確認','success'); closeSalDetail(); await loadSalaryRecords();
+}
+
+async function confirmAllSalary() {
+  const month = document.getElementById('sal-month').value;
+  if (!month) return;
+  const draftCount = salaryRecords.filter(r=>r.status==='draft').length;
+  if (!confirm(`確定確認 ${month} 全部 ${draftCount} 筆草稿薪資？確認後員工將收到通知。`)) return;
+  const by = prompt('確認人員姓名：','管理員'); if(!by) return;
+  const {ok,data} = await api('/api/salary/records/confirm-all', apiJSON({month, confirmed_by:by}));
+  if (!ok) return;
+  showToast(`已確認 ${data.confirmed} 筆薪資記錄`, 'success');
+  await loadSalaryRecords();
+}
+
+async function bulkPrintPayslips() {
+  const month = document.getElementById('sal-month').value;
+  if (!month) return;
+  const confirmed = salaryRecords.filter(r=>r.status==='confirmed');
+  if (!confirmed.length) { showToast('尚無已確認薪資記錄','error'); return; }
+  // Fetch all payslip data
+  showToast(`載入 ${confirmed.length} 份薪資單...`,'info');
+  const all = await Promise.all(confirmed.map(r=>api(`/api/salary/records/${r.id}`,{},true)));
+  const slips = all.filter(({ok})=>ok).map(({data})=>data);
+  if (!slips.length) return;
+  const win = window.open('','_blank','width=900,height=900');
+  const css = `
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;font-size:12pt;color:#1a2340;background:#fff}
+    .slip{max-width:680px;margin:0 auto;padding:20mm 16mm;page-break-after:always}
+    .slip:last-child{page-break-after:avoid}
+    .hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1a2340;padding-bottom:12px;margin-bottom:18px}
+    .co{font-size:18px;font-weight:800}.title{font-size:13px;color:#666;margin-top:4px}
+    .info{font-size:11px;color:#444;text-align:right;line-height:1.9}
+    .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+    .kc{border:1.5px solid #e2e8f0;border-radius:6px;padding:10px 14px;text-align:center}
+    .kl{font-size:9px;color:#888;margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em}
+    .kv{font-size:19px;font-weight:800;font-family:monospace}
+    .kv.g{color:#2e9e6b}.kv.r{color:#d64242}.kv.n{color:#1a2340}
+    table{width:100%;border-collapse:collapse;font-size:11pt;margin-bottom:12px}
+    th{background:#f4f6fa;padding:7px 10px;text-align:left;border-bottom:2px solid #dde3ef;font-size:10pt}
+    td{padding:6px 10px;border-bottom:1px solid #f0f2f8}
+    .num{text-align:right;font-family:monospace}
+    .gr{color:#2e9e6b}.rd{color:#d64242}
+    tfoot td{font-weight:800;background:#f4f6fa;padding:8px 10px}
+    .attend{font-size:10pt;color:#555;padding:8px 12px;background:#f9fafc;border-radius:6px;margin-bottom:14px}
+    .seal{margin-top:30px;display:flex;justify-content:flex-end;gap:40px;font-size:11pt;color:#444}
+    .seal-line{border-top:1px solid #aaa;padding-top:4px;text-align:center;min-width:100px}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+    @page{size:A4;margin:8mm}
+  `;
+  const slipHtml = slips.map(d => {
+    const items = d.items||[];
+    const aItems = items.filter(i=>i.type==='allowance');
+    const dItems = items.filter(i=>i.type==='deduction');
+    const isH = d.salary_type==='hourly';
+    const attend = isH
+      ? `實際工時 ${d.actual_work_hours}h × 時薪 $${fmtNum(d.hourly_rate)} = $${fmtNum(d.hourly_base_pay)}`
+      : `出勤 ${d.actual_days} 天 ／ 本月工作日 ${d.work_days} 天${d.leave_days>0?' ／ 請假 '+d.leave_days+'天':''}${d.ot_pay>0?' ／ 加班費 $'+fmtNum(d.ot_pay):''}`;
+    const aRows = aItems.map(i=>`<tr><td>${i.name}</td><td class="num gr">+$${fmtNum(i.amount)}</td><td style="font-size:10px;color:#888">${i.calc_note||''}</td></tr>`).join('');
+    const dRows = dItems.map(i=>`<tr><td>${i.name}</td><td class="num rd">-$${fmtNum(i.amount)}</td><td style="font-size:10px;color:#888">${i.calc_note||''}</td></tr>`).join('');
+    return `<div class="slip">
+      <div class="hdr">
+        <div><div class="co">薪　資　單</div><div class="title">${d.month} 月份</div></div>
+        <div class="info">姓名：<strong>${d.staff_name}</strong><br>代碼：${d.employee_code||'—'}<br>部門：${d.department||'—'}<br>${isH?'時薪制':'月薪制'}</div>
+      </div>
+      <div class="kpi">
+        <div class="kc"><div class="kl">支付總額</div><div class="kv g">$${fmtNum(d.allowance_total)}</div></div>
+        <div class="kc"><div class="kl">扣除總額</div><div class="kv r">$${fmtNum(d.deduction_total)}</div></div>
+        <div class="kc"><div class="kl">實領金額</div><div class="kv n">$${fmtNum(d.net_pay)}</div></div>
+      </div>
+      <div class="attend">${attend}</div>
+      <table>
+        <thead><tr><th>項目</th><th class="num">金額</th><th>計算說明</th></tr></thead>
+        <tbody>${aRows}${dRows}</tbody>
+        <tfoot><tr><td colspan="2">實領金額</td><td class="num">$${fmtNum(d.net_pay)}</td></tr></tfoot>
+      </table>
+      <div class="seal">
+        <div class="seal-line">員工簽收</div>
+        <div class="seal-line">主管確認</div>
+        <div class="seal-line">財務核章</div>
+      </div>
+    </div>`;
+  }).join('');
+  win.document.write(`\x3c!DOCTYPE html\x3e\x3chtml lang="zh-TW"\x3e\x3chead\x3e\x3cmeta charset="UTF-8"\x3e\x3ctitle\x3e${month} 全員薪資單\x3c/title\x3e\x3cstyle\x3e${css}\x3c/style\x3e\x3c/head\x3e\x3cbody\x3e${slipHtml}\x3cscript\x3ewindow.onload=()=>window.print();\x3c/script\x3e\x3c/body\x3e\x3c/html\x3e`);
+  win.document.close();
+}
+
+// 手動新增調整項目
+async function addSalaryAdjustment() {
+  const name   = document.getElementById('adj-name').value.trim();
+  const type   = document.getElementById('adj-type').value;
+  const amount = parseFloat(document.getElementById('adj-amount').value);
+  if (!name) { showToast('請填寫項目名稱','error'); return; }
+  if (!amount || amount <= 0) { showToast('請填寫金額','error'); return; }
+  const id = parseInt(document.getElementById('sdm-confirm-btn').getAttribute('data-id'));
+  // Fetch current record
+  const {ok, data} = await api(`/api/salary/records/${id}`,{},true);
+  if (!ok) return;
+  const items = [...(data.items||[]), {id:'adj_'+Date.now(), name, type, amount, formula:'', calc_note:'手動調整'}];
+  const allowTotal = items.filter(i=>i.type==='allowance').reduce((s,i)=>s+i.amount,0);
+  const deductTotal = items.filter(i=>i.type==='deduction').reduce((s,i)=>s+i.amount,0);
+  const body = { items, allowance_total:allowTotal, deduction_total:deductTotal, net_pay:allowTotal-deductTotal };
+  const {ok:ok2} = await api(`/api/salary/records/${id}`, apiJSON(body, 'PUT'));
+  if (!ok2) return;
+  document.getElementById('adj-name').value='';
+  document.getElementById('adj-amount').value='';
+  showToast(`已加入「${name}」$${fmtNum(amount)}`,'success');
+  await openSalDetail(id); // re-render modal
 }
 
 async function deleteSalRecord(id) {

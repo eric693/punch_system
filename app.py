@@ -1045,6 +1045,105 @@ def api_punch_summary():
         result.append(d)
     return jsonify(result)
 
+@app.route('/api/attendance/monthly-stats', methods=['GET'])
+@login_required
+def api_attendance_monthly_stats():
+    """
+    月出勤統計報表（每位員工匯總）
+    回傳：出勤天數、總工時、遲到次數、缺打卡次數、平均工時
+    """
+    from datetime import datetime as _dts
+    month = request.args.get('month') or _dts.now().strftime('%Y-%m')
+    with get_db() as conn:
+        # 每人每日打卡彙整
+        rows = conn.execute("""
+            SELECT ps.id as staff_id, ps.name as staff_name,
+                   ps.department, ps.role,
+                   (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date as work_date,
+                   MIN(CASE WHEN pr.punch_type='in'  THEN pr.punched_at AT TIME ZONE 'Asia/Taipei' END) as clock_in,
+                   MAX(CASE WHEN pr.punch_type='out' THEN pr.punched_at AT TIME ZONE 'Asia/Taipei' END) as clock_out,
+                   BOOL_OR(pr.punch_type='in')  as has_in,
+                   BOOL_OR(pr.punch_type='out') as has_out
+            FROM punch_records pr
+            JOIN punch_staff ps ON ps.id = pr.staff_id AND ps.active = TRUE
+            WHERE TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM') = %s
+            GROUP BY ps.id, ps.name, ps.department, ps.role,
+                     (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
+            ORDER BY ps.name, work_date
+        """, (month,)).fetchall()
+
+        # 班別指派（用於遲到判斷）
+        shift_rows = conn.execute("""
+            SELECT sa.staff_id, sa.date, st.start_time, st.end_time
+            FROM shift_assignments sa
+            JOIN shift_types st ON st.id = sa.shift_type_id
+            WHERE TO_CHAR(sa.date,'YYYY-MM') = %s
+        """, (month,)).fetchall()
+        shift_map = {(r['staff_id'], str(r['date'])): r for r in shift_rows}
+
+    from collections import defaultdict
+    stats = defaultdict(lambda: {
+        'staff_id': None, 'staff_name': '', 'department': '', 'role': '',
+        'days_worked': 0, 'total_minutes': 0,
+        'late_count': 0, 'missing_in_count': 0, 'missing_out_count': 0,
+        'anomaly_dates': [],
+    })
+
+    for r in rows:
+        sid  = r['staff_id']
+        ds   = str(r['work_date'])
+        s    = stats[sid]
+        s['staff_id']   = sid
+        s['staff_name'] = r['staff_name']
+        s['department'] = r['department'] or ''
+        s['role']       = r['role']       or ''
+
+        has_in  = bool(r['has_in'])
+        has_out = bool(r['has_out'])
+
+        if has_in or has_out:
+            s['days_worked'] += 1
+
+        if r['clock_in'] and r['clock_out']:
+            diff = (r['clock_out'] - r['clock_in']).total_seconds() / 60
+            if diff > 0:
+                s['total_minutes'] += int(diff)
+
+        # 缺打卡
+        if has_in and not has_out:
+            s['missing_out_count'] += 1
+            s['anomaly_dates'].append({'date': ds, 'type': 'missing_out', 'label': '缺下班卡'})
+        if not has_in and has_out:
+            s['missing_in_count'] += 1
+            s['anomaly_dates'].append({'date': ds, 'type': 'missing_in', 'label': '缺上班卡'})
+
+        # 遲到（比對班別）
+        if has_in and r['clock_in']:
+            shift = shift_map.get((sid, ds))
+            if shift and shift['start_time']:
+                try:
+                    sh, sm = map(int, str(shift['start_time'])[:5].split(':'))
+                    ci_local = r['clock_in']
+                    ih, im   = ci_local.hour, ci_local.minute
+                    late_mins = (ih * 60 + im) - (sh * 60 + sm)
+                    if late_mins > 10:
+                        s['late_count'] += 1
+                        s['anomaly_dates'].append({'date': ds, 'type': 'late',
+                                                   'label': f'遲到 {late_mins} 分鐘'})
+                except Exception:
+                    pass
+
+    result = []
+    for s in sorted(stats.values(), key=lambda x: (x['department'], x['staff_name'])):
+        h   = s['total_minutes'] // 60
+        m   = s['total_minutes'] % 60
+        avg = round(s['total_minutes'] / s['days_worked'] / 60, 1) if s['days_worked'] else 0
+        s['total_hours']   = round(s['total_minutes'] / 60, 1)
+        s['avg_hours_day'] = avg
+        s['total_hm']      = f"{h}h {m:02d}m"
+        result.append(s)
+    return jsonify({'month': month, 'stats': result})
+
 # ── Punch Requests (補打卡申請) ───────────────────────────────────
 
 @app.route('/api/punch/request', methods=['POST'])
@@ -3706,6 +3805,26 @@ def api_salary_record_update(rid):
               float(b.get('net_pay',0)), items_json,
               b.get('note',''), rid)).fetchone()
     return jsonify(salary_record_row(row)) if row else ('', 404)
+
+@app.route('/api/salary/records/confirm-all', methods=['POST'])
+@require_module('salary')
+def api_salary_confirm_all():
+    b    = request.get_json(force=True)
+    month = b.get('month','').strip()
+    by   = b.get('confirmed_by','管理員')
+    if not month: return jsonify({'error': '請指定月份'}), 400
+    with get_db() as conn:
+        rows = conn.execute("""
+            UPDATE salary_records SET status='confirmed', confirmed_by=%s,
+              confirmed_at=NOW(), updated_at=NOW()
+            WHERE month=%s AND status='draft'
+            RETURNING id, staff_id, month, net_pay
+        """, (by, month)).fetchall()
+    confirmed = len(rows)
+    for row in rows:
+        extra = f"{row['month']} 薪資已確認\n實領金額：${float(row['net_pay'] or 0):,.0f}"
+        _notify_review_result(row['staff_id'], '薪資', 'confirmed', extra)
+    return jsonify({'ok': True, 'confirmed': confirmed})
 
 @app.route('/api/salary/records/<int:rid>/confirm', methods=['POST'])
 @require_module('salary')
