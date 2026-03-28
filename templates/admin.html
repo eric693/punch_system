@@ -1047,34 +1047,36 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- OCR辨識 -->
     <div id="fin-panel-ocr" style="display:none">
-      <div style="max-width:700px">
-        <div class="card" style="padding:20px;margin-bottom:16px">
-          <div class="card-title" style="padding:0;margin-bottom:12px">AI 辨識發票 / 收據 / 報帳單</div>
-          <!-- 拖曳區（拖曳或點擊） -->
-          <div id="fin-ocr-drop"
-               style="border:2px dashed var(--border);border-radius:8px;padding:32px;text-align:center;cursor:pointer;transition:border-color .2s"
-               onclick="document.getElementById('fin-ocr-file').click()"
-               ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
-               ondragleave="this.style.borderColor='var(--border)'"
-               ondrop="handleOcrDrop(event)">
-            <div style="font-size:32px;margin-bottom:8px">🧾</div>
-            <div style="font-size:13px;color:var(--muted)">拖曳圖片到此，或點此選取</div>
-            <div id="fin-ocr-filename" style="font-size:12px;color:var(--green);margin-top:8px;font-weight:600"></div>
-          </div>
-          <input type="file" id="fin-ocr-file" accept="image/*,image/heic" style="display:none" onchange="handleOcrFile(this.files[0])">
-          <button class="btn btn-primary" style="width:100%;margin-top:14px;font-size:15px;padding:13px" id="fin-ocr-btn" onclick="doOcr()">AI OCR 辨識</button>
-          <div id="fin-ocr-loading" style="display:none;text-align:center;margin-top:14px;font-size:13px;color:var(--muted)">
-            <span style="display:inline-block;animation:spin 1s linear infinite;margin-right:6px">⏳</span>AI 辨識中，請稍候...
+      <!-- 拖曳上傳區 -->
+      <div class="card" style="padding:20px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <span class="card-title" style="padding:0">AI 批次辨識發票 / 收據 / 報帳單</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary btn-sm" id="ocr-run-btn" onclick="runOcrQueue()" style="display:none">開始辨識</button>
+            <button class="btn btn-outline btn-sm" onclick="clearOcrQueue()" id="ocr-clear-btn" style="display:none">清除全部</button>
           </div>
         </div>
-        <!-- OCR 結果 -->
-        <div class="card" id="fin-ocr-result-card" style="padding:20px;display:none">
-          <div class="card-title" style="padding:0;margin-bottom:14px">辨識結果 <span style="font-size:12px;font-weight:400;color:var(--muted)">（請確認後按「建立記錄」）</span></div>
-          <div class="form-grid" id="fin-ocr-fields"></div>
-          <div style="margin-top:16px;display:flex;gap:10px">
-            <button class="btn btn-primary" onclick="createRecordFromOcr()">建立財務記錄</button>
-            <button class="btn btn-outline" onclick="resetOcr()">重新上傳</button>
+        <div id="fin-ocr-drop"
+             style="border:2px dashed var(--border);border-radius:8px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s"
+             onclick="document.getElementById('fin-ocr-file').click()"
+             ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+             ondragleave="this.style.borderColor='var(--border)'"
+             ondrop="handleOcrDrop(event)">
+          <div style="font-size:28px;margin-bottom:6px">🧾</div>
+          <div style="font-size:13px;color:var(--muted)">點擊選取或拖曳圖片到此（可多選）</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">支援 JPG、PNG、WEBP、HEIC</div>
+        </div>
+        <input type="file" id="fin-ocr-file" accept="image/*,image/heic" multiple style="display:none" onchange="addToOcrQueue(this.files)">
+      </div>
+
+      <!-- 批次佇列 -->
+      <div id="ocr-queue-wrap" style="display:none">
+        <div class="card">
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+            <span class="card-title" id="ocr-queue-title">待辨識（0 個）</span>
+            <button class="btn btn-primary btn-sm" id="ocr-confirm-all-btn" onclick="createAllOcrRecords()" style="display:none">建立全部已辨識記錄</button>
           </div>
+          <div id="ocr-queue-list" style="padding:0 4px 12px"></div>
         </div>
       </div>
     </div>
@@ -1689,6 +1691,68 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeFinCatModal()">取消</button>
       <button class="btn btn-primary" onclick="saveFinCat()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- OCR Edit Modal -->
+<div class="modal-overlay" id="ocr-edit-modal" style="display:none">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <span class="modal-title">編輯辨識結果</span>
+      <button class="modal-close" onclick="closeOcrEditModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="oem-idx">
+      <div class="form-row">
+        <div>
+          <label class="form-label">收支類型 *</label>
+          <select class="form-input" id="oem-type" onchange="updateOemCatOpts()">
+            <option value="expense">支出</option>
+            <option value="income">收入</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">類別</label>
+          <select class="form-input" id="oem-category"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label class="form-label">日期 *</label>
+          <input class="form-input" type="date" id="oem-date">
+        </div>
+        <div>
+          <label class="form-label">含稅金額 *</label>
+          <input class="form-input" type="number" min="0" step="1" id="oem-amount">
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label class="form-label">稅額</label>
+          <input class="form-input" type="number" min="0" step="1" id="oem-tax">
+        </div>
+        <div>
+          <label class="form-label">廠商 / 對象</label>
+          <input class="form-input" id="oem-vendor">
+        </div>
+      </div>
+      <div>
+        <label class="form-label">標題 *</label>
+        <input class="form-input" id="oem-title">
+      </div>
+      <div style="margin-top:10px">
+        <label class="form-label">發票 / 單據號碼</label>
+        <input class="form-input" id="oem-invoice_no">
+      </div>
+      <div style="margin-top:10px">
+        <label class="form-label">備註</label>
+        <input class="form-input" id="oem-note">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOcrEditModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveOcrEdit()">儲存修改</button>
     </div>
   </div>
 </div>
@@ -5284,138 +5348,257 @@ async function saveFinSettings() {
   if (ok) showToast('設定已儲存','success');
 }
 
-// ── OCR 辨識 ──────────────────────────────────────────────────
-let ocrFile = null;
-function handleOcrFile(file) {
-  if (!file) return;
-  ocrFile = file;
-  document.getElementById('fin-ocr-filename').textContent = '✓ ' + file.name;
+// ── OCR 批次辨識 ──────────────────────────────────────────────
+// queue item: { id, file, status:'pending'|'processing'|'done'|'error', result, edited:{type,category_id,date,title,amount,tax_amount,vendor,invoice_no,note} }
+let ocrQueue = [];
+let ocrRunning = false;
+
+function addToOcrQueue(files) {
+  for (const f of files) {
+    ocrQueue.push({ id: Date.now() + Math.random(), file: f, status: 'pending', result: null, edited: null });
+  }
+  renderOcrQueue();
   document.getElementById('fin-ocr-drop').style.borderColor = 'var(--green)';
-  document.getElementById('fin-ocr-result-card').style.display = 'none';
+  document.getElementById('ocr-run-btn').style.display   = '';
+  document.getElementById('ocr-clear-btn').style.display = '';
+  document.getElementById('ocr-queue-wrap').style.display = '';
+  // reset file input so same files can be added again
+  document.getElementById('fin-ocr-file').value = '';
 }
+
 function handleOcrDrop(e) {
   e.preventDefault();
-  document.getElementById('fin-ocr-drop').style.borderColor='var(--border)';
-  handleOcrFile(e.dataTransfer.files[0]);
+  document.getElementById('fin-ocr-drop').style.borderColor = 'var(--border)';
+  addToOcrQueue(e.dataTransfer.files);
 }
-async function doOcr() {
-  if (!ocrFile) {
-    // 尚未選檔 → 打開選檔視窗，選完後自動辨識
-    const input = document.getElementById('fin-ocr-file');
-    input.onchange = e => { if (e.target.files[0]) { handleOcrFile(e.target.files[0]); doOcr(); } };
-    input.click();
-    return;
-  }
-  const btn = document.getElementById('fin-ocr-btn');
-  btn.disabled = true;
-  document.getElementById('fin-ocr-loading').style.display = '';
-  document.getElementById('fin-ocr-result-card').style.display = 'none';
+
+function clearOcrQueue() {
+  if (ocrRunning) return;
+  ocrQueue = [];
+  document.getElementById('ocr-queue-wrap').style.display  = 'none';
+  document.getElementById('ocr-run-btn').style.display     = 'none';
+  document.getElementById('ocr-clear-btn').style.display   = 'none';
+  document.getElementById('fin-ocr-drop').style.borderColor = 'var(--border)';
+}
+
+function _catOptsHtml(type, selectedId) {
+  return '<option value="">— 請選擇 —</option>' +
+    finCatList.filter(c=>c.active && c.type===type)
+      .map(c=>`<option value="${c.id}"${c.id===selectedId?' selected':''}>${escHtml(c.name)}</option>`).join('');
+}
+
+function renderOcrQueue() {
+  const done = ocrQueue.filter(q=>q.status==='done').length;
+  document.getElementById('ocr-queue-title').textContent =
+    `佇列（${ocrQueue.length} 個，已辨識 ${done} 個）`;
+  document.getElementById('ocr-confirm-all-btn').style.display = done > 0 ? '' : 'none';
+
+  const statusBadge = s => ({
+    pending:    '<span style="color:var(--muted);font-size:12px">待辨識</span>',
+    processing: '<span style="color:var(--accent);font-size:12px">辨識中…</span>',
+    done:       '<span style="color:var(--green);font-size:12px;font-weight:600">✓ 已辨識</span>',
+    error:      '<span style="color:var(--red);font-size:12px">✗ 失敗</span>',
+  }[s] || s);
+
+  document.getElementById('ocr-queue-list').innerHTML = ocrQueue.length === 0
+    ? '<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">佇列為空</div>'
+    : ocrQueue.map((q, idx) => {
+        const e = q.edited || {};
+        const type = e.type || 'expense';
+        const amt  = e.amount != null ? e.amount : (q.result?.total_amount || '');
+        const title = e.title != null ? e.title : (q.result?.title || q.result?.vendor || '');
+        const date  = e.date  != null ? e.date  : (q.result?.date || '');
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--border);flex-wrap:wrap">
+          <div style="flex:0 0 auto;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)" title="${escHtml(q.file.name)}">${escHtml(q.file.name)}</div>
+          <div style="flex:0 0 auto;min-width:70px">${statusBadge(q.status)}</div>
+          ${q.status === 'done' ? `
+            <input style="flex:1;min-width:90px;max-width:110px" class="form-input" type="date" value="${escHtml(date)}" onchange="ocrQueueEdit(${idx},'date',this.value)">
+            <input style="flex:2;min-width:120px" class="form-input" placeholder="標題" value="${escHtml(title)}" onchange="ocrQueueEdit(${idx},'title',this.value)">
+            <input style="flex:1;min-width:80px;max-width:100px" class="form-input" type="number" placeholder="金額" value="${escHtml(String(amt))}" onchange="ocrQueueEdit(${idx},'amount',parseFloat(this.value)||0)">
+            <select style="flex:1;min-width:80px;max-width:100px" class="form-input" onchange="ocrQueueEdit(${idx},'type',this.value);this.closest('div').querySelector('select:last-of-type').innerHTML=_catOptsHtml(this.value,null)">
+              <option value="expense"${type==='expense'?' selected':''}>支出</option>
+              <option value="income"${type==='income'?' selected':''}>收入</option>
+            </select>
+            <select style="flex:1;min-width:100px" class="form-input" onchange="ocrQueueEdit(${idx},'category_id',this.value?parseInt(this.value):null)">${_catOptsHtml(type, e.category_id)}</select>
+            <button class="btn btn-outline btn-sm" onclick="openOcrEditModal(${idx})" style="flex:0 0 auto">詳細</button>
+            <button class="btn btn-primary btn-sm" onclick="createSingleOcrRecord(${idx})" style="flex:0 0 auto">建立</button>
+          ` : q.status === 'error' ? `
+            <span style="font-size:12px;color:var(--red);flex:1">${escHtml(q.errorMsg||'辨識失敗')}</span>
+            <button class="btn btn-outline btn-sm" onclick="retrySingleOcr(${idx})">重試</button>
+          ` : `<span style="flex:1"></span>`}
+          <button class="btn btn-danger btn-sm" onclick="removeFromOcrQueue(${idx})" style="flex:0 0 auto;padding:4px 8px">✕</button>
+        </div>`;
+      }).join('');
+}
+
+function ocrQueueEdit(idx, field, value) {
+  if (!ocrQueue[idx]) return;
+  if (!ocrQueue[idx].edited) ocrQueue[idx].edited = {};
+  ocrQueue[idx].edited[field] = value;
+}
+
+function removeFromOcrQueue(idx) {
+  ocrQueue.splice(idx, 1);
+  renderOcrQueue();
+  if (!ocrQueue.length) clearOcrQueue();
+}
+
+async function retrySingleOcr(idx) {
+  ocrQueue[idx].status = 'pending';
+  ocrQueue[idx].result = null;
+  ocrQueue[idx].edited = null;
+  renderOcrQueue();
+  await _ocrOneItem(idx);
+  renderOcrQueue();
+}
+
+async function _ocrOneItem(idx) {
+  const q = ocrQueue[idx];
+  q.status = 'processing';
+  renderOcrQueue();
   try {
-    const fd = new FormData(); fd.append('file', ocrFile);
+    const fd = new FormData(); fd.append('file', q.file);
     const resp = await fetch('/api/finance/ocr', {method:'POST', body:fd});
-    document.getElementById('fin-ocr-loading').style.display = 'none';
     let data;
     try { data = await resp.json(); } catch { data = {}; }
-    if (!resp.ok) { showToast(data.error||'OCR 失敗，請確認 API Key 是否設定','error'); btn.disabled=false; return; }
-    finOcrResult = data;
-    // 判斷預設類型
-    const defaultType = (data.doc_type==='income') ? 'income' : 'expense';
-    // 建立類別選項
-    const catOpts = (type) => finCatList
-      .filter(c=>c.active && c.type===type)
-      .map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
-    document.getElementById('fin-ocr-fields').innerHTML = `
-      <div class="form-group">
-        <label class="form-label">收支類型 *</label>
-        <select class="form-input" id="ocr-field-type" onchange="updateOcrCatOpts()">
-          <option value="expense"${defaultType==='expense'?' selected':''}>支出</option>
-          <option value="income"${defaultType==='income'?' selected':''}>收入</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">類別</label>
-        <select class="form-input" id="ocr-field-category">
-          <option value="">— 請選擇 —</option>
-          ${catOpts(defaultType)}
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">日期 *</label>
-        <input class="form-input" type="date" id="ocr-field-date" value="${escHtml(data.date||new Date().toISOString().slice(0,10))}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">標題 *</label>
-        <input class="form-input" id="ocr-field-title" value="${escHtml(data.title||data.vendor||'')}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">含稅金額 *</label>
-        <input class="form-input" type="number" min="0" step="1" id="ocr-field-total_amount" value="${escHtml(String(data.total_amount||''))}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">稅額</label>
-        <input class="form-input" type="number" min="0" step="1" id="ocr-field-tax_amount" value="${escHtml(String(data.tax_amount||'0'))}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">廠商 / 對象</label>
-        <input class="form-input" id="ocr-field-vendor" value="${escHtml(data.vendor||'')}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">發票 / 單據號碼</label>
-        <input class="form-input" id="ocr-field-invoice_no" value="${escHtml(data.invoice_no||'')}">
-      </div>
-      <div class="form-group" style="grid-column:1/-1">
-        <label class="form-label">備註</label>
-        <input class="form-input" id="ocr-field-note" value="OCR辨識${data.doc_type?' - '+data.doc_type:''}">
-      </div>`;
-    document.getElementById('fin-ocr-result-card').style.display = '';
-    btn.disabled = false;
+    if (!resp.ok) { q.status = 'error'; q.errorMsg = data.error || 'OCR 失敗'; return; }
+    q.result = data;
+    q.status = 'done';
+    q.edited = {
+      type:        data.doc_type === 'income' ? 'income' : 'expense',
+      category_id: null,
+      date:        data.date || new Date().toISOString().slice(0,10),
+      title:       data.title || data.vendor || q.file.name,
+      amount:      data.total_amount || 0,
+      tax_amount:  data.tax_amount   || 0,
+      vendor:      data.vendor       || '',
+      invoice_no:  data.invoice_no   || '',
+      note:        'OCR辨識' + (data.doc_type ? ' - '+data.doc_type : ''),
+    };
   } catch(e) {
-    document.getElementById('fin-ocr-loading').style.display='none';
-    showToast('OCR 失敗：' + e.message, 'error');
-    btn.disabled=false;
+    q.status = 'error'; q.errorMsg = e.message;
   }
 }
-function resetOcr() {
-  ocrFile = null; finOcrResult = null;
-  document.getElementById('fin-ocr-file').value = '';
-  document.getElementById('fin-ocr-filename').textContent = '';
-  document.getElementById('fin-ocr-drop').style.borderColor = 'var(--border)';
-  document.getElementById('fin-ocr-result-card').style.display = 'none';
+
+async function runOcrQueue() {
+  if (ocrRunning) return;
+  ocrRunning = true;
+  document.getElementById('ocr-run-btn').disabled = true;
+  const pending = ocrQueue.map((q,i)=>({q,i})).filter(({q})=>q.status==='pending');
+  for (const {i} of pending) {
+    await _ocrOneItem(i);
+    renderOcrQueue();
+  }
+  ocrRunning = false;
+  document.getElementById('ocr-run-btn').disabled = false;
+  const errCount = ocrQueue.filter(q=>q.status==='error').length;
+  const doneCount = ocrQueue.filter(q=>q.status==='done').length;
+  showToast(`辨識完成：${doneCount} 成功${errCount?' / '+errCount+' 失敗':''}`, errCount?'error':'success');
 }
-function updateOcrCatOpts() {
-  const type = document.getElementById('ocr-field-type')?.value || 'expense';
-  const sel  = document.getElementById('ocr-field-category');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">— 請選擇 —</option>' +
-    finCatList.filter(c=>c.active && c.type===type)
-      .map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
-}
-async function createRecordFromOcr() {
-  if (!finOcrResult) return;
-  const getF = id => document.getElementById('ocr-field-'+id)?.value||'';
-  const amount = parseFloat(getF('total_amount'));
+
+async function createSingleOcrRecord(idx) {
+  const q = ocrQueue[idx];
+  if (!q || q.status !== 'done') return;
+  const e = q.edited || {};
+  const amount = parseFloat(e.amount);
   if (!amount) { showToast('請填寫金額','error'); return; }
-  if (!getF('date')) { showToast('請填寫日期','error'); return; }
   const body = {
-    record_date:  getF('date'),
-    type:         getF('type') || 'expense',
-    category_id:  getF('category') ? parseInt(getF('category')) : null,
-    title:        getF('title') || getF('vendor') || '未命名',
-    amount:       amount,
-    tax_amount:   parseFloat(getF('tax_amount'))||0,
-    vendor:       getF('vendor'),
-    invoice_no:   getF('invoice_no'),
-    note:         getF('note'),
-    document_id:  finOcrResult.document_id||null,
+    record_date: e.date  || new Date().toISOString().slice(0,10),
+    type:        e.type  || 'expense',
+    category_id: e.category_id || null,
+    title:       e.title || '未命名',
+    amount,
+    tax_amount:  parseFloat(e.tax_amount)||0,
+    vendor:      e.vendor      || '',
+    invoice_no:  e.invoice_no  || '',
+    note:        e.note        || '',
+    document_id: q.result.document_id || null,
   };
   const {ok} = await api('/api/finance/records', {method:'POST', body:JSON.stringify(body)});
   if (!ok) return;
-  showToast('已建立財務記錄','success');
-  resetOcr();
-  // Switch to records tab
-  switchFinTab('records');
-  document.getElementById('fin-rec-month').value = body.record_date.slice(0,7);
-  await loadFinRecords();
+  showToast(`已建立：${escHtml(body.title)}`,'success');
+  ocrQueue.splice(idx, 1);
+  renderOcrQueue();
+  if (!ocrQueue.length) clearOcrQueue();
+}
+
+async function createAllOcrRecords() {
+  const done = ocrQueue.filter(q=>q.status==='done');
+  if (!done.length) return;
+  let created = 0, failed = 0;
+  for (let i = ocrQueue.length-1; i >= 0; i--) {
+    const q = ocrQueue[i];
+    if (q.status !== 'done') continue;
+    const e = q.edited || {};
+    const amount = parseFloat(e.amount);
+    if (!amount) { failed++; continue; }
+    const body = {
+      record_date: e.date || new Date().toISOString().slice(0,10),
+      type:        e.type || 'expense',
+      category_id: e.category_id || null,
+      title:       e.title || '未命名',
+      amount,
+      tax_amount:  parseFloat(e.tax_amount)||0,
+      vendor:      e.vendor     || '',
+      invoice_no:  e.invoice_no || '',
+      note:        e.note       || '',
+      document_id: q.result.document_id || null,
+    };
+    const {ok} = await api('/api/finance/records', {method:'POST', body:JSON.stringify(body)});
+    if (ok) { ocrQueue.splice(i,1); created++; } else { failed++; }
+  }
+  renderOcrQueue();
+  if (!ocrQueue.length) clearOcrQueue();
+  showToast(`已建立 ${created} 筆記錄${failed?' / '+failed+' 筆失敗':''}`, failed?'error':'success');
+}
+
+// ── OCR 詳細編輯 Modal ─────────────────────────────────────────
+function updateOemCatOpts() {
+  const type = document.getElementById('oem-type')?.value || 'expense';
+  const sel  = document.getElementById('oem-category');
+  if (!sel) return;
+  sel.innerHTML = _catOptsHtml(type, null);
+}
+
+function openOcrEditModal(idx) {
+  const q = ocrQueue[idx];
+  if (!q || !q.edited) return;
+  const e = q.edited;
+  document.getElementById('oem-idx').value       = idx;
+  document.getElementById('oem-type').value       = e.type || 'expense';
+  document.getElementById('oem-category').innerHTML = _catOptsHtml(e.type||'expense', e.category_id);
+  if (e.category_id) document.getElementById('oem-category').value = e.category_id;
+  document.getElementById('oem-date').value       = e.date       || '';
+  document.getElementById('oem-amount').value     = e.amount     != null ? e.amount : '';
+  document.getElementById('oem-tax').value        = e.tax_amount != null ? e.tax_amount : '';
+  document.getElementById('oem-vendor').value     = e.vendor     || '';
+  document.getElementById('oem-title').value      = e.title      || '';
+  document.getElementById('oem-invoice_no').value = e.invoice_no || '';
+  document.getElementById('oem-note').value       = e.note       || '';
+  document.getElementById('ocr-edit-modal').style.display = 'flex';
+}
+
+function closeOcrEditModal() {
+  document.getElementById('ocr-edit-modal').style.display = 'none';
+}
+
+function saveOcrEdit() {
+  const idx = parseInt(document.getElementById('oem-idx').value);
+  if (isNaN(idx) || !ocrQueue[idx]) return;
+  const catId = document.getElementById('oem-category').value;
+  ocrQueue[idx].edited = {
+    type:        document.getElementById('oem-type').value,
+    category_id: catId ? parseInt(catId) : null,
+    date:        document.getElementById('oem-date').value,
+    amount:      parseFloat(document.getElementById('oem-amount').value)||0,
+    tax_amount:  parseFloat(document.getElementById('oem-tax').value)||0,
+    vendor:      document.getElementById('oem-vendor').value,
+    title:       document.getElementById('oem-title').value,
+    invoice_no:  document.getElementById('oem-invoice_no').value,
+    note:        document.getElementById('oem-note').value,
+  };
+  closeOcrEditModal();
+  renderOcrQueue();
 }
 
 // ── 帳號管理模組 ──────────────────────────────────────────────
