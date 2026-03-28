@@ -5522,6 +5522,35 @@ def init_finance_db():
             upload_date     DATE DEFAULT CURRENT_DATE,
             created_at      TIMESTAMPTZ DEFAULT NOW()
         )""",
+        """CREATE TABLE IF NOT EXISTS finance_recurring (
+            id              SERIAL PRIMARY KEY,
+            title           TEXT NOT NULL,
+            type            TEXT NOT NULL DEFAULT 'expense',
+            category_id     INT REFERENCES finance_categories(id) ON DELETE SET NULL,
+            amount          NUMERIC(14,2) NOT NULL DEFAULT 0,
+            tax_amount      NUMERIC(14,2) DEFAULT 0,
+            vendor          TEXT DEFAULT '',
+            note            TEXT DEFAULT '',
+            frequency       TEXT NOT NULL DEFAULT 'monthly',
+            day_of_month    INT DEFAULT 1,
+            start_date      DATE NOT NULL,
+            end_date        DATE,
+            last_generated  TEXT DEFAULT '',
+            active          BOOLEAN DEFAULT TRUE,
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS bank_statements (
+            id                  SERIAL PRIMARY KEY,
+            account_name        TEXT DEFAULT '',
+            txn_date            DATE NOT NULL,
+            amount              NUMERIC(14,2) NOT NULL,
+            txn_type            TEXT DEFAULT 'debit',
+            description         TEXT DEFAULT '',
+            reconciled          BOOLEAN DEFAULT FALSE,
+            matched_record_id   INT REFERENCES finance_records(id) ON DELETE SET NULL,
+            import_batch        TEXT DEFAULT '',
+            created_at          TIMESTAMPTZ DEFAULT NOW()
+        )""",
     ]
     for sql in migrations:
         try:
@@ -6261,4 +6290,398 @@ def api_finance_export_statements(year, month):
     return (buf.read(), 200, {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': f'attachment; filename="{fname}"',
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Feature 1: 定期自動分錄 (Recurring Entries)
+# ═══════════════════════════════════════════════════════════════════
+
+def _recurring_row(r):
+    if not r: return None
+    d = dict(r)
+    for f in ('amount', 'tax_amount'):
+        if d.get(f) is not None: d[f] = float(d[f])
+    if d.get('start_date'): d['start_date'] = str(d['start_date'])
+    if d.get('end_date'):   d['end_date']   = str(d['end_date'])
+    if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+    return d
+
+@app.route('/api/finance/recurring', methods=['GET'])
+@require_module('finance')
+def api_recurring_list():
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT fr.*, fc.name as category_name
+            FROM finance_recurring fr
+            LEFT JOIN finance_categories fc ON fc.id=fr.category_id
+            ORDER BY fr.active DESC, fr.id
+        """).fetchall()
+    result = []
+    for r in rows:
+        d = _recurring_row(r)
+        d['category_name'] = r['category_name']
+        result.append(d)
+    return jsonify(result)
+
+@app.route('/api/finance/recurring', methods=['POST'])
+@require_module('finance')
+def api_recurring_create():
+    b = request.get_json(force=True)
+    if not b.get('title','').strip(): return jsonify({'error': '標題為必填'}), 400
+    if not b.get('start_date'):       return jsonify({'error': '開始日期為必填'}), 400
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO finance_recurring
+              (title, type, category_id, amount, tax_amount, vendor, note,
+               frequency, day_of_month, start_date, end_date, active)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,TRUE) RETURNING *
+        """, (b['title'].strip(), b.get('type','expense'), b.get('category_id') or None,
+              float(b.get('amount',0)), float(b.get('tax_amount',0)),
+              b.get('vendor','').strip(), b.get('note','').strip(),
+              b.get('frequency','monthly'), int(b.get('day_of_month',1) or 1),
+              b['start_date'], b.get('end_date') or None)).fetchone()
+    return jsonify(_recurring_row(row)), 201
+
+@app.route('/api/finance/recurring/<int:rid>', methods=['PUT'])
+@require_module('finance')
+def api_recurring_update(rid):
+    b = request.get_json(force=True)
+    with get_db() as conn:
+        row = conn.execute("""
+            UPDATE finance_recurring SET
+              title=%s, type=%s, category_id=%s, amount=%s, tax_amount=%s,
+              vendor=%s, note=%s, frequency=%s, day_of_month=%s,
+              start_date=%s, end_date=%s, active=%s
+            WHERE id=%s RETURNING *
+        """, (b.get('title','').strip(), b.get('type','expense'), b.get('category_id') or None,
+              float(b.get('amount',0)), float(b.get('tax_amount',0)),
+              b.get('vendor','').strip(), b.get('note','').strip(),
+              b.get('frequency','monthly'), int(b.get('day_of_month',1) or 1),
+              b.get('start_date'), b.get('end_date') or None,
+              bool(b.get('active', True)), rid)).fetchone()
+    return jsonify(_recurring_row(row)) if row else ('', 404)
+
+@app.route('/api/finance/recurring/<int:rid>', methods=['DELETE'])
+@require_module('finance')
+def api_recurring_delete(rid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM finance_recurring WHERE id=%s", (rid,))
+    return jsonify({'deleted': rid})
+
+@app.route('/api/finance/recurring/generate', methods=['POST'])
+@require_module('finance')
+def api_recurring_generate():
+    """為指定月份產生定期分錄（冪等：已產生則跳過）"""
+    from datetime import date as _d, timedelta as _td
+    import calendar as _cal
+    b = request.get_json(force=True)
+    month = b.get('month', '')  # YYYY-MM
+    if not month:
+        from datetime import datetime, timezone, timedelta
+        month = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m')
+    y, m = int(month[:4]), int(month[5:])
+    days_in_month = _cal.monthrange(y, m)[1]
+
+    created, skipped = 0, 0
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT * FROM finance_recurring
+            WHERE active=TRUE
+              AND start_date <= %s
+              AND (end_date IS NULL OR end_date >= %s)
+        """, (f"{month}-28", f"{month}-01")).fetchall()
+
+        for r in rows:
+            # Check already generated this month
+            if r['last_generated'] == month:
+                skipped += 1
+                continue
+            # Check frequency
+            freq = r['frequency']
+            start_m = r['start_date'].month
+            if freq == 'quarterly' and (m - start_m) % 3 != 0:
+                skipped += 1
+                continue
+            if freq == 'yearly' and m != start_m:
+                skipped += 1
+                continue
+            # Determine record date
+            day = min(int(r['day_of_month'] or 1), days_in_month)
+            rec_date = _d(y, m, day)
+            conn.execute("""
+                INSERT INTO finance_records
+                  (record_date, category_id, type, title, amount, tax_amount, vendor, note, created_by)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'auto-recurring')
+            """, (rec_date, r['category_id'], r['type'], r['title'],
+                  r['amount'], r['tax_amount'] or 0, r['vendor'] or '', r['note'] or ''))
+            conn.execute("UPDATE finance_recurring SET last_generated=%s WHERE id=%s",
+                         (month, r['id']))
+            created += 1
+
+    return jsonify({'created': created, 'skipped': skipped, 'month': month})
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Feature 2: 銀行對帳 (Bank Reconciliation)
+# ═══════════════════════════════════════════════════════════════════
+
+def _bank_row(r):
+    if not r: return None
+    d = dict(r)
+    if d.get('txn_date'):   d['txn_date']   = str(d['txn_date'])
+    if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+    if d.get('amount') is not None: d['amount'] = float(d['amount'])
+    return d
+
+@app.route('/api/finance/bank/import', methods=['POST'])
+@require_module('finance')
+def api_bank_import():
+    """匯入銀行對帳單 CSV"""
+    import csv, io as _io
+    from datetime import datetime as _dt2
+    file = request.files.get('file')
+    if not file: return jsonify({'error': '請上傳 CSV 檔案'}), 400
+    raw = file.read().decode('utf-8-sig', errors='replace')
+    account_name = request.form.get('account_name', '').strip() or '銀行帳戶'
+    import_batch = _dt2.now().strftime('%Y%m%d%H%M%S')
+
+    reader = csv.reader(_io.StringIO(raw))
+    rows_data = [r for r in reader if any(c.strip() for c in r)]
+    if not rows_data: return jsonify({'error': 'CSV 無資料'}), 400
+
+    # Auto-detect header row (skip rows where first column is not a date-like string)
+    def _is_date(s):
+        s = s.strip().replace('/', '-').replace('.', '-')
+        for fmt in ('%Y-%m-%d','%Y-%m-%d','%m-%d-%Y','%d-%m-%Y'):
+            try: _dt2.strptime(s, fmt); return True
+            except: pass
+        # ROC year: 民國 e.g. 113/01/15
+        import re
+        if re.match(r'^\d{2,3}[/-]\d{1,2}[/-]\d{1,2}$', s):
+            parts = re.split(r'[/-]', s)
+            if int(parts[0]) < 200: return True
+        return False
+
+    def _parse_date(s):
+        import re
+        s = s.strip()
+        parts = re.split(r'[/\-\.]', s)
+        if len(parts) == 3:
+            if int(parts[0]) < 200:
+                # ROC year
+                y2 = int(parts[0]) + 1911
+                return f"{y2}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+            if int(parts[0]) > 31:
+                return f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+            if int(parts[2]) > 31:
+                return f"{parts[2]}-{parts[0].zfill(2)}-{parts[1].zfill(2)}"
+        return None
+
+    def _parse_amount(s):
+        import re
+        s = re.sub(r'[,$\s]', '', str(s).strip())
+        try: return float(s)
+        except: return None
+
+    inserted = 0
+    with get_db() as conn:
+        for row in rows_data:
+            if len(row) < 2: continue
+            date_str = _parse_date(row[0])
+            if not date_str: continue
+            desc = row[1].strip() if len(row) > 1 else ''
+            # Format: date, desc, debit, credit  OR  date, desc, amount
+            if len(row) >= 4:
+                debit  = _parse_amount(row[2])
+                credit = _parse_amount(row[3])
+                if debit and debit > 0:
+                    conn.execute("""INSERT INTO bank_statements
+                        (account_name,txn_date,amount,txn_type,description,import_batch)
+                        VALUES (%s,%s,%s,'debit',%s,%s)
+                    """, (account_name, date_str, debit, desc, import_batch))
+                    inserted += 1
+                if credit and credit > 0:
+                    conn.execute("""INSERT INTO bank_statements
+                        (account_name,txn_date,amount,txn_type,description,import_batch)
+                        VALUES (%s,%s,%s,'credit',%s,%s)
+                    """, (account_name, date_str, credit, desc, import_batch))
+                    inserted += 1
+            elif len(row) >= 3:
+                amt = _parse_amount(row[2])
+                if amt is not None and amt != 0:
+                    txn_type = 'credit' if amt > 0 else 'debit'
+                    conn.execute("""INSERT INTO bank_statements
+                        (account_name,txn_date,amount,txn_type,description,import_batch)
+                        VALUES (%s,%s,%s,%s,%s,%s)
+                    """, (account_name, date_str, abs(amt), txn_type, desc, import_batch))
+                    inserted += 1
+    return jsonify({'inserted': inserted, 'batch': import_batch})
+
+@app.route('/api/finance/bank/statements', methods=['GET'])
+@require_module('finance')
+def api_bank_statements():
+    month = request.args.get('month', '')
+    conds, params = ['TRUE'], []
+    if month:
+        conds.append("TO_CHAR(bs.txn_date,'YYYY-MM')=%s"); params.append(month)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT bs.*, fr.title as matched_title, fr.amount as matched_amount,
+                   fr.record_date as matched_date
+            FROM bank_statements bs
+            LEFT JOIN finance_records fr ON fr.id=bs.matched_record_id
+            WHERE {' AND '.join(conds)}
+            ORDER BY bs.txn_date DESC, bs.id DESC
+        """, params).fetchall()
+    result = []
+    for r in rows:
+        d = _bank_row(r)
+        d['matched_title']  = r['matched_title']
+        d['matched_amount'] = float(r['matched_amount']) if r['matched_amount'] else None
+        d['matched_date']   = str(r['matched_date']) if r['matched_date'] else None
+        result.append(d)
+    return jsonify(result)
+
+@app.route('/api/finance/bank/statements/<int:sid>', methods=['DELETE'])
+@require_module('finance')
+def api_bank_statement_delete(sid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM bank_statements WHERE id=%s", (sid,))
+    return jsonify({'deleted': sid})
+
+@app.route('/api/finance/bank/match', methods=['POST'])
+@require_module('finance')
+def api_bank_match():
+    b = request.get_json(force=True)
+    sid = b.get('statement_id')
+    rid = b.get('record_id')  # None to unmatch
+    with get_db() as conn:
+        if rid:
+            conn.execute("UPDATE bank_statements SET reconciled=TRUE, matched_record_id=%s WHERE id=%s",
+                         (rid, sid))
+        else:
+            conn.execute("UPDATE bank_statements SET reconciled=FALSE, matched_record_id=NULL WHERE id=%s",
+                         (sid,))
+    return jsonify({'ok': True})
+
+@app.route('/api/finance/bank/auto-match', methods=['POST'])
+@require_module('finance')
+def api_bank_auto_match():
+    """自動比對：相同金額且日期在 3 天內"""
+    b = request.get_json(force=True)
+    month = b.get('month', '')
+    matched = 0
+    with get_db() as conn:
+        stmts = conn.execute("""
+            SELECT * FROM bank_statements
+            WHERE reconciled=FALSE
+            """ + ("AND TO_CHAR(txn_date,'YYYY-MM')=%s" if month else ""),
+            ([month] if month else [])).fetchall()
+        for s in stmts:
+            # Find finance record: same amount, date within ±3 days, same type direction
+            ftype = 'income' if s['txn_type'] == 'credit' else 'expense'
+            rec = conn.execute("""
+                SELECT id FROM finance_records
+                WHERE type=%s AND amount=%s
+                  AND ABS(record_date - %s::date) <= 3
+                  AND id NOT IN (
+                      SELECT matched_record_id FROM bank_statements
+                      WHERE matched_record_id IS NOT NULL
+                  )
+                ORDER BY ABS(record_date - %s::date), id
+                LIMIT 1
+            """, (ftype, s['amount'], s['txn_date'], s['txn_date'])).fetchone()
+            if rec:
+                conn.execute("""UPDATE bank_statements SET reconciled=TRUE, matched_record_id=%s
+                                WHERE id=%s""", (rec['id'], s['id']))
+                matched += 1
+    return jsonify({'matched': matched})
+
+@app.route('/api/finance/bank/summary', methods=['GET'])
+@require_module('finance')
+def api_bank_summary():
+    month = request.args.get('month', '')
+    cond = "AND TO_CHAR(txn_date,'YYYY-MM')=%s" if month else ""
+    params = [month] if month else []
+    with get_db() as conn:
+        r = conn.execute(f"""
+            SELECT
+              COUNT(*) as total,
+              SUM(CASE WHEN reconciled THEN 1 ELSE 0 END) as matched,
+              SUM(CASE WHEN txn_type='credit' THEN amount ELSE 0 END) as total_credit,
+              SUM(CASE WHEN txn_type='debit'  THEN amount ELSE 0 END) as total_debit,
+              SUM(CASE WHEN reconciled AND txn_type='credit' THEN amount ELSE 0 END) as matched_credit,
+              SUM(CASE WHEN reconciled AND txn_type='debit'  THEN amount ELSE 0 END) as matched_debit
+            FROM bank_statements WHERE TRUE {cond}
+        """, params).fetchone()
+    d = dict(r)
+    for k in d:
+        if d[k] is not None: d[k] = float(d[k]) if isinstance(d[k], type(r['total_credit'])) else int(d[k])
+    return jsonify(d)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Feature 3: 稅務申報準備 (Tax Filing Prep — Taiwan VAT 401)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/finance/tax/<int:year>/<int:period>', methods=['GET'])
+@require_module('finance')
+def api_finance_tax(year, period):
+    """
+    period: 1=Jan-Feb, 2=Mar-Apr, 3=May-Jun, 4=Jul-Aug, 5=Sep-Oct, 6=Nov-Dec
+    """
+    if period < 1 or period > 6:
+        return jsonify({'error': '期別需為 1-6'}), 400
+    m_start = (period - 1) * 2 + 1
+    m_end   = m_start + 1
+    months  = [f"{year}-{str(m).zfill(2)}" for m in range(m_start, m_end + 1)]
+
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT fr.type, fr.amount, fr.tax_amount, fr.title,
+                   fr.vendor, fr.invoice_no, fr.record_date,
+                   fc.name as category_name
+            FROM finance_records fr
+            LEFT JOIN finance_categories fc ON fc.id=fr.category_id
+            WHERE TO_CHAR(fr.record_date,'YYYY-MM') = ANY(%s)
+            ORDER BY fr.record_date, fr.type
+        """, (months,)).fetchall()
+
+    sales_rows    = [r for r in rows if r['type'] == 'income']
+    purchase_rows = [r for r in rows if r['type'] == 'expense']
+
+    sales_amount    = sum(float(r['amount'])     for r in sales_rows)
+    sales_tax       = sum(float(r['tax_amount'] or 0) for r in sales_rows)
+    purchase_amount = sum(float(r['amount'])     for r in purchase_rows)
+    purchase_tax    = sum(float(r['tax_amount'] or 0) for r in purchase_rows)
+    tax_payable     = round(sales_tax - purchase_tax, 2)
+
+    def _fmt_row(r):
+        return {
+            'date':     str(r['record_date']),
+            'title':    r['title'],
+            'vendor':   r['vendor'] or '',
+            'invoice_no': r['invoice_no'] or '',
+            'amount':   float(r['amount']),
+            'tax_amount': float(r['tax_amount'] or 0),
+            'category': r['category_name'] or '未分類',
+        }
+
+    return jsonify({
+        'year': year, 'period': period,
+        'roc_year': year - 1911,
+        'months': months,
+        'sales': {
+            'rows':   [_fmt_row(r) for r in sales_rows],
+            'amount': round(sales_amount, 2),
+            'tax':    round(sales_tax, 2),
+        },
+        'purchases': {
+            'rows':   [_fmt_row(r) for r in purchase_rows],
+            'amount': round(purchase_amount, 2),
+            'tax':    round(purchase_tax, 2),
+        },
+        'tax_payable': tax_payable,
+        'is_refund':   tax_payable < 0,
     })

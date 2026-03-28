@@ -1017,9 +1017,12 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <button class="inv-tab"        id="fintab-records" onclick="switchFinTab('records')">收支記錄</button>
       <button class="inv-tab"        id="fintab-cats"    onclick="switchFinTab('cats')">類別設定</button>
       <button class="inv-tab"        id="fintab-ocr"     onclick="switchFinTab('ocr')">OCR辨識</button>
-      <button class="inv-tab"        id="fintab-docs"    onclick="switchFinTab('docs')">文件庫</button>
-      <button class="inv-tab"        id="fintab-stmts"   onclick="switchFinTab('stmts')">財務報表</button>
-      <button class="inv-tab"        id="fintab-settings" onclick="switchFinTab('settings')">財務設定</button>
+      <button class="inv-tab"        id="fintab-docs"      onclick="switchFinTab('docs')">文件庫</button>
+      <button class="inv-tab"        id="fintab-recurring" onclick="switchFinTab('recurring')">定期分錄</button>
+      <button class="inv-tab"        id="fintab-bank"      onclick="switchFinTab('bank')">銀行對帳</button>
+      <button class="inv-tab"        id="fintab-tax"       onclick="switchFinTab('tax')">稅務申報</button>
+      <button class="inv-tab"        id="fintab-stmts"     onclick="switchFinTab('stmts')">財務報表</button>
+      <button class="inv-tab"        id="fintab-settings"  onclick="switchFinTab('settings')">財務設定</button>
     </div>
 
     <!-- 損益儀表板 -->
@@ -1161,6 +1164,76 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
         </div>
       </div>
+    </div>
+
+    <!-- 定期分錄 -->
+    <div id="fin-panel-recurring" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-weight:600;font-size:15px">定期自動分錄</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="generateRecurring()">產生本月分錄</button>
+          <button class="btn btn-primary btn-sm" onclick="openRecurringModal()">+ 新增定期項目</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="recurring-list" style="padding:0 4px 12px">
+          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 銀行對帳 -->
+    <div id="fin-panel-bank" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+        <div style="font-weight:600;font-size:15px">銀行對帳</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input class="filter-input" type="month" id="bank-month" onchange="loadBankStatements()">
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('bank-csv-file').click()">匯入對帳單 CSV</button>
+          <input type="file" id="bank-csv-file" accept=".csv" style="display:none" onchange="importBankCSV(this)">
+          <button class="btn btn-outline btn-sm" id="bank-auto-btn" onclick="bankAutoMatch()">自動比對</button>
+        </div>
+      </div>
+      <!-- 對帳摘要 -->
+      <div id="bank-summary-bar" style="display:none;margin-bottom:12px;padding:12px 16px;background:#fff;border-radius:8px;border:1px solid var(--border);display:flex;gap:24px;flex-wrap:wrap;font-size:13px"></div>
+      <div class="card">
+        <div id="bank-list" style="padding:0 4px 12px">
+          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">請先匯入銀行對帳單 CSV</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 稅務申報 -->
+    <div id="fin-panel-tax" style="display:none">
+      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+        <span class="filter-label">年度</span>
+        <input class="filter-input" type="number" id="tax-year" style="width:90px" min="2020" max="2099">
+        <span class="filter-label">期別（雙月）</span>
+        <select class="filter-input" id="tax-period" style="min-width:140px">
+          <option value="1">第一期（1-2月）</option>
+          <option value="2">第二期（3-4月）</option>
+          <option value="3">第三期（5-6月）</option>
+          <option value="4">第四期（7-8月）</option>
+          <option value="5">第五期（9-10月）</option>
+          <option value="6">第六期（11-12月）</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="loadTaxReport()">查詢</button>
+        <button class="btn btn-outline btn-sm" id="tax-export-btn" style="display:none" onclick="exportTaxReport()">匯出 Excel</button>
+      </div>
+      <div id="tax-panel" style="display:none">
+        <!-- 摘要卡片 -->
+        <div id="tax-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
+        <!-- 銷項 -->
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-header"><span class="card-title">銷項（收入）</span><span id="tax-sales-total" style="font-size:13px;color:var(--muted)"></span></div>
+          <div id="tax-sales-list" style="padding:0 4px 12px"></div>
+        </div>
+        <!-- 進項 -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">進項（費用）</span><span id="tax-purchase-total" style="font-size:13px;color:var(--muted)"></span></div>
+          <div id="tax-purchase-list" style="padding:0 4px 12px"></div>
+        </div>
+      </div>
+      <div id="tax-empty" style="padding:32px;text-align:center;color:var(--muted);font-size:13px">請選擇年度與期別後點「查詢」</div>
     </div>
 
     <!-- 財務報表 -->
@@ -1850,6 +1923,94 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeOcrEditModal()">取消</button>
       <button class="btn btn-primary" onclick="saveOcrEdit()">儲存修改</button>
+    </div>
+  </div>
+</div>
+
+<!-- Recurring Entry Modal -->
+<div class="modal-overlay" id="recurring-modal" style="display:none">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <span class="modal-title" id="rm-title">新增定期分錄</span>
+      <button class="modal-close" onclick="closeRecurringModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="rm-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="grid-column:1/-1">
+          <label class="form-label">標題 *</label>
+          <input class="form-input" id="rm-title-input" placeholder="例：月租金">
+        </div>
+        <div>
+          <label class="form-label">類型</label>
+          <select class="form-input" id="rm-type" onchange="renderRecurringCatOptions()">
+            <option value="expense">支出</option>
+            <option value="income">收入</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">類別</label>
+          <select class="form-input" id="rm-cat"><option value="">未分類</option></select>
+        </div>
+        <div>
+          <label class="form-label">金額 *</label>
+          <input class="form-input" id="rm-amount" type="number" min="0" placeholder="0">
+        </div>
+        <div>
+          <label class="form-label">稅額</label>
+          <input class="form-input" id="rm-tax" type="number" min="0" placeholder="0">
+        </div>
+        <div>
+          <label class="form-label">廠商</label>
+          <input class="form-input" id="rm-vendor" placeholder="廠商名稱">
+        </div>
+        <div>
+          <label class="form-label">頻率</label>
+          <select class="form-input" id="rm-frequency">
+            <option value="monthly">每月</option>
+            <option value="quarterly">每季</option>
+            <option value="yearly">每年</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">每次產生日（幾號）</label>
+          <input class="form-input" id="rm-day" type="number" min="1" max="28" value="1">
+        </div>
+        <div>
+          <label class="form-label">開始日期 *</label>
+          <input class="form-input" id="rm-start" type="date">
+        </div>
+        <div>
+          <label class="form-label">結束日期（選填）</label>
+          <input class="form-input" id="rm-end" type="date">
+        </div>
+        <div style="grid-column:1/-1">
+          <label class="form-label">備註</label>
+          <input class="form-input" id="rm-note" placeholder="備註">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeRecurringModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveRecurring()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bank Match Modal -->
+<div class="modal-overlay" id="bank-match-modal" style="display:none">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <span class="modal-title">手動配對收支記錄</span>
+      <button class="modal-close" onclick="closeBankMatchModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="bmm-stmt-info" style="padding:10px 14px;background:var(--bg);border-radius:8px;margin-bottom:12px;font-size:13px"></div>
+      <input class="form-input" id="bmm-search" placeholder="搜尋標題 / 金額…" oninput="filterBmmRecords(this.value)" style="margin-bottom:10px">
+      <div id="bmm-records" style="max-height:320px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeBankMatchModal()">取消</button>
     </div>
   </div>
 </div>
@@ -5415,14 +5576,19 @@ document.addEventListener('DOMContentLoaded', () => { refreshBadges(); setInterv
 let finCatList = [], finOcrResult = null, finTrendChart = null, finCatChart = null;
 
 function switchFinTab(tab) {
-  ['dash','records','cats','ocr','docs','stmts','settings'].forEach(t => {
-    document.getElementById('fintab-'+t).classList.toggle('active', t===tab);
-    document.getElementById('fin-panel-'+t).style.display = t===tab?'':'none';
+  ['dash','records','cats','ocr','docs','recurring','bank','tax','stmts','settings'].forEach(t => {
+    const btn = document.getElementById('fintab-'+t);
+    const panel = document.getElementById('fin-panel-'+t);
+    if (btn)   btn.classList.toggle('active', t===tab);
+    if (panel) panel.style.display = t===tab?'':'none';
   });
-  if (tab==='records') loadFinRecords();
-  if (tab==='cats')    loadFinCats();
-  if (tab==='docs')    loadFinDocuments();
-  if (tab==='settings') loadFinSettings();
+  if (tab==='records')   loadFinRecords();
+  if (tab==='cats')      loadFinCats();
+  if (tab==='docs')      loadFinDocuments();
+  if (tab==='recurring') loadRecurring();
+  if (tab==='bank')      loadBankStatements();
+  if (tab==='tax')       _initTaxDefaults();
+  if (tab==='settings')  loadFinSettings();
 }
 async function initFinance() {
   const now = new Date();
@@ -6306,6 +6472,375 @@ function _renderOcrRawModal(filename, raw) {
 
 function closeOcrRawModal() {
   document.getElementById('ocr-raw-modal').style.display = 'none';
+}
+
+// ── 定期分錄 ──────────────────────────────────────────────────
+let _recurringList = [];
+
+async function loadRecurring() {
+  const { ok, data } = await api('/api/finance/recurring', {}, true);
+  _recurringList = ok ? data : [];
+  const wrap = document.getElementById('recurring-list');
+  if (!_recurringList.length) {
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">尚無定期分錄，點右上角「新增定期項目」開始設定</div>';
+    return;
+  }
+  const freqLabel = { monthly:'每月', quarterly:'每季', yearly:'每年' };
+  wrap.innerHTML = `<table class="data-table" style="margin:0">
+    <thead><tr>
+      <th>標題</th><th>類型</th><th>類別</th><th>頻率</th>
+      <th style="text-align:right">金額</th><th>廠商</th>
+      <th>開始</th><th>結束</th><th>上次產生</th><th>狀態</th><th>操作</th>
+    </tr></thead>
+    <tbody>${_recurringList.map(r => {
+      const typeBadge = r.type==='income'
+        ? '<span class="badge badge-ok">收入</span>'
+        : '<span class="badge" style="background:rgba(214,66,66,0.12);color:var(--red)">支出</span>';
+      const activeBadge = r.active
+        ? '<span class="badge badge-ok">啟用</span>'
+        : '<span class="badge badge-warn">停用</span>';
+      return `<tr style="opacity:${r.active?1:0.55}">
+        <td style="font-weight:600">${escHtml(r.title)}</td>
+        <td>${typeBadge}</td>
+        <td style="font-size:12px;color:var(--muted)">${escHtml(r.category_name||'—')}</td>
+        <td>${freqLabel[r.frequency]||r.frequency}（${r.day_of_month}號）</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600">$${r.amount.toLocaleString()}</td>
+        <td style="font-size:12px;color:var(--muted)">${escHtml(r.vendor||'—')}</td>
+        <td style="font-size:12px">${r.start_date}</td>
+        <td style="font-size:12px;color:var(--muted)">${r.end_date||'—'}</td>
+        <td style="font-size:12px;color:var(--muted)">${r.last_generated||'未產生'}</td>
+        <td>${activeBadge}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-outline btn-sm" onclick="openRecurringModal(${r.id})">編輯</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRecurring(${r.id})" style="margin-left:4px">刪除</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+async function generateRecurring() {
+  const today = new Date();
+  const month = today.toISOString().slice(0,7);
+  const { ok, data } = await api('/api/finance/recurring/generate', { method:'POST', body:JSON.stringify({ month }) });
+  if (!ok) return;
+  showToast(`已產生 ${data.created} 筆，跳過 ${data.skipped} 筆（${month}）`, data.created > 0 ? 'success' : 'info');
+  if (data.created > 0) loadRecurring();
+}
+
+function renderRecurringCatOptions() {
+  const type = document.getElementById('rm-type').value;
+  const sel  = document.getElementById('rm-cat');
+  const cur  = sel.value;
+  sel.innerHTML = '<option value="">未分類</option>' +
+    finCatList.filter(c => c.type===type && c.active).map(c =>
+      `<option value="${c.id}"${c.id==cur?' selected':''}>${escHtml(c.name)}</option>`
+    ).join('');
+}
+
+function openRecurringModal(id=null) {
+  document.getElementById('rm-id').value    = id || '';
+  document.getElementById('rm-title').textContent = id ? '編輯定期分錄' : '新增定期分錄';
+  if (id) {
+    const r = _recurringList.find(x => x.id === id);
+    if (r) {
+      document.getElementById('rm-title-input').value = r.title;
+      document.getElementById('rm-type').value        = r.type;
+      renderRecurringCatOptions();
+      document.getElementById('rm-cat').value         = r.category_id || '';
+      document.getElementById('rm-amount').value      = r.amount;
+      document.getElementById('rm-tax').value         = r.tax_amount || 0;
+      document.getElementById('rm-vendor').value      = r.vendor || '';
+      document.getElementById('rm-frequency').value   = r.frequency;
+      document.getElementById('rm-day').value         = r.day_of_month || 1;
+      document.getElementById('rm-start').value       = r.start_date;
+      document.getElementById('rm-end').value         = r.end_date || '';
+      document.getElementById('rm-note').value        = r.note || '';
+    }
+  } else {
+    document.getElementById('rm-title-input').value = '';
+    document.getElementById('rm-type').value        = 'expense';
+    renderRecurringCatOptions();
+    document.getElementById('rm-cat').value         = '';
+    document.getElementById('rm-amount').value      = '';
+    document.getElementById('rm-tax').value         = '0';
+    document.getElementById('rm-vendor').value      = '';
+    document.getElementById('rm-frequency').value   = 'monthly';
+    document.getElementById('rm-day').value         = '1';
+    document.getElementById('rm-start').value       = new Date().toISOString().slice(0,10);
+    document.getElementById('rm-end').value         = '';
+    document.getElementById('rm-note').value        = '';
+  }
+  document.getElementById('recurring-modal').style.display = 'flex';
+}
+
+function closeRecurringModal() {
+  document.getElementById('recurring-modal').style.display = 'none';
+}
+
+async function saveRecurring() {
+  const id = document.getElementById('rm-id').value;
+  const body = {
+    title:        document.getElementById('rm-title-input').value.trim(),
+    type:         document.getElementById('rm-type').value,
+    category_id:  document.getElementById('rm-cat').value ? parseInt(document.getElementById('rm-cat').value) : null,
+    amount:       parseFloat(document.getElementById('rm-amount').value) || 0,
+    tax_amount:   parseFloat(document.getElementById('rm-tax').value) || 0,
+    vendor:       document.getElementById('rm-vendor').value.trim(),
+    frequency:    document.getElementById('rm-frequency').value,
+    day_of_month: parseInt(document.getElementById('rm-day').value) || 1,
+    start_date:   document.getElementById('rm-start').value,
+    end_date:     document.getElementById('rm-end').value || null,
+    note:         document.getElementById('rm-note').value.trim(),
+    active:       true,
+  };
+  if (!body.title) { showToast('請填寫標題', 'error'); return; }
+  if (!body.start_date) { showToast('請填寫開始日期', 'error'); return; }
+  const url    = id ? `/api/finance/recurring/${id}` : '/api/finance/recurring';
+  const method = id ? 'PUT' : 'POST';
+  const { ok } = await api(url, { method, body: JSON.stringify(body) });
+  if (!ok) return;
+  showToast(id ? '已更新' : '已新增', 'success');
+  closeRecurringModal();
+  loadRecurring();
+}
+
+async function deleteRecurring(id) {
+  if (!confirm('確定刪除此定期分錄？')) return;
+  const { ok } = await api(`/api/finance/recurring/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除', 'success'); loadRecurring(); }
+}
+
+// ── 銀行對帳 ──────────────────────────────────────────────────
+let _bankAllRecords = [];
+let _bankMatchStatementId = null;
+
+async function loadBankStatements() {
+  const el = document.getElementById('bank-month');
+  if (!el.value) el.value = new Date().toISOString().slice(0,7);
+  const month = el.value;
+  const params = new URLSearchParams();
+  if (month) params.set('month', month);
+  const [stmtRes, sumRes] = await Promise.all([
+    api('/api/finance/bank/statements?' + params, {}, true),
+    api('/api/finance/bank/summary?' + params, {}, true),
+  ]);
+  const wrap = document.getElementById('bank-list');
+  if (!stmtRes.ok) { wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red)">載入失敗</div>'; return; }
+  const data = stmtRes.data;
+  if (sumRes.ok) _renderBankSummary(sumRes.data);
+  if (!data.length) {
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">此月份無對帳單資料</div>';
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0">
+    <thead><tr>
+      <th>日期</th><th>說明</th><th>類型</th>
+      <th style="text-align:right">金額</th>
+      <th>配對記帳</th><th>狀態</th><th>操作</th>
+    </tr></thead>
+    <tbody>${data.map(s => {
+      const typeBadge = s.txn_type === 'credit'
+        ? '<span class="badge badge-ok" style="font-size:11px">入帳</span>'
+        : '<span class="badge" style="background:rgba(214,66,66,0.12);color:var(--red);font-size:11px">出帳</span>';
+      const statusBadge = s.reconciled
+        ? '<span class="badge badge-ok" style="font-size:11px">已對帳</span>'
+        : '<span class="badge badge-warn" style="font-size:11px">未對帳</span>';
+      const matchedInfo = s.reconciled && s.matched_title
+        ? `<span style="font-size:12px;color:var(--accent)">${escHtml(s.matched_title)} (${s.matched_date})</span>`
+        : '<span style="font-size:12px;color:var(--muted)">—</span>';
+      return `<tr>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${s.txn_date}</td>
+        <td style="font-size:12px">${escHtml(s.description||'—')}</td>
+        <td>${typeBadge}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:${s.txn_type==='credit'?'var(--green)':'var(--red)'}">$${s.amount.toLocaleString()}</td>
+        <td>${matchedInfo}</td>
+        <td>${statusBadge}</td>
+        <td style="white-space:nowrap">
+          ${!s.reconciled ? `<button class="btn btn-outline btn-sm" onclick="openBankMatchModal(${s.id})">配對</button>` : ''}
+          ${s.reconciled  ? `<button class="btn btn-outline btn-sm" onclick="unmatchBank(${s.id})">取消配對</button>` : ''}
+          <button class="btn btn-danger btn-sm" onclick="deleteBankStmt(${s.id})" style="margin-left:4px">刪除</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function _renderBankSummary(s) {
+  const bar = document.getElementById('bank-summary-bar');
+  bar.style.display = 'flex';
+  const pct = s.total > 0 ? Math.round(s.matched / s.total * 100) : 0;
+  bar.innerHTML = `
+    <span><span style="color:var(--muted)">總筆數：</span><strong>${s.total||0}</strong></span>
+    <span><span style="color:var(--muted)">已對帳：</span><strong style="color:var(--green)">${s.matched||0}</strong>（${pct}%）</span>
+    <span><span style="color:var(--muted)">未對帳：</span><strong style="color:var(--gold)">${(s.total||0)-(s.matched||0)}</strong></span>
+    <span><span style="color:var(--muted)">入帳合計：</span><strong style="color:var(--green)">$${(s.total_credit||0).toLocaleString()}</strong></span>
+    <span><span style="color:var(--muted)">出帳合計：</span><strong style="color:var(--red)">$${(s.total_debit||0).toLocaleString()}</strong></span>`;
+}
+
+async function importBankCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const accountName = prompt('請輸入帳戶名稱（選填）', '銀行帳戶') || '銀行帳戶';
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('account_name', accountName);
+  const resp = await fetch('/api/finance/bank/import', { method:'POST', body:fd });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) { showToast(data.error || '匯入失敗', 'error'); return; }
+  showToast(`已匯入 ${data.inserted} 筆交易`, 'success');
+  input.value = '';
+  loadBankStatements();
+}
+
+async function bankAutoMatch() {
+  const month = document.getElementById('bank-month').value;
+  const { ok, data } = await api('/api/finance/bank/auto-match', {
+    method:'POST', body:JSON.stringify({ month })
+  });
+  if (!ok) return;
+  showToast(`自動比對完成：${data.matched} 筆成功配對`, data.matched > 0 ? 'success' : 'info');
+  loadBankStatements();
+}
+
+async function unmatchBank(sid) {
+  const { ok } = await api('/api/finance/bank/match', { method:'POST', body:JSON.stringify({ statement_id:sid, record_id:null }) });
+  if (ok) loadBankStatements();
+}
+
+async function deleteBankStmt(sid) {
+  if (!confirm('確定刪除此對帳單項目？')) return;
+  const { ok } = await api(`/api/finance/bank/statements/${sid}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除', 'success'); loadBankStatements(); }
+}
+
+async function openBankMatchModal(sid) {
+  _bankMatchStatementId = sid;
+  const month = document.getElementById('bank-month').value;
+  const params = new URLSearchParams();
+  if (month) params.set('month', month);
+  const { ok, data } = await api('/api/finance/records?' + params, {}, true);
+  _bankAllRecords = ok ? data.filter(r => !r.document_id || true) : [];
+  document.getElementById('bmm-search').value = '';
+  filterBmmRecords('');
+  document.getElementById('bank-match-modal').style.display = 'flex';
+}
+
+function filterBmmRecords(q) {
+  const wrap = document.getElementById('bmm-records');
+  const list = q ? _bankAllRecords.filter(r =>
+    r.title.toLowerCase().includes(q.toLowerCase()) ||
+    String(r.amount).includes(q)
+  ) : _bankAllRecords;
+  if (!list.length) { wrap.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">無符合記錄</div>'; return; }
+  wrap.innerHTML = list.slice(0,50).map(r => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;hover:background:var(--bg)"
+         onclick="confirmBankMatch(${r.id})">
+      <div>
+        <div style="font-weight:600;font-size:13px">${escHtml(r.title)}</div>
+        <div style="font-size:11px;color:var(--muted)">${r.record_date} · ${escHtml(r.category_name||'—')}</div>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-weight:700;color:${r.type==='income'?'var(--green)':'var(--red)'}">$${r.amount.toLocaleString()}</div>
+    </div>`).join('');
+}
+
+async function confirmBankMatch(recordId) {
+  const { ok } = await api('/api/finance/bank/match', {
+    method:'POST',
+    body: JSON.stringify({ statement_id: _bankMatchStatementId, record_id: recordId })
+  });
+  if (ok) {
+    showToast('配對成功', 'success');
+    closeBankMatchModal();
+    loadBankStatements();
+  }
+}
+
+function closeBankMatchModal() {
+  document.getElementById('bank-match-modal').style.display = 'none';
+  _bankMatchStatementId = null;
+}
+
+// ── 稅務申報 ──────────────────────────────────────────────────
+let _taxData = null;
+
+function _initTaxDefaults() {
+  const today = new Date();
+  const yr = document.getElementById('tax-year');
+  const pr = document.getElementById('tax-period');
+  if (!yr.value) yr.value = today.getFullYear();
+  if (!pr.value) pr.value = Math.ceil((today.getMonth() + 1) / 2);
+}
+
+async function loadTaxReport() {
+  const year   = document.getElementById('tax-year').value;
+  const period = document.getElementById('tax-period').value;
+  if (!year || !period) return;
+  const { ok, data } = await api(`/api/finance/tax/${year}/${period}`, {}, true);
+  if (!ok) return;
+  _taxData = data;
+  document.getElementById('tax-empty').style.display   = 'none';
+  document.getElementById('tax-panel').style.display   = '';
+  document.getElementById('tax-export-btn').style.display = '';
+
+  const paySign = data.tax_payable >= 0 ? '' : '';
+  const payColor = data.tax_payable < 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('tax-summary').innerHTML = [
+    ['銷項稅額（收入）', `$${data.sales.tax.toLocaleString()}`, 'var(--green)'],
+    ['進項稅額（費用）', `$${data.purchases.tax.toLocaleString()}`, 'var(--red)'],
+    [data.is_refund ? '申請退稅' : '應繳稅額', `$${Math.abs(data.tax_payable).toLocaleString()}`, payColor],
+    ['期別', `民國 ${data.roc_year} 年 第 ${data.period} 期`, 'var(--text)'],
+  ].map(([label, val, color]) => `
+    <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${label}</div>
+      <div style="font-size:20px;font-weight:700;color:${color}">${val}</div>
+    </div>`).join('');
+
+  const renderTaxTable = (rows, totalAmt, totalTax) => {
+    if (!rows.length) return '<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">此期間無資料</div>';
+    return `<table class="data-table" style="margin:0">
+      <thead><tr><th>日期</th><th>標題</th><th>廠商</th><th>發票號碼</th>
+        <th style="text-align:right">金額</th><th style="text-align:right">稅額</th>
+      </tr></thead>
+      <tbody>${rows.map(r => `<tr>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${r.date}</td>
+        <td>${escHtml(r.title)}</td>
+        <td style="font-size:12px;color:var(--muted)">${escHtml(r.vendor||'—')}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${escHtml(r.invoice_no||'—')}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace">$${r.amount.toLocaleString()}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--accent)">$${r.tax_amount.toLocaleString()}</td>
+      </tr>`).join('')}
+      <tr style="background:var(--bg);font-weight:700">
+        <td colspan="4" style="text-align:right">合計</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace">$${totalAmt.toLocaleString()}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;color:var(--accent)">$${totalTax.toLocaleString()}</td>
+      </tr></tbody>
+    </table>`;
+  };
+
+  document.getElementById('tax-sales-total').textContent   = `${data.sales.rows.length} 筆，稅額合計 $${data.sales.tax.toLocaleString()}`;
+  document.getElementById('tax-purchase-total').textContent = `${data.purchases.rows.length} 筆，稅額合計 $${data.purchases.tax.toLocaleString()}`;
+  document.getElementById('tax-sales-list').innerHTML    = renderTaxTable(data.sales.rows,    data.sales.amount,    data.sales.tax);
+  document.getElementById('tax-purchase-list').innerHTML = renderTaxTable(data.purchases.rows, data.purchases.amount, data.purchases.tax);
+}
+
+function exportTaxReport() {
+  if (!_taxData) return;
+  const rows = [
+    ['類型','日期','標題','廠商','發票號碼','金額','稅額'],
+    ..._taxData.sales.rows.map(r    => ['銷項', r.date, r.title, r.vendor, r.invoice_no, r.amount, r.tax_amount]),
+    ..._taxData.purchases.rows.map(r => ['進項', r.date, r.title, r.vendor, r.invoice_no, r.amount, r.tax_amount]),
+    [],
+    ['', '', '', '', '銷項稅額', '', _taxData.sales.tax],
+    ['', '', '', '', '進項稅額', '', _taxData.purchases.tax],
+    ['', '', '', '', _taxData.is_refund?'退稅':'應繳稅額', '', Math.abs(_taxData.tax_payable)],
+  ];
+  const csv = rows.map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], { type:'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tax_${_taxData.year}_period${_taxData.period}.csv`;
+  a.click();
 }
 
 // ── 帳號管理模組 ──────────────────────────────────────────────
