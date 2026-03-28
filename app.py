@@ -7787,7 +7787,7 @@ def api_perf_review_create():
     period_label= (b.get('period_label') or '').strip()
     scores      = b.get('scores', {})
     comments    = (b.get('comments') or '').strip()
-    reviewer    = session.get('admin_display_name', '管理員')
+    reviewer    = (b.get('reviewer') or '').strip() or session.get('admin_display_name', '管理員')
 
     if not staff_id or not period_label:
         return jsonify({'error': '請選擇員工及考核期間'}), 400
@@ -7874,7 +7874,7 @@ def api_perf_review_update(rid):
 def api_perf_adjust_salary(rid):
     """依考核結果調薪 — 直接更新員工底薪並記錄"""
     b     = request.get_json(force=True)
-    delta = float(b.get('delta', 0))
+    delta = float(b.get('salary_delta', b.get('delta', 0)))
     note  = (b.get('note') or '').strip()
     if delta == 0: return jsonify({'error': '調薪金額不可為 0'}), 400
     with get_db() as conn:
@@ -8054,6 +8054,7 @@ def _line_submit_leave(staff, user_id, text):
         days = sum(1 for i in range((e-s).days+1)
                    if (_dlv.fromisoformat(date_str1) + __import__('datetime').timedelta(days=i)).weekday() != 6)
 
+        remain = None
         if bal:
             remain = float(bal['total_days'] or 0) - float(bal['used_days'] or 0)
             if remain < days:
@@ -8070,7 +8071,7 @@ def _line_submit_leave(staff, user_id, text):
             VALUES (%s,%s,%s,%s,%s,%s,'pending',NOW()) RETURNING id
         """, (staff['id'], lt['id'], date_str1, date_str2, days, reason or '（LINE 請假）')).fetchone()
 
-    bal_str = f'（剩餘 {remain:.1f} 天）' if bal else ''
+    bal_str = f'（剩餘 {remain:.1f} 天）' if remain is not None else ''
     _send_line_punch(user_id,
         f'✅ 請假申請已送出\n\n'
         f'假別：{lt["name"]} {bal_str}\n'

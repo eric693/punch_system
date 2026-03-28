@@ -7789,6 +7789,16 @@ function switchPerfTab(tab) {
 }
 
 async function initPerf() {
+  // Pre-populate staff filter dropdown
+  const filterStaff = document.getElementById('perf-filter-staff');
+  if (filterStaff && filterStaff.options.length <= 1) {
+    const d = await api('/api/punch/staff');
+    if (d.ok) {
+      const list = Array.isArray(d.data) ? d.data : [];
+      filterStaff.innerHTML = '<option value="">全部員工</option>' +
+        list.filter(s=>s.active).map(s=>`<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+    }
+  }
   switchPerfTab('reviews');
 }
 
