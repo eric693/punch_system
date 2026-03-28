@@ -1017,6 +1017,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <button class="inv-tab"        id="fintab-records" onclick="switchFinTab('records')">收支記錄</button>
       <button class="inv-tab"        id="fintab-cats"    onclick="switchFinTab('cats')">類別設定</button>
       <button class="inv-tab"        id="fintab-ocr"     onclick="switchFinTab('ocr')">OCR辨識</button>
+      <button class="inv-tab"        id="fintab-docs"    onclick="switchFinTab('docs')">文件庫</button>
       <button class="inv-tab"        id="fintab-stmts"   onclick="switchFinTab('stmts')">財務報表</button>
       <button class="inv-tab"        id="fintab-settings" onclick="switchFinTab('settings')">財務設定</button>
     </div>
@@ -1149,6 +1150,19 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         </div>
       </div>
     </div>
+    <!-- 文件庫 -->
+    <div id="fin-panel-docs" style="display:none">
+      <div class="card">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+          <span class="card-title">OCR 文件庫</span>
+          <span id="fin-docs-count" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+        <div id="fin-docs-list" style="padding:0 4px 12px">
+          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 財務報表 -->
     <div id="fin-panel-stmts" style="display:none">
       <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
@@ -1836,6 +1850,20 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeOcrEditModal()">取消</button>
       <button class="btn btn-primary" onclick="saveOcrEdit()">儲存修改</button>
+    </div>
+  </div>
+</div>
+
+<!-- OCR Raw Detail Modal -->
+<div class="modal-overlay" id="ocr-raw-modal" style="display:none">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <span class="modal-title" id="orm-title">OCR 辨識原始資料</span>
+      <button class="modal-close" onclick="closeOcrRawModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="orm-body" style="font-size:13px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOcrRawModal()">關閉</button>
     </div>
   </div>
 </div>
@@ -5387,12 +5415,13 @@ document.addEventListener('DOMContentLoaded', () => { refreshBadges(); setInterv
 let finCatList = [], finOcrResult = null, finTrendChart = null, finCatChart = null;
 
 function switchFinTab(tab) {
-  ['dash','records','cats','ocr','stmts','settings'].forEach(t => {
+  ['dash','records','cats','ocr','docs','stmts','settings'].forEach(t => {
     document.getElementById('fintab-'+t).classList.toggle('active', t===tab);
     document.getElementById('fin-panel-'+t).style.display = t===tab?'':'none';
   });
   if (tab==='records') loadFinRecords();
   if (tab==='cats')    loadFinCats();
+  if (tab==='docs')    loadFinDocuments();
   if (tab==='settings') loadFinSettings();
 }
 async function initFinance() {
@@ -5490,6 +5519,7 @@ async function loadFinRecords() {
     tb.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="empty-state-text">無記錄</div></td></tr>';
     document.getElementById('fin-rec-footer').style.display = 'none'; return;
   }
+  window._finRecords = data;
   let totalIncome=0, totalExpense=0;
   tb.innerHTML = data.map(r => {
     if (r.type==='income') totalIncome+=r.amount; else totalExpense+=r.amount;
@@ -5497,9 +5527,12 @@ async function loadFinRecords() {
       ? '<span class="badge badge-ok">收入</span>'
       : '<span class="badge" style="background:rgba(214,66,66,0.12);color:var(--red)">支出</span>';
     const catDot = r.category_color ? `<span style="width:8px;height:8px;border-radius:2px;background:${r.category_color};display:inline-block;margin-right:4px"></span>` : '';
+    const ocrBadge = r.document_id
+      ? `<button class="btn btn-sm" style="margin-left:4px;background:rgba(74,123,218,0.12);color:var(--accent);border:none;font-size:11px;padding:2px 7px" onclick="openOcrRawModal(${r.id})" title="查看 OCR 辨識來源">OCR</button>`
+      : '';
     return `<tr>
       <td style="font-family:'DM Mono',monospace;font-size:12px">${r.record_date}</td>
-      <td>${typeBadge}</td>
+      <td>${typeBadge}${ocrBadge}</td>
       <td>${catDot}${escHtml(r.category_name||'—')}</td>
       <td style="font-weight:600">${escHtml(r.title)}</td>
       <td style="color:var(--muted);font-size:12px">${escHtml(r.vendor||'')}</td>
@@ -6184,6 +6217,95 @@ function saveOcrEdit() {
   };
   closeOcrEditModal();
   renderOcrQueue();
+}
+
+// ── OCR 文件庫 ────────────────────────────────────────────────
+async function loadFinDocuments() {
+  const wrap = document.getElementById('fin-docs-list');
+  wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>';
+  const { ok, data } = await api('/api/finance/documents', {}, true);
+  if (!ok) { wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red)">載入失敗</div>'; return; }
+  document.getElementById('fin-docs-count').textContent = `共 ${data.length} 份文件`;
+  if (!data.length) {
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">尚無 OCR 辨識記錄</div>';
+    return;
+  }
+  const docTypeLabel = { invoice:'發票', receipt:'收據', expense:'報帳單' };
+  wrap.innerHTML = `<table class="data-table" style="margin:0">
+    <thead><tr>
+      <th>上傳日期</th><th>檔案名稱</th><th>文件類型</th>
+      <th style="text-align:right">金額</th><th>廠商</th><th>狀態</th><th>操作</th>
+    </tr></thead>
+    <tbody>${data.map(d => {
+      const raw = d.ocr_raw || {};
+      const amt = raw.total_amount != null ? `$${Number(raw.total_amount).toLocaleString()}` : '—';
+      const vendor = escHtml(raw.vendor || '—');
+      const dtLabel = docTypeLabel[raw.doc_type] || escHtml(d.doc_type || '—');
+      const statusBadge = d.linked_count > 0
+        ? `<span class="badge badge-ok">已建立記帳</span>`
+        : `<span class="badge" style="background:rgba(200,169,110,0.15);color:#a07830">未建立</span>`;
+      return `<tr>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${d.upload_date}</td>
+        <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(d.filename)}">${escHtml(d.filename)}</td>
+        <td><span class="badge" style="background:rgba(74,123,218,0.1);color:var(--accent)">${dtLabel}</span></td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:600">${amt}</td>
+        <td style="font-size:12px;color:var(--muted)">${vendor}</td>
+        <td>${statusBadge}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="openOcrRawModalById(${d.id})">查看辨識</button></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function openOcrRawModal(recordId) {
+  const r = (window._finRecords || []).find(x => x.id === recordId);
+  if (!r || !r.ocr_raw) { showToast('找不到 OCR 資料', 'error'); return; }
+  _renderOcrRawModal(r.doc_filename || '—', r.ocr_raw);
+}
+
+async function openOcrRawModalById(docId) {
+  const { ok, data } = await api('/api/finance/documents', {}, true);
+  if (!ok) return;
+  const doc = data.find(d => d.id === docId);
+  if (!doc) return;
+  _renderOcrRawModal(doc.filename, doc.ocr_raw || {});
+}
+
+function _renderOcrRawModal(filename, raw) {
+  document.getElementById('orm-title').textContent = `OCR 辨識結果 — ${escHtml(filename)}`;
+  const fields = [
+    ['日期', raw.date], ['廠商', raw.vendor], ['發票號碼', raw.invoice_no],
+    ['含稅金額', raw.total_amount != null ? `$${Number(raw.total_amount).toLocaleString()}` : null],
+    ['稅額', raw.tax_amount != null ? `$${Number(raw.tax_amount).toLocaleString()}` : null],
+    ['未稅金額', raw.pre_tax_amount != null ? `$${Number(raw.pre_tax_amount).toLocaleString()}` : null],
+    ['建議標題', raw.title], ['幣別', raw.currency],
+  ];
+  const rows = fields.filter(([, v]) => v != null && v !== '').map(([k, v]) =>
+    `<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="color:var(--muted);min-width:80px">${k}</span>
+      <strong>${escHtml(String(v))}</strong>
+    </div>`
+  ).join('');
+  const items = Array.isArray(raw.items) && raw.items.length
+    ? `<div style="margin-top:12px">
+        <div style="font-weight:600;margin-bottom:6px;font-size:12px;color:var(--muted)">品項明細</div>
+        <table class="data-table" style="margin:0;font-size:12px">
+          <thead><tr><th>品項</th><th style="text-align:right">數量</th><th style="text-align:right">單價</th><th style="text-align:right">小計</th></tr></thead>
+          <tbody>${raw.items.map(it => `<tr>
+            <td>${escHtml(it.name||'')}</td>
+            <td style="text-align:right">${it.qty ?? ''}</td>
+            <td style="text-align:right">${it.unit_price != null ? '$'+Number(it.unit_price).toLocaleString() : ''}</td>
+            <td style="text-align:right;font-weight:600">${it.amount != null ? '$'+Number(it.amount).toLocaleString() : ''}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>`
+    : '';
+  document.getElementById('orm-body').innerHTML = rows + items;
+  document.getElementById('ocr-raw-modal').style.display = 'flex';
+}
+
+function closeOcrRawModal() {
+  document.getElementById('ocr-raw-modal').style.display = 'none';
 }
 
 // ── 帳號管理模組 ──────────────────────────────────────────────

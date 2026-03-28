@@ -5639,9 +5639,11 @@ def api_finance_records_list():
         conds.append("fr.category_id=%s"); params.append(int(cat_id))
     with get_db() as conn:
         rows = conn.execute(f"""
-            SELECT fr.*, fc.name as category_name, fc.color as category_color
+            SELECT fr.*, fc.name as category_name, fc.color as category_color,
+                   fd.filename as doc_filename, fd.ocr_raw as ocr_raw
             FROM finance_records fr
             LEFT JOIN finance_categories fc ON fc.id=fr.category_id
+            LEFT JOIN finance_documents fd ON fd.id=fr.document_id
             WHERE {' AND '.join(conds)}
             ORDER BY fr.record_date DESC, fr.id DESC
         """, params).fetchall()
@@ -5650,6 +5652,32 @@ def api_finance_records_list():
         d = _finance_rec_row(r)
         d['category_name']  = r['category_name']
         d['category_color'] = r['category_color']
+        d['doc_filename']   = r['doc_filename']
+        d['ocr_raw']        = r['ocr_raw'] if r['ocr_raw'] else None
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/finance/documents', methods=['GET'])
+@require_module('finance')
+def api_finance_documents_list():
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT fd.*,
+                   COUNT(fr.id) as linked_count,
+                   MAX(fr.title) as linked_title,
+                   MAX(fr.id) as linked_record_id
+            FROM finance_documents fd
+            LEFT JOIN finance_records fr ON fr.document_id = fd.id
+            GROUP BY fd.id
+            ORDER BY fd.created_at DESC
+        """).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        if d.get('upload_date'): d['upload_date'] = str(d['upload_date'])
+        if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+        d['linked_count'] = int(d['linked_count'] or 0)
         result.append(d)
     return jsonify(result)
 
