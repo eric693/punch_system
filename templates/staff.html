@@ -2215,8 +2215,8 @@ async function doBioLogin(){
         type:cred.type
       })
     });
-    const result=await completeRes.json();
-    if(!completeRes.ok){err.textContent=result.error||'驗證失敗';return;}
+    const result=await completeRes.json().catch(()=>({}));
+    if(!completeRes.ok){err.textContent=result.error||'伺服器錯誤（'+completeRes.status+'）';return;}
     // Session is now set by server — reload me info
     const r=await fetch('/api/punch/me');
     if(r.ok){me=await r.json();showMain();loadAnnStaff();}
@@ -2289,8 +2289,8 @@ async function doRegisterBio(){
         device_name:deviceName
       })
     });
-    const result=await completeRes.json();
-    if(!completeRes.ok){alert(result.error||'綁定失敗');return;}
+    const result=await completeRes.json().catch(()=>({}));
+    if(!completeRes.ok){alert(result.error||'伺服器錯誤（'+completeRes.status+'）');return;}
     alert('裝置綁定成功！下次可直接使用生物辨識登入。');
     loadBioCredList();
   }catch(e){

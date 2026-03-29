@@ -190,8 +190,8 @@ async function doBioLogin(){
         type:cred.type
       })
     });
-    const result=await completeRes.json();
-    if(!completeRes.ok){bioMsg(result.error||'驗證失敗','err');return;}
+    const result=await completeRes.json().catch(()=>({}));
+    if(!completeRes.ok){bioMsg(result.error||'伺服器錯誤（'+completeRes.status+'）','err');return;}
     bioMsg('驗證成功，正在跳轉...','ok');
     window.location.href='/admin';
   }catch(e){

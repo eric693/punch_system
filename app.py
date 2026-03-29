@@ -10333,22 +10333,22 @@ def webauthn_register_complete():
         # Verify credential_id matches
         assert _b64url_encode(cred_id_bytes).rstrip('=') == credential_id.rstrip('='), 'credentialId mismatch'
 
+        device_name = b.get('device_name', '我的裝置')
+        with get_db() as conn:
+            conn.execute("""
+                INSERT INTO webauthn_credentials
+                  (user_key, credential_id, public_key, sign_count, device_name)
+                VALUES (%s, %s, %s, 0, %s)
+                ON CONFLICT (credential_id) DO UPDATE
+                  SET sign_count=0, device_name=%s
+            """, (user_key, credential_id, cose_key_bytes, device_name, device_name))
+
+        session.pop('webauthn_reg_challenge', None)
+        session.pop('webauthn_reg_user_key', None)
+        return jsonify({'ok': True})
+
     except Exception as ex:
-        return jsonify({'error': f'驗證失敗：{ex}'}), 400
-
-    device_name = b.get('device_name', '我的裝置')
-    with get_db() as conn:
-        conn.execute("""
-            INSERT INTO webauthn_credentials
-              (user_key, credential_id, public_key, sign_count, device_name)
-            VALUES (%s, %s, %s, 0, %s)
-            ON CONFLICT (credential_id) DO UPDATE
-              SET sign_count=0, device_name=%s
-        """, (user_key, credential_id, cose_key_bytes, device_name, device_name))
-
-    session.pop('webauthn_reg_challenge', None)
-    session.pop('webauthn_reg_user_key', None)
-    return jsonify({'ok': True})
+        return jsonify({'error': f'綁定失敗：{ex}'}), 400
 
 # ── Authentication Begin ───────────────────────────────────────────────────────
 
@@ -10447,46 +10447,46 @@ def webauthn_auth_complete():
                 (new_sign_count, cred['id'])
             )
 
+        session.pop('webauthn_auth_challenge', None)
+
+        # Create session based on user_key
+        user_key = cred['user_key']
+        if user_key.startswith('admin_'):
+            admin_id = int(user_key[6:])
+            with get_db() as conn:
+                admin = conn.execute(
+                    "SELECT * FROM admin_accounts WHERE id=%s AND active=TRUE", (admin_id,)
+                ).fetchone()
+            if not admin:
+                return jsonify({'error': '帳號不存在或已停用'}), 401
+            perms = admin['permissions']
+            if isinstance(perms, str):
+                try: perms = _json3.loads(perms)
+                except: perms = []
+            session['logged_in']          = True
+            session['admin_id']           = admin['id']
+            session['admin_username']     = admin['username']
+            session['admin_display_name'] = admin['display_name'] or admin['username']
+            session['admin_permissions']  = perms
+            session['admin_is_super']     = bool(admin['is_super'])
+            return jsonify({'ok': True, 'redirect': '/admin', 'role': 'admin'})
+
+        elif user_key.startswith('staff_'):
+            staff_id = int(user_key[6:])
+            with get_db() as conn:
+                staff = conn.execute(
+                    "SELECT id, name, role FROM punch_staff WHERE id=%s AND active=TRUE", (staff_id,)
+                ).fetchone()
+            if not staff:
+                return jsonify({'error': '帳號不存在或已停用'}), 401
+            session['punch_staff_id']   = staff['id']
+            session['punch_staff_name'] = staff['name']
+            return jsonify({'ok': True, 'role': 'staff', 'user': dict(staff)})
+
+        return jsonify({'error': '未知帳號類型'}), 400
+
     except Exception as ex:
         return jsonify({'error': f'驗證失敗：{ex}'}), 400
-
-    session.pop('webauthn_auth_challenge', None)
-
-    # Create session based on user_key
-    user_key = cred['user_key']
-    if user_key.startswith('admin_'):
-        admin_id = int(user_key[6:])
-        with get_db() as conn:
-            admin = conn.execute(
-                "SELECT * FROM admin_accounts WHERE id=%s AND active=TRUE", (admin_id,)
-            ).fetchone()
-        if not admin:
-            return jsonify({'error': '帳號不存在或已停用'}), 401
-        perms = admin['permissions']
-        if isinstance(perms, str):
-            try: perms = _json3.loads(perms)
-            except: perms = []
-        session['logged_in']          = True
-        session['admin_id']           = admin['id']
-        session['admin_username']     = admin['username']
-        session['admin_display_name'] = admin['display_name'] or admin['username']
-        session['admin_permissions']  = perms
-        session['admin_is_super']     = bool(admin['is_super'])
-        return jsonify({'ok': True, 'redirect': '/admin', 'role': 'admin'})
-
-    elif user_key.startswith('staff_'):
-        staff_id = int(user_key[6:])
-        with get_db() as conn:
-            staff = conn.execute(
-                "SELECT id, name, role FROM punch_staff WHERE id=%s AND active=TRUE", (staff_id,)
-            ).fetchone()
-        if not staff:
-            return jsonify({'error': '帳號不存在或已停用'}), 401
-        session['punch_staff_id']   = staff['id']
-        session['punch_staff_name'] = staff['name']
-        return jsonify({'ok': True, 'role': 'staff', 'user': dict(staff)})
-
-    return jsonify({'error': '未知帳號類型'}), 400
 
 # ── 已綁定裝置列表 & 刪除 ────────────────────────────────────────────────────────
 
