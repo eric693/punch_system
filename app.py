@@ -7662,6 +7662,11 @@ def _init_performance_db():
             reviewed_at     TIMESTAMPTZ DEFAULT NOW(),
             created_at      TIMESTAMPTZ DEFAULT NOW()
         )""",
+        """CREATE TABLE IF NOT EXISTS performance_config (
+            key        TEXT PRIMARY KEY,
+            value      JSONB NOT NULL,
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        )""",
     ]
     for sql in sqls:
         try:
@@ -7671,6 +7676,33 @@ def _init_performance_db():
             print(f"[perf_init] {e}")
 
 _init_performance_db()
+
+_DEFAULT_GRADE_CONFIG = [
+    {'grade': 'A', 'label': '優秀', 'min_pct': 90},
+    {'grade': 'B', 'label': '良好', 'min_pct': 75},
+    {'grade': 'C', 'label': '待加強', 'min_pct': 60},
+    {'grade': 'D', 'label': '需改善', 'min_pct':  0},
+]
+
+def _get_grade_config():
+    """從 DB 讀取評級設定，若未設定則回傳預設值（按門檻由高到低排序）。"""
+    try:
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT value FROM performance_config WHERE key='grade_config'"
+            ).fetchone()
+        if row:
+            cfg = row['value']
+            if isinstance(cfg, str):
+                cfg = _json.loads(cfg)
+            if isinstance(cfg, list) and cfg:
+                return sorted(cfg, key=lambda x: -float(x.get('min_pct', 0)))
+    except Exception:
+        pass
+    return _DEFAULT_GRADE_CONFIG
+
+def _grade_labels():
+    return {c['grade']: c['label'] for c in _get_grade_config()}
 
 
 def _perf_template_row(r):
@@ -7696,10 +7728,10 @@ def _perf_review_row(r):
     return d
 
 def _score_to_grade(pct):
-    if pct >= 90: return 'A'
-    if pct >= 75: return 'B'
-    if pct >= 60: return 'C'
-    return 'D'
+    for cfg in _get_grade_config():
+        if pct >= cfg['min_pct']:
+            return cfg['grade']
+    return _get_grade_config()[-1]['grade']
 
 # ── 考核範本 CRUD ───────────────────────────────────────────────
 
@@ -7831,7 +7863,7 @@ def api_perf_review_create():
         ).fetchone()
 
     # LINE 通知
-    grade_labels = {'A': '優秀', 'B': '良好', 'C': '待加強', 'D': '需改善'}
+    grade_labels = _grade_labels()
     msg = (f"[績效考核] {period_label} 考核結果\n"
            f"總分：{total:.1f} / {max_s:.0f}（{pct:.0f}%）\n"
            f"評級：{grade} {grade_labels.get(grade,'')}\n"
@@ -7927,6 +7959,43 @@ def api_perf_my_reviews():
         d['template_name'] = r['tpl_name'] or ''
         result.append(d)
     return jsonify(result)
+
+
+# ── 評級設定 CRUD ───────────────────────────────────────────────
+
+@app.route('/api/performance/config', methods=['GET'])
+@login_required
+def api_perf_config_get():
+    return jsonify({'grades': _get_grade_config()})
+
+@app.route('/api/performance/config', methods=['PUT'])
+@login_required
+def api_perf_config_update():
+    b      = request.get_json(force=True)
+    grades = b.get('grades', [])
+    if not grades:
+        return jsonify({'error': '請至少設定一個評級'}), 400
+    for g in grades:
+        if not str(g.get('grade', '')).strip() or not str(g.get('label', '')).strip():
+            return jsonify({'error': '評級代碼與標籤不可為空'}), 400
+        pct = g.get('min_pct')
+        if pct is None or not (0 <= float(pct) <= 100):
+            return jsonify({'error': '門檻百分比需介於 0~100'}), 400
+    # 確保至少有一個門檻為 0，避免無法分級
+    if not any(float(g.get('min_pct', -1)) == 0 for g in grades):
+        return jsonify({'error': '必須有一個評級的門檻設為 0%（作為最低等級）'}), 400
+    grades_sorted = sorted(
+        [{'grade': str(g['grade']).strip(), 'label': str(g['label']).strip(),
+          'min_pct': float(g['min_pct'])} for g in grades],
+        key=lambda x: -x['min_pct']
+    )
+    with get_db() as conn:
+        conn.execute("""
+            INSERT INTO performance_config (key, value, updated_at)
+            VALUES ('grade_config', %s, NOW())
+            ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()
+        """, (_json.dumps(grades_sorted),))
+    return jsonify({'ok': True, 'grades': grades_sorted})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -8100,7 +8169,7 @@ def _line_query_performance(staff, user_id):
     if not row:
         _send_line_punch(user_id, f'{staff["name"]}\n尚無績效考核記錄。')
         return
-    grade_label = {'A':'優秀','B':'良好','C':'待加強','D':'需改善'}
+    grade_label = _grade_labels()
     pct = float(row['total_score']) / float(row['max_score']) * 100 if row['max_score'] else 0
     adj = f"\n薪資調整：NT$ {float(row['salary_delta']):+,.0f}" if row['salary_adjusted'] else ''
     reviewed = str(row['reviewed_at'])[:10] if row['reviewed_at'] else ''

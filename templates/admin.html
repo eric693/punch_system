@@ -1449,6 +1449,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <button class="inv-tab active" onclick="switchPerfTab('reviews')">考核記錄</button>
       <button class="inv-tab" onclick="switchPerfTab('new')">新增考核</button>
       <button class="inv-tab" onclick="switchPerfTab('templates')">考核範本</button>
+      <button class="inv-tab" onclick="switchPerfTab('config')">評級設定</button>
     </div>
 
     <!-- 考核記錄 tab -->
@@ -1537,6 +1538,28 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         </table>
       </div>
     </div><!-- end perf-panel-templates -->
+
+    <!-- 評級設定 tab -->
+    <div id="perf-panel-config" style="display:none">
+      <div class="card" style="max-width:560px">
+        <div class="card-header"><span class="card-title">評級門檻設定</span></div>
+        <div style="padding:20px 24px">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px">設定各等級的代碼、顯示標籤與最低分數門檻。必須有一個等級門檻為 0%。</p>
+          <div style="display:grid;grid-template-columns:72px 1fr 140px 36px;gap:8px;align-items:center;margin-bottom:6px;padding:0 2px">
+            <span class="filter-label" style="text-align:center">代碼</span>
+            <span class="filter-label">標籤</span>
+            <span class="filter-label" style="text-align:center">最低門檻</span>
+            <span></span>
+          </div>
+          <div id="perf-config-grades"></div>
+          <button class="btn btn-outline btn-sm" style="margin-top:8px;font-size:12px" onclick="addPerfConfigGrade()">+ 新增等級</button>
+          <div style="margin-top:20px;display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="savePerfConfig()">儲存設定</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- end perf-panel-config -->
+
   </div><!-- end page-perf -->
 
 
@@ -7777,17 +7800,19 @@ function promptRejectExpense(id) {
 // ══════════════════════════════════════════════════════════════
 let _perfTemplates = [];
 let _perfTemplateModal = null;
+let _perfConfig = null;
 
 function switchPerfTab(tab) {
-  ['reviews','new','templates'].forEach(t => {
+  ['reviews','new','templates','config'].forEach(t => {
     document.getElementById('perf-panel-' + t).style.display = t === tab ? '' : 'none';
   });
   document.querySelectorAll('#perf-tab-bar .inv-tab').forEach((btn, i) => {
-    btn.classList.toggle('active', ['reviews','new','templates'][i] === tab);
+    btn.classList.toggle('active', ['reviews','new','templates','config'][i] === tab);
   });
   if (tab === 'reviews')   loadPerfReviews();
   if (tab === 'new')       initPerfNewForm();
   if (tab === 'templates') loadPerfTemplates();
+  if (tab === 'config')    loadPerfConfig();
 }
 
 async function initPerf() {
@@ -7801,6 +7826,9 @@ async function initPerf() {
         list.filter(s=>s.active).map(s=>`<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
     }
   }
+  // 預先載入評級設定供評分計算使用
+  const cfgRes = await api('/api/performance/config');
+  if (cfgRes.ok) _perfConfig = cfgRes.data;
   switchPerfTab('reviews');
 }
 
@@ -7898,6 +7926,15 @@ function loadPerfTemplateItems() {
   recalcPerfScore();
 }
 
+function _calcGradeFromPct(pct) {
+  const grades = (_perfConfig && _perfConfig.grades) ? _perfConfig.grades : [
+    {grade:'A',min_pct:90},{grade:'B',min_pct:75},{grade:'C',min_pct:60},{grade:'D',min_pct:0}
+  ];
+  const sorted = [...grades].sort((a, b) => b.min_pct - a.min_pct);
+  for (const g of sorted) { if (pct >= g.min_pct) return g.grade; }
+  return sorted[sorted.length - 1].grade;
+}
+
 function recalcPerfScore() {
   const tmplId = parseInt(document.getElementById('pf-template').value);
   const tmpl = _perfTemplates.find(t => t.id === tmplId);
@@ -7908,13 +7945,13 @@ function recalcPerfScore() {
     total += isNaN(val) ? 0 : Math.min(val, item.max_score||10);
     maxTotal += item.max_score || 10;
   });
-  const pct = maxTotal > 0 ? total / maxTotal * 100 : 0;
-  const grade = pct >= 90 ? 'A' : pct >= 75 ? 'B' : pct >= 60 ? 'C' : 'D';
+  const pct   = maxTotal > 0 ? total / maxTotal * 100 : 0;
+  const grade = _calcGradeFromPct(pct);
   document.getElementById('pf-score-display').textContent = total;
   document.getElementById('pf-max-display').textContent   = maxTotal;
   document.getElementById('pf-grade-display').textContent = grade;
   const gradeColor = {A:'var(--green)',B:'var(--accent)',C:'#e07b2a',D:'var(--red)'};
-  document.getElementById('pf-grade-display').style.color = gradeColor[grade];
+  document.getElementById('pf-grade-display').style.color = gradeColor[grade] || 'var(--text)';
 }
 
 async function submitPerfReview() {
@@ -8089,6 +8126,65 @@ async function deletePerfTemplate(id) {
   showToast('已刪除', 'success');
   loadPerfTemplates();
   _perfTemplates = [];
+}
+
+// ── 評級設定 ──────────────────────────────────────────────────
+async function loadPerfConfig() {
+  const d = await api('/api/performance/config');
+  if (!d.ok) return;
+  _perfConfig = d.data;
+  renderPerfConfigGrades(_perfConfig.grades || []);
+}
+
+function renderPerfConfigGrades(grades) {
+  const container = document.getElementById('perf-config-grades');
+  if (!container) return;
+  container.innerHTML = grades.map(g => `
+    <div class="pcfg-row" style="display:grid;grid-template-columns:72px 1fr 140px 36px;gap:8px;align-items:center;margin-bottom:8px">
+      <input type="text" class="form-input pcfg-grade" value="${escHtml(g.grade)}" placeholder="A" style="text-align:center;font-weight:700;font-size:15px">
+      <input type="text" class="form-input pcfg-label" value="${escHtml(g.label)}" placeholder="標籤">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="filter-label" style="white-space:nowrap">≥</span>
+        <input type="number" class="form-input pcfg-min" value="${g.min_pct}" min="0" max="100" style="width:64px;text-align:center;padding:8px 6px">
+        <span class="filter-label">%</span>
+      </div>
+      <button onclick="this.closest('.pcfg-row').remove()" class="btn btn-ghost" style="color:var(--red);padding:6px 8px;font-size:16px">×</button>
+    </div>`).join('');
+}
+
+function addPerfConfigGrade() {
+  const container = document.getElementById('perf-config-grades');
+  const row = document.createElement('div');
+  row.className = 'pcfg-row';
+  row.style.cssText = 'display:grid;grid-template-columns:72px 1fr 140px 36px;gap:8px;align-items:center;margin-bottom:8px';
+  row.innerHTML = `
+    <input type="text" class="form-input pcfg-grade" placeholder="E" style="text-align:center;font-weight:700;font-size:15px">
+    <input type="text" class="form-input pcfg-label" placeholder="標籤">
+    <div style="display:flex;align-items:center;gap:6px">
+      <span class="filter-label" style="white-space:nowrap">≥</span>
+      <input type="number" class="form-input pcfg-min" value="0" min="0" max="100" style="width:64px;text-align:center;padding:8px 6px">
+      <span class="filter-label">%</span>
+    </div>
+    <button onclick="this.closest('.pcfg-row').remove()" class="btn btn-ghost" style="color:var(--red);padding:6px 8px;font-size:16px">×</button>`;
+  container.appendChild(row);
+}
+
+async function savePerfConfig() {
+  const rows = document.querySelectorAll('#perf-config-grades .pcfg-row');
+  const grades = [...rows].map(row => ({
+    grade:   row.querySelector('.pcfg-grade').value.trim(),
+    label:   row.querySelector('.pcfg-label').value.trim(),
+    min_pct: parseFloat(row.querySelector('.pcfg-min').value) || 0
+  })).filter(g => g.grade && g.label);
+  if (!grades.length) { showToast('請至少設定一個評級', 'error'); return; }
+  const res = await api('/api/performance/config', {
+    method: 'PUT',
+    body: JSON.stringify({ grades })
+  });
+  if (!res.ok) { showToast(res.error || '儲存失敗', 'error'); return; }
+  _perfConfig = res.data;
+  showToast('評級設定已儲存', 'success');
+  renderPerfConfigGrades(_perfConfig.grades || []);
 }
 </script>
 </html>
