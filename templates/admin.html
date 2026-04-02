@@ -641,6 +641,34 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div>
           <div class="card" style="padding:20px;margin-bottom:14px">
             <div class="card-title" style="padding:0;margin-bottom:12px">圖文選單</div>
+            <!-- Google Drive image URL -->
+            <div style="margin-bottom:10px">
+              <label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:4px">Google Drive 圖片連結（選填）</label>
+              <input id="rm-gdrive-url" type="text" class="filter-input" placeholder="https://drive.google.com/file/d/…/view" style="width:100%;font-size:12px">
+              <div style="font-size:11px;color:var(--muted);margin-top:3px">貼上 Google Drive 分享連結，系統會自動下載並上傳至 LINE。留空則使用預設色塊圖。</div>
+            </div>
+            <!-- Button text mapping: 2x2 grid -->
+            <div style="margin-bottom:12px">
+              <label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px">按鈕觸發文字（對應四個區域，留空使用預設值）</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <div>
+                  <div style="font-size:10px;color:var(--muted);margin-bottom:2px">左上（打卡上班）</div>
+                  <input id="rm-text-0" type="text" class="filter-input" placeholder="上班" style="width:100%;font-size:12px">
+                </div>
+                <div>
+                  <div style="font-size:10px;color:var(--muted);margin-bottom:2px">右上（打卡下班）</div>
+                  <input id="rm-text-1" type="text" class="filter-input" placeholder="下班" style="width:100%;font-size:12px">
+                </div>
+                <div>
+                  <div style="font-size:10px;color:var(--muted);margin-bottom:2px">左下（休息開始）</div>
+                  <input id="rm-text-2" type="text" class="filter-input" placeholder="休息" style="width:100%;font-size:12px">
+                </div>
+                <div>
+                  <div style="font-size:10px;color:var(--muted);margin-bottom:2px">右下（休息結束）</div>
+                  <input id="rm-text-3" type="text" class="filter-input" placeholder="回來" style="width:100%;font-size:12px">
+                </div>
+              </div>
+            </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
               <button class="btn btn-primary btn-sm" onclick="createRichMenu()">建立圖文選單</button>
               <button class="btn btn-outline btn-sm" onclick="loadRichMenus()">查看現有選單</button>
@@ -4162,9 +4190,12 @@ async function unbindLinePunch(id, name) {
 async function createRichMenu() {
   const msg = document.getElementById('rm-msg');
   msg.style.color = 'var(--accent)'; msg.textContent = '建立中，請稍候...';
-  const { ok, data } = await api('/api/line-punch/richmenu/create', apiJSON({}));
+  const gdrive_url = document.getElementById('rm-gdrive-url').value.trim();
+  const area_texts = [0,1,2,3].map(i => document.getElementById(`rm-text-${i}`).value.trim());
+  const { ok, data } = await api('/api/line-punch/richmenu/create', apiJSON({ gdrive_url, area_texts }));
   if (!ok) { msg.style.color='var(--red)'; msg.textContent='建立失敗：'+(data.error||''); return; }
-  msg.style.color = 'var(--green)'; msg.textContent = `圖文選單已建立！ID：${data.rich_menu_id}`;
+  const imgNote = data.image_uploaded ? '' : '（圖片上傳失敗，選單仍建立成功）';
+  msg.style.color = 'var(--green)'; msg.textContent = `圖文選單已建立！ID：${data.rich_menu_id} ${imgNote}`;
   showToast('圖文選單建立成功', 'success'); await loadRichMenus();
 }
 async function loadRichMenus() {

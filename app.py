@@ -142,6 +142,10 @@ def init_db():
                 ON CONFLICT (id) DO NOTHING
             """)
             conn.execute("""
+                ALTER TABLE line_punch_config
+                ADD COLUMN IF NOT EXISTS richmenu_area_texts JSONB DEFAULT NULL
+            """)
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS schedule_config (
                     month           TEXT PRIMARY KEY,
                     max_off_per_day INT DEFAULT 2,
@@ -1442,6 +1446,18 @@ def _handle_line_punch_event(event, cfg):
         '休息': 'break_out', '休息開始': 'break_out',
         '回來': 'break_in', '休息結束': 'break_in',
     }
+    # Merge custom rich-menu button texts if configured
+    try:
+        _rm_cfg = get_line_punch_config()
+        _rm_texts = _rm_cfg.get('richmenu_area_texts') if _rm_cfg else None
+        if _rm_texts:
+            _rm_list = _json.loads(_rm_texts) if isinstance(_rm_texts, str) else _rm_texts
+            _type_order = ['in', 'out', 'break_out', 'break_in']
+            for _i, _t in enumerate(_rm_list[:4]):
+                if _t and _t.strip():
+                    PUNCH_CMDS[_t.strip()] = _type_order[_i]
+    except Exception:
+        pass
     PUNCH_LABEL = {
         'in': '上班打卡', 'out': '下班打卡',
         'break_out': '休息開始', 'break_in': '休息結束',
@@ -1665,6 +1681,40 @@ def _call_line_api(cfg, method, path, body=None):
         return 0, {'error': str(e)}
 
 
+def _gdrive_download(url):
+    """Download an image from a Google Drive sharing URL. Returns bytes or None."""
+    import re
+    # Extract file ID from various Drive URL formats
+    m = re.search(r'/file/d/([a-zA-Z0-9_-]+)', url)
+    if not m:
+        m = re.search(r'[?&]id=([a-zA-Z0-9_-]+)', url)
+    if not m:
+        return None
+    file_id = m.group(1)
+    download_url = f'https://drive.google.com/uc?export=download&id={file_id}'
+    req = urllib.request.Request(download_url, headers={'User-Agent': 'Mozilla/5.0'})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = resp.read()
+        # If Google returns an HTML confirmation page (large file), try the confirm URL
+        if data[:5] in (b'<!DOC', b'<html', b'<!doc'):
+            import re as _re
+            confirm = _re.search(rb'confirm=([0-9A-Za-z_-]+)', data)
+            if confirm:
+                confirm_url = f'https://drive.google.com/uc?export=download&confirm={confirm.group(1).decode()}&id={file_id}'
+                req2 = urllib.request.Request(confirm_url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req2, timeout=30) as resp2:
+                    data = resp2.read()
+            else:
+                return None
+        # Validate it's a PNG or JPEG
+        if data[:8] == b'\x89PNG\r\n\x1a\n' or data[:2] == b'\xff\xd8':
+            return data
+        return None
+    except Exception:
+        return None
+
+
 def _make_richmenu_png():
     """Generate a simple 2500×1686 PNG with 4 colored quadrants (no external deps)."""
     import struct, zlib
@@ -1699,17 +1749,38 @@ def api_richmenu_create():
     if not cfg or not cfg.get('channel_access_token'):
         return jsonify({'error': '請先設定 Channel Access Token'}), 400
 
-    staff_url = (RENDER_EXTERNAL_URL or request.host_url).rstrip('/') + '/staff'
+    body_json = request.get_json(silent=True) or {}
+    gdrive_url = (body_json.get('gdrive_url') or '').strip()
+    raw_texts  = body_json.get('area_texts') or []
+    # Expect [top-left, top-right, bottom-left, bottom-right]
+    defaults   = ['上班', '下班', '休息', '回來']
+    area_texts = [(raw_texts[i].strip() if i < len(raw_texts) and raw_texts[i].strip() else defaults[i])
+                  for i in range(4)]
+
+    # Save custom area texts to config so webhook can use them
+    try:
+        with get_db() as conn:
+            conn.execute(
+                "UPDATE line_punch_config SET richmenu_area_texts=%s WHERE id=1",
+                (_json.dumps(area_texts),)
+            )
+    except Exception:
+        pass
+
+    bounds = [
+        {"x": 0,    "y": 0,   "width": 1250, "height": 843},
+        {"x": 1250, "y": 0,   "width": 1250, "height": 843},
+        {"x": 0,    "y": 843, "width": 1250, "height": 843},
+        {"x": 1250, "y": 843, "width": 1250, "height": 843},
+    ]
     body = {
         "size": {"width": 2500, "height": 1686},
         "selected": True,
         "name": "Punch Menu",
         "chatBarText": "Punch",
         "areas": [
-            {"bounds": {"x": 0,    "y": 0,   "width": 1250, "height": 843}, "action": {"type": "message", "text": "上班"}},
-            {"bounds": {"x": 1250, "y": 0,   "width": 1250, "height": 843}, "action": {"type": "message", "text": "下班"}},
-            {"bounds": {"x": 0,    "y": 843, "width": 1250, "height": 843}, "action": {"type": "message", "text": "休息"}},
-            {"bounds": {"x": 1250, "y": 843, "width": 1250, "height": 843}, "action": {"type": "message", "text": "回來"}},
+            {"bounds": bounds[i], "action": {"type": "message", "text": area_texts[i]}}
+            for i in range(4)
         ]
     }
 
@@ -1719,18 +1790,23 @@ def api_richmenu_create():
 
     rich_menu_id = data.get('richMenuId', '')
 
-    # Upload image — try custom first, then auto-generate
+    # Upload image — priority: Google Drive URL > local custom file > auto-generate
     png_bytes = None
-    try:
-        import os
-        for _cp in [CUSTOM_RICHMENU_IMAGE_PATH,
-                    CUSTOM_RICHMENU_IMAGE_PATH.replace('.png', '.jpg')]:
-            if os.path.exists(_cp):
-                with open(_cp, 'rb') as f:
-                    png_bytes = f.read()
-                break
-    except Exception:
-        pass
+    if gdrive_url:
+        try:
+            png_bytes = _gdrive_download(gdrive_url)
+        except Exception:
+            pass
+    if not png_bytes:
+        try:
+            for _cp in [CUSTOM_RICHMENU_IMAGE_PATH,
+                        CUSTOM_RICHMENU_IMAGE_PATH.replace('.png', '.jpg')]:
+                if os.path.exists(_cp):
+                    with open(_cp, 'rb') as f:
+                        png_bytes = f.read()
+                    break
+        except Exception:
+            pass
     if not png_bytes:
         try:
             png_bytes = _make_richmenu_png()
