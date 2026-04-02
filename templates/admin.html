@@ -5445,7 +5445,7 @@ async function saveLeaveType() {
   const body = {
     name:document.getElementById('ltm-name').value.trim(),
     code:document.getElementById('ltm-code').value.trim(),
-    pay_rate:parseFloat(document.getElementById('ltm-pay').value)||1,
+    pay_rate:(p=>isNaN(p)?1:p)(parseFloat(document.getElementById('ltm-pay').value)),
     max_days:document.getElementById('ltm-max').value?parseFloat(document.getElementById('ltm-max').value):null,
     color:document.getElementById('ltm-color').value,
     active:document.getElementById('ltm-active').value==='1',
