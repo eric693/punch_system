@@ -2226,15 +2226,26 @@ def api_line_punch_config_get():
 @login_required
 def api_line_punch_config_put():
     b       = request.get_json(force=True)
-    token   = b.get('channel_access_token', '').strip()
-    secret  = b.get('channel_secret', '').strip()
     enabled = bool(b.get('enabled', False))
+    token   = b.get('channel_access_token')   # None = not provided (don't overwrite)
+    secret  = b.get('channel_secret')
     with get_db() as conn:
-        conn.execute("""
-            UPDATE line_punch_config
-            SET channel_access_token=%s, channel_secret=%s, enabled=%s, updated_at=NOW()
-            WHERE id=1
-        """, (token, secret, enabled))
+        if token is not None or secret is not None:
+            # 有帶入 token/secret → 一起更新
+            conn.execute("""
+                UPDATE line_punch_config
+                SET channel_access_token=%s, channel_secret=%s, enabled=%s, updated_at=NOW()
+                WHERE id=1
+            """, (
+                token.strip() if token else '',
+                secret.strip() if secret else '',
+                enabled,
+            ))
+        else:
+            # 僅更新啟用狀態，保留原有 token/secret
+            conn.execute("""
+                UPDATE line_punch_config SET enabled=%s, updated_at=NOW() WHERE id=1
+            """, (enabled,))
     return jsonify({'ok': True, 'enabled': enabled})
 
 @app.route('/api/line-punch/staff', methods=['GET'])
