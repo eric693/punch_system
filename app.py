@@ -1178,6 +1178,11 @@ def api_punch_record_delete(rid):
 @login_required
 def api_punch_summary():
     month = request.args.get('month') or _dt.now(TW_TZ).strftime('%Y-%m')
+    from datetime import date as _date2, timedelta as _td2, datetime as _dt2
+    import calendar as _cal2
+    _y2, _m2 = int(month[:4]), int(month[5:])
+    _next_date2 = (_date2(_y2, _m2, _cal2.monthrange(_y2, _m2)[1]) + _td2(days=1)).isoformat()
+
     with get_db() as conn:
         rows = conn.execute("""
             SELECT ps.id as staff_id, ps.name as staff_name,
@@ -1188,23 +1193,51 @@ def api_punch_summary():
                    BOOL_OR(pr.is_manual) as has_manual
             FROM punch_records pr JOIN punch_staff ps ON ps.id=pr.staff_id
             WHERE TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
+               OR (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date = %s
             GROUP BY ps.id, ps.name, (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
-            ORDER BY (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date DESC, ps.name
-        """, (month,)).fetchall()
-    result = []
+            ORDER BY (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date ASC, ps.name
+        """, (month, _next_date2)).fetchall()
+
+    # Build per-(staff, date) dict
+    day_map = {}
     for r in rows:
-        d = dict(r)
-        d['work_date']  = d['work_date'].isoformat()  if d['work_date']  else None
-        d['clock_in']   = d['clock_in'].isoformat()   if d['clock_in']   else None
-        d['clock_out']  = d['clock_out'].isoformat()  if d['clock_out']  else None
+        key = (r['staff_id'], r['work_date'].isoformat())
+        day_map[key] = dict(r)
+
+    # Merge cross-day sessions:
+    # (staff, D) has clock_in but no clock_out  +  (staff, D+1) has clock_out but no clock_in
+    # → move D+1's clock_out into D and discard D+1
+    merged = set()
+    for (sid, ds), row in list(day_map.items()):
+        if row['clock_in'] and not row['clock_out']:
+            nds  = (_date2.fromisoformat(ds) + _td2(days=1)).isoformat()
+            nkey = (sid, nds)
+            if nkey in day_map and nkey not in merged:
+                nrow = day_map[nkey]
+                if nrow['clock_out'] and not nrow['clock_in']:
+                    if (nrow['clock_out'] - row['clock_in']).total_seconds() <= 86400:
+                        row['clock_out']    = nrow['clock_out']
+                        row['punch_count'] += nrow['punch_count']
+                        row['has_manual']   = row['has_manual'] or nrow['has_manual']
+                        merged.add(nkey)
+
+    result = []
+    for (sid, ds), row in day_map.items():
+        if (sid, ds) in merged or not ds.startswith(month):
+            continue
+        d = dict(row)
+        d['work_date'] = ds
+        d['clock_in']  = d['clock_in'].isoformat()  if d['clock_in']  else None
+        d['clock_out'] = d['clock_out'].isoformat() if d['clock_out'] else None
         if d['clock_in'] and d['clock_out']:
-            from datetime import datetime as _dt2
-            ci = _dt2.fromisoformat(d['clock_in'].replace('Z', ''))
-            co = _dt2.fromisoformat(d['clock_out'].replace('Z', ''))
+            ci = _dt2.fromisoformat(d['clock_in'])
+            co = _dt2.fromisoformat(d['clock_out'])
             d['duration_min'] = max(0, int((co - ci).total_seconds() / 60))
         else:
             d['duration_min'] = None
         result.append(d)
+
+    result.sort(key=lambda x: (x['work_date'], x['staff_name']), reverse=True)
     return jsonify(result)
 
 @app.route('/api/attendance/monthly-stats', methods=['GET'])
@@ -1215,8 +1248,13 @@ def api_attendance_monthly_stats():
     回傳：出勤天數、總工時、遲到次數、缺打卡次數、平均工時
     """
     month = request.args.get('month') or _dt.now(TW_TZ).strftime('%Y-%m')
+    from datetime import date as _date3, timedelta as _td3
+    import calendar as _cal3
+    _y3, _m3 = int(month[:4]), int(month[5:])
+    _next_date3 = (_date3(_y3, _m3, _cal3.monthrange(_y3, _m3)[1]) + _td3(days=1)).isoformat()
+
     with get_db() as conn:
-        # 每人每日打卡彙整
+        # 每人每日打卡彙整（多抓下個月第一天，供跨日班次合併）
         rows = conn.execute("""
             SELECT ps.id as staff_id, ps.name as staff_name,
                    ps.department, ps.role,
@@ -1228,10 +1266,11 @@ def api_attendance_monthly_stats():
             FROM punch_records pr
             JOIN punch_staff ps ON ps.id = pr.staff_id AND ps.active = TRUE
             WHERE TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM') = %s
+               OR (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date = %s
             GROUP BY ps.id, ps.name, ps.department, ps.role,
                      (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
             ORDER BY ps.name, work_date
-        """, (month,)).fetchall()
+        """, (month, _next_date3)).fetchall()
 
         # 班別指派（用於遲到判斷）
         shift_rows = conn.execute("""
@@ -1242,6 +1281,33 @@ def api_attendance_monthly_stats():
         """, (month,)).fetchall()
         shift_map = {(r['staff_id'], str(r['date'])): r for r in shift_rows}
 
+    # 建立 (staff_id, date_str) → row_dict，並合併跨日班次
+    day_map = {}
+    for r in rows:
+        key = (r['staff_id'], str(r['work_date']))
+        day_map[key] = {
+            'staff_id':   r['staff_id'],   'staff_name': r['staff_name'],
+            'department': r['department'], 'role':       r['role'],
+            'work_date':  str(r['work_date']),
+            'clock_in':   r['clock_in'],   'clock_out':  r['clock_out'],
+            'has_in':  bool(r['has_in']),  'has_out': bool(r['has_out']),
+        }
+
+    # 合併跨日：(staff, D) 有 in 無 out + (staff, D+1) 有 out 無 in → 合為同一班次
+    merged = set()
+    for (sid, ds), row in list(day_map.items()):
+        if row['has_in'] and not row['has_out']:
+            nds  = (_date3.fromisoformat(ds) + _td3(days=1)).isoformat()
+            nkey = (sid, nds)
+            if nkey in day_map and nkey not in merged:
+                nrow = day_map[nkey]
+                if nrow['has_out'] and not nrow['has_in']:
+                    ci, co = row['clock_in'], nrow['clock_out']
+                    if ci and co and (co - ci).total_seconds() <= 86400:
+                        row['clock_out'] = co
+                        row['has_out']   = True
+                        merged.add(nkey)
+
     from collections import defaultdict
     stats = defaultdict(lambda: {
         'staff_id': None, 'staff_name': '', 'department': '', 'role': '',
@@ -1250,23 +1316,24 @@ def api_attendance_monthly_stats():
         'anomaly_dates': [],
     })
 
-    for r in rows:
-        sid  = r['staff_id']
-        ds   = str(r['work_date'])
-        s    = stats[sid]
-        s['staff_id']   = sid
-        s['staff_name'] = r['staff_name']
-        s['department'] = r['department'] or ''
-        s['role']       = r['role']       or ''
+    for (sid, ds), row in day_map.items():
+        if (sid, ds) in merged or not ds.startswith(month):
+            continue
 
-        has_in  = bool(r['has_in'])
-        has_out = bool(r['has_out'])
+        s = stats[sid]
+        s['staff_id']   = sid
+        s['staff_name'] = row['staff_name']
+        s['department'] = row['department'] or ''
+        s['role']       = row['role']       or ''
+
+        has_in  = row['has_in']
+        has_out = row['has_out']
 
         if has_in or has_out:
             s['days_worked'] += 1
 
-        if r['clock_in'] and r['clock_out']:
-            diff = (r['clock_out'] - r['clock_in']).total_seconds() / 60
+        if row['clock_in'] and row['clock_out']:
+            diff = (row['clock_out'] - row['clock_in']).total_seconds() / 60
             if diff > 0:
                 s['total_minutes'] += int(diff)
 
@@ -1279,14 +1346,13 @@ def api_attendance_monthly_stats():
             s['anomaly_dates'].append({'date': ds, 'type': 'missing_in', 'label': '缺上班卡'})
 
         # 遲到（比對班別）
-        if has_in and r['clock_in']:
+        if has_in and row['clock_in']:
             shift = shift_map.get((sid, ds))
             if shift and shift['start_time']:
                 try:
-                    sh, sm = map(int, str(shift['start_time'])[:5].split(':'))
-                    ci_local = r['clock_in']
-                    ih, im   = ci_local.hour, ci_local.minute
-                    late_mins = (ih * 60 + im) - (sh * 60 + sm)
+                    sh, sm    = map(int, str(shift['start_time'])[:5].split(':'))
+                    ci_local  = row['clock_in']
+                    late_mins = (ci_local.hour * 60 + ci_local.minute) - (sh * 60 + sm)
                     if late_mins > 10:
                         s['late_count'] += 1
                         s['anomaly_dates'].append({'date': ds, 'type': 'late',
@@ -1295,14 +1361,13 @@ def api_attendance_monthly_stats():
                     pass
 
         # 早退（比對班別）
-        if has_out and r['clock_out']:
+        if has_out and row['clock_out']:
             shift = shift_map.get((sid, ds))
             if shift and shift['end_time']:
                 try:
-                    eh, em = map(int, str(shift['end_time'])[:5].split(':'))
-                    co_local = r['clock_out']
-                    oh, om   = co_local.hour, co_local.minute
-                    early_mins = (eh * 60 + em) - (oh * 60 + om)
+                    eh, em     = map(int, str(shift['end_time'])[:5].split(':'))
+                    co_local   = row['clock_out']
+                    early_mins = (eh * 60 + em) - (co_local.hour * 60 + co_local.minute)
                     if early_mins > 15:
                         s['early_count'] += 1
                         s['anomaly_dates'].append({'date': ds, 'type': 'early',
@@ -2042,8 +2107,7 @@ def _do_line_punch(staff, user_id, lat, lng, forced_type, PUNCH_LABEL):
             last = conn.execute("""
                 SELECT punch_type, punched_at FROM punch_records
                 WHERE staff_id=%s
-                  AND (punched_at AT TIME ZONE 'Asia/Taipei')::date
-                    = (NOW() AT TIME ZONE 'Asia/Taipei')::date
+                  AND punched_at > NOW() - INTERVAL '24 hours'
                 ORDER BY punched_at DESC LIMIT 1
             """, (staff['id'],)).fetchone()
         if not last:                               punch_type = 'in'
@@ -4414,31 +4478,56 @@ def _calc_service_years(hire_date_str):
 def _calc_punch_hours(conn, staff_id, month):
     """
     從打卡記錄計算實際工時（時薪制用）
-    邏輯：每天找最早 in + 最晚 out，扣除休息時間
+    邏輯：每天找最早 in + 最晚 out，扣除休息時間；支援跨日班次
     回傳 (total_hours, work_days, details)
     """
-    from datetime import datetime as _dth, timezone as _tzh, timedelta as _tdh
+    from datetime import datetime as _dth, timezone as _tzh, timedelta as _tdh, date as _dateh
+    import calendar as _calh
     TW = _tzh(_tdh(hours=8))
+
+    _yh, _mh   = int(month[:4]), int(month[5:])
+    _last_h    = _calh.monthrange(_yh, _mh)[1]
+    _next_date_h = (_dateh(_yh, _mh, _last_h) + _tdh(days=1)).isoformat()
 
     rows = conn.execute("""
         SELECT punch_type, punched_at
         FROM punch_records
         WHERE staff_id=%s
-          AND to_char(punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
+          AND (
+            to_char(punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
+            OR (punched_at AT TIME ZONE 'Asia/Taipei')::date = %s
+          )
         ORDER BY punched_at ASC
-    """, (staff_id, month)).fetchall()
+    """, (staff_id, month, _next_date_h)).fetchall()
 
-    # Group by date
-    day_map = {}
+    # Group by work session: non-'in' records within 24h of the last 'in'
+    # are assigned to that 'in' record's date (handles cross-day shifts)
+    day_map       = {}
+    last_in_ds    = None
+    last_in_dt    = None
     for r in rows:
         pa = r['punched_at']
         if pa.tzinfo is None:
             pa = pa.replace(tzinfo=_tzh.utc)
-        pa_tw  = pa.astimezone(TW)
-        ds     = pa_tw.strftime('%Y-%m-%d')
-        if ds not in day_map:
-            day_map[ds] = []
-        day_map[ds].append({'type': r['punch_type'], 'dt': pa_tw})
+        pa_tw = pa.astimezone(TW)
+        ptype = r['punch_type']
+        ds    = pa_tw.strftime('%Y-%m-%d')
+
+        if ptype == 'in':
+            last_in_ds = ds
+            last_in_dt = pa_tw
+            target_ds  = ds
+        elif last_in_ds and last_in_dt and (pa_tw - last_in_dt).total_seconds() <= 86400:
+            target_ds  = last_in_ds   # 屬於前一天跨日班次
+        else:
+            target_ds  = ds           # 孤立打卡，以自身日期為準
+
+        if target_ds not in day_map:
+            day_map[target_ds] = []
+        day_map[target_ds].append({'type': ptype, 'dt': pa_tw})
+
+    # 只保留本月的日期（跨日班次的 in 已在本月，out 被歸回同 key）
+    day_map = {ds: v for ds, v in day_map.items() if ds.startswith(month)}
 
     total_hours = 0.0
     details     = []
