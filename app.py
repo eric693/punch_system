@@ -4808,6 +4808,8 @@ def api_salary_records_list():
         result.append(d)
     return jsonify(result)
 
+_SALARY_GENERATE_LOCK_KEY = 0x53414C41  # 'SALA' — advisory lock for batch salary generation
+
 @app.route('/api/salary/records/generate', methods=['POST'])
 @require_module('salary')
 def api_salary_generate():
@@ -4816,35 +4818,44 @@ def api_salary_generate():
     month = b.get('month', '').strip()
     if not month: return jsonify({'error': '請指定月份'}), 400
     with get_db() as conn:
-        staff_list = conn.execute(
-            "SELECT * FROM punch_staff WHERE active=TRUE"
-        ).fetchall()
-        generated = 0
-        for staff in staff_list:
-            data = _auto_generate_salary(conn, dict(staff), month)
-            items_json = _json.dumps(data['items'], ensure_ascii=False)
-            conn.execute("""
-                INSERT INTO salary_records
-                  (staff_id, month, base_salary, insured_salary, work_days, actual_days,
-                   leave_days, unpaid_days, ot_pay, allowance_total, deduction_total,
-                   net_pay, items, status, updated_at)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,'draft',NOW())
-                ON CONFLICT (staff_id, month) DO UPDATE
-                  SET base_salary=%s, insured_salary=%s, work_days=%s, actual_days=%s,
-                      leave_days=%s, unpaid_days=%s, ot_pay=%s, allowance_total=%s,
-                      deduction_total=%s, net_pay=%s, items=%s::jsonb,
-                      status=CASE WHEN salary_records.status='confirmed' THEN 'confirmed' ELSE 'draft' END,
-                      updated_at=NOW()
-            """, (
-                data['staff_id'], month, data['base_salary'], data['insured_salary'],
-                data['work_days'], data['actual_days'], data['leave_days'], data['unpaid_days'],
-                data['ot_pay'], data['allowance_total'], data['deduction_total'],
-                data['net_pay'], items_json,
-                data['base_salary'], data['insured_salary'], data['work_days'], data['actual_days'],
-                data['leave_days'], data['unpaid_days'], data['ot_pay'], data['allowance_total'],
-                data['deduction_total'], data['net_pay'], items_json,
-            ))
-            generated += 1
+        # 取得 session-level advisory lock，避免同時多次批次產生互相覆蓋
+        acquired = conn.execute(
+            "SELECT pg_try_advisory_lock(%s) AS ok", (_SALARY_GENERATE_LOCK_KEY,)
+        ).fetchone()['ok']
+        if not acquired:
+            return jsonify({'error': '薪資批次正在產生中，請稍後再試'}), 409
+        try:
+            staff_list = conn.execute(
+                "SELECT * FROM punch_staff WHERE active=TRUE"
+            ).fetchall()
+            generated = 0
+            for staff in staff_list:
+                data = _auto_generate_salary(conn, dict(staff), month)
+                items_json = _json.dumps(data['items'], ensure_ascii=False)
+                conn.execute("""
+                    INSERT INTO salary_records
+                      (staff_id, month, base_salary, insured_salary, work_days, actual_days,
+                       leave_days, unpaid_days, ot_pay, allowance_total, deduction_total,
+                       net_pay, items, status, updated_at)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,'draft',NOW())
+                    ON CONFLICT (staff_id, month) DO UPDATE
+                      SET base_salary=%s, insured_salary=%s, work_days=%s, actual_days=%s,
+                          leave_days=%s, unpaid_days=%s, ot_pay=%s, allowance_total=%s,
+                          deduction_total=%s, net_pay=%s, items=%s::jsonb,
+                          status=CASE WHEN salary_records.status='confirmed' THEN 'confirmed' ELSE 'draft' END,
+                          updated_at=NOW()
+                """, (
+                    data['staff_id'], month, data['base_salary'], data['insured_salary'],
+                    data['work_days'], data['actual_days'], data['leave_days'], data['unpaid_days'],
+                    data['ot_pay'], data['allowance_total'], data['deduction_total'],
+                    data['net_pay'], items_json,
+                    data['base_salary'], data['insured_salary'], data['work_days'], data['actual_days'],
+                    data['leave_days'], data['unpaid_days'], data['ot_pay'], data['allowance_total'],
+                    data['deduction_total'], data['net_pay'], items_json,
+                ))
+                generated += 1
+        finally:
+            conn.execute("SELECT pg_advisory_unlock(%s)", (_SALARY_GENERATE_LOCK_KEY,))
     return jsonify({'ok': True, 'generated': generated, 'month': month})
 
 @app.route('/api/salary/records/<int:rid>', methods=['GET'])
