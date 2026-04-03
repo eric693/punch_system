@@ -501,8 +501,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>姓名</th><th>員工代碼</th><th>職稱</th><th>帳號</th><th>狀態</th><th>操作</th></tr></thead>
-            <tbody id="punch-staff-tbody"><tr><td colspan="6" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr></tbody>
+            <thead><tr><th>姓名</th><th>員工代碼</th><th>職稱</th><th>帳號</th><th>匯款帳號</th><th>狀態</th><th>操作</th></tr></thead>
+            <tbody id="punch-staff-tbody"><tr><td colspan="7" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr></tbody>
           </table>
         </div>
       </div>
@@ -4002,19 +4002,23 @@ async function loadPunchStaff() {
   punchStaffList = ok ? data : [];
   const tb = document.getElementById('punch-staff-tbody');
   document.getElementById('punch-staff-count').textContent = `共 ${punchStaffList.length} 位員工`;
-  if (!punchStaffList.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="empty-state-text">尚無員工</div></td></tr>'; return; }
-  tb.innerHTML = punchStaffList.map(s => `<tr>
+  if (!punchStaffList.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-text">尚無員工</div></td></tr>'; return; }
+  tb.innerHTML = punchStaffList.map(s => {
+    const bankDisplay = s.bank_account ? (s.bank_name ? `${escHtml(s.bank_name)} ${escHtml(s.bank_account)}` : escHtml(s.bank_account)) : '<span style="color:var(--muted)">—</span>';
+    return `<tr>
     <td style="font-weight:600">${escHtml(s.name)}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${escHtml(s.employee_code||'—')}</td>
     <td style="color:var(--muted)">${escHtml(s.role||'')}</td>
-    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(s.username||'—')}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(s.username||'—')}${s.has_password ? '' : '<span style="color:var(--red);font-size:10px;margin-left:4px">未設密碼</span>'}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${bankDisplay}</td>
     <td>${s.active ? '<span class="badge badge-ok">在職</span>' : '<span class="badge badge-warn">停用</span>'}</td>
     <td style="white-space:nowrap">
       <button class="btn btn-outline btn-sm" onclick="openPunchStaffModal(${s.id})">編輯</button>
       <button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="openTerminateModal(${s.id},'${escHtml(s.name)}')" title="辦理離職">離職</button>
       <button class="btn btn-danger btn-sm" onclick="deletePunchStaff(${s.id})" style="margin-left:4px">刪除</button>
     </td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 }
 function openPunchStaffModal(id=null) {
   punchEditStaffId = id;
@@ -4037,7 +4041,7 @@ function openPunchStaffModal(id=null) {
     document.getElementById('psm-address').value        = s.address         || '';
     document.getElementById('psm-username').value       = s.username        || '';
     document.getElementById('psm-active').value         = s.active ? '1' : '0';
-    document.getElementById('psm-pw-hint').textContent  = '留空表示不修改密碼';
+    document.getElementById('psm-pw-hint').textContent  = s.has_password ? '已設定密碼（留空表示不修改）' : '尚未設定密碼，請輸入';
     document.getElementById('psm-bank-code').value      = s.bank_code       || '';
     document.getElementById('psm-bank-name').value      = s.bank_name       || '';
     document.getElementById('psm-bank-branch').value    = s.bank_branch     || '';
@@ -5146,7 +5150,7 @@ function renderLeaveRequests() {
           <button class="btn btn-danger btn-sm" onclick="deleteLeaveReq(${r.id})">刪除</button>
         </div>
       </div>
-      ${r.reason?`<div style="padding:8px 20px;background:var(--bg);font-size:12px;color:var(--muted)">原因：${escHtml(r.reason)}${r.substitute_name?'　代理人：'+escHtml(r.substitute_name):''}${r.review_note?`<span style="color:${sc}">　審核意見：${escHtml(r.review_note)}</span>`:''}</div>`:''}
+      ${r.reason||r.has_attachment?`<div style="padding:8px 20px;background:var(--bg);font-size:12px;color:var(--muted)">原因：${escHtml(r.reason||'')}${r.substitute_name?'　代理人：'+escHtml(r.substitute_name):''}${r.has_attachment?`　<a href="/api/leave/attachment/${r.id}" target="_blank" style="color:var(--accent)">查看病假證明</a>`:''}${r.review_note?`<span style="color:${sc}">　審核意見：${escHtml(r.review_note)}</span>`:''}</div>`:''}
     </div>`;
   }).join('');
 }

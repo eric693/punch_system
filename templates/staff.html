@@ -358,7 +358,18 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
           <div id="leave-balance-info" style="font-size:12px;color:var(--muted);padding:8px 10px;background:var(--bg);border-radius:6px;margin-bottom:6px;min-height:32px"></div>
           <button class="btn btn-outline" style="width:100%;font-size:12px;margin-bottom:10px" onclick="showMyAnnualSchedule()">查看我的特休排程</button>
           <div style="margin-bottom:10px"><div class="fl">請假原因 *</div><input class="fi" id="leave-reason" placeholder="例：身體不適、家庭事務" style="margin-bottom:0"></div>
-          <div style="margin-bottom:14px"><div class="fl">代理人（選填）</div><input class="fi" id="leave-sub" placeholder="例：王小明" style="margin-bottom:0"></div>
+          <div style="margin-bottom:10px"><div class="fl">代理人（選填）</div><input class="fi" id="leave-sub" placeholder="例：王小明" style="margin-bottom:0"></div>
+          <div id="leave-attachment-wrap" style="margin-bottom:14px;display:none">
+            <div class="fl">病假證明文件</div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 12px;border:1.5px dashed var(--border);border-radius:8px;background:var(--bg)" onclick="document.getElementById('leave-file-input').click()">
+              <span style="font-size:18px;color:var(--muted)">+</span>
+              <div>
+                <div id="leave-file-label" style="font-size:13px;color:var(--muted)">點擊上傳病單（圖片或 PDF）</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px">最大 10MB</div>
+              </div>
+            </label>
+            <input type="file" id="leave-file-input" accept="image/*,application/pdf" style="display:none" onchange="leaveFileSelected(this)">
+          </div>
           <button class="btn btn-primary" style="width:100%" onclick="submitLeaveRequest()">送出請假申請</button>
         </div>
 
@@ -1451,10 +1462,11 @@ async function initLeaveTab() {
   // 填入假別選單
   const sel = document.getElementById('leave-type-sel');
   sel.innerHTML = leaveTypeList.map(t =>
-    `<option value="${t.id}" data-pay="${t.pay_rate}" data-max="${t.max_days||''}" data-color="${t.color}">${esc(t.name)}</option>`
+    `<option value="${t.id}" data-pay="${t.pay_rate}" data-max="${t.max_days||''}" data-color="${t.color}" data-code="${t.code||''}">${esc(t.name)}</option>`
   ).join('');
-  sel.addEventListener('change', updateLeaveTypeInfo);
+  sel.addEventListener('change', () => { updateLeaveTypeInfo(); updateLeaveAttachmentWrap(); });
   updateLeaveTypeInfo();
+  updateLeaveAttachmentWrap();
   // 設定預設日期為今天
   const today = new Date().toISOString().slice(0, 10);
   if (!document.getElementById('leave-start').value) {
@@ -1749,6 +1761,23 @@ async function showMyAnnualSchedule() {
   } catch(e) { showToast('載入失敗', 'err'); }
 }
 
+const SICK_LEAVE_CODES = ['sick','hospitalize','menstrual'];
+function leaveFileSelected(input) {
+  const label = document.getElementById('leave-file-label');
+  label.textContent = input.files[0] ? input.files[0].name : '點擊上傳病單（圖片或 PDF）';
+}
+function updateLeaveAttachmentWrap() {
+  const sel  = document.getElementById('leave-type-sel');
+  const wrap = document.getElementById('leave-attachment-wrap');
+  if (!wrap || !sel) return;
+  const opt  = sel.options[sel.selectedIndex];
+  const code = opt ? opt.getAttribute('data-code') : '';
+  wrap.style.display = SICK_LEAVE_CODES.includes(code) ? '' : 'none';
+  if (!SICK_LEAVE_CODES.includes(code)) {
+    document.getElementById('leave-file-input').value = '';
+    document.getElementById('leave-file-label').textContent = '點擊上傳病單（圖片或 PDF）';
+  }
+}
 async function submitLeaveRequest() {
   const leave_type_id = document.getElementById('leave-type-sel').value;
   const start_date    = document.getElementById('leave-start').value;
@@ -1767,9 +1796,17 @@ async function submitLeaveRequest() {
     });
     const data = await res.json();
     if (!res.ok) { showToast(data.error || '送出失敗', 'err'); return; }
+    // Upload attachment if provided
+    const fileInput = document.getElementById('leave-file-input');
+    if (fileInput && fileInput.files[0]) {
+      const fd = new FormData();
+      fd.append('file', fileInput.files[0]);
+      await fetch(`/api/leave/my-requests/${data.id}/attachment`, { method: 'POST', body: fd });
+    }
     showToast('請假申請已送出，等待主管審核', 'ok');
     document.getElementById('leave-reason').value = '';
     document.getElementById('leave-sub').value    = '';
+    if (fileInput) { fileInput.value = ''; document.getElementById('leave-file-label').textContent = '點擊上傳病單（圖片或 PDF）'; }
     await loadMyLeaveBalance();
     await loadMyLeaveHistory();
   } catch(e) { showToast('網路錯誤', 'err'); }
@@ -1813,6 +1850,7 @@ function renderMyLeaveList() {
       <div style="padding:8px 14px;font-size:12px;color:var(--muted)">
         原因：${esc(r.reason || '')}
         ${r.substitute_name ? `　代理人：${esc(r.substitute_name)}` : ''}
+        ${r.has_attachment ? `<div style="margin-top:4px"><a href="/api/leave/attachment/${r.id}" target="_blank" style="color:var(--accent);font-size:12px">查看病假證明文件</a></div>` : ''}
         ${r.review_note ? `<div style="color:${sc};margin-top:4px">審核意見：${esc(r.review_note)}</div>` : ''}
       </div>
     </div>`;

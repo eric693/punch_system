@@ -632,6 +632,7 @@ def _gps_distance(lat1, lng1, lat2, lng2):
 def punch_staff_row(row):
     if not row: return None
     d = dict(row)
+    d['has_password'] = bool(d.get('password_hash'))
     d.pop('password_hash', None)
     if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
     if d.get('hire_date'):  d['hire_date']  = d['hire_date'].isoformat()
@@ -643,8 +644,14 @@ def punch_record_row(row):
     d = dict(row)
     for f in ['latitude', 'longitude']:
         if d.get(f) is not None: d[f] = float(d[f])
-    if d.get('punched_at'): d['punched_at'] = d['punched_at'].isoformat()
-    if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+    if d.get('punched_at'):
+        pa = d['punched_at']
+        if hasattr(pa, 'astimezone'): pa = pa.astimezone(TW_TZ)
+        d['punched_at'] = pa.isoformat()
+    if d.get('created_at'):
+        ca = d['created_at']
+        if hasattr(ca, 'astimezone'): ca = ca.astimezone(TW_TZ)
+        d['created_at'] = ca.isoformat()
     return d
 
 def loc_row(row):
@@ -659,9 +666,11 @@ def loc_row(row):
 def punch_req_row(row):
     if not row: return None
     d = dict(row)
-    if d.get('requested_at'): d['requested_at'] = d['requested_at'].isoformat()
-    if d.get('reviewed_at'):  d['reviewed_at']  = d['reviewed_at'].isoformat()
-    if d.get('created_at'):   d['created_at']   = d['created_at'].isoformat()
+    for f in ('requested_at', 'reviewed_at', 'created_at'):
+        if d.get(f):
+            v = d[f]
+            if hasattr(v, 'astimezone'): v = v.astimezone(TW_TZ)
+            d[f] = v.isoformat()
     return d
 
 def ot_req_row(row):
@@ -3514,6 +3523,9 @@ def init_leave_db():
             created_at      TIMESTAMPTZ DEFAULT NOW(),
             updated_at      TIMESTAMPTZ DEFAULT NOW()
         )""",
+        "ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS attachment BYTEA",
+        "ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS attachment_name TEXT DEFAULT ''",
+        "ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS attachment_type TEXT DEFAULT ''",
         """CREATE TABLE IF NOT EXISTS leave_balances (
             id          SERIAL PRIMARY KEY,
             staff_id    INT REFERENCES punch_staff(id) ON DELETE CASCADE,
@@ -3578,6 +3590,8 @@ def leave_req_row(row):
     if d.get('reviewed_at'): d['reviewed_at'] = d['reviewed_at'].isoformat()
     if d.get('created_at'):  d['created_at']  = d['created_at'].isoformat()
     if d.get('updated_at'):  d['updated_at']  = d['updated_at'].isoformat()
+    d['has_attachment'] = bool(d.get('attachment'))
+    d.pop('attachment', None)  # don't send binary over JSON
     return d
 
 def leave_balance_row(row):
@@ -3966,6 +3980,42 @@ def api_leave_submit():
         """, (sid, leave_type_id, start_date, end_date, start_half, end_half,
               total_days, reason, substitute)).fetchone()
     return jsonify(leave_req_row(row)), 201
+
+@app.route('/api/leave/my-requests/<int:rid>/attachment', methods=['POST'])
+def api_leave_attachment_upload(rid):
+    sid = session.get('punch_staff_id')
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    file = request.files.get('file')
+    if not file: return jsonify({'error': '請選擇檔案'}), 400
+    raw = file.read()
+    if len(raw) > 10 * 1024 * 1024:
+        return jsonify({'error': '檔案大小不能超過 10MB'}), 413
+    filename   = file.filename or 'attachment'
+    media_type = file.content_type or 'application/octet-stream'
+    with get_db() as conn:
+        req = conn.execute("SELECT id FROM leave_requests WHERE id=%s AND staff_id=%s", (rid, sid)).fetchone()
+        if not req: return jsonify({'error': '找不到請假申請'}), 404
+        conn.execute("""
+            UPDATE leave_requests SET attachment=%s, attachment_name=%s, attachment_type=%s WHERE id=%s
+        """, (raw, filename, media_type, rid))
+    return jsonify({'ok': True, 'attachment_name': filename})
+
+@app.route('/api/leave/attachment/<int:rid>', methods=['GET'])
+def api_leave_attachment_get(rid):
+    sid = session.get('punch_staff_id')
+    is_admin = session.get('logged_in')
+    with get_db() as conn:
+        row = conn.execute("SELECT staff_id, attachment, attachment_name, attachment_type FROM leave_requests WHERE id=%s", (rid,)).fetchone()
+    if not row or not row['attachment']:
+        return ('', 404)
+    if not is_admin and row['staff_id'] != sid:
+        return jsonify({'error': '無權限'}), 403
+    from flask import Response
+    return Response(
+        bytes(row['attachment']),
+        mimetype=row['attachment_type'] or 'application/octet-stream',
+        headers={'Content-Disposition': f'inline; filename="{row["attachment_name"]}"'}
+    )
 
 # ── Leave Balance ─────────────────────────────────────────────────
 
