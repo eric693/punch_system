@@ -297,6 +297,8 @@ def init_db():
         "ALTER TABLE punch_staff ADD COLUMN IF NOT EXISTS store_id INT REFERENCES stores(id) ON DELETE SET NULL",
         "ALTER TABLE punch_locations ADD COLUMN IF NOT EXISTS store_id INT REFERENCES stores(id) ON DELETE SET NULL",
         "ALTER TABLE admin_accounts ADD COLUMN IF NOT EXISTS store_ids JSONB DEFAULT '[]'",
+        "ALTER TABLE admin_accounts ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE",
+        "UPDATE admin_accounts SET active=TRUE WHERE active IS NULL",
         "ALTER TABLE schedule_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()",
         """CREATE TABLE IF NOT EXISTS shift_staffing_requirements (
             id            SERIAL PRIMARY KEY,
@@ -326,17 +328,24 @@ def init_db():
         except Exception as me:
             print(f"[MIGRATION SKIP] {sql[:70]}: {me}")
 
-    # Seed default super admin if no accounts exist
+    # Seed default super admin if no accounts exist; always sync password & active
     try:
         with get_db() as conn:
             cnt = conn.execute("SELECT COUNT(*) as c FROM admin_accounts").fetchone()['c']
             if cnt == 0:
                 all_modules = _json.dumps(['punch','sched','leave','salary','ann','holiday','finance'])
                 conn.execute("""
-                    INSERT INTO admin_accounts (username, password_hash, display_name, permissions, is_super)
-                    VALUES (%s,%s,'超級管理員',%s,TRUE)
+                    INSERT INTO admin_accounts (username, password_hash, display_name, permissions, is_super, active)
+                    VALUES (%s,%s,'超級管理員',%s,TRUE,TRUE)
                 """, ('admin', _hash_pw(ADMIN_PASSWORD), all_modules))
                 print("[OK] Default super admin seeded (username: admin)")
+            else:
+                # Keep built-in admin password in sync with ADMIN_PASSWORD env var
+                conn.execute("""
+                    UPDATE admin_accounts
+                    SET password_hash=%s, active=TRUE
+                    WHERE username='admin' AND is_super=TRUE
+                """, (_hash_pw(ADMIN_PASSWORD),))
     except Exception as e:
         print(f"[WARN] admin seed: {e}")
 
@@ -1014,6 +1023,13 @@ def api_punch_staff_update(sid):
     bank_branch   = (b.get('bank_branch') or '').strip()
     bank_account  = (b.get('bank_account') or '').strip()
     account_holder= (b.get('account_holder') or '').strip()
+    department    = (b.get('department') or '').strip()
+    position_title= (b.get('position_title') or '').strip()
+    hire_date     = b.get('hire_date') or None
+    birth_date    = b.get('birth_date') or None
+    national_id   = (b.get('national_id') or '').strip()
+    gender        = (b.get('gender') or '').strip()
+    address       = (b.get('address') or '').strip()
     if not name or not username:
         return jsonify({'error': '姓名和帳號為必填'}), 400
     with get_db() as conn:
@@ -1023,18 +1039,26 @@ def api_punch_staff_update(sid):
             row = conn.execute("""
                 UPDATE punch_staff
                 SET name=%s,username=%s,password_hash=%s,role=%s,active=%s,employee_code=%s,
-                    bank_code=%s,bank_name=%s,bank_branch=%s,bank_account=%s,account_holder=%s
+                    bank_code=%s,bank_name=%s,bank_branch=%s,bank_account=%s,account_holder=%s,
+                    department=%s,position_title=%s,hire_date=%s,birth_date=%s,
+                    national_id=%s,gender=%s,address=%s
                 WHERE id=%s RETURNING *
             """, (name, username, _hash_pw(password), role, active, employee_code,
-                  bank_code, bank_name, bank_branch, bank_account, account_holder, sid)).fetchone()
+                  bank_code, bank_name, bank_branch, bank_account, account_holder,
+                  department, position_title, hire_date, birth_date,
+                  national_id, gender, address, sid)).fetchone()
         else:
             row = conn.execute("""
                 UPDATE punch_staff
                 SET name=%s,username=%s,role=%s,active=%s,employee_code=%s,
-                    bank_code=%s,bank_name=%s,bank_branch=%s,bank_account=%s,account_holder=%s
+                    bank_code=%s,bank_name=%s,bank_branch=%s,bank_account=%s,account_holder=%s,
+                    department=%s,position_title=%s,hire_date=%s,birth_date=%s,
+                    national_id=%s,gender=%s,address=%s
                 WHERE id=%s RETURNING *
             """, (name, username, role, active, employee_code,
-                  bank_code, bank_name, bank_branch, bank_account, account_holder, sid)).fetchone()
+                  bank_code, bank_name, bank_branch, bank_account, account_holder,
+                  department, position_title, hire_date, birth_date,
+                  national_id, gender, address, sid)).fetchone()
     return jsonify(punch_staff_row(row)) if row else ('', 404)
 
 @app.route('/api/punch/staff/<int:sid>', methods=['DELETE'])
@@ -1323,6 +1347,7 @@ def api_punch_req_delete(rid):
 
 CUSTOM_RICHMENU_IMAGE_PATH = '/tmp/custom_richmenu.png'
 _pending_line_punches = {}   # {line_user_id: punch_type}
+_line_conv_state      = {}   # {line_user_id: {'flow': str, 'step': int, 'data': {}}}
 
 
 def get_line_punch_config():
@@ -1345,6 +1370,428 @@ def _send_line_punch(user_id, text):
         )
     except Exception as e:
         print(f"[LINE PUNCH] push_message error: {e}")
+
+
+def _push_line_msg(user_id, *messages):
+    """Push one or more raw message dicts via LINE push API."""
+    cfg = get_line_punch_config()
+    if not cfg or not cfg.get('enabled') or not cfg.get('channel_access_token'):
+        return
+    body = _json.dumps({'to': user_id, 'messages': list(messages)}).encode('utf-8')
+    req = urllib.request.Request(
+        'https://api.line.me/v2/bot/message/push', data=body, method='POST',
+        headers={'Content-Type': 'application/json',
+                 'Authorization': f'Bearer {cfg["channel_access_token"]}'}
+    )
+    try:
+        urllib.request.urlopen(req, timeout=15)
+    except Exception as e:
+        print(f'[LINE] push error: {e}')
+
+
+def _qr_pb(*items):
+    """Build quickReply with postback actions. items=(label, data, displayText)."""
+    return {'items': [
+        {'type': 'action', 'action': {
+            'type': 'postback', 'label': lbl[:20],
+            'data': dat, 'displayText': disp
+        }} for lbl, dat, disp in items
+    ]}
+
+
+def _flex_ask(title, color, question, hint=''):
+    """Simple Flex bubble for a step in an interactive flow."""
+    body_items = [{'type': 'text', 'text': question, 'wrap': True,
+                   'size': 'sm', 'weight': 'bold'}]
+    if hint:
+        body_items.append({'type': 'text', 'text': hint, 'wrap': True,
+                            'size': 'xs', 'color': '#888888', 'margin': 'sm'})
+    return {
+        'type': 'flex',
+        'altText': question,
+        'contents': {
+            'type': 'bubble', 'size': 'kilo',
+            'header': {
+                'type': 'box', 'layout': 'vertical', 'paddingAll': '12px',
+                'backgroundColor': color,
+                'contents': [{'type': 'text', 'text': title, 'color': '#ffffff',
+                               'weight': 'bold', 'size': 'sm'}]
+            },
+            'body': {
+                'type': 'box', 'layout': 'vertical',
+                'paddingAll': '14px', 'spacing': 'sm',
+                'contents': body_items
+            }
+        }
+    }
+
+
+# ── Leave interactive flow ────────────────────────────────────────────
+
+def _line_leave_start(staff, user_id):
+    with get_db() as conn:
+        types = conn.execute(
+            "SELECT name FROM leave_types WHERE active=TRUE ORDER BY sort_order"
+        ).fetchall()
+    if not types:
+        _send_line_punch(user_id, '目前無可用假別，請聯絡管理員。')
+        return
+    _line_conv_state[user_id] = {'flow': 'leave', 'step': 1, 'data': {}, 'all_types': [t['name'] for t in types]}
+    # Quick reply max 13 items; show first 12 + cancel; if more, paginate via postback
+    _line_leave_send_types(user_id, [t['name'] for t in types], page=0)
+
+
+def _line_leave_send_types(user_id, all_types, page=0):
+    PAGE = 12
+    chunk = all_types[page*PAGE:(page+1)*PAGE]
+    has_next = len(all_types) > (page+1)*PAGE
+    qr = [(t, f'lv_type={t}', f'假別：{t}') for t in chunk]
+    if has_next:
+        qr.append(('➡️ 更多', f'lv_page={page+1}', '查看更多假別'))
+    qr.append(('❌ 取消', 'cancel', '取消'))
+    msg = _flex_ask('📝 請假申請', '#27AE60',
+                    f'請選擇假別（第{page+1}頁，共{len(all_types)}種）',
+                    '點選下方按鈕')
+    msg['quickReply'] = _qr_pb(*qr)
+    _push_line_msg(user_id, msg)
+
+
+def _handle_conv_leave(staff, user_id, state, text=None, pb_data=None):
+    from datetime import date as _dl, timedelta as _tdl
+    step = state['step']
+    data = state['data']
+    today = _dl.today().isoformat()
+    tmrw  = (_dl.today() + _tdl(days=1)).isoformat()
+
+    if pb_data == 'cancel' or text == '取消':
+        _line_conv_state.pop(user_id, None)
+        _send_line_punch(user_id, '已取消請假申請。')
+        return
+
+    # Pagination for leave types
+    if pb_data and pb_data.startswith('lv_page='):
+        try:
+            page = int(pb_data[8:])
+            _line_leave_send_types(user_id, state.get('all_types', []), page=page)
+        except ValueError:
+            pass
+        return
+
+    if step == 1:
+        lv_type = (pb_data[8:] if pb_data and pb_data.startswith('lv_type=')
+                   else (text.strip() if text else None))
+        if not lv_type:
+            return
+        # Validate against known types
+        known = state.get('all_types', [])
+        if known and lv_type not in known:
+            _send_line_punch(user_id, f'找不到假別「{lv_type}」，請點選按鈕選擇。')
+            return
+        data['leave_type'] = lv_type
+        state['step'] = 2
+        msg = _flex_ask('📝 請假申請', '#27AE60',
+                        f'假別：{lv_type}\n\n請輸入開始日期',
+                        '格式：YYYY-MM-DD，或點選快速選擇')
+        msg['quickReply'] = _qr_pb(
+            (f'今天 ({today})', f'lv_sd={today}', today),
+            (f'明天 ({tmrw})',  f'lv_sd={tmrw}',  tmrw),
+            ('❌ 取消', 'cancel', '取消'),
+        )
+        _push_line_msg(user_id, msg)
+
+    elif step == 2:
+        raw = (pb_data[6:] if pb_data and pb_data.startswith('lv_sd=')
+               else (text.strip() if text else None))
+        try:
+            _dl.fromisoformat(raw)
+        except Exception:
+            _send_line_punch(user_id, f'日期格式錯誤，請輸入 YYYY-MM-DD，例：{today}')
+            return
+        data['start_date'] = raw
+        state['step'] = 3
+        msg = _flex_ask('📝 請假申請', '#27AE60',
+                        f'開始日期：{raw}\n\n請輸入結束日期',
+                        '單日假點「同一天」，多日請直接輸入')
+        msg['quickReply'] = _qr_pb(
+            ('同一天', f'lv_ed={raw}', raw),
+            ('❌ 取消', 'cancel', '取消'),
+        )
+        _push_line_msg(user_id, msg)
+
+    elif step == 3:
+        raw = (pb_data[6:] if pb_data and pb_data.startswith('lv_ed=')
+               else (text.strip() if text else None))
+        try:
+            _dl.fromisoformat(raw)
+        except Exception:
+            _send_line_punch(user_id, '日期格式錯誤，請輸入 YYYY-MM-DD')
+            return
+        if raw < data['start_date']:
+            _send_line_punch(user_id, '⚠️ 結束日期不能早於開始日期')
+            return
+        data['end_date'] = raw
+        state['step'] = 4
+        # Ask half-day / time of day
+        msg = _flex_ask('📝 請假申請', '#27AE60',
+                        f'假別：{data["leave_type"]}\n'
+                        f'日期：{data["start_date"]}' +
+                        (f' ～ {raw}' if raw != data['start_date'] else '') +
+                        '\n\n請選擇請假時段',
+                        '整天 / 上午 / 下午')
+        msg['quickReply'] = _qr_pb(
+            ('整天', 'lv_half=full',      '整天請假'),
+            ('上午', 'lv_half=morning',   '上午請假'),
+            ('下午', 'lv_half=afternoon', '下午請假'),
+            ('❌ 取消', 'cancel', '取消'),
+        )
+        _push_line_msg(user_id, msg)
+
+    elif step == 4:
+        half = None
+        if pb_data == 'lv_half=full':      half = 'full'
+        elif pb_data == 'lv_half=morning': half = 'morning'
+        elif pb_data == 'lv_half=afternoon': half = 'afternoon'
+        elif text in ('整天', '全天'):     half = 'full'
+        elif text in ('上午', '早上'):     half = 'morning'
+        elif text in ('下午', '午後'):     half = 'afternoon'
+        if half is None:
+            _send_line_punch(user_id, '請選擇：整天 / 上午 / 下午')
+            return
+        data['half'] = half
+        # start_half: True = 上午請假 (only morning); end_half: True = 下午請假 (only afternoon)
+        # For "morning": start_half=True means first(=only) day is half-day from morning
+        # For "afternoon": end_half=True
+        state['step'] = 5
+        half_label = {'full': '整天', 'morning': '上午', 'afternoon': '下午'}[half]
+        time_note = {'full': '09:00 ～ 18:00', 'morning': '09:00 ～ 12:00', 'afternoon': '13:00 ～ 18:00'}[half]
+        date_range = (f'{data["start_date"]}' +
+                      (f' ～ {data["end_date"]}' if data["end_date"] != data["start_date"] else ''))
+        msg = _flex_ask('📝 請假申請', '#27AE60',
+                        f'假別：{data["leave_type"]}\n'
+                        f'日期：{date_range}\n'
+                        f'時段：{half_label}（{time_note}）\n\n請輸入請假原因',
+                        '或點「跳過」')
+        msg['quickReply'] = _qr_pb(
+            ('跳過', 'lv_skip_reason', '（未填原因）'),
+            ('❌ 取消', 'cancel', '取消'),
+        )
+        _push_line_msg(user_id, msg)
+
+    elif step == 5:
+        reason = ('' if pb_data == 'lv_skip_reason'
+                  else (text.strip() if text else None))
+        if reason is None:
+            return
+        _line_conv_state.pop(user_id, None)
+        half = data.get('half', 'full')
+        start_half = half == 'morning'
+        end_half   = half == 'afternoon'
+        _do_line_leave_submit(staff, user_id,
+                              data['leave_type'], data['start_date'], data['end_date'],
+                              start_half, end_half, reason)
+
+
+def _do_line_leave_submit(staff, user_id, leave_type_name, start_date, end_date,
+                           start_half, end_half, reason):
+    """Insert leave request directly, with balance check."""
+    import re as _re_lv
+    from datetime import date as _dlv
+    try:
+        _dlv.fromisoformat(start_date); _dlv.fromisoformat(end_date)
+    except ValueError:
+        _send_line_punch(user_id, '日期格式錯誤。'); return
+
+    with get_db() as conn:
+        lt = conn.execute(
+            "SELECT * FROM leave_types WHERE active=TRUE AND name=%s", (leave_type_name,)
+        ).fetchone()
+        if not lt:
+            lt = conn.execute(
+                "SELECT * FROM leave_types WHERE active=TRUE AND name ILIKE %s LIMIT 1",
+                (f'%{leave_type_name}%',)
+            ).fetchone()
+        if not lt:
+            avail = conn.execute("SELECT name FROM leave_types WHERE active=TRUE ORDER BY sort_order").fetchall()
+            _send_line_punch(user_id, f'找不到假別「{leave_type_name}」\n可用：{"、".join(r["name"] for r in avail)}')
+            return
+
+        days = _calc_leave_days(start_date, end_date, start_half=start_half, end_half=end_half)
+        year = int(start_date[:4])
+        bal = conn.execute("""
+            SELECT total_days, used_days FROM leave_balances
+            WHERE staff_id=%s AND leave_type_id=%s AND year=%s
+        """, (staff['id'], lt['id'], year)).fetchone()
+
+        remain = None
+        if bal:
+            remain = float(bal['total_days'] or 0) - float(bal['used_days'] or 0)
+            if remain < days:
+                _send_line_punch(user_id,
+                    f'⚠️ {lt["name"]} 餘額不足\n剩餘 {remain:.1f} 天，申請 {days} 天\n\n請至員工系統調整後再申請。')
+                return
+
+        # Try inserting with total_days first, fall back to days column name
+        try:
+            row = conn.execute("""
+                INSERT INTO leave_requests
+                  (staff_id, leave_type_id, start_date, end_date, start_half, end_half,
+                   total_days, reason, status, created_at)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'pending',NOW()) RETURNING id
+            """, (staff['id'], lt['id'], start_date, end_date,
+                  start_half, end_half, days, reason or '（LINE 請假）')).fetchone()
+        except Exception:
+            row = conn.execute("""
+                INSERT INTO leave_requests
+                  (staff_id, leave_type_id, start_date, end_date, start_half, end_half,
+                   days, reason, status, created_at)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'pending',NOW()) RETURNING id
+            """, (staff['id'], lt['id'], start_date, end_date,
+                  start_half, end_half, days, reason or '（LINE 請假）')).fetchone()
+
+    half_label = {(True, False): '上午', (False, True): '下午', (False, False): '整天'}.get((start_half, end_half), '整天')
+    time_note  = {(True, False): '09:00～12:00', (False, True): '13:00～18:00', (False, False): '09:00～18:00'}.get((start_half, end_half), '')
+    bal_str = f'（剩餘 {remain:.1f} 天）' if remain is not None else ''
+    _send_line_punch(user_id,
+        f'✅ 請假申請已送出\n\n'
+        f'假別：{lt["name"]} {bal_str}\n'
+        f'日期：{start_date}' + (f' ～ {end_date}' if end_date != start_date else '') + '\n'
+        f'時段：{half_label}（{time_note}）\n'
+        f'天數：{days} 天\n'
+        + (f'原因：{reason}\n' if reason else '')
+        + f'申請號：#{row["id"]}，等待管理員審核。')
+
+
+# ── Overtime interactive flow ─────────────────────────────────────────
+
+def _line_ot_start(staff, user_id):
+    from datetime import date as _d, timedelta as _td
+    today = _d.today().isoformat()
+    tmrw  = (_d.today() + _td(days=1)).isoformat()
+    _line_conv_state[user_id] = {'flow': 'ot', 'step': 1, 'data': {}}
+    msg = _flex_ask('⏰ 加班申請', '#E67E22',
+                    '請選擇加班日期',
+                    '或直接輸入 YYYY-MM-DD')
+    msg['quickReply'] = _qr_pb(
+        (f'今天 ({today})', f'ot_date={today}', today),
+        (f'明天 ({tmrw})',  f'ot_date={tmrw}',  tmrw),
+        ('❌ 取消', 'cancel', '取消'),
+    )
+    _push_line_msg(user_id, msg)
+
+
+def _handle_conv_ot(staff, user_id, state, text=None, pb_data=None):
+    from datetime import date as _dot, datetime as _dtt
+    step = state['step']
+    data = state['data']
+    today = _dot.today().isoformat()
+
+    if pb_data == 'cancel' or text == '取消':
+        _line_conv_state.pop(user_id, None)
+        _send_line_punch(user_id, '已取消加班申請。')
+        return
+
+    def _parse_time(s):
+        """Parse HH:MM, return (h, m) or raise ValueError."""
+        s = (s or '').strip().replace('：', ':')
+        h, m = s.split(':')
+        h, m = int(h), int(m)
+        if not (0 <= h <= 23 and 0 <= m <= 59): raise ValueError
+        return h, m
+
+    if step == 1:
+        raw = (pb_data[8:] if pb_data and pb_data.startswith('ot_date=')
+               else (text.strip() if text else None))
+        try:
+            _dot.fromisoformat(raw)
+        except Exception:
+            _send_line_punch(user_id, f'日期格式錯誤，請輸入 YYYY-MM-DD，例：{today}')
+            return
+        data['date'] = raw
+        state['step'] = 2
+        msg = _flex_ask('⏰ 加班申請', '#E67E22',
+                        f'加班日期：{raw}\n\n請選擇或輸入開始時間',
+                        '格式：HH:MM，例：18:00')
+        msg['quickReply'] = _qr_pb(
+            ('17:00', 'ot_st=17:00', '17:00'),
+            ('18:00', 'ot_st=18:00', '18:00'),
+            ('19:00', 'ot_st=19:00', '19:00'),
+            ('20:00', 'ot_st=20:00', '20:00'),
+            ('❌ 取消', 'cancel', '取消'),
+        )
+        _push_line_msg(user_id, msg)
+
+    elif step == 2:
+        raw = (pb_data[6:] if pb_data and pb_data.startswith('ot_st=')
+               else (text.strip() if text else None))
+        try:
+            h, m = _parse_time(raw)
+        except Exception:
+            _send_line_punch(user_id, '請輸入有效時間，格式：HH:MM，例：18:00')
+            return
+        data['start_time'] = f'{h:02d}:{m:02d}'
+        state['step'] = 3
+        # Suggest end times based on start
+        ends = [f'{(h+i)%24:02d}:{m:02d}' for i in range(1, 5)]
+        qr = [(t, f'ot_et={t}', t) for t in ends] + [('❌ 取消', 'cancel', '取消')]
+        msg = _flex_ask('⏰ 加班申請', '#E67E22',
+                        f'加班日期：{data["date"]}\n開始：{data["start_time"]}\n\n請選擇或輸入結束時間',
+                        '格式：HH:MM')
+        msg['quickReply'] = _qr_pb(*qr)
+        _push_line_msg(user_id, msg)
+
+    elif step == 3:
+        raw = (pb_data[6:] if pb_data and pb_data.startswith('ot_et=')
+               else (text.strip() if text else None))
+        try:
+            eh, em = _parse_time(raw)
+        except Exception:
+            _send_line_punch(user_id, '請輸入有效時間，格式：HH:MM，例：21:00')
+            return
+        end_time = f'{eh:02d}:{em:02d}'
+        sh, sm = _parse_time(data['start_time'])
+        # Calculate hours (handle midnight crossing)
+        minutes = (eh * 60 + em) - (sh * 60 + sm)
+        if minutes <= 0: minutes += 24 * 60
+        hrs = round(minutes / 60, 2)
+        if hrs > 12:
+            _send_line_punch(user_id, f'⚠️ 加班時數異常（{hrs}h），請重新確認時間。')
+            return
+        data['end_time'] = end_time
+        data['hours'] = hrs
+        state['step'] = 4
+        msg = _flex_ask('⏰ 加班申請', '#E67E22',
+                        f'加班日期：{data["date"]}\n'
+                        f'時間：{data["start_time"]} ～ {end_time}\n'
+                        f'時數：{hrs}h\n\n請輸入加班原因',
+                        '或點「跳過」')
+        msg['quickReply'] = _qr_pb(
+            ('跳過', 'ot_skip_reason', '（未填原因）'),
+            ('❌ 取消', 'cancel', '取消'),
+        )
+        _push_line_msg(user_id, msg)
+
+    elif step == 4:
+        reason = ('' if pb_data == 'ot_skip_reason'
+                  else (text.strip() if text else None))
+        if reason is None:
+            return
+        _line_conv_state.pop(user_id, None)
+        d = data
+        with get_db() as conn:
+            row = conn.execute("""
+                INSERT INTO overtime_requests
+                  (staff_id, request_date, start_time, end_time, ot_hours, reason, status)
+                VALUES (%s,%s,%s,%s,%s,%s,'pending') RETURNING id
+            """, (staff['id'], d['date'], d['start_time'], d['end_time'],
+                  d['hours'], reason or '（LINE 加班申請）')).fetchone()
+        _send_line_punch(user_id,
+            f'✅ 加班申請已送出\n\n'
+            f'日期：{d["date"]}\n'
+            f'時間：{d["start_time"]} ～ {d["end_time"]}\n'
+            f'時數：{d["hours"]}h\n'
+            + (f'原因：{reason}\n' if reason else '')
+            + f'申請編號：#{row["id"]}\n\n'
+            '請等候管理員審核，審核結果將通知您。')
 
 
 @app.route('/line-punch/webhook', methods=['POST'])
@@ -1389,6 +1836,23 @@ def _handle_line_punch_event(event, cfg):
             '✏️ 輸入範例：\n  綁定 mary123\n'
             '（請將 mary123 換成您自己的帳號）\n\n'
             '不知道帳號？請詢問管理員。')
+        return
+
+    # ── Postback events (from Quick Reply interactive flows) ──────────
+    if evt_type == 'postback':
+        pb_data = event.get('postback', {}).get('data', '')
+        with get_db() as conn:
+            staff = conn.execute(
+                "SELECT * FROM punch_staff WHERE line_user_id=%s AND active=TRUE", (user_id,)
+            ).fetchone()
+        if not staff:
+            return
+        state = _line_conv_state.get(user_id)
+        if state:
+            if state['flow'] == 'leave':
+                _handle_conv_leave(staff, user_id, state, pb_data=pb_data)
+            elif state['flow'] == 'ot':
+                _handle_conv_ot(staff, user_id, state, pb_data=pb_data)
         return
 
     if evt_type != 'message': return
@@ -1470,6 +1934,15 @@ def _handle_line_punch_event(event, cfg):
     elif msg_type == 'text':
         text = msg.get('text', '').strip()
 
+        # ── Active conversation state machine ──────────────────────
+        _cs = _line_conv_state.get(user_id)
+        if _cs:
+            if _cs['flow'] == 'leave':
+                _handle_conv_leave(staff, user_id, _cs, text=text)
+            elif _cs['flow'] == 'ot':
+                _handle_conv_ot(staff, user_id, _cs, text=text)
+            return
+
         if text in ('狀態', '打卡記錄'):
             _send_status(staff, user_id); return
 
@@ -1485,9 +1958,13 @@ def _handle_line_punch_event(event, cfg):
                 locs = conn.execute("SELECT * FROM punch_locations WHERE active=TRUE").fetchall()
             gps_required = pcfg['gps_required'] if pcfg else False
             if gps_required and locs:
-                _send_line_punch(user_id,
-                    f'請傳送您的位置來完成{PUNCH_LABEL[punch_type]}\n'
-                    '點下方「傳送位置」按鈕即可打卡')
+                msg = _flex_ask('📍 需要位置驗證', '#2980B9',
+                                f'請傳送您的位置來完成{PUNCH_LABEL[punch_type]}',
+                                '點下方「傳送位置」按鈕即可打卡')
+                msg['quickReply'] = {'items': [
+                    {'type': 'action', 'action': {'type': 'location', 'label': '📍 傳送位置'}}
+                ]}
+                _push_line_msg(user_id, msg)
                 _pending_line_punches[user_id] = punch_type
             else:
                 _do_line_punch(staff, user_id, None, None, punch_type, PUNCH_LABEL)
@@ -1495,8 +1972,10 @@ def _handle_line_punch_event(event, cfg):
             _line_query_leave_balance(staff, user_id)
         elif text in ('查薪資', '薪資', '薪水', '薪資單', '查薪水'):
             _line_query_salary(staff, user_id)
-        elif text.startswith('請假'):
-            _line_submit_leave(staff, user_id, text)
+        elif text == '請假':
+            _line_leave_start(staff, user_id)
+        elif text.startswith('請假 '):
+            _line_submit_leave(staff, user_id, text)   # direct format still works
         elif text in ('績效', '考核', '我的考核', '查績效'):
             _line_query_performance(staff, user_id)
         elif text in ('假別', '假別清單', '假別列表'):
@@ -1505,8 +1984,10 @@ def _handle_line_punch_event(event, cfg):
               or text.startswith('出勤紀錄 ') or text.startswith('出勤記錄 ')
               or text.startswith('打卡紀錄 ') or text.startswith('打卡記錄 ')):
             _line_query_monthly_records(staff, user_id, text)
-        elif text.startswith('申請加班') or text == '加班':
-            _line_submit_overtime(staff, user_id, text)
+        elif text == '加班':
+            _line_ot_start(staff, user_id)
+        elif text.startswith('加班 ') or text.startswith('申請加班'):
+            _line_submit_overtime(staff, user_id, text)  # direct format still works
         elif text in ('選單', '功能', '菜單', '?', '？', 'help', 'Help', 'HELP'):
             _line_show_help(staff, user_id)
         else:
