@@ -1446,16 +1446,16 @@ def _handle_line_punch_event(event, cfg):
         '休息': 'break_out', '休息開始': 'break_out',
         '回來': 'break_in', '休息結束': 'break_in',
     }
-    # Merge custom rich-menu button texts if configured
+    # Merge custom rich-menu button texts for punch positions (0=in, 1=out) only
     try:
         _rm_cfg = get_line_punch_config()
         _rm_texts = _rm_cfg.get('richmenu_area_texts') if _rm_cfg else None
         if _rm_texts:
             _rm_list = _json.loads(_rm_texts) if isinstance(_rm_texts, str) else _rm_texts
-            _type_order = ['in', 'out', 'break_out', 'break_in']
-            for _i, _t in enumerate(_rm_list[:4]):
-                if _t and _t.strip():
-                    PUNCH_CMDS[_t.strip()] = _type_order[_i]
+            for _i, _pt in enumerate(['in', 'out']):
+                _t = _rm_list[_i].strip() if _i < len(_rm_list) and _rm_list[_i] else ''
+                if _t:
+                    PUNCH_CMDS[_t] = _pt
     except Exception:
         pass
     PUNCH_LABEL = {
@@ -1505,7 +1505,7 @@ def _handle_line_punch_event(event, cfg):
               or text.startswith('出勤紀錄 ') or text.startswith('出勤記錄 ')
               or text.startswith('打卡紀錄 ') or text.startswith('打卡記錄 ')):
             _line_query_monthly_records(staff, user_id, text)
-        elif text.startswith('申請加班'):
+        elif text.startswith('申請加班') or text == '加班':
             _line_submit_overtime(staff, user_id, text)
         elif text in ('選單', '功能', '菜單', '?', '？', 'help', 'Help', 'HELP'):
             _line_show_help(staff, user_id)
@@ -1753,7 +1753,7 @@ def api_richmenu_create():
     gdrive_url = (body_json.get('gdrive_url') or '').strip()
     raw_texts  = body_json.get('area_texts') or []
     # Expect [top-left, top-right, bottom-left, bottom-right]
-    defaults   = ['上班', '下班', '休息', '回來']
+    defaults   = ['上班', '下班', '請假', '加班']
     area_texts = [(raw_texts[i].strip() if i < len(raw_texts) and raw_texts[i].strip() else defaults[i])
                   for i in range(4)]
 
@@ -9477,16 +9477,16 @@ def _line_query_monthly_records(staff, user_id, text):
 
 def _line_submit_overtime(staff, user_id, text):
     """
-    LINE 加班申請。格式：申請加班 [YYYY-MM-DD] [時數] [原因]
-    範例：申請加班 2026-04-05 3 業績衝刺
+    LINE 加班申請。格式：加班 [YYYY-MM-DD] [時數] [原因]
+    範例：加班 2026-04-05 3 業績衝刺
     """
     import re as _re_ot
     from datetime import date as _dot
     parts = text.strip().split(None, 3)
     if len(parts) < 3:
         _send_line_punch(user_id,
-            '加班申請格式：\n申請加班 [日期] [時數] [原因]\n\n'
-            '範例：申請加班 2026-04-05 3 業績衝刺\n'
+            '加班申請格式：\n加班 [日期] [時數] [原因]\n\n'
+            '範例：加班 2026-04-05 3 業績衝刺\n'
             '（時數可用小數，如 1.5）')
         return
     date_str = parts[1]
@@ -9526,7 +9526,7 @@ def _line_show_help(staff, user_id):
         f'哈囉 {staff["name"]}！以下是可用的指令：\n\n'
         '─── 打卡 ───\n'
         '📍 傳送位置 → 自動打卡\n'
-        '💬 上班 / 下班 / 休息 / 回來\n'
+        '💬 上班 / 下班\n'
         '📋 狀態 → 今日打卡記錄\n\n'
         '─── 查詢 ───\n'
         '🌿 查餘假 → 本年假期餘額\n'
@@ -9537,8 +9537,8 @@ def _line_show_help(staff, user_id):
         '─── 申請 ───\n'
         '📝 請假 [假別] [日期] → 送出請假\n'
         '   範例：請假 特休 2026-04-01\n'
-        '⏰ 申請加班 [日期] [時數] → 加班申請\n'
-        '   範例：申請加班 2026-04-05 3\n'
+        '⏰ 加班 [日期] [時數] → 加班申請\n'
+        '   範例：加班 2026-04-05 3\n'
         '🗂️ 假別 → 查看可用假別清單\n\n'
         '─── 其他 ───\n'
         '🔓 解除綁定')
