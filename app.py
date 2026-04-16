@@ -11260,3 +11260,767 @@ def webauthn_delete_credential(cid):
             "DELETE FROM webauthn_credentials WHERE id=%s AND user_key=%s", (cid, user_key)
         )
     return jsonify({'ok': True})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ── Excel 匯出輔助 ────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _xl_response(wb, filename):
+    """將 openpyxl Workbook 轉成 Flask Response (.xlsx)"""
+    from io import BytesIO as _BytesIO
+    from flask import Response as _Resp
+    buf = _BytesIO(); wb.save(buf); buf.seek(0)
+    return _Resp(
+        buf.read(),
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
+
+def _xl_header_fill():
+    from openpyxl.styles import PatternFill
+    return PatternFill('solid', fgColor='0F1C3A')
+
+def _xl_alt_fill():
+    from openpyxl.styles import PatternFill
+    return PatternFill('solid', fgColor='F0F2F8')
+
+def _xl_thin_border():
+    from openpyxl.styles import Border, Side
+    s = Side(style='thin', color='DDDDDD')
+    return Border(left=s, right=s, top=s, bottom=s)
+
+def _xl_write_header(ws, headers, col_widths=None):
+    """寫入首列（深藍背景、白字）並設定欄寬"""
+    from openpyxl.styles import Font, Alignment
+    hf = _xl_header_fill(); thin = _xl_thin_border()
+    center = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[1].height = 20
+    for ci, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=ci, value=h)
+        cell.font = Font(bold=True, color='FFFFFF', name='Noto Sans TC', size=10)
+        cell.fill = hf; cell.border = thin; cell.alignment = center
+        if col_widths and ci-1 < len(col_widths):
+            ws.column_dimensions[cell.column_letter].width = col_widths[ci-1]
+    ws.freeze_panes = 'A2'
+
+def _xl_write_rows(ws, data_rows, alt=True):
+    """寫入資料列（間隔底色）"""
+    from openpyxl.styles import Alignment
+    af = _xl_alt_fill(); thin = _xl_thin_border()
+    vcenter = Alignment(vertical='center', wrap_text=True)
+    for ri, row in enumerate(data_rows, 2):
+        for ci, val in enumerate(row, 1):
+            cell = ws.cell(row=ri, column=ci, value=val)
+            cell.border = thin; cell.alignment = vcenter
+            if alt and ri % 2 == 0:
+                cell.fill = af
+
+
+# ── 1. 出勤明細 Excel ──────────────────────────────────────────────────────────
+@app.route('/api/export/attendance-excel', methods=['GET'])
+@login_required
+def api_export_attendance_excel():
+    """匯出出勤明細 Excel"""
+    import openpyxl
+    month    = request.args.get('month', '') or _dt.now(TW_TZ).strftime('%Y-%m')
+    staff_id = request.args.get('staff_id', '')
+    conds, params = ["TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s"], [month]
+    if staff_id: conds.append("pr.staff_id=%s"); params.append(int(staff_id))
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT ps.employee_code, ps.name as staff_name, ps.department, ps.role,
+                   (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date as work_date,
+                   pr.punch_type,
+                   to_char(pr.punched_at AT TIME ZONE 'Asia/Taipei','HH24:MI') as punch_time,
+                   pr.is_manual, pr.manual_by, pr.gps_distance, pr.location_name, pr.note
+            FROM punch_records pr JOIN punch_staff ps ON ps.id=pr.staff_id
+            WHERE {' AND '.join(conds)} ORDER BY ps.name, pr.punched_at
+        """, params).fetchall()
+    PUNCH_LABEL = {'in':'上班打卡','out':'下班打卡','break_out':'休息開始','break_in':'休息結束'}
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{month} 出勤明細'
+    headers = ['員工代碼','姓名','部門','職稱','日期','打卡類型','時間','補打卡','操作人','GPS距離(m)','地點','備註']
+    col_w   = [10, 10, 10, 10, 12, 10, 8, 7, 10, 12, 14, 20]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for r in rows:
+        data.append([
+            r['employee_code'] or '', r['staff_name'], r['department'] or '', r['role'] or '',
+            str(r['work_date']), PUNCH_LABEL.get(r['punch_type'], r['punch_type']),
+            r['punch_time'], '是' if r['is_manual'] else '',
+            r['manual_by'] or '', r['gps_distance'] if r['gps_distance'] is not None else '',
+            r['location_name'] or '', r['note'] or '',
+        ])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, f'attendance_{month}.xlsx')
+
+
+# ── 2. 出勤摘要 Excel ──────────────────────────────────────────────────────────
+@app.route('/api/export/attendance-summary-excel', methods=['GET'])
+@login_required
+def api_export_attendance_summary_excel():
+    """匯出出勤摘要 Excel（每人每天工時）"""
+    import openpyxl
+    month = request.args.get('month', '') or _dt.now(TW_TZ).strftime('%Y-%m')
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT ps.employee_code, ps.name as staff_name, ps.department, ps.role,
+                   (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date as work_date,
+                   MIN(CASE WHEN pr.punch_type='in'  THEN pr.punched_at AT TIME ZONE 'Asia/Taipei' END) as clock_in,
+                   MAX(CASE WHEN pr.punch_type='out' THEN pr.punched_at AT TIME ZONE 'Asia/Taipei' END) as clock_out,
+                   BOOL_OR(pr.punch_type='in')  as has_in,
+                   BOOL_OR(pr.punch_type='out') as has_out
+            FROM punch_records pr JOIN punch_staff ps ON ps.id=pr.staff_id
+            WHERE TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
+            GROUP BY ps.employee_code, ps.name, ps.department, ps.role,
+                     (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
+            ORDER BY ps.name, work_date
+        """, (month,)).fetchall()
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{month} 出勤摘要'
+    headers = ['員工代碼','姓名','部門','職稱','日期','上班時間','下班時間','工時(h)','狀態']
+    col_w   = [10, 10, 10, 10, 12, 10, 10, 8, 10]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for r in rows:
+        ci = str(r['clock_in'])[11:16]  if r['clock_in']  else '—'
+        co = str(r['clock_out'])[11:16] if r['clock_out'] else '—'
+        hrs = ''
+        if r['clock_in'] and r['clock_out']:
+            from datetime import datetime as _dtt
+            diff = (r['clock_out'] - r['clock_in']).total_seconds() / 3600
+            hrs = round(diff, 2)
+        status = '正常' if r['has_in'] and r['has_out'] else ('缺下班' if r['has_in'] else ('缺上班' if r['has_out'] else '缺打卡'))
+        data.append([r['employee_code'] or '', r['staff_name'], r['department'] or '', r['role'] or '',
+                     str(r['work_date']), ci, co, hrs, status])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, f'attendance_summary_{month}.xlsx')
+
+
+# ── 3. 月統計 Excel ───────────────────────────────────────────────────────────
+@app.route('/api/export/monthly-stats-excel', methods=['GET'])
+@login_required
+def api_export_monthly_stats_excel():
+    """匯出月出勤統計 Excel"""
+    import openpyxl
+    from datetime import date as _date3, timedelta as _td3
+    import calendar as _cal3
+    month = request.args.get('month', '') or _dt.now(TW_TZ).strftime('%Y-%m')
+    _y3, _m3 = int(month[:4]), int(month[5:])
+    _next_d = (_date3(_y3, _m3, _cal3.monthrange(_y3, _m3)[1]) + _td3(days=1)).isoformat()
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT ps.id as staff_id, ps.name as staff_name, ps.department, ps.role,
+                   (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date as work_date,
+                   MIN(CASE WHEN pr.punch_type='in'  THEN pr.punched_at AT TIME ZONE 'Asia/Taipei' END) as clock_in,
+                   MAX(CASE WHEN pr.punch_type='out' THEN pr.punched_at AT TIME ZONE 'Asia/Taipei' END) as clock_out,
+                   BOOL_OR(pr.punch_type='in')  as has_in,
+                   BOOL_OR(pr.punch_type='out') as has_out
+            FROM punch_records pr JOIN punch_staff ps ON ps.id=pr.staff_id AND ps.active=TRUE
+            WHERE TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
+               OR (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date=%s
+            GROUP BY ps.id, ps.name, ps.department, ps.role,
+                     (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
+            ORDER BY ps.name, work_date
+        """, (month, _next_d)).fetchall()
+        shift_rows = conn.execute("""
+            SELECT sa.staff_id, sa.shift_date, st.start_time, st.end_time
+            FROM shift_assignments sa JOIN shift_types st ON st.id=sa.shift_type_id
+            WHERE TO_CHAR(sa.shift_date,'YYYY-MM')=%s
+        """, (month,)).fetchall()
+    from datetime import date as _da
+    shift_map = {(r['staff_id'], str(r['shift_date'])): r for r in shift_rows}
+    # Aggregate by staff
+    stats = {}
+    for r in rows:
+        sid = r['staff_id']; ds = str(r['work_date'])
+        if sid not in stats:
+            stats[sid] = {'name': r['staff_name'], 'dept': r['department'] or '', 'role': r['role'] or '',
+                          'days': 0, 'hours': 0.0, 'late': 0, 'early': 0, 'missing': 0}
+        s = stats[sid]
+        if r['has_in'] and r['has_out']:
+            s['days'] += 1
+            diff = (r['clock_out'] - r['clock_in']).total_seconds() / 3600
+            s['hours'] = round(s['hours'] + diff, 2)
+        if not r['has_in'] or not r['has_out']:
+            if _da.fromisoformat(ds) < _da.today(): s['missing'] += 1
+        sh = shift_map.get((sid, ds))
+        if sh and r['clock_in']:
+            ci_t = str(r['clock_in'])[11:16]; sh_s = str(sh['start_time'])[:5]
+            try:
+                if int(ci_t[:2])*60+int(ci_t[3:]) - (int(sh_s[:2])*60+int(sh_s[3:])) > 10: s['late'] += 1
+            except: pass
+        if sh and r['clock_out']:
+            co_t = str(r['clock_out'])[11:16]; sh_e = str(sh['end_time'])[:5]
+            try:
+                if (int(sh_e[:2])*60+int(sh_e[3:])) - (int(co_t[:2])*60+int(co_t[3:])) > 15: s['early'] += 1
+            except: pass
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{month} 月統計'
+    headers = ['姓名','部門','職稱','出勤天數','總工時(h)','平均時數/天','遲到次數','早退次數','缺打卡次數']
+    col_w   = [12, 10, 10, 10, 10, 12, 10, 10, 10]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for s in stats.values():
+        avg = round(s['hours'] / s['days'], 2) if s['days'] else 0
+        data.append([s['name'], s['dept'], s['role'], s['days'], round(s['hours'],2), avg, s['late'], s['early'], s['missing']])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, f'monthly_stats_{month}.xlsx')
+
+
+# ── 4. 員工管理 Excel ──────────────────────────────────────────────────────────
+@app.route('/api/export/staff-excel', methods=['GET'])
+@login_required
+def api_export_staff_excel():
+    """匯出員工列表 Excel"""
+    import openpyxl
+    include_inactive = request.args.get('include_inactive', '0') == '1'
+    with get_db() as conn:
+        cond = '' if include_inactive else 'WHERE ps.active=TRUE'
+        rows = conn.execute(f"""
+            SELECT ps.employee_code, ps.name, ps.department, ps.role,
+                   ps.position_title, ps.hire_date, ps.birth_date,
+                   ps.salary_type, ps.base_salary, ps.insured_salary,
+                   ps.daily_hours, ps.gender, ps.national_id,
+                   ps.insurance_type, ps.address, ps.active,
+                   s.name as store_name
+            FROM punch_staff ps
+            LEFT JOIN stores s ON s.id=ps.store_id
+            {cond} ORDER BY ps.name
+        """).fetchall()
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = '員工列表'
+    headers = ['員工代碼','姓名','部門','職稱','到職日','出生日','薪資制度','底薪','投保薪資',
+               '每日時數','性別','身分證','保險類型','地址','門市','狀態']
+    col_w   = [10, 10, 10, 10, 12, 12, 10, 12, 12, 8, 6, 12, 10, 24, 10, 6]
+    _xl_write_header(ws, headers, col_w)
+    SAL_LABEL = {'monthly':'月薪制','hourly':'時薪制'}
+    INS_LABEL = {'regular':'一般','part_time':'兼職','self':'自行投保'}
+    data = []
+    for r in rows:
+        data.append([
+            r['employee_code'] or '', r['name'], r['department'] or '', r['position_title'] or r['role'] or '',
+            str(r['hire_date']) if r['hire_date'] else '', str(r['birth_date']) if r['birth_date'] else '',
+            SAL_LABEL.get(r['salary_type'] or 'monthly', r['salary_type'] or ''),
+            float(r['base_salary'] or 0), float(r['insured_salary'] or 0), float(r['daily_hours'] or 8),
+            r['gender'] or '', r['national_id'] or '',
+            INS_LABEL.get(r['insurance_type'] or 'regular', r['insurance_type'] or ''),
+            r['address'] or '', r['store_name'] or '',
+            '在職' if r['active'] else '離職',
+        ])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, 'staff_list.xlsx')
+
+
+# ── 5. 加班申請 Excel ──────────────────────────────────────────────────────────
+@app.route('/api/export/overtime-excel', methods=['GET'])
+@login_required
+def api_export_overtime_excel():
+    """匯出加班申請 Excel"""
+    import openpyxl
+    month  = request.args.get('month', '') or _dt.now(TW_TZ).strftime('%Y-%m')
+    status = request.args.get('status', '')
+    conds, params = ["to_char(r.request_date,'YYYY-MM')=%s"], [month]
+    if status: conds.append("r.status=%s"); params.append(status)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT r.*, ps.name as staff_name, ps.department, ps.employee_code
+            FROM overtime_requests r JOIN punch_staff ps ON ps.id=r.staff_id
+            WHERE {' AND '.join(conds)} ORDER BY r.request_date DESC
+        """, params).fetchall()
+    STATUS_LABEL = {'pending':'待審核','approved':'已核准','rejected':'已退回'}
+    DAY_LABEL    = {'weekday':'平日','rest_day':'休息日','holiday':'國定假日','special':'特殊假日'}
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{month} 加班申請'
+    headers = ['員工代碼','姓名','部門','申請日期','日別','開始時間','結束時間','加班時數','加班費','原因','狀態','審核人','審核備註']
+    col_w   = [10,10,10,12,10,10,10,10,10,24,10,10,20]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for r in rows:
+        data.append([
+            r['employee_code'] or '', r['staff_name'], r['department'] or '',
+            str(r['request_date']), DAY_LABEL.get(r['day_type'] or 'weekday', r['day_type'] or ''),
+            str(r['start_time'])[:5] if r['start_time'] else '',
+            str(r['end_time'])[:5]   if r['end_time']   else '',
+            float(r['ot_hours'] or 0), float(r['ot_pay'] or 0),
+            r['reason'] or '', STATUS_LABEL.get(r['status'], r['status']),
+            r['reviewed_by'] or '', r['review_note'] or '',
+        ])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, f'overtime_{month}.xlsx')
+
+
+# ── 6. 補打申請 Excel ──────────────────────────────────────────────────────────
+@app.route('/api/export/punch-requests-excel', methods=['GET'])
+@login_required
+def api_export_punch_requests_excel():
+    """匯出補打申請 Excel"""
+    import openpyxl
+    month  = request.args.get('month', '') or _dt.now(TW_TZ).strftime('%Y-%m')
+    status = request.args.get('status', '')
+    conds, params = ["TO_CHAR(r.requested_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s"], [month]
+    if status: conds.append("r.status=%s"); params.append(status)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT r.*, ps.name as staff_name, ps.department, ps.employee_code
+            FROM punch_requests r JOIN punch_staff ps ON ps.id=r.staff_id
+            WHERE {' AND '.join(conds)} ORDER BY r.requested_at DESC
+        """, params).fetchall()
+    PUNCH_LABEL  = {'in':'上班打卡','out':'下班打卡','break_out':'休息開始','break_in':'休息結束'}
+    STATUS_LABEL = {'pending':'待審核','approved':'已核准','rejected':'已退回'}
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{month} 補打申請'
+    headers = ['員工代碼','姓名','部門','打卡類型','申請時間','原因','狀態','審核人','審核備註']
+    col_w   = [10,10,10,10,16,24,10,10,20]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for r in rows:
+        data.append([
+            r['employee_code'] or '', r['staff_name'], r['department'] or '',
+            PUNCH_LABEL.get(r['punch_type'], r['punch_type']),
+            str(r['requested_at'].astimezone(TW_TZ))[:16] if hasattr(r['requested_at'], 'astimezone') else str(r['requested_at'])[:16],
+            r['reason'] or '', STATUS_LABEL.get(r['status'], r['status']),
+            r['reviewed_by'] or '', r['review_note'] or '',
+        ])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, f'punch_requests_{month}.xlsx')
+
+
+# ── 7. 排休申請 Excel ──────────────────────────────────────────────────────────
+@app.route('/api/export/schedule-requests-excel', methods=['GET'])
+@login_required
+def api_export_schedule_requests_excel():
+    """匯出排休申請 Excel"""
+    import openpyxl
+    month  = request.args.get('month', '') or _dt.now(TW_TZ).strftime('%Y-%m')
+    status = request.args.get('status', '')
+    conds, params = ['r.month=%s'], [month]
+    if status: conds.append("r.status=%s"); params.append(status)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT r.*, ps.name as staff_name, ps.department, ps.employee_code
+            FROM schedule_requests r JOIN punch_staff ps ON ps.id=r.staff_id
+            WHERE {' AND '.join(conds)} ORDER BY r.created_at DESC
+        """, params).fetchall()
+    STATUS_LABEL = {'pending':'待審核','approved':'已核准','rejected':'已退回','modified_pending':'修改待審'}
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{month} 排休申請'
+    headers = ['員工代碼','姓名','部門','月份','申請天數','休假日期','申請備註','狀態','審核人','審核備註']
+    col_w   = [10,10,10,10,10,40,20,12,10,20]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for r in rows:
+        import json as _jx
+        dates_raw = r['dates'] if isinstance(r['dates'], list) else _jx.loads(r['dates'] or '[]')
+        dates_str = ', '.join(sorted(dates_raw))
+        data.append([
+            r['employee_code'] or '', r['staff_name'], r['department'] or '',
+            r['month'], len(dates_raw), dates_str,
+            r['submit_note'] or '', STATUS_LABEL.get(r['status'], r['status']),
+            r['reviewed_by'] or '', r['review_note'] or '',
+        ])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, f'schedule_requests_{month}.xlsx')
+
+
+# ── 8. 請假申請 Excel ──────────────────────────────────────────────────────────
+@app.route('/api/export/leave-excel', methods=['GET'])
+@login_required
+def api_export_leave_excel():
+    """匯出請假申請 Excel"""
+    import openpyxl
+    month    = request.args.get('month', '')
+    year     = request.args.get('year', '')
+    staff_id = request.args.get('staff_id', '')
+    status   = request.args.get('status', '')
+    conds, params = ['TRUE'], []
+    if month:    conds.append("to_char(lr.start_date,'YYYY-MM')=%s"); params.append(month)
+    if year:     conds.append("EXTRACT(YEAR FROM lr.start_date)=%s"); params.append(int(year))
+    if staff_id: conds.append("lr.staff_id=%s"); params.append(int(staff_id))
+    if status:   conds.append("lr.status=%s"); params.append(status)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT lr.*, ps.name as staff_name, ps.employee_code, ps.department,
+                   lt.name as leave_type_name, lt.pay_rate
+            FROM leave_requests lr
+            JOIN punch_staff ps ON ps.id=lr.staff_id
+            JOIN leave_types  lt ON lt.id=lr.leave_type_id
+            WHERE {' AND '.join(conds)} ORDER BY lr.start_date, ps.name
+        """, params).fetchall()
+    STATUS_LABEL = {'approved':'已核准','rejected':'已退回','pending':'待審核','cancelled':'已取消'}
+    PAY_LABEL    = {1.0:'全薪', 0.5:'半薪', 0.0:'無薪'}
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'請假申請'
+    headers = ['員工代碼','姓名','部門','假別','薪資倍率','開始日期','結束日期','天數','原因','代理人','狀態','審核人','審核備註']
+    col_w   = [10,10,10,10,10,12,12,8,24,10,10,10,20]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for r in rows:
+        data.append([
+            r['employee_code'] or '', r['staff_name'], r['department'] or '',
+            r['leave_type_name'], PAY_LABEL.get(float(r['pay_rate']), f"{r['pay_rate']}倍"),
+            str(r['start_date']), str(r['end_date']), float(r['total_days']),
+            r['reason'] or '', r['substitute_name'] or '',
+            STATUS_LABEL.get(r['status'], r['status']),
+            r['reviewed_by'] or '', r['review_note'] or '',
+        ])
+    _xl_write_rows(ws, data)
+    tag = month or year or 'all'
+    return _xl_response(wb, f'leave_{tag}.xlsx')
+
+
+# ── 9. 假別餘額 Excel ──────────────────────────────────────────────────────────
+@app.route('/api/export/leave-balances-excel', methods=['GET'])
+@login_required
+def api_export_leave_balances_excel():
+    """匯出假別餘額 Excel"""
+    import openpyxl
+    year = request.args.get('year', '') or str(_dt.now(TW_TZ).year)
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT lb.*, ps.name as staff_name, ps.employee_code, ps.department,
+                   lt.name as leave_type_name, lt.code as leave_code
+            FROM leave_balances lb
+            JOIN punch_staff ps ON ps.id=lb.staff_id
+            JOIN leave_types  lt ON lt.id=lb.leave_type_id
+            WHERE lb.year=%s ORDER BY ps.name, lt.name
+        """, (int(year),)).fetchall()
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{year} 假別餘額'
+    headers = ['員工代碼','姓名','部門','假別','假別代碼','年度','配額(天)','已使用(天)','待審(天)','剩餘(天)']
+    col_w   = [10,10,10,12,10,8,10,12,10,10]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for r in rows:
+        quota   = float(r['quota_days']  or 0)
+        used    = float(r['used_days']   or 0)
+        pending = float(r['pending_days'] or 0)
+        remain  = quota - used - pending
+        data.append([
+            r['employee_code'] or '', r['staff_name'], r['department'] or '',
+            r['leave_type_name'], r['leave_code'] or '', int(year),
+            quota, used, pending, round(remain, 2),
+        ])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, f'leave_balances_{year}.xlsx')
+
+
+# ── 10. 月薪計算 Excel ──────────────────────────────────────────────────────────
+@app.route('/api/export/salary-excel', methods=['GET'])
+@login_required
+def api_export_salary_excel():
+    """匯出月薪計算 Excel"""
+    import openpyxl
+    month = request.args.get('month', '') or _dt.now(TW_TZ).strftime('%Y-%m')
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT sr.*, ps.name as staff_name, ps.employee_code,
+                   ps.department, ps.role, ps.salary_type
+            FROM salary_records sr JOIN punch_staff ps ON ps.id=sr.staff_id
+            WHERE sr.month=%s ORDER BY ps.name
+        """, (month,)).fetchall()
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{month} 薪資'
+    headers = ['員工代碼','姓名','部門','職稱','薪資制度',
+               '工作日','出勤天數','請假天數','無薪假天數',
+               '底薪/時薪','津貼合計','扣除合計','加班費','實領金額','狀態','備註']
+    col_w   = [10,10,10,10,10,8,8,8,8,12,12,12,10,12,8,20]
+    _xl_write_header(ws, headers, col_w)
+    from openpyxl.styles import Font, PatternFill, Alignment
+    confirmed_fill = PatternFill('solid', fgColor='EDF9F4')
+    data = []
+    for r in rows:
+        sal_type  = r['salary_type'] or 'monthly'
+        base_val  = float(r['hourly_rate'] or 0) if sal_type == 'hourly' else float(r['base_salary'] or r.get('base_pay', 0) or 0)
+        row_vals = [
+            r['employee_code'] or '', r['staff_name'], r['department'] or '', r['role'] or '',
+            '時薪制' if sal_type == 'hourly' else '月薪制',
+            float(r['work_days'] or 0), float(r['actual_days'] or 0),
+            float(r['leave_days'] or 0), float(r['unpaid_days'] or 0),
+            float(r['base_pay'] or 0),
+            float(r['allowance_total'] or 0), float(r['deduction_total'] or 0),
+            float(r['ot_pay'] or 0), float(r['net_pay'] or 0),
+            '已確認' if r['status'] == 'confirmed' else '草稿',
+            r['note'] or '',
+        ]
+        data.append(row_vals)
+    _xl_write_rows(ws, data)
+    # 加上合計列
+    n = len(data)
+    if n:
+        from openpyxl.styles import Side, Border
+        thin = _xl_thin_border()
+        total_row = ws.max_row + 1
+        ws.cell(total_row, 1, '合計').font = Font(bold=True)
+        for ci, col_idx in enumerate([10, 11, 12, 13, 14], 1):
+            s = sum(float(r[col_idx-1]) for r in data if isinstance(r[col_idx-1], (int, float)))
+            ws.cell(total_row, col_idx + 9, s).font = Font(bold=True)
+    return _xl_response(wb, f'salary_{month}.xlsx')
+
+
+# ── 11. 公告管理 Excel ─────────────────────────────────────────────────────────
+@app.route('/api/export/announcements-excel', methods=['GET'])
+@login_required
+def api_export_announcements_excel():
+    """匯出公告列表 Excel"""
+    import openpyxl
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT id, title, category, status, is_pinned, content,
+                   publish_at, expire_at, view_count, created_at
+            FROM announcements ORDER BY created_at DESC
+        """).fetchall()
+    CAT_LABEL = {'general':'一般公告','hr':'人事公告','event':'活動通知',
+                 'urgent':'緊急公告','policy':'制度政策'}
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = '公告列表'
+    headers = ['ID','標題','類別','狀態','置頂','發布時間','到期時間','觀看次數','建立時間','內容摘要']
+    col_w   = [6, 30, 12, 10, 6, 16, 16, 10, 16, 40]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for r in rows:
+        content_preview = (r['content'] or '')[:100].replace('\n',' ')
+        data.append([
+            r['id'], r['title'], CAT_LABEL.get(r['category'] or 'general', r['category'] or ''),
+            '上架中' if r['status'] == 'active' else '已下架',
+            '是' if r['is_pinned'] else '',
+            str(r['publish_at'])[:16] if r['publish_at'] else '',
+            str(r['expire_at'])[:16]  if r['expire_at']  else '',
+            r['view_count'] or 0,
+            str(r['created_at'])[:16] if r['created_at'] else '',
+            content_preview,
+        ])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, 'announcements.xlsx')
+
+
+# ── 12. 國定假日 Excel ─────────────────────────────────────────────────────────
+@app.route('/api/export/holidays-excel', methods=['GET'])
+@login_required
+def api_export_holidays_excel():
+    """匯出國定假日 Excel"""
+    import openpyxl
+    year = request.args.get('year', '') or str(_dt.now(TW_TZ).year)
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT id, holiday_date, name, holiday_type, note
+            FROM holidays WHERE EXTRACT(YEAR FROM holiday_date)=%s
+            ORDER BY holiday_date
+        """, (int(year),)).fetchall()
+    WEEKDAY_ZH2 = ['一','二','三','四','五','六','日']
+    TYPE_LABEL  = {'national':'國定假日','compensatory':'補假','special':'特殊假日','custom':'自訂'}
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{year} 國定假日'
+    headers = ['日期','星期','名稱','類型','備註']
+    col_w   = [12, 6, 20, 12, 30]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    from datetime import date as _da4
+    for r in rows:
+        try:
+            d = _da4.fromisoformat(str(r['holiday_date']))
+            wd = WEEKDAY_ZH2[d.weekday()]
+        except: wd = ''
+        data.append([
+            str(r['holiday_date']), wd, r['name'],
+            TYPE_LABEL.get(r['holiday_type'] or 'national', r['holiday_type'] or ''),
+            r['note'] or '',
+        ])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, f'holidays_{year}.xlsx')
+
+
+# ── 13. 財務收支記錄 Excel ─────────────────────────────────────────────────────
+@app.route('/api/finance/records-excel', methods=['GET'])
+@require_module('finance')
+def api_finance_records_excel():
+    """匯出財務收支記錄 Excel"""
+    import openpyxl
+    month = request.args.get('month', '') or _dt.now(TW_TZ).strftime('%Y-%m')
+    ftype = request.args.get('type', '')
+    conds, params = ["TO_CHAR(fr.record_date,'YYYY-MM')=%s"], [month]
+    if ftype: conds.append("fr.type=%s"); params.append(ftype)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT fr.*, fc.name as cat_name
+            FROM finance_records fr
+            LEFT JOIN finance_categories fc ON fc.id=fr.category_id
+            WHERE {' AND '.join(conds)} ORDER BY fr.record_date, fr.id
+        """, params).fetchall()
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{month} 收支記錄'
+    headers = ['日期','類型','類別','標題','廠商/客戶','發票號碼','金額','備註']
+    col_w   = [12, 8, 14, 24, 16, 14, 12, 24]
+    _xl_write_header(ws, headers, col_w)
+    from openpyxl.styles import Font, PatternFill
+    inc_fill = PatternFill('solid', fgColor='EDF9F4')
+    exp_fill = PatternFill('solid', fgColor='FDF0F0')
+    data = []
+    for r in rows:
+        data.append([
+            str(r['record_date']), '收入' if r['type'] == 'income' else '支出',
+            r['cat_name'] or '', r['title'] or '',
+            r['vendor'] or '', r['invoice_no'] or '',
+            float(r['amount'] or 0), r['note'] or '',
+        ])
+    _xl_write_rows(ws, data)
+    # 收入/支出小計
+    income_total  = sum(float(r['amount'] or 0) for r in rows if r['type'] == 'income')
+    expense_total = sum(float(r['amount'] or 0) for r in rows if r['type'] == 'expense')
+    ws2 = wb.create_sheet('摘要')
+    _xl_write_header(ws2, ['項目', '金額'], [20, 16])
+    _xl_write_rows(ws2, [['總收入', income_total], ['總支出', expense_total], ['淨損益', income_total - expense_total]])
+    return _xl_response(wb, f'finance_{month}.xlsx')
+
+
+# ── 14. 費用審核 Excel ─────────────────────────────────────────────────────────
+@app.route('/api/export/expense-claims-excel', methods=['GET'])
+@login_required
+def api_export_expense_claims_excel():
+    """匯出費用申請 Excel"""
+    import openpyxl
+    month  = request.args.get('month', '') or _dt.now(TW_TZ).strftime('%Y-%m')
+    status = request.args.get('status', '')
+    conds, params = ["TO_CHAR(ec.expense_date,'YYYY-MM')=%s"], [month]
+    if status: conds.append("ec.status=%s"); params.append(status)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT ec.*, ps.name as staff_name, ps.employee_code, ps.department
+            FROM expense_claims ec JOIN punch_staff ps ON ps.id=ec.staff_id
+            WHERE {' AND '.join(conds)} ORDER BY ec.expense_date DESC
+        """, params).fetchall()
+    STATUS_LABEL = {'pending':'待審核','approved':'已核准','rejected':'已拒絕'}
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{month} 費用申請'
+    headers = ['員工代碼','姓名','部門','日期','類型','標題','金額','說明','狀態','審核人','審核備註','審核時間']
+    col_w   = [10,10,10,12,12,20,12,24,10,10,20,16]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for r in rows:
+        data.append([
+            r['employee_code'] or '', r['staff_name'], r['department'] or '',
+            str(r['expense_date']), r['type'] or '', r['title'] or '',
+            float(r['amount'] or 0), r['note'] or '',
+            STATUS_LABEL.get(r['status'], r['status']),
+            r['reviewed_by'] or '', r['review_note'] or '',
+            str(r['reviewed_at'])[:16] if r.get('reviewed_at') else '',
+        ])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, f'expense_claims_{month}.xlsx')
+
+
+# ── 15. 績效考核 Excel ─────────────────────────────────────────────────────────
+@app.route('/api/export/performance-excel', methods=['GET'])
+@login_required
+def api_export_performance_excel():
+    """匯出績效考核 Excel"""
+    import openpyxl
+    period   = request.args.get('period', '')
+    staff_id = request.args.get('staff_id', '')
+    conds, params = ['TRUE'], []
+    if period:   conds.append("pr.period_label ILIKE %s"); params.append(f'%{period}%')
+    if staff_id: conds.append("pr.staff_id=%s"); params.append(int(staff_id))
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT pr.*, ps.name as staff_name, ps.department, ps.role as staff_role,
+                   pt.name as tpl_name
+            FROM performance_reviews pr
+            JOIN punch_staff ps ON ps.id=pr.staff_id
+            LEFT JOIN performance_templates pt ON pt.id=pr.template_id
+            WHERE {' AND '.join(conds)} ORDER BY pr.reviewed_at DESC
+        """, params).fetchall()
+    GRADE_COLOR = {'A':'E8F5E9','B':'FFF8E1','C':'FFF3E0','D':'FFEBEE'}
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = '績效考核'
+    headers = ['姓名','部門','職稱','考核期間','考核範本','總分','等級','薪資調整幅度','考核人','考核日期','備註']
+    col_w   = [12,10,10,14,16,8,6,14,10,12,24]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for r in rows:
+        data.append([
+            r['staff_name'], r['department'] or '', r['staff_role'] or '',
+            r['period_label'] or '', r['tpl_name'] or '',
+            float(r['total_score'] or 0), r['grade'] or '',
+            r['salary_adjustment'] or '',
+            r['reviewer'] or '',
+            str(r['reviewed_at'])[:10] if r.get('reviewed_at') else '',
+            r['comments'] or '',
+        ])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, 'performance_reviews.xlsx')
+
+
+# ── 16. 門市管理 Excel ─────────────────────────────────────────────────────────
+@app.route('/api/export/stores-excel', methods=['GET'])
+@login_required
+def api_export_stores_excel():
+    """匯出門市列表 Excel（含員工人數）"""
+    import openpyxl
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT s.id, s.name, s.code, s.address, s.active, s.created_at,
+                   COUNT(ps.id) FILTER (WHERE ps.active=TRUE) as staff_count
+            FROM stores s
+            LEFT JOIN punch_staff ps ON ps.store_id=s.id
+            GROUP BY s.id ORDER BY s.id
+        """).fetchall()
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = '門市列表'
+    headers = ['門市ID','名稱','代碼','地址','在職員工數','狀態','建立時間']
+    col_w   = [8, 16, 10, 30, 12, 8, 16]
+    _xl_write_header(ws, headers, col_w)
+    data = []
+    for r in rows:
+        data.append([
+            r['id'], r['name'], r['code'] or '', r['address'] or '',
+            int(r['staff_count'] or 0),
+            '啟用' if r['active'] else '停用',
+            str(r['created_at'])[:10] if r['created_at'] else '',
+        ])
+    _xl_write_rows(ws, data)
+    return _xl_response(wb, 'stores.xlsx')
+
+
+# ── 17. 教育訓練 Excel ─────────────────────────────────────────────────────────
+@app.route('/api/export/training-excel', methods=['GET'])
+@login_required
+def api_export_training_excel():
+    """匯出教育訓練記錄 Excel"""
+    import openpyxl
+    from datetime import date as _da5
+    staff_id = request.args.get('staff_id', '')
+    category = request.args.get('category', '')
+    conds, params = ['TRUE'], []
+    if staff_id: conds.append("tr.staff_id=%s"); params.append(int(staff_id))
+    if category: conds.append("tr.category=%s"); params.append(category)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT tr.*, ps.name as staff_name, ps.department, ps.employee_code
+            FROM training_records tr JOIN punch_staff ps ON ps.id=tr.staff_id
+            WHERE {' AND '.join(conds)} ORDER BY tr.completion_date DESC
+        """, params).fetchall()
+    CAT_LABEL = {
+        'food_safety':'食品安全','fire_safety':'消防安全','first_aid':'急救訓練',
+        'hygiene':'衛生管理','service':'服務禮儀','equipment':'設備操作',
+        'general':'一般訓練','other':'其他'
+    }
+    today = _da5.today()
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = '訓練記錄'
+    headers = ['員工代碼','姓名','部門','課程名稱','類別','完成日期','到期日期','剩餘天數','證書號碼','狀態','備註']
+    col_w   = [10,10,10,24,12,12,12,10,16,10,24]
+    _xl_write_header(ws, headers, col_w)
+    from openpyxl.styles import Font, PatternFill
+    exp_fill = PatternFill('solid', fgColor='FFEBEE')
+    warn_fill= PatternFill('solid', fgColor='FFF8E1')
+    data = []
+    for r in rows:
+        remain = ''
+        status = '有效'
+        if r.get('expiry_date'):
+            try:
+                ed = _da5.fromisoformat(str(r['expiry_date']))
+                delta = (ed - today).days
+                remain = delta
+                if   delta < 0:  status = '已過期'
+                elif delta < 30: status = '即將到期'
+                else: status = '有效'
+            except: pass
+        data.append([
+            r['employee_code'] or '', r['staff_name'], r['department'] or '',
+            r['course_name'] or '', CAT_LABEL.get(r['category'] or 'other', r['category'] or ''),
+            str(r['completion_date']) if r.get('completion_date') else '',
+            str(r['expiry_date'])     if r.get('expiry_date')     else '',
+            remain, r['certificate_no'] or '', status, r['note'] or '',
+        ])
+    _xl_write_rows(ws, data)
+    # 摘要工作表
+    ws2 = wb.create_sheet('到期摘要')
+    _xl_write_header(ws2, ['員工','課程','類別','到期日','剩餘天數','狀態'], [12,24,12,12,10,10])
+    exp_data = [r for r in data if r[9] in ('已過期', '即將到期')]
+    _xl_write_rows(ws2, [[r[1], r[3], r[4], r[6], r[7], r[9]] for r in exp_data])
+    return _xl_response(wb, 'training_records.xlsx')
