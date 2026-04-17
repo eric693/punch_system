@@ -1,4 +1,3 @@
-import hashlib
 import math
 import os
 import secrets
@@ -9,8 +8,6 @@ import urllib.request
 from datetime import date
 from functools import wraps
 
-import psycopg
-from psycopg.rows import dict_row
 from flask import (
     Flask, request, jsonify, render_template,
     session, redirect, url_for, abort
@@ -22,20 +19,26 @@ from linebot.models import (
     PostbackEvent, LocationMessage
 )
 
+# shared modules (extracted for blueprint reuse)
+from db import get_db, _hash_pw, DATABASE_URL
+from auth import login_required, require_module, require_super
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 LINE_CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
 LINE_CHANNEL_SECRET       = os.environ.get('LINE_CHANNEL_SECRET', '')
 ADMIN_PASSWORD            = os.environ.get('ADMIN_PASSWORD', 'admin123')
-_raw_db_url               = os.environ.get('DATABASE_URL', '')
-DATABASE_URL              = _raw_db_url.replace('postgres://', 'postgresql://', 1) if _raw_db_url.startswith('postgres://') else _raw_db_url
 RENDER_EXTERNAL_URL       = os.environ.get('RENDER_EXTERNAL_URL', '')
 
 print(f"[startup] DATABASE_URL prefix: {DATABASE_URL[:20] if DATABASE_URL else 'NOT SET'}")
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler      = WebhookHandler(LINE_CHANNEL_SECRET)
+
+# ─── Blueprints ───────────────────────────────────────────────────────────────
+from blueprints.training import training_bp, _init_training_db
+app.register_blueprint(training_bp)
 
 # ─── Imports ──────────────────────────────────────────────────────────────────
 import json as _json
@@ -44,14 +47,6 @@ from datetime import datetime as _dt, timedelta as _td, timezone as _tz
 TW_TZ = _tz(_td(hours=8))   # Asia/Taipei (UTC+8)
 
 WEEKDAY_ZH = ['一', '二', '三', '四', '五', '六', '日']
-
-# ─── PostgreSQL ───────────────────────────────────────────────────────────────
-
-def get_db():
-    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
-
-def _hash_pw(pw):
-    return hashlib.sha256(pw.encode()).hexdigest()
 
 
 def init_db():
@@ -443,44 +438,7 @@ def health():
         return jsonify({'status': 'error', 'detail': str(e)}), 500
 
 # ─── Admin Auth ───────────────────────────────────────────────────────────────
-
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get('logged_in'):
-            if request.is_json or request.path.startswith('/api/'):
-                return jsonify({'error': '請先登入'}), 401
-            return redirect(url_for('admin_login'))
-        return f(*args, **kwargs)
-    return decorated
-
-def require_module(module):
-    """確認已登入且擁有指定模組權限（超級管理員跳過模組檢查）。"""
-    def decorator(f):
-        @wraps(f)
-        def decorated(*args, **kwargs):
-            if not session.get('logged_in'):
-                if request.is_json or request.path.startswith('/api/'):
-                    return jsonify({'error': '請先登入'}), 401
-                return redirect(url_for('admin_login'))
-            if not session.get('admin_is_super'):
-                perms = session.get('admin_permissions') or []
-                if module not in perms:
-                    return jsonify({'error': f'無「{module}」模組的存取權限'}), 403
-            return f(*args, **kwargs)
-        return decorated
-    return decorator
-
-def require_super(f):
-    """只允許超級管理員存取。"""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get('logged_in'):
-            return jsonify({'error': '請先登入'}), 401
-        if not session.get('admin_is_super'):
-            return jsonify({'error': '需要超級管理員權限'}), 403
-        return f(*args, **kwargs)
-    return decorated
+# login_required / require_module / require_super are imported from auth.py
 
 @app.route('/')
 def index():
@@ -982,6 +940,109 @@ def api_punch_my_records():
             'is_manual':     bool(r['is_manual']),
         })
     return jsonify({'month': month, 'records': result})
+
+# ── Employee: My Anomalies ────────────────────────────────────────
+
+@app.route('/api/attendance/my-anomalies', methods=['GET'])
+def api_my_anomalies():
+    """員工查自己近30天的出勤異常（缺打卡、遲到、早退）"""
+    from datetime import date as _da, timedelta as _td2, datetime as _dta2, timezone as _tz2
+    sid = session.get('punch_staff_id')
+    if not sid:
+        return jsonify({'error': 'not logged in'}), 401
+
+    TW = _tz2(_td2(hours=8))
+    today = _dta2.now(TW).date()
+    date_from = today - _td2(days=30)
+
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date AS work_date,
+                   MIN(CASE WHEN pr.punch_type='in'  THEN to_char(pr.punched_at AT TIME ZONE 'Asia/Taipei','HH24:MI') END) AS first_in,
+                   MAX(CASE WHEN pr.punch_type='out' THEN to_char(pr.punched_at AT TIME ZONE 'Asia/Taipei','HH24:MI') END) AS last_out,
+                   BOOL_OR(pr.punch_type='in')  AS has_in,
+                   BOOL_OR(pr.punch_type='out') AS has_out
+            FROM punch_records pr
+            WHERE pr.staff_id=%s
+              AND (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date BETWEEN %s AND %s
+            GROUP BY (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
+            ORDER BY work_date DESC
+        """, (sid, date_from, today)).fetchall()
+
+        shift_rows = conn.execute("""
+            SELECT sa.shift_date, st.start_time::text AS start_time, st.end_time::text AS end_time, st.name AS shift_name
+            FROM shift_assignments sa
+            JOIN shift_types st ON st.id=sa.shift_type_id
+            WHERE sa.staff_id=%s AND sa.shift_date BETWEEN %s AND %s
+        """, (sid, date_from, today)).fetchall()
+        shift_map = {str(r['shift_date']): r for r in shift_rows}
+
+        leave_rows = conn.execute("""
+            SELECT start_date, end_date FROM leave_requests
+            WHERE staff_id=%s AND status='approved'
+              AND start_date <= %s AND end_date >= %s
+        """, (sid, today, date_from)).fetchall()
+        leave_set = set()
+        for lr in leave_rows:
+            cur = lr['start_date']
+            end = lr['end_date']
+            while cur <= end:
+                leave_set.add(str(cur))
+                cur = _da.fromisoformat(str(cur)) + _td2(days=1)
+                if not isinstance(cur, _da): cur = cur.date()
+
+    anomalies = []
+    for r in rows:
+        ds = str(r['work_date'])
+        if ds in leave_set:
+            continue
+        shift = shift_map.get(ds)
+        issues = []
+        late_min = 0; early_min = 0
+
+        if not r['has_in'] and r['has_out']:
+            issues.append('缺上班打卡')
+        elif r['has_in'] and not r['has_out']:
+            issues.append('缺下班打卡')
+        elif not r['has_in'] and not r['has_out']:
+            issues.append('當日無打卡記錄')
+
+        if shift and r['first_in']:
+            try:
+                sh, sm = map(int, shift['start_time'][:5].split(':'))
+                ih, im = map(int, r['first_in'][:5].split(':'))
+                diff = (ih * 60 + im) - (sh * 60 + sm)
+                if diff > 5:
+                    late_min = diff
+                    issues.append(f'遲到 {diff} 分鐘')
+            except Exception:
+                pass
+
+        if shift and r['last_out']:
+            try:
+                eh, em = map(int, shift['end_time'][:5].split(':'))
+                oh, om = map(int, r['last_out'][:5].split(':'))
+                diff = (eh * 60 + em) - (oh * 60 + om)
+                if diff > 5:
+                    early_min = diff
+                    issues.append(f'早退 {diff} 分鐘')
+            except Exception:
+                pass
+
+        if issues:
+            anomalies.append({
+                'date': ds,
+                'issues': issues,
+                'first_in': r['first_in'],
+                'last_out': r['last_out'],
+                'shift_name': shift['shift_name'] if shift else None,
+                'shift_start': shift['start_time'][:5] if shift else None,
+                'shift_end': shift['end_time'][:5] if shift else None,
+                'late_min': late_min,
+                'early_min': early_min,
+            })
+
+    return jsonify({'anomalies': anomalies, 'date_from': str(date_from), 'today': str(today)})
 
 # ── Admin: Staff CRUD ─────────────────────────────────────────────
 
@@ -4063,6 +4124,76 @@ def api_leave_my_list():
         d['pay_rate']        = float(r['pay_rate'])
         result.append(d)
     return jsonify(result)
+
+@app.route('/api/leave/my-annual-report', methods=['GET'])
+def api_leave_my_annual_report():
+    """員工查自己當年度的假別使用彙整報告"""
+    from datetime import date as _da3
+    sid = session.get('punch_staff_id')
+    if not sid:
+        return jsonify({'error': 'not logged in'}), 401
+
+    year = request.args.get('year') or str(_da3.today().year)
+
+    with get_db() as conn:
+        # 假別餘額
+        balances = conn.execute("""
+            SELECT lb.allocated, lb.used, lb.adjusted, lb.carry_over,
+                   lt.name AS type_name, lt.code, lt.color
+            FROM leave_balances lb
+            JOIN leave_types lt ON lt.id=lb.leave_type_id
+            WHERE lb.staff_id=%s AND lb.year=%s
+            ORDER BY lt.sort_order
+        """, (sid, int(year))).fetchall()
+
+        # 全年已審核的請假紀錄（含月份拆分用）
+        requests = conn.execute("""
+            SELECT lr.start_date, lr.end_date, lr.total_days,
+                   lr.reason, lr.status,
+                   lt.name AS type_name, lt.code, lt.color
+            FROM leave_requests lr
+            JOIN leave_types lt ON lt.id=lr.leave_type_id
+            WHERE lr.staff_id=%s AND lr.status='approved'
+              AND (EXTRACT(YEAR FROM lr.start_date)=%s OR EXTRACT(YEAR FROM lr.end_date)=%s)
+            ORDER BY lr.start_date DESC
+        """, (sid, int(year), int(year))).fetchall()
+
+    # 月份統計
+    monthly = {}
+    for r in requests:
+        mo = str(r['start_date'])[:7]
+        if mo not in monthly:
+            monthly[mo] = {'days': 0, 'count': 0}
+        monthly[mo]['days']  += float(r['total_days'])
+        monthly[mo]['count'] += 1
+
+    balances_out = [{
+        'type_name':  r['type_name'],
+        'code':       r['code'],
+        'color':      r['color'],
+        'allocated':  float(r['allocated']),
+        'carry_over': float(r['carry_over'] or 0),
+        'adjusted':   float(r['adjusted'] or 0),
+        'used':       float(r['used'] or 0),
+        'remaining':  float(r['allocated']) + float(r['carry_over'] or 0) + float(r['adjusted'] or 0) - float(r['used'] or 0),
+    } for r in balances]
+
+    requests_out = [{
+        'start_date': str(r['start_date']),
+        'end_date':   str(r['end_date']),
+        'total_days': float(r['total_days']),
+        'reason':     r['reason'] or '',
+        'type_name':  r['type_name'],
+        'code':       r['code'],
+        'color':      r['color'],
+    } for r in requests]
+
+    return jsonify({
+        'year':     year,
+        'balances': balances_out,
+        'requests': requests_out,
+        'monthly':  monthly,
+    })
 
 @app.route('/api/leave/my-requests', methods=['POST'])
 def api_leave_submit():
@@ -8038,167 +8169,9 @@ init_insurance_db()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 教育訓練追蹤 (Training & Certificate Tracking)
+# 教育訓練 → 已移至 blueprints/training.py（在啟動時初始化 DB）
 # ═══════════════════════════════════════════════════════════════════════════════
-
-def init_training_db():
-    try:
-        with get_db() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS training_records (
-                    id              SERIAL PRIMARY KEY,
-                    staff_id        INT REFERENCES punch_staff(id) ON DELETE CASCADE,
-                    course_name     TEXT NOT NULL,
-                    category        TEXT NOT NULL DEFAULT 'general',
-                    completed_date  DATE,
-                    expiry_date     DATE,
-                    certificate_no  TEXT DEFAULT '',
-                    note            TEXT DEFAULT '',
-                    created_at      TIMESTAMPTZ DEFAULT NOW(),
-                    updated_at      TIMESTAMPTZ DEFAULT NOW()
-                )
-            """)
-    except Exception as e:
-        print(f"[training_init] {e}")
-
-init_training_db()
-
-TRAINING_CATEGORIES = {
-    'food_safety':  '食品安全',
-    'fire_safety':  '消防安全',
-    'first_aid':    '急救訓練',
-    'hygiene':      '衛生管理',
-    'service':      '服務禮儀',
-    'equipment':    '設備操作',
-    'general':      '一般訓練',
-    'other':        '其他',
-}
-
-@app.route('/api/training/records', methods=['GET'])
-@login_required
-def api_training_list():
-    staff_id  = request.args.get('staff_id')
-    category  = request.args.get('category', '')
-    expiring  = request.args.get('expiring')   # days, e.g. 60
-    expired   = request.args.get('expired')    # '1' = show only expired
-
-    sql = """
-        SELECT tr.*, ps.name AS staff_name, ps.department
-        FROM training_records tr
-        JOIN punch_staff ps ON tr.staff_id = ps.id
-        WHERE 1=1
-    """
-    params = []
-    if staff_id:
-        sql += " AND tr.staff_id = %s"; params.append(int(staff_id))
-    if category:
-        sql += " AND tr.category = %s"; params.append(category)
-    if expiring:
-        days = int(expiring)
-        sql += " AND tr.expiry_date IS NOT NULL AND tr.expiry_date <= CURRENT_DATE + INTERVAL '%s days' AND tr.expiry_date >= CURRENT_DATE"
-        params.append(days)
-    if expired == '1':
-        sql += " AND tr.expiry_date IS NOT NULL AND tr.expiry_date < CURRENT_DATE"
-    sql += " ORDER BY tr.expiry_date ASC NULLS LAST, tr.completed_date DESC"
-
-    with get_db() as conn:
-        rows = conn.execute(sql, params).fetchall()
-    result = []
-    for r in rows:
-        d = dict(r)
-        for k in ('completed_date', 'expiry_date', 'created_at', 'updated_at'):
-            if d.get(k): d[k] = str(d[k])
-        today = date.today()
-        if d.get('expiry_date'):
-            ed = _dt.strptime(d['expiry_date'], '%Y-%m-%d').date()
-            days_left = (ed - today).days
-            d['days_left'] = days_left
-            d['status'] = 'expired' if days_left < 0 else 'expiring_soon' if days_left <= 60 else 'valid'
-        else:
-            d['days_left'] = None
-            d['status'] = 'no_expiry'
-        result.append(d)
-    return jsonify(result)
-
-@app.route('/api/training/records', methods=['POST'])
-@login_required
-def api_training_create():
-    b = request.get_json(force=True) or {}
-    staff_id       = b.get('staff_id')
-    course_name    = (b.get('course_name') or '').strip()
-    category       = b.get('category', 'general')
-    completed_date = b.get('completed_date') or None
-    expiry_date    = b.get('expiry_date') or None
-    certificate_no = (b.get('certificate_no') or '').strip()
-    note           = (b.get('note') or '').strip()
-    if not staff_id or not course_name:
-        return jsonify({'error': '缺少必填欄位'}), 400
-    with get_db() as conn:
-        row = conn.execute("""
-            INSERT INTO training_records
-              (staff_id, course_name, category, completed_date, expiry_date, certificate_no, note)
-            VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id
-        """, (staff_id, course_name, category, completed_date, expiry_date, certificate_no, note)).fetchone()
-    return jsonify({'ok': True, 'id': row['id']})
-
-@app.route('/api/training/records/<int:rid>', methods=['PUT'])
-@login_required
-def api_training_update(rid):
-    b = request.get_json(force=True) or {}
-    with get_db() as conn:
-        conn.execute("""
-            UPDATE training_records SET
-              course_name=%s, category=%s, completed_date=%s, expiry_date=%s,
-              certificate_no=%s, note=%s, updated_at=NOW()
-            WHERE id=%s
-        """, (
-            b.get('course_name'), b.get('category', 'general'),
-            b.get('completed_date') or None, b.get('expiry_date') or None,
-            b.get('certificate_no', ''), b.get('note', ''), rid
-        ))
-    return jsonify({'ok': True})
-
-@app.route('/api/training/records/<int:rid>', methods=['DELETE'])
-@login_required
-def api_training_delete(rid):
-    with get_db() as conn:
-        conn.execute("DELETE FROM training_records WHERE id=%s", (rid,))
-    return jsonify({'ok': True})
-
-@app.route('/api/training/summary', methods=['GET'])
-@login_required
-def api_training_summary():
-    """每位員工的訓練狀況摘要"""
-    with get_db() as conn:
-        staff_all = conn.execute(
-            "SELECT id, name, department FROM punch_staff WHERE active=TRUE ORDER BY name"
-        ).fetchall()
-        records = conn.execute("""
-            SELECT staff_id, category, expiry_date,
-                   CASE
-                     WHEN expiry_date IS NULL THEN 'no_expiry'
-                     WHEN expiry_date < CURRENT_DATE THEN 'expired'
-                     WHEN expiry_date <= CURRENT_DATE + INTERVAL '60 days' THEN 'expiring_soon'
-                     ELSE 'valid'
-                   END AS status
-            FROM training_records
-        """).fetchall()
-    from collections import defaultdict
-    by_staff = defaultdict(list)
-    for r in records:
-        by_staff[r['staff_id']].append(dict(r))
-
-    result = []
-    for s in staff_all:
-        recs = by_staff[s['id']]
-        result.append({
-            'id': s['id'], 'name': s['name'], 'department': s['department'],
-            'total': len(recs),
-            'valid': sum(1 for r in recs if r['status'] in ('valid', 'no_expiry')),
-            'expiring_soon': sum(1 for r in recs if r['status'] == 'expiring_soon'),
-            'expired': sum(1 for r in recs if r['status'] == 'expired'),
-        })
-    return jsonify(result)
+_init_training_db()
 
 # ── 薪資計算預覽 (Salary Preview without saving) ───────────────────────────────
 
@@ -11966,61 +11939,4 @@ def api_export_stores_excel():
     return _xl_response(wb, 'stores.xlsx')
 
 
-# ── 17. 教育訓練 Excel ─────────────────────────────────────────────────────────
-@app.route('/api/export/training-excel', methods=['GET'])
-@login_required
-def api_export_training_excel():
-    """匯出教育訓練記錄 Excel"""
-    import openpyxl
-    from datetime import date as _da5
-    staff_id = request.args.get('staff_id', '')
-    category = request.args.get('category', '')
-    conds, params = ['TRUE'], []
-    if staff_id: conds.append("tr.staff_id=%s"); params.append(int(staff_id))
-    if category: conds.append("tr.category=%s"); params.append(category)
-    with get_db() as conn:
-        rows = conn.execute(f"""
-            SELECT tr.*, ps.name as staff_name, ps.department, ps.employee_code
-            FROM training_records tr JOIN punch_staff ps ON ps.id=tr.staff_id
-            WHERE {' AND '.join(conds)} ORDER BY tr.completion_date DESC
-        """, params).fetchall()
-    CAT_LABEL = {
-        'food_safety':'食品安全','fire_safety':'消防安全','first_aid':'急救訓練',
-        'hygiene':'衛生管理','service':'服務禮儀','equipment':'設備操作',
-        'general':'一般訓練','other':'其他'
-    }
-    today = _da5.today()
-    wb = openpyxl.Workbook(); ws = wb.active; ws.title = '訓練記錄'
-    headers = ['員工代碼','姓名','部門','課程名稱','類別','完成日期','到期日期','剩餘天數','證書號碼','狀態','備註']
-    col_w   = [10,10,10,24,12,12,12,10,16,10,24]
-    _xl_write_header(ws, headers, col_w)
-    from openpyxl.styles import Font, PatternFill
-    exp_fill = PatternFill('solid', fgColor='FFEBEE')
-    warn_fill= PatternFill('solid', fgColor='FFF8E1')
-    data = []
-    for r in rows:
-        remain = ''
-        status = '有效'
-        if r.get('expiry_date'):
-            try:
-                ed = _da5.fromisoformat(str(r['expiry_date']))
-                delta = (ed - today).days
-                remain = delta
-                if   delta < 0:  status = '已過期'
-                elif delta < 30: status = '即將到期'
-                else: status = '有效'
-            except: pass
-        data.append([
-            r['employee_code'] or '', r['staff_name'], r['department'] or '',
-            r['course_name'] or '', CAT_LABEL.get(r['category'] or 'other', r['category'] or ''),
-            str(r['completion_date']) if r.get('completion_date') else '',
-            str(r['expiry_date'])     if r.get('expiry_date')     else '',
-            remain, r['certificate_no'] or '', status, r['note'] or '',
-        ])
-    _xl_write_rows(ws, data)
-    # 摘要工作表
-    ws2 = wb.create_sheet('到期摘要')
-    _xl_write_header(ws2, ['員工','課程','類別','到期日','剩餘天數','狀態'], [12,24,12,12,10,10])
-    exp_data = [r for r in data if r[9] in ('已過期', '即將到期')]
-    _xl_write_rows(ws2, [[r[1], r[3], r[4], r[6], r[7], r[9]] for r in exp_data])
-    return _xl_response(wb, 'training_records.xlsx')
+# ── 17. 教育訓練 Excel → 已移至 blueprints/training.py ──────────────────────────

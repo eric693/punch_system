@@ -186,6 +186,8 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
         <button class="tab"        id="tab-schedule-view" onclick="switchTab('schedule-view')">我的排班</button>
         <button class="tab"        id="tab-overtime"      onclick="switchTab('overtime')">加班申請</button>
         <button class="tab"        id="tab-attendance"    onclick="switchTab('attendance')">出勤月曆</button>
+        <button class="tab"        id="tab-myanomalies"   onclick="switchTab('myanomalies')">異常查詢</button>
+        <button class="tab"        id="tab-leavereport"   onclick="switchTab('leavereport')">假別年報</button>
         <button class="tab"        id="tab-payslip"       onclick="switchTab('payslip')">薪資單</button>
         <button class="tab"        id="tab-expense"       onclick="switchTab('expense')" style="position:relative">費用報帳<span id="expense-badge" style="display:none;position:absolute;top:6px;right:6px;background:var(--red);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;line-height:16px;text-align:center"></span></button>
         <button class="tab"        id="tab-myperf"        onclick="switchTab('myperf')">我的考核</button>
@@ -400,6 +402,28 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
         <div id="att-calendar"></div>
       </div>
 
+      <!-- 異常查詢 tab -->
+      <div id="panel-myanomalies" class="tab-body" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">近 30 天出勤異常</span>
+          <button onclick="loadMyAnomalies()" style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer">重新整理</button>
+        </div>
+        <div id="my-anomaly-list">
+          <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入中...</div>
+        </div>
+      </div>
+
+      <!-- 假別年報 tab -->
+      <div id="panel-leavereport" class="tab-body" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">年度</span>
+          <select class="month-inp" id="leavereport-year" onchange="loadLeaveReport()" style="width:auto;padding:8px 12px"></select>
+        </div>
+        <div id="leave-report-balances" style="margin-bottom:16px"></div>
+        <div id="leave-report-monthly" style="margin-bottom:16px"></div>
+        <div id="leave-report-list"></div>
+      </div>
+
       <!-- 我的考核 tab -->
       <div id="panel-myperf" class="tab-body" style="display:none">
         <div id="myperf-list">
@@ -566,7 +590,7 @@ function showMain(){
   switchTab('punch');
 }
 function switchTab(tab){
-  ['ann','punch','sched','leave','schedule-view','overtime','attendance','payslip','expense','myperf','biodev'].forEach(t=>{
+  ['ann','punch','sched','leave','schedule-view','overtime','attendance','myanomalies','leavereport','payslip','expense','myperf','biodev'].forEach(t=>{
     document.getElementById('tab-'+t).classList.toggle('active',t===tab);
     document.getElementById('panel-'+t).style.display=t===tab?'':'none';
   });
@@ -577,6 +601,8 @@ function switchTab(tab){
   if(tab==='schedule-view')initScheduleViewTab();
   if(tab==='overtime')initOTTab();
   if(tab==='attendance')initAttendanceTab();
+  if(tab==='myanomalies')loadMyAnomalies();
+  if(tab==='leavereport')initLeaveReportTab();
   if(tab==='payslip')initPayslipTab();
   if(tab==='expense')initExpenseTab();
   if(tab==='myperf')loadMyPerf();
@@ -2349,6 +2375,149 @@ async function deleteBioCred(credId){
 
 function escHtml(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════════════════════════════
+// 異常查詢模組
+// ══════════════════════════════════════════════════════════════
+async function loadMyAnomalies() {
+  const el = document.getElementById('my-anomaly-list');
+  el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入中...</div>';
+  try {
+    const res = await fetch('/api/attendance/my-anomalies');
+    if (!res.ok) { el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入失敗</div>'; return; }
+    const data = await res.json();
+    const list = data.anomalies || [];
+    if (!list.length) {
+      el.innerHTML = `
+        <div style="text-align:center;padding:40px">
+          <div style="font-size:32px;margin-bottom:10px">✅</div>
+          <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:4px">近 30 天無出勤異常</div>
+          <div style="font-size:12px;color:var(--muted)">出勤紀錄良好，繼續保持！</div>
+        </div>`;
+      return;
+    }
+    const issueColor = t => t.includes('遲到') ? 'var(--orange)' : t.includes('早退') ? 'var(--accent)' : 'var(--red)';
+    const issueBg    = t => t.includes('遲到') ? 'var(--orange-light)' : t.includes('早退') ? 'var(--accent-light)' : 'var(--red-light)';
+    el.innerHTML = list.map(a => `
+      <div style="background:#fff;border-radius:12px;border:1.5px solid var(--border);padding:14px 16px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:14px;font-weight:700;color:var(--navy);font-family:'DM Mono',monospace">${esc(a.date)}</div>
+          ${a.shift_name ? `<div style="font-size:11px;color:var(--muted);background:var(--bg);padding:2px 8px;border-radius:6px">${esc(a.shift_name)} ${a.shift_start||''}–${a.shift_end||''}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          ${a.issues.map(i=>`<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${issueBg(i)};color:${issueColor(i)}">${esc(i)}</span>`).join('')}
+        </div>
+        <div style="font-size:12px;color:var(--muted)">
+          上班：${a.first_in||'—'} &nbsp;|&nbsp; 下班：${a.last_out||'—'}
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;color:var(--red);font-size:13px;padding:40px">載入失敗，請重試</div>';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 假別年報模組
+// ══════════════════════════════════════════════════════════════
+function initLeaveReportTab() {
+  const sel = document.getElementById('leavereport-year');
+  if (!sel.options.length) {
+    const now = new Date();
+    for (let y = now.getFullYear(); y >= now.getFullYear() - 2; y--) {
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = y + ' 年';
+      if (y === now.getFullYear()) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+  loadLeaveReport();
+}
+
+async function loadLeaveReport() {
+  const year = document.getElementById('leavereport-year').value;
+  const balDiv = document.getElementById('leave-report-balances');
+  const moDiv  = document.getElementById('leave-report-monthly');
+  const lstDiv = document.getElementById('leave-report-list');
+  balDiv.innerHTML = moDiv.innerHTML = lstDiv.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">載入中...</div>';
+
+  try {
+    const res = await fetch(`/api/leave/my-annual-report?year=${year}`);
+    if (!res.ok) { balDiv.innerHTML = '<div style="color:var(--red);font-size:13px;padding:10px">載入失敗</div>'; moDiv.innerHTML = lstDiv.innerHTML = ''; return; }
+    const data = await res.json();
+
+    // 假別餘額卡片
+    if (!data.balances.length) {
+      balDiv.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">尚無假別餘額資料</div>';
+    } else {
+      balDiv.innerHTML = `
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">假別餘額</div>
+        ${data.balances.map(b => {
+          const total = b.allocated + b.carry_over + b.adjusted;
+          const pct   = total > 0 ? Math.min(100, Math.round(b.used / total * 100)) : 0;
+          const rem   = b.remaining;
+          const remColor = rem <= 0 ? 'var(--red)' : rem <= 2 ? 'var(--orange)' : 'var(--green)';
+          return `
+          <div style="background:#fff;border-radius:10px;border:1.5px solid var(--border);padding:12px 14px;margin-bottom:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:10px;height:10px;border-radius:50%;background:${esc(b.color||'#888')};flex-shrink:0"></div>
+                <span style="font-size:13px;font-weight:700;color:var(--navy)">${esc(b.type_name)}</span>
+              </div>
+              <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:${remColor}">${rem >= 0 ? rem : 0} 天</span>
+            </div>
+            <div style="background:var(--border);border-radius:4px;height:5px;overflow:hidden;margin-bottom:6px">
+              <div style="width:${pct}%;height:100%;background:${esc(b.color||'var(--accent)')};border-radius:4px;transition:width .4s"></div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);display:flex;gap:14px">
+              <span>配額 <strong>${b.allocated}</strong></span>
+              ${b.carry_over ? `<span>結轉 <strong>+${b.carry_over}</strong></span>` : ''}
+              ${b.adjusted   ? `<span>調整 <strong>${b.adjusted >= 0 ? '+' : ''}${b.adjusted}</strong></span>` : ''}
+              <span>已用 <strong>${b.used}</strong></span>
+            </div>
+          </div>`;
+        }).join('')}`;
+    }
+
+    // 月份統計
+    const months = Object.entries(data.monthly).sort((a,b)=>a[0].localeCompare(b[0]));
+    if (!months.length) {
+      moDiv.innerHTML = '';
+    } else {
+      const maxDays = Math.max(...months.map(([,v])=>v.days), 1);
+      moDiv.innerHTML = `
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">月份用假統計</div>
+        <div style="background:#fff;border-radius:10px;border:1.5px solid var(--border);padding:12px 14px">
+          ${months.map(([mo, v]) => `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+            <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);width:44px;flex-shrink:0">${mo.slice(5)}月</div>
+            <div style="flex:1;background:var(--bg);border-radius:4px;height:14px;overflow:hidden">
+              <div style="width:${Math.round(v.days/maxDays*100)}%;height:100%;background:var(--accent);border-radius:4px"></div>
+            </div>
+            <div style="font-size:11px;font-family:'DM Mono',monospace;font-weight:600;color:var(--navy);width:36px;text-align:right">${v.days}天</div>
+          </div>`).join('')}
+        </div>`;
+    }
+
+    // 請假明細
+    if (!data.requests.length) {
+      lstDiv.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">本年度尚無請假記錄</div>';
+    } else {
+      lstDiv.innerHTML = `
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">請假紀錄（${data.requests.length} 筆）</div>
+        ${data.requests.map(r => `
+        <div style="background:#fff;border-radius:10px;border:1.5px solid var(--border);padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${esc(r.color||'#888')};flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;color:var(--navy)">${esc(r.type_name)} <span style="font-weight:400;color:var(--muted)">· ${r.total_days} 天</span></div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">${esc(r.start_date)} ${r.start_date!==r.end_date ? '~ '+esc(r.end_date) : ''}${r.reason ? '　'+esc(r.reason) : ''}</div>
+          </div>
+        </div>`).join('')}`;
+    }
+  } catch(e) {
+    balDiv.innerHTML = '<div style="color:var(--red);font-size:13px;padding:10px">載入失敗，請重試</div>';
+    moDiv.innerHTML = lstDiv.innerHTML = '';
+  }
 }
 </script>
 </body>
