@@ -10355,8 +10355,8 @@ async function openLoanModal(assetId, assetName) {
   document.getElementById('lm-purpose').value     = '';
   const staffSel = document.getElementById('lm-staff');
   if (!staffSel.options.length) {
-    const { ok, data } = await api('/api/staff/list?active=1', {}, true);
-    if (ok) staffSel.innerHTML = data.map(s=>`<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+    const { ok, data } = await api('/api/punch/staff', {}, true);
+    if (ok) staffSel.innerHTML = data.filter(s=>s.active).map(s=>`<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
   }
   document.getElementById('loan-modal').style.display = 'flex';
 }
