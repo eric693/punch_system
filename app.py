@@ -332,6 +332,18 @@ def init_db():
             note        TEXT DEFAULT '',
             created_at  TIMESTAMPTZ DEFAULT NOW()
         )""",
+        # 補休追蹤
+        "ALTER TABLE overtime_requests ADD COLUMN IF NOT EXISTS comp_days NUMERIC(5,2) DEFAULT 0",
+        "ALTER TABLE overtime_requests ADD COLUMN IF NOT EXISTS pay_mode TEXT DEFAULT 'cash'",
+        # 薪資單發送記錄
+        """CREATE TABLE IF NOT EXISTS payslip_sends (
+            id          SERIAL PRIMARY KEY,
+            staff_id    INT REFERENCES punch_staff(id) ON DELETE CASCADE,
+            month       TEXT NOT NULL,
+            channel     TEXT NOT NULL DEFAULT 'line',
+            sent_by     TEXT DEFAULT '',
+            sent_at     TIMESTAMPTZ DEFAULT NOW()
+        )""",
     ]
     for sql in migrations:
         try:
@@ -3654,10 +3666,15 @@ def api_ot_review(rid):
     action      = b.get('action')
     reviewed_by = b.get('reviewed_by', '').strip()
     review_note = b.get('review_note', '').strip()
+    # pay_mode: 'cash'（加班費）| 'comp'（補休）| 'both'（都給）
+    pay_mode    = b.get('pay_mode', 'cash')
+    if pay_mode not in ('cash', 'comp', 'both'):
+        pay_mode = 'cash'
     if action not in ('approve', 'reject'):
         return jsonify({'error': 'invalid action'}), 400
     new_status   = 'approved' if action == 'approve' else 'rejected'
     ot_pay_final = 0.0
+    comp_days_granted = 0.0
 
     with get_db() as conn:
         req = conn.execute(
@@ -3672,28 +3689,57 @@ def api_ot_review(rid):
                 FROM punch_staff WHERE id=%s
             """, (req['staff_id'],)).fetchone()
             if staff:
-                dtype        = req.get('day_type', 'weekday') or 'weekday'
-                ot_pay_final, _ = _calc_ot_pay(staff, req['ot_hours'] or 0, dtype)
+                dtype = req.get('day_type', 'weekday') or 'weekday'
+                ot_hours = float(req['ot_hours'] or 0)
+                daily_h  = float(staff.get('daily_hours') or 8) or 8
+
+                if pay_mode in ('cash', 'both'):
+                    ot_pay_final, _ = _calc_ot_pay(staff, ot_hours, dtype)
+
+                if pay_mode in ('comp', 'both'):
+                    # 加班時數換算補休天數（四捨五入到 0.5 天）
+                    raw = ot_hours / daily_h
+                    comp_days_granted = round(raw * 2) / 2
+
+                    # 找補休假別 ID
+                    comp_type = conn.execute(
+                        "SELECT id FROM leave_types WHERE code='compensatory' AND active=TRUE LIMIT 1"
+                    ).fetchone()
+                    if comp_type and comp_days_granted > 0:
+                        year = str(req['request_date'])[:4]
+                        conn.execute("""
+                            INSERT INTO leave_balances (staff_id, leave_type_id, year, total_days, used_days)
+                            VALUES (%s,%s,%s,%s,0)
+                            ON CONFLICT (staff_id, leave_type_id, year) DO UPDATE
+                              SET total_days = leave_balances.total_days + EXCLUDED.total_days,
+                                  updated_at = NOW()
+                        """, (req['staff_id'], comp_type['id'], year, comp_days_granted))
 
         row = conn.execute("""
             UPDATE overtime_requests
             SET status=%s, reviewed_by=%s, review_note=%s,
-                ot_pay=%s, reviewed_at=NOW()
+                ot_pay=%s, comp_days=%s, pay_mode=%s, reviewed_at=NOW()
             WHERE id=%s RETURNING *
-        """, (new_status, reviewed_by, review_note, ot_pay_final, rid)).fetchone()
+        """, (new_status, reviewed_by, review_note,
+              ot_pay_final, comp_days_granted, pay_mode, rid)).fetchone()
 
         sn = conn.execute(
             "SELECT name FROM punch_staff WHERE id=%s", (req['staff_id'],)
         ).fetchone()
 
     result = ot_req_row(row)
-    result['staff_name'] = sn['name'] if sn else ''
+    result['staff_name']     = sn['name'] if sn else ''
+    result['comp_days']      = comp_days_granted
+    result['pay_mode']       = pay_mode
     # LINE notification
     time_str = (f"{row['start_time']}～{row['end_time']}" if row.get('start_time') and row.get('end_time')
                 else f"{float(row['ot_hours'])} 小時")
     extra = f"{row['request_date']} {time_str}"
-    if action == 'approve' and float(row.get('ot_pay') or 0) > 0:
-        extra += f"\n加班費：${float(row['ot_pay']):,.0f}"
+    if action == 'approve':
+        if pay_mode in ('cash', 'both') and ot_pay_final > 0:
+            extra += f"\n加班費：${ot_pay_final:,.0f}"
+        if pay_mode in ('comp', 'both') and comp_days_granted > 0:
+            extra += f"\n補休天數：{comp_days_granted} 天（已存入補休餘額）"
     if review_note: extra += f"\n審核意見：{review_note}"
     _notify_review_result(req['staff_id'], '加班申請', action, extra)
     return jsonify(result)
@@ -4482,6 +4528,49 @@ def api_leave_balances():
         d['leave_color']     = r['leave_color']
         d['max_days']        = float(r['max_days']) if r['max_days'] is not None else None
         result.append(d)
+    return jsonify(result)
+
+@app.route('/api/leave/comp-history', methods=['GET'])
+def api_comp_leave_history():
+    """補休累積歷程：顯示每筆加班核准產生了多少補休"""
+    sid = session.get('punch_staff_id')
+    is_admin = session.get('logged_in')
+    staff_id = request.args.get('staff_id')
+    year     = request.args.get('year', '')
+
+    if not is_admin:
+        if not sid:
+            return jsonify({'error': 'not logged in'}), 401
+        staff_id = str(sid)   # 員工只能查自己
+
+    conds, params = ["pay_mode IN ('comp','both') AND status='approved'"], []
+    if staff_id: conds.append("staff_id=%s"); params.append(int(staff_id))
+    if year:     conds.append("EXTRACT(YEAR FROM request_date)=%s"); params.append(int(year))
+
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT ot.*, ps.name as staff_name
+            FROM overtime_requests ot
+            JOIN punch_staff ps ON ps.id=ot.staff_id
+            WHERE {' AND '.join(conds)}
+            ORDER BY ot.request_date DESC LIMIT 100
+        """, params).fetchall()
+
+    result = []
+    for r in rows:
+        result.append({
+            'id':          r['id'],
+            'staff_id':    r['staff_id'],
+            'staff_name':  r['staff_name'],
+            'request_date': str(r['request_date']),
+            'ot_hours':    float(r['ot_hours'] or 0),
+            'day_type':    r['day_type'],
+            'pay_mode':    r['pay_mode'],
+            'comp_days':   float(r['comp_days'] or 0),
+            'ot_pay':      float(r['ot_pay'] or 0),
+            'reason':      r['reason'] or '',
+            'reviewed_at': r['reviewed_at'].isoformat() if r['reviewed_at'] else None,
+        })
     return jsonify(result)
 
 @app.route('/api/leave/balances/init', methods=['POST'])
@@ -7540,6 +7629,110 @@ def api_leave_batch():
 
 
 # ═══════════════════════════════════════════════════════════════════
+# Feature: Payslip LINE Send (薪資單發送)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/salary/send-payslip', methods=['POST'])
+@require_module('salary')
+def api_send_payslip():
+    """管理員批次 or 單人發送薪資單至 LINE"""
+    b        = request.get_json(force=True)
+    month    = b.get('month', '').strip()
+    staff_ids = b.get('staff_ids')   # None = 全部有薪資記錄的人
+    sent_by  = b.get('sent_by', '管理員').strip()
+
+    if not month:
+        return jsonify({'error': '請指定月份'}), 400
+
+    with get_db() as conn:
+        conds, params = ["sr.month=%s"], [month]
+        if staff_ids:
+            conds.append(f"sr.staff_id = ANY(%s)")
+            params.append(staff_ids)
+
+        records = conn.execute(f"""
+            SELECT sr.id as rid, sr.staff_id, sr.month,
+                   sr.base_salary, sr.allowance_total, sr.deduction_total,
+                   sr.ot_pay, sr.net_pay, sr.work_days, sr.actual_days,
+                   sr.leave_days, sr.status, sr.items,
+                   ps.name as staff_name, ps.line_user_id
+            FROM salary_records sr
+            JOIN punch_staff ps ON ps.id = sr.staff_id
+            WHERE {' AND '.join(conds)}
+            ORDER BY ps.name
+        """, params).fetchall()
+
+    ok_list, skip_list = [], []
+    for r in records:
+        if not r['line_user_id']:
+            skip_list.append({'staff_name': r['staff_name'], 'reason': '未綁定 LINE'})
+            continue
+
+        status_map = {'draft':'草稿', 'confirmed':'已確認', 'paid':'已發放'}
+        msg = (
+            f"📄 {r['month']} 薪資單\n"
+            f"姓名：{r['staff_name']}\n"
+            f"━━━━━━━━━━━━\n"
+            f"底薪：${float(r['base_salary'] or 0):,.0f}\n"
+            f"津貼：${float(r['allowance_total'] or 0):,.0f}\n"
+            f"加班費：${float(r['ot_pay'] or 0):,.0f}\n"
+            f"扣除：${float(r['deduction_total'] or 0):,.0f}\n"
+            f"━━━━━━━━━━━━\n"
+            f"實領薪資：${float(r['net_pay'] or 0):,.0f}\n"
+            f"出勤：{float(r['actual_days'] or 0)} / {float(r['work_days'] or 0)} 天\n"
+            f"狀態：{status_map.get(r['status'], r['status'])}\n\n"
+            f"如有疑問請聯絡管理員。"
+        )
+        try:
+            line_bot_api.push_message(r['line_user_id'], TextSendMessage(text=msg))
+            with get_db() as conn:
+                conn.execute("""
+                    INSERT INTO payslip_sends (staff_id, month, channel, sent_by)
+                    VALUES (%s,%s,'line',%s)
+                """, (r['staff_id'], month, sent_by))
+            ok_list.append({'staff_name': r['staff_name'], 'staff_id': r['staff_id']})
+        except Exception as e:
+            skip_list.append({'staff_name': r['staff_name'], 'reason': str(e)[:80]})
+
+    return jsonify({
+        'ok':      True,
+        'sent':    len(ok_list),
+        'skipped': len(skip_list),
+        'ok_list':   ok_list,
+        'skip_list': skip_list,
+    })
+
+
+@app.route('/api/salary/send-history', methods=['GET'])
+@require_module('salary')
+def api_payslip_send_history():
+    """查詢薪資單發送紀錄"""
+    month    = request.args.get('month', '')
+    staff_id = request.args.get('staff_id')
+    conds, params = ["TRUE"], []
+    if month:    conds.append("month=%s");    params.append(month)
+    if staff_id: conds.append("staff_id=%s"); params.append(int(staff_id))
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT ps.id as rid, ps.staff_id, ps.month, ps.channel, ps.sent_by,
+                   ps.sent_at, pst.name as staff_name
+            FROM payslip_sends ps
+            JOIN punch_staff pst ON pst.id=ps.staff_id
+            WHERE {' AND '.join(conds)}
+            ORDER BY ps.sent_at DESC LIMIT 200
+        """, params).fetchall()
+    return jsonify([{
+        'id':         r['rid'],
+        'staff_id':   r['staff_id'],
+        'staff_name': r['staff_name'],
+        'month':      r['month'],
+        'channel':    r['channel'],
+        'sent_by':    r['sent_by'],
+        'sent_at':    r['sent_at'].isoformat() if r['sent_at'] else None,
+    } for r in rows])
+
+
+# ═══════════════════════════════════════════════════════════════════
 # Feature: Attendance Anomaly Detection (出勤異常)
 # ═══════════════════════════════════════════════════════════════════
 
@@ -10100,14 +10293,24 @@ def _line_query_leave_balance(staff, user_id):
 
 
 def _line_query_salary(staff, user_id):
-    """查詢員工最近一筆薪資記錄"""
+    """查詢員工最近一筆薪資記錄 + 補休餘額"""
     try:
         with get_db() as conn:
             row = conn.execute("""
-                SELECT month, net_pay, base_salary, allowance_total, deduction_total, status
+                SELECT month, net_pay, base_salary, ot_pay,
+                       allowance_total, deduction_total, status,
+                       work_days, actual_days
                 FROM salary_records
                 WHERE staff_id=%s
                 ORDER BY month DESC LIMIT 1
+            """, (staff['id'],)).fetchone()
+            # 補休餘額
+            comp_bal = conn.execute("""
+                SELECT lb.total_days, lb.used_days, lb.year
+                FROM leave_balances lb
+                JOIN leave_types lt ON lt.id=lb.leave_type_id
+                WHERE lb.staff_id=%s AND lt.code='compensatory'
+                ORDER BY lb.year DESC LIMIT 1
             """, (staff['id'],)).fetchone()
     except Exception as e:
         _send_line_punch(user_id, f'查詢失敗：{e}')
@@ -10116,14 +10319,21 @@ def _line_query_salary(staff, user_id):
         _send_line_punch(user_id, f'📊 {staff["name"]}\n尚無薪資記錄。')
         return
     status_map = {'draft':'草稿', 'confirmed':'已確認', 'paid':'已發放'}
+    comp_str = ''
+    if comp_bal:
+        remain = float(comp_bal['total_days'] or 0) - float(comp_bal['used_days'] or 0)
+        comp_str = f'\n補休餘額：{remain:.1f} 天（{comp_bal["year"]}年）'
     _send_line_punch(user_id,
         f'📊 {staff["name"]} {row["month"]} 薪資\n\n'
         f'底薪：NT$ {float(row["base_salary"] or 0):,.0f}\n'
         f'津貼：NT$ {float(row["allowance_total"] or 0):,.0f}\n'
+        f'加班費：NT$ {float(row["ot_pay"] or 0):,.0f}\n'
         f'扣除：NT$ {float(row["deduction_total"] or 0):,.0f}\n'
         f'━━━━━━━━━━━━\n'
         f'實領：NT$ {float(row["net_pay"] or 0):,.0f}\n'
-        f'狀態：{status_map.get(row["status"], row["status"])}\n\n'
+        f'出勤：{float(row["actual_days"] or 0)}/{float(row["work_days"] or 0)} 天\n'
+        f'狀態：{status_map.get(row["status"], row["status"])}'
+        f'{comp_str}\n\n'
         f'詳細資訊請至員工系統薪資單查看。')
 
 
