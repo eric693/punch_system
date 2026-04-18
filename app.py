@@ -401,6 +401,9 @@ def init_db():
             note            TEXT DEFAULT '',
             created_at      TIMESTAMPTZ DEFAULT NOW()
         )""",
+        "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS reviewed_by  TEXT DEFAULT ''",
+        "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS review_note  TEXT DEFAULT ''",
+        "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS reviewed_at  TIMESTAMPTZ",
     ]
     for sql in migrations:
         try:
@@ -12496,6 +12499,8 @@ def api_travel_review(rid):
             WHERE id=%s RETURNING *
         """, (new_status, reviewed_by, review_note, rid)).fetchone()
     if not row: return ('', 404)
+    _notify_review_result(row['staff_id'], '差旅申請', new_status,
+        f"{row['title']}（{str(row['start_date'])[:10]}～{str(row['end_date'])[:10]}）")
     return jsonify(_travel_row(row))
 
 
@@ -12756,10 +12761,40 @@ def api_asset_loan_return(lid):
     with get_db() as conn:
         loan = conn.execute("SELECT * FROM asset_loans WHERE id=%s", (lid,)).fetchone()
         if not loan: return ('', 404)
+        if loan['status'] != 'active': return jsonify({'error': '僅可歸還借用中的設備'}), 400
         conn.execute("""
             UPDATE asset_loans SET status='returned', actual_return=%s, note=%s WHERE id=%s
         """, (return_date, note, lid))
         conn.execute("UPDATE assets SET status='available' WHERE id=%s", (loan['asset_id'],))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/assets/loans/<int:lid>/review', methods=['POST'])
+@login_required
+def api_asset_loan_review(lid):
+    b           = request.get_json(force=True)
+    action      = b.get('action')
+    reviewed_by = b.get('reviewed_by', '').strip()
+    review_note = b.get('review_note', '').strip()
+    if action not in ('approve', 'reject'):
+        return jsonify({'error': 'invalid action'}), 400
+    new_status = 'active' if action == 'approve' else 'rejected'
+    with get_db() as conn:
+        loan = conn.execute("""
+            SELECT al.*, a.name as asset_name
+            FROM asset_loans al JOIN assets a ON a.id=al.asset_id
+            WHERE al.id=%s AND al.status='pending'
+        """, (lid,)).fetchone()
+        if not loan: return jsonify({'error': '找不到或已審核'}), 404
+        conn.execute("""
+            UPDATE asset_loans
+            SET status=%s, reviewed_by=%s, review_note=%s, reviewed_at=NOW()
+            WHERE id=%s
+        """, (new_status, reviewed_by, review_note, lid))
+        if action == 'approve':
+            conn.execute("UPDATE assets SET status='loaned' WHERE id=%s", (loan['asset_id'],))
+    _notify_review_result(loan['staff_id'], '設備借用申請', new_status,
+        f"{loan['asset_name']} 借出日：{str(loan['loan_date'])[:10]}")
     return jsonify({'ok': True})
 
 
@@ -12796,7 +12831,12 @@ def api_asset_stats():
                 COUNT(*)                                      as total
             FROM assets WHERE active=TRUE
         """).fetchone()
-    return jsonify(dict(row))
+        pending = conn.execute(
+            "SELECT COUNT(*) FROM asset_loans WHERE status='pending'"
+        ).fetchone()[0]
+    d = dict(row)
+    d['pending_loans'] = pending
+    return jsonify(d)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -12901,8 +12941,9 @@ def api_staff_travel_expense_add(rid):
     sid = _staff_auth()
     if not sid: return jsonify({'error': 'not logged in'}), 401
     with get_db() as conn:
-        req = conn.execute("SELECT id FROM travel_requests WHERE id=%s AND staff_id=%s", (rid, sid)).fetchone()
+        req = conn.execute("SELECT id, status FROM travel_requests WHERE id=%s AND staff_id=%s", (rid, sid)).fetchone()
         if not req: return jsonify({'error': 'not found'}), 404
+        if req['status'] != 'pending': return jsonify({'error': '申請已審核，不可修改費用'}), 403
         b = request.get_json(force=True)
         if not b.get('amount'): return jsonify({'error': '金額必填'}), 400
         row = conn.execute("""
@@ -12926,10 +12967,70 @@ def api_staff_travel_expense_del(eid):
         exp = conn.execute("""
             SELECT te.id FROM travel_expenses te
             JOIN travel_requests tr ON tr.id=te.travel_id
-            WHERE te.id=%s AND tr.staff_id=%s
+            WHERE te.id=%s AND tr.staff_id=%s AND tr.status='pending'
         """, (eid, sid)).fetchone()
-        if not exp: return jsonify({'error': 'not found'}), 404
+        if not exp: return jsonify({'error': '找不到或申請已審核，不可刪除費用'}), 404
         conn.execute("DELETE FROM travel_expenses WHERE id=%s", (eid,))
+    return jsonify({'ok': True})
+
+
+# ── 員工資產借用申請 ───────────────────────────────────────────────
+
+@app.route('/api/staff/assets', methods=['GET'])
+def api_staff_asset_browse():
+    sid = _staff_auth()
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT a.*,
+                   (SELECT COUNT(*) FROM asset_loans al2
+                    WHERE al2.asset_id=a.id AND al2.staff_id=%s AND al2.status='pending') as my_pending
+            FROM assets a
+            WHERE a.active=TRUE AND a.status='available'
+            ORDER BY a.category, a.name
+        """, (sid,)).fetchall()
+    return jsonify([_asset_row(r) for r in rows])
+
+
+@app.route('/api/staff/assets/loan-request', methods=['POST'])
+def api_staff_asset_loan_request():
+    sid = _staff_auth()
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    b = request.get_json(force=True)
+    if not b.get('asset_id') or not b.get('loan_date'):
+        return jsonify({'error': '設備及借用日期必填'}), 400
+    with get_db() as conn:
+        asset = conn.execute(
+            "SELECT id, name, status FROM assets WHERE id=%s AND active=TRUE", (int(b['asset_id']),)
+        ).fetchone()
+        if not asset: return jsonify({'error': '設備不存在'}), 404
+        if asset['status'] != 'available':
+            return jsonify({'error': '此設備目前無法借用'}), 409
+        existing = conn.execute(
+            "SELECT id FROM asset_loans WHERE asset_id=%s AND staff_id=%s AND status='pending'",
+            (int(b['asset_id']), sid)
+        ).fetchone()
+        if existing: return jsonify({'error': '您已有待審的借用申請'}), 409
+        row = conn.execute("""
+            INSERT INTO asset_loans (asset_id, staff_id, loan_date, expected_return, purpose, status)
+            VALUES (%s,%s,%s,%s,%s,'pending') RETURNING *
+        """, (int(b['asset_id']), sid, b['loan_date'],
+              b.get('expected_return') or None,
+              b.get('purpose','').strip())).fetchone()
+    return jsonify(_loan_row(row)), 201
+
+
+@app.route('/api/staff/assets/loan-requests/<int:lid>', methods=['DELETE'])
+def api_staff_asset_loan_request_cancel(lid):
+    sid = _staff_auth()
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    with get_db() as conn:
+        loan = conn.execute(
+            "SELECT id FROM asset_loans WHERE id=%s AND staff_id=%s AND status='pending'",
+            (lid, sid)
+        ).fetchone()
+        if not loan: return jsonify({'error': '找不到或已審核'}), 404
+        conn.execute("DELETE FROM asset_loans WHERE id=%s", (lid,))
     return jsonify({'ok': True})
 
 

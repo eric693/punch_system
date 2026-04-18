@@ -507,12 +507,35 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
       <div id="panel-myloans" class="tab-body" style="display:none">
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
           <select id="myl-status" class="fi" style="width:auto;flex:none" onchange="loadMyLoans()">
+            <option value="">全部</option>
+            <option value="pending">待審中</option>
             <option value="active">借用中</option>
             <option value="returned">已歸還</option>
-            <option value="">全部</option>
+            <option value="rejected">已拒絕</option>
           </select>
           <button onclick="loadMyLoans()" style="padding:7px 14px;border-radius:9px;border:1.5px solid var(--border);background:#fff;color:var(--navy);font-size:13px;font-weight:600;cursor:pointer">重新整理</button>
+          <button onclick="openMyLoanRequestForm()" class="btn btn-primary" style="flex:none;font-size:13px;padding:7px 14px">＋ 申請借用</button>
         </div>
+
+        <!-- 申請借用表單 -->
+        <div id="myloan-request-form" style="display:none;background:#fff;border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid var(--border)">
+          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:14px">申請借用設備</div>
+          <div class="fl">選擇設備 *</div>
+          <select class="fi" id="mlr-asset" style="margin-bottom:10px">
+            <option value="">載入中…</option>
+          </select>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div><div class="fl">借用日期 *</div><input type="date" class="fi" id="mlr-loan-date"></div>
+            <div><div class="fl">預計歸還日期</div><input type="date" class="fi" id="mlr-return-date"></div>
+          </div>
+          <div class="fl">用途說明</div>
+          <textarea class="fi" id="mlr-purpose" rows="2" style="resize:vertical;margin-bottom:14px" placeholder="說明借用用途（選填）"></textarea>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" style="flex:1" onclick="submitMyLoanRequest()">送出申請</button>
+            <button class="btn btn-outline" style="flex:1" onclick="closeMyLoanRequestForm()">取消</button>
+          </div>
+        </div>
+
         <div id="my-loan-list">
           <div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">載入中…</div>
         </div>
@@ -2834,6 +2857,8 @@ async function deleteMyExpense(eid) {
 // 我的借用（員工端）
 // ══════════════════════════════════════════════════════
 const LOAN_CAT = { computer:'電腦/3C', vehicle:'車輛', furniture:'辦公家具', tool:'工具設備', other:'其他' };
+const LOAN_STATUS_LABEL = { pending:'待審中', active:'借用中', returned:'已歸還', rejected:'已拒絕' };
+const LOAN_STATUS_COLOR = { pending:'#9b59b6', active:'#e07b2a', returned:'#27ae60', rejected:'#e74c3c' };
 
 async function loadMyLoans() {
   const status = document.getElementById('myl-status').value;
@@ -2842,31 +2867,89 @@ async function loadMyLoans() {
     const r    = await fetch(`/api/staff/assets/loans?status=${status}`);
     const data = await r.json();
     if (!data.length) {
-      wrap.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">${status==='active'?'目前無借用中的設備':'無記錄'}</div>`;
+      wrap.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">無記錄</div>`;
       return;
     }
     const today = new Date().toISOString().slice(0,10);
     wrap.innerHTML = data.map(r => {
       const overdue = r.expected_return && r.expected_return < today && r.status==='active';
+      const statusColor = LOAN_STATUS_COLOR[r.status] || '#888';
+      const statusLabel = LOAN_STATUS_LABEL[r.status] || r.status;
       return `<div style="background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;border:1.5px solid ${overdue?'#e74c3c':'var(--border)'}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--navy)">${esc(r.asset_name)}</div>
             ${r.asset_code ? `<div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${esc(r.asset_code)}</div>` : ''}
           </div>
-          <span style="font-size:11px;font-weight:700;color:${r.status==='active'?'#e07b2a':'#27ae60'}">${r.status==='active'?'借用中':'已歸還'}</span>
+          <span style="font-size:11px;font-weight:700;color:${statusColor}">${statusLabel}</span>
         </div>
         <div style="font-size:12px;color:var(--muted)">類別：${LOAN_CAT[r.asset_category]||r.asset_category}</div>
         ${r.asset_location ? `<div style="font-size:12px;color:var(--muted)">位置：${esc(r.asset_location)}</div>` : ''}
-        <div style="font-size:12px;color:var(--muted)">借出日：${r.loan_date}</div>
+        <div style="font-size:12px;color:var(--muted)">申請日：${r.loan_date}</div>
         ${r.expected_return ? `<div style="font-size:12px;color:${overdue?'#e74c3c':'var(--muted)'}">預計歸還：${r.expected_return}${overdue?' ⚠️ 已逾期':''}</div>` : ''}
         ${r.actual_return   ? `<div style="font-size:12px;color:var(--muted)">實際歸還：${r.actual_return}</div>` : ''}
         ${r.purpose ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">用途：${esc(r.purpose)}</div>` : ''}
+        ${r.status==='rejected'&&r.review_note ? `<div style="font-size:12px;color:#e74c3c;margin-top:4px;background:#fef0f0;border-radius:6px;padding:4px 8px">拒絕原因：${esc(r.review_note)}</div>` : ''}
+        ${r.status==='pending' ? `<div style="margin-top:8px"><button onclick="cancelMyLoanRequest(${r.id})" style="font-size:12px;padding:4px 10px;border-radius:7px;border:1.5px solid #e74c3c;background:#fff;color:#e74c3c;cursor:pointer;font-weight:600">取消申請</button></div>` : ''}
       </div>`;
     }).join('');
   } catch(e) {
     wrap.innerHTML = '<div style="color:var(--red);font-size:13px;padding:12px">載入失敗</div>';
   }
+}
+
+async function openMyLoanRequestForm() {
+  const form = document.getElementById('myloan-request-form');
+  form.style.display = 'block';
+  const sel = document.getElementById('mlr-asset');
+  sel.innerHTML = '<option value="">載入中…</option>';
+  document.getElementById('mlr-loan-date').value   = new Date().toISOString().slice(0,10);
+  document.getElementById('mlr-return-date').value = '';
+  document.getElementById('mlr-purpose').value     = '';
+  try {
+    const r = await fetch('/api/staff/assets');
+    const data = await r.json();
+    if (!data.length) {
+      sel.innerHTML = '<option value="">目前無可借用設備</option>';
+    } else {
+      sel.innerHTML = data.map(a =>
+        `<option value="${a.id}">[${LOAN_CAT[a.category]||a.category}] ${esc(a.name)}${a.code?' ('+esc(a.code)+')':''}${a.my_pending?' ※已申請':''}</option>`
+      ).join('');
+    }
+  } catch(e) {
+    sel.innerHTML = '<option value="">載入失敗</option>';
+  }
+}
+
+function closeMyLoanRequestForm() {
+  document.getElementById('myloan-request-form').style.display = 'none';
+}
+
+async function submitMyLoanRequest() {
+  const assetId    = document.getElementById('mlr-asset').value;
+  const loanDate   = document.getElementById('mlr-loan-date').value;
+  const returnDate = document.getElementById('mlr-return-date').value;
+  const purpose    = document.getElementById('mlr-purpose').value.trim();
+  if (!assetId)  return showToast('請選擇設備','warning');
+  if (!loanDate) return showToast('請填寫借用日期','warning');
+  const r = await fetch('/api/staff/assets/loan-request', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ asset_id: parseInt(assetId), loan_date: loanDate,
+                           expected_return: returnDate||null, purpose })
+  });
+  const data = await r.json();
+  if (!r.ok) { showToast(data.error||'申請失敗','error'); return; }
+  closeMyLoanRequestForm();
+  loadMyLoans();
+  showToast('申請已送出，等待審核','success');
+}
+
+async function cancelMyLoanRequest(lid) {
+  if (!confirm('確定取消此借用申請？')) return;
+  const r = await fetch(`/api/staff/assets/loan-requests/${lid}`, { method:'DELETE' });
+  if (r.ok) { loadMyLoans(); showToast('已取消申請','success'); }
+  else { const d = await r.json(); showToast(d.error||'取消失敗','error'); }
 }
 </script>
 </body>

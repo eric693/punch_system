@@ -1944,7 +1944,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     </div>
 
     <!-- 資產統計 -->
-    <div class="stats-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px">
+    <div class="stats-row" style="grid-template-columns:repeat(6,1fr);margin-bottom:16px">
       <div class="stat-card" style="border-left:4px solid var(--green)">
         <div class="stat-label">可借用</div><div class="stat-value" id="ast-available">—</div>
       </div>
@@ -1960,9 +1960,20 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="stat-card" style="border-left:4px solid var(--navy)">
         <div class="stat-label">總計</div><div class="stat-value" id="ast-total">—</div>
       </div>
+      <div class="stat-card" style="border-left:4px solid #9b59b6;cursor:pointer" onclick="document.getElementById('pending-loan-section').scrollIntoView({behavior:'smooth'})">
+        <div class="stat-label">待審申請</div><div class="stat-value" id="ast-pending-loans" style="color:#9b59b6">—</div>
+      </div>
     </div>
 
     <div id="asset-list"><div style="padding:32px;text-align:center;color:var(--muted)">載入中…</div></div>
+
+    <!-- 待審借用申請 -->
+    <div style="margin-top:24px" id="pending-loan-section">
+      <div style="font-size:13px;font-weight:700;color:#9b59b6;margin-bottom:10px">
+        待審借用申請
+      </div>
+      <div id="loan-pending-list"></div>
+    </div>
 
     <!-- 借用記錄子頁 -->
     <div style="margin-top:24px">
@@ -2161,6 +2172,25 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
       <button class="btn btn-outline" onclick="closeLoanModal()">取消</button>
       <button class="btn btn-primary" onclick="saveLoanModal()">確認借出</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 設備借用審核 Modal ── -->
+<div id="loan-review-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:440px;max-width:95vw;padding:28px 32px;position:relative">
+    <button onclick="closeLoanReviewModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    <h3 style="margin:0 0 4px;font-size:16px;color:var(--navy)">審核設備借用申請</h3>
+    <p id="lrv-sub" style="margin:0 0 20px;font-size:12px;color:var(--muted)"></p>
+    <input type="hidden" id="lrv-id">
+    <div style="margin-bottom:12px">
+      <label class="form-label">審核意見</label>
+      <textarea class="form-input" id="lrv-note" rows="3" style="resize:vertical" placeholder="審核說明（選填）"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-outline" onclick="closeLoanReviewModal()">取消</button>
+      <button class="btn btn-danger" onclick="submitLoanReview('reject')">拒絕</button>
+      <button class="btn btn-primary" onclick="submitLoanReview('approve')">核准</button>
     </div>
   </div>
 </div>
@@ -10239,7 +10269,7 @@ async function deleteExpense(eid) {
 let _assetList = [];
 
 async function initAssets() {
-  await Promise.all([loadAssets(), loadActiveLoanList()]);
+  await Promise.all([loadAssets(), loadActiveLoanList(), loadPendingLoanList()]);
 }
 
 async function loadAssets() {
@@ -10257,11 +10287,12 @@ async function loadAssets() {
   _assetList = r1.ok ? r1.data : [];
   if (r2.ok) {
     const s = r2.data;
-    document.getElementById('ast-available').textContent   = s.available;
-    document.getElementById('ast-loaned').textContent      = s.loaned;
-    document.getElementById('ast-maintenance').textContent = s.maintenance;
-    document.getElementById('ast-retired').textContent     = s.retired;
-    document.getElementById('ast-total').textContent       = s.total;
+    document.getElementById('ast-available').textContent      = s.available;
+    document.getElementById('ast-loaned').textContent         = s.loaned;
+    document.getElementById('ast-maintenance').textContent    = s.maintenance;
+    document.getElementById('ast-retired').textContent        = s.retired;
+    document.getElementById('ast-total').textContent          = s.total;
+    document.getElementById('ast-pending-loans').textContent  = s.pending_loans ?? 0;
   }
   renderAssetList();
 }
@@ -10412,6 +10443,48 @@ async function returnLoanById(lid) {
   if (!confirm('確定登記歸還？')) return;
   const { ok } = await api(`/api/assets/loans/${lid}/return`, { method:'POST', body:JSON.stringify({ return_date: new Date().toISOString().slice(0,10) }) });
   if (ok) { loadAssets(); loadActiveLoanList(); showToast('已登記歸還','success'); }
+}
+
+async function loadPendingLoanList() {
+  const { ok, data } = await api('/api/assets/loans?status=pending', {}, true);
+  const wrap = document.getElementById('loan-pending-list');
+  if (!ok || !data.length) {
+    wrap.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0">目前無待審借用申請</div>';
+    document.getElementById('ast-pending-loans').textContent = 0;
+    return;
+  }
+  document.getElementById('ast-pending-loans').textContent = data.length;
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>申請人</th><th>設備</th><th>類別</th><th>借用日</th><th>預計歸還</th><th>用途</th><th>操作</th>
+  </tr></thead><tbody>${data.map(r=>`<tr>
+    <td style="font-weight:600">${escHtml(r.staff_name||'')}</td>
+    <td style="font-weight:600">${escHtml(r.asset_name||'')} <span style="font-size:11px;color:var(--muted)">${escHtml(r.asset_code||'')}</span></td>
+    <td style="font-size:12px">${ASSET_CAT_LABEL[r.asset_category]||r.asset_category||''}</td>
+    <td style="font-size:12px">${r.loan_date||''}</td>
+    <td style="font-size:12px">${r.expected_return||'未設定'}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.purpose||'—')}</td>
+    <td><button class="btn btn-primary btn-sm" onclick="openLoanReviewModal(${r.id},'${escHtml((r.staff_name||'')+'／'+(r.asset_name||''))}')">審核</button></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function openLoanReviewModal(id, subtitle) {
+  document.getElementById('lrv-id').value    = id;
+  document.getElementById('lrv-sub').textContent = subtitle;
+  document.getElementById('lrv-note').value  = '';
+  document.getElementById('loan-review-modal').style.display = 'flex';
+}
+function closeLoanReviewModal() { document.getElementById('loan-review-modal').style.display = 'none'; }
+
+async function submitLoanReview(action) {
+  const id   = document.getElementById('lrv-id').value;
+  const note = document.getElementById('lrv-note').value.trim();
+  const { ok, data } = await api(`/api/assets/loans/${id}/review`, {
+    method:'POST', body: JSON.stringify({ action, review_note: note, reviewed_by: _adminName||'' })
+  });
+  if (!ok) { showToast(data?.error||'審核失敗','error'); return; }
+  closeLoanReviewModal();
+  loadAssets(); loadActiveLoanList(); loadPendingLoanList();
+  showToast(action==='approve'?'已核准借用':'已拒絕申請','success');
 }
 </script>
 </html>
