@@ -318,6 +318,20 @@ def init_db():
         )""",
         "ALTER TABLE admin_accounts ADD COLUMN IF NOT EXISTS password_plain TEXT DEFAULT ''",
         "ALTER TABLE punch_staff    ADD COLUMN IF NOT EXISTS password_plain TEXT DEFAULT ''",
+        # 軟刪除 + 稽核
+        "ALTER TABLE punch_records ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ",
+        "ALTER TABLE punch_records ADD COLUMN IF NOT EXISTS deleted_by TEXT DEFAULT ''",
+        """CREATE TABLE IF NOT EXISTS punch_audit_log (
+            id          SERIAL PRIMARY KEY,
+            record_id   INT,
+            action      TEXT NOT NULL,
+            staff_id    INT,
+            changed_by  TEXT NOT NULL DEFAULT '',
+            old_data    JSONB,
+            new_data    JSONB,
+            note        TEXT DEFAULT '',
+            created_at  TIMESTAMPTZ DEFAULT NOW()
+        )""",
     ]
     for sql in migrations:
         try:
@@ -895,6 +909,7 @@ def api_punch_today():
             WHERE pr.staff_id=%s
               AND (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
                 = (NOW() AT TIME ZONE 'Asia/Taipei')::date
+              AND pr.deleted_at IS NULL
             ORDER BY pr.punched_at ASC
         """, (sid,)).fetchall()
     return jsonify([punch_record_row(r) for r in rows])
@@ -915,6 +930,7 @@ def api_punch_my_records():
             FROM punch_records
             WHERE staff_id=%s
               AND to_char(punched_at AT TIME ZONE 'Asia/Taipei', 'YYYY-MM') = %s
+              AND deleted_at IS NULL
             ORDER BY punched_at ASC
         """, (sid, month)).fetchall()
     from datetime import timezone as _tz2, timedelta as _tdb
@@ -965,6 +981,7 @@ def api_my_anomalies():
             FROM punch_records pr
             WHERE pr.staff_id=%s
               AND (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date BETWEEN %s AND %s
+              AND pr.deleted_at IS NULL
             GROUP BY (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
             ORDER BY work_date DESC
         """, (sid, date_from, today)).fetchall()
@@ -1184,6 +1201,7 @@ def api_punch_records():
         if date_to:
             conds.append("(pr.punched_at AT TIME ZONE 'Asia/Taipei')::date<=%s"); params.append(date_to)
 
+    conds.append("pr.deleted_at IS NULL")
     with get_db() as conn:
         rows = conn.execute(f"""
             SELECT pr.*, ps.name as staff_name, ps.role as staff_role
@@ -1206,12 +1224,56 @@ def api_punch_record_manual():
         return jsonify({'error': '缺少必要欄位'}), 400
     if punch_type not in ('in', 'out', 'break_out', 'break_in'):
         return jsonify({'error': '無效的打卡類型'}), 400
+
     with get_db() as conn:
+        # ── 驗證 1：同日同類型不可重複 ──
+        existing = conn.execute("""
+            SELECT id FROM punch_records
+            WHERE staff_id=%s AND punch_type=%s
+              AND (punched_at AT TIME ZONE 'Asia/Taipei')::date
+                  = (%s::timestamptz AT TIME ZONE 'Asia/Taipei')::date
+              AND deleted_at IS NULL
+        """, (staff_id, punch_type, punched_at)).fetchone()
+        if existing:
+            LABEL = {'in':'上班打卡','out':'下班打卡','break_out':'休息開始','break_in':'休息結束'}
+            return jsonify({'error': f'該員工當日已有「{LABEL.get(punch_type,punch_type)}」記錄（id={existing["id"]}），請先刪除再補建'}), 409
+
+        # ── 驗證 2：in 必須早於 out ──
+        if punch_type == 'out':
+            in_rec = conn.execute("""
+                SELECT punched_at FROM punch_records
+                WHERE staff_id=%s AND punch_type='in'
+                  AND (punched_at AT TIME ZONE 'Asia/Taipei')::date
+                      = (%s::timestamptz AT TIME ZONE 'Asia/Taipei')::date
+                  AND deleted_at IS NULL
+                ORDER BY punched_at LIMIT 1
+            """, (staff_id, punched_at)).fetchone()
+            if in_rec and punched_at <= in_rec['punched_at'].isoformat():
+                return jsonify({'error': '下班時間不得早於或等於上班時間'}), 400
+        elif punch_type == 'in':
+            out_rec = conn.execute("""
+                SELECT punched_at FROM punch_records
+                WHERE staff_id=%s AND punch_type='out'
+                  AND (punched_at AT TIME ZONE 'Asia/Taipei')::date
+                      = (%s::timestamptz AT TIME ZONE 'Asia/Taipei')::date
+                  AND deleted_at IS NULL
+                ORDER BY punched_at LIMIT 1
+            """, (staff_id, punched_at)).fetchone()
+            if out_rec and punched_at >= out_rec['punched_at'].isoformat():
+                return jsonify({'error': '上班時間不得晚於或等於已存在的下班時間'}), 400
+
         row = conn.execute("""
             INSERT INTO punch_records
               (staff_id, punch_type, punched_at, note, is_manual, manual_by)
             VALUES (%s,%s,%s,%s,TRUE,%s) RETURNING *
         """, (staff_id, punch_type, punched_at, note, manual_by)).fetchone()
+        # 寫稽核 log
+        conn.execute("""
+            INSERT INTO punch_audit_log (record_id, action, staff_id, changed_by, new_data, note)
+            VALUES (%s,'create',%s,%s,%s,%s)
+        """, (row['id'], staff_id, manual_by,
+              _json.dumps({'punch_type': punch_type, 'punched_at': punched_at, 'note': note}),
+              note))
         staff = conn.execute("SELECT name FROM punch_staff WHERE id=%s", (staff_id,)).fetchone()
     d = punch_record_row(row)
     if staff: d['staff_name'] = staff['name']
@@ -1222,23 +1284,86 @@ def api_punch_record_manual():
 def api_punch_record_update(rid):
     b          = request.get_json(force=True)
     punch_type = b.get('punch_type')
+    manual_by  = b.get('manual_by', '').strip()
     if punch_type not in ('in', 'out', 'break_out', 'break_in'):
         return jsonify({'error': '無效的打卡類型'}), 400
     with get_db() as conn:
+        old = conn.execute("SELECT * FROM punch_records WHERE id=%s AND deleted_at IS NULL", (rid,)).fetchone()
+        if not old: return ('', 404)
         row = conn.execute("""
             UPDATE punch_records
             SET punch_type=%s, punched_at=%s, note=%s, is_manual=TRUE, manual_by=%s
             WHERE id=%s RETURNING *
         """, (punch_type, b.get('punched_at'),
-              b.get('note', ''), b.get('manual_by', ''), rid)).fetchone()
-    return jsonify(punch_record_row(row)) if row else ('', 404)
+              b.get('note', ''), manual_by, rid)).fetchone()
+        # 寫稽核 log
+        conn.execute("""
+            INSERT INTO punch_audit_log (record_id, action, staff_id, changed_by, old_data, new_data)
+            VALUES (%s,'update',%s,%s,%s,%s)
+        """, (rid, old['staff_id'], manual_by,
+              _json.dumps({'punch_type': old['punch_type'],
+                           'punched_at': old['punched_at'].isoformat() if old['punched_at'] else None,
+                           'note': old['note']}),
+              _json.dumps({'punch_type': punch_type,
+                           'punched_at': b.get('punched_at'),
+                           'note': b.get('note', '')})))
+    return jsonify(punch_record_row(row))
 
 @app.route('/api/punch/records/<int:rid>', methods=['DELETE'])
 @login_required
 def api_punch_record_delete(rid):
+    _body = request.get_json(force=True, silent=True) or {}
+    deleted_by = (request.args.get('deleted_by', '').strip()
+                  or _body.get('deleted_by', '').strip())
     with get_db() as conn:
-        conn.execute("DELETE FROM punch_records WHERE id=%s", (rid,))
+        old = conn.execute("SELECT * FROM punch_records WHERE id=%s AND deleted_at IS NULL", (rid,)).fetchone()
+        if not old: return ('', 404)
+        conn.execute("""
+            UPDATE punch_records SET deleted_at=NOW(), deleted_by=%s WHERE id=%s
+        """, (deleted_by or '', rid))
+        conn.execute("""
+            INSERT INTO punch_audit_log (record_id, action, staff_id, changed_by, old_data)
+            VALUES (%s,'delete',%s,%s,%s)
+        """, (rid, old['staff_id'], deleted_by or '',
+              _json.dumps({'punch_type': old['punch_type'],
+                           'punched_at': old['punched_at'].isoformat() if old['punched_at'] else None,
+                           'note': old['note']})))
     return jsonify({'deleted': rid})
+
+@app.route('/api/punch/audit-log', methods=['GET'])
+@login_required
+def api_punch_audit_log():
+    """查詢打卡稽核歷程（管理員用）"""
+    staff_id  = request.args.get('staff_id')
+    record_id = request.args.get('record_id')
+    month     = request.args.get('month')
+    conds, params = ["TRUE"], []
+    if staff_id:  conds.append("l.staff_id=%s");  params.append(int(staff_id))
+    if record_id: conds.append("l.record_id=%s"); params.append(int(record_id))
+    if month:     conds.append("TO_CHAR(l.created_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s"); params.append(month)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT l.*, ps.name as staff_name
+            FROM punch_audit_log l
+            LEFT JOIN punch_staff ps ON ps.id=l.staff_id
+            WHERE {' AND '.join(conds)}
+            ORDER BY l.created_at DESC LIMIT 200
+        """, params).fetchall()
+    result = []
+    for r in rows:
+        result.append({
+            'id':         r['id'],
+            'record_id':  r['record_id'],
+            'action':     r['action'],
+            'staff_id':   r['staff_id'],
+            'staff_name': r['staff_name'],
+            'changed_by': r['changed_by'],
+            'old_data':   r['old_data'],
+            'new_data':   r['new_data'],
+            'note':       r['note'],
+            'created_at': r['created_at'].isoformat() if r['created_at'] else None,
+        })
+    return jsonify(result)
 
 @app.route('/api/punch/summary', methods=['GET'])
 @login_required
@@ -1258,8 +1383,9 @@ def api_punch_summary():
                    COUNT(*) as punch_count,
                    BOOL_OR(pr.is_manual) as has_manual
             FROM punch_records pr JOIN punch_staff ps ON ps.id=pr.staff_id
-            WHERE TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
-               OR (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date = %s
+            WHERE (TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
+               OR (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date = %s)
+              AND pr.deleted_at IS NULL
             GROUP BY ps.id, ps.name, (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
             ORDER BY (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date ASC, ps.name
         """, (month, _next_date2)).fetchall()
@@ -1331,8 +1457,9 @@ def api_attendance_monthly_stats():
                    BOOL_OR(pr.punch_type='out') as has_out
             FROM punch_records pr
             JOIN punch_staff ps ON ps.id = pr.staff_id AND ps.active = TRUE
-            WHERE TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM') = %s
-               OR (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date = %s
+            WHERE (TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM') = %s
+               OR (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date = %s)
+              AND pr.deleted_at IS NULL
             GROUP BY ps.id, ps.name, ps.department, ps.role,
                      (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
             ORDER BY ps.name, work_date
@@ -5827,6 +5954,7 @@ def api_anomaly_report_excel():
             FROM punch_records pr
             JOIN punch_staff ps ON ps.id=pr.staff_id AND ps.active=TRUE
             WHERE TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
+              AND pr.deleted_at IS NULL
             GROUP BY ps.id, ps.name, ps.department,
                      (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
             ORDER BY work_date, ps.name
@@ -6159,6 +6287,7 @@ def api_dashboard():
             FROM punch_records
             WHERE punch_type='in'
               AND (punched_at AT TIME ZONE 'Asia/Taipei')::date = %s
+              AND deleted_at IS NULL
         """, (today,)).fetchone()['c']
 
         # 今日已打下班卡的人數
@@ -6167,6 +6296,7 @@ def api_dashboard():
             FROM punch_records
             WHERE punch_type='out'
               AND (punched_at AT TIME ZONE 'Asia/Taipei')::date = %s
+              AND deleted_at IS NULL
         """, (today,)).fetchone()['c']
 
         # 今日請假人數（已核准）
