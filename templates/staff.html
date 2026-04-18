@@ -493,7 +493,10 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
           <div class="fl">金額 (NT$)</div>
           <input type="number" class="fi" id="myt-exp-amount" placeholder="0" min="0" style="margin-bottom:8px">
           <div class="fl">備註</div>
-          <input class="fi" id="myt-exp-note" placeholder="選填" style="margin-bottom:10px">
+          <input class="fi" id="myt-exp-note" placeholder="選填" style="margin-bottom:8px">
+          <div class="fl" style="margin-bottom:4px">憑證附件（發票/收據）</div>
+          <input type="file" id="myt-exp-file" accept="image/*,application/pdf"
+                 style="display:block;width:100%;padding:7px;border:1.5px solid var(--border);border-radius:9px;font-size:12px;margin-bottom:12px;cursor:pointer">
           <button class="btn btn-primary" style="width:100%;margin-bottom:14px" onclick="addMyExpense()">新增費用</button>
           <div id="myt-exp-list"></div>
           <button onclick="closeMyTravelExp()" style="margin-top:10px;width:100%;padding:9px;border-radius:9px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:13px;cursor:pointer">關閉</button>
@@ -2756,13 +2759,29 @@ async function renderMyExpList() {
     if (!data.length) { wrap.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px 0">尚無費用記錄</div>'; return; }
     const total = data.reduce((a,r)=>a+parseFloat(r.amount||0),0);
     wrap.innerHTML = data.map(r => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--navy)">${MYT_CAT_LABEL[r.category]||r.category}</div>
-          <div style="font-size:11px;color:var(--muted)">${r.expense_date||''} ${r.note ? '· '+esc(r.note) : ''}</div>
+      <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--navy)">${MYT_CAT_LABEL[r.category]||r.category}</div>
+            <div style="font-size:11px;color:var(--muted)">${r.expense_date||''} ${r.note ? '· '+esc(r.note) : ''}</div>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;flex-shrink:0;margin-left:8px">NT$ ${Number(r.amount).toLocaleString()}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700">NT$ ${Number(r.amount).toLocaleString()}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${r.attachment_name
+            ? `<a href="/api/travel/expenses/${r.id}/attachment" target="_blank"
+                 style="font-size:12px;color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:4px">
+                 📎 ${esc(r.attachment_name)}
+               </a>
+               <label style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline">
+                 重新上傳<input type="file" accept="image/*,application/pdf" style="display:none"
+                   onchange="uploadMyExpAttachment(${r.id},this)">
+               </label>`
+            : `<label style="font-size:12px;color:var(--accent);cursor:pointer;display:flex;align-items:center;gap:4px">
+                 📎 上傳憑證
+                 <input type="file" accept="image/*,application/pdf" style="display:none"
+                   onchange="uploadMyExpAttachment(${r.id},this)">
+               </label>`}
           <button onclick="deleteMyExpense(${r.id})" style="padding:3px 8px;border-radius:6px;border:1px solid #e74c3c;background:transparent;color:#e74c3c;font-size:11px;cursor:pointer">刪除</button>
         </div>
       </div>`).join('') +
@@ -2770,7 +2789,17 @@ async function renderMyExpList() {
   } catch(e) { wrap.innerHTML='<div style="color:var(--red);font-size:13px">載入失敗</div>'; }
 }
 
+async function uploadMyExpAttachment(eid, input) {
+  if (!input.files.length) return;
+  const fd = new FormData();
+  fd.append('file', input.files[0]);
+  const r = await fetch(`/api/travel/expenses/${eid}/attachment`, { method:'POST', body:fd });
+  if (r.ok) renderMyExpList();
+  else alert('上傳失敗，請重試');
+}
+
 async function addMyExpense() {
+  const fileInput = document.getElementById('myt-exp-file');
   const body = {
     category:     document.getElementById('myt-exp-cat').value,
     expense_date: document.getElementById('myt-exp-date').value,
@@ -2778,9 +2807,18 @@ async function addMyExpense() {
     note:         document.getElementById('myt-exp-note').value.trim(),
   };
   if (!body.amount) { alert('請填入金額'); return; }
-  await fetch(`/api/staff/travel/${_mytExpTravelId}/expenses`, {
+  const r = await fetch(`/api/staff/travel/${_mytExpTravelId}/expenses`, {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
   });
+  if (!r.ok) return;
+  const newExp = await r.json();
+  // 上傳附件（如有選檔）
+  if (fileInput && fileInput.files.length > 0) {
+    const fd = new FormData();
+    fd.append('file', fileInput.files[0]);
+    await fetch(`/api/travel/expenses/${newExp.id}/attachment`, { method:'POST', body:fd });
+    fileInput.value = '';
+  }
   document.getElementById('myt-exp-amount').value = '';
   document.getElementById('myt-exp-note').value   = '';
   renderMyExpList();

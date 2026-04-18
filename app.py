@@ -361,14 +361,20 @@ def init_db():
             created_at      TIMESTAMPTZ DEFAULT NOW()
         )""",
         """CREATE TABLE IF NOT EXISTS travel_expenses (
-            id          SERIAL PRIMARY KEY,
-            travel_id   INT REFERENCES travel_requests(id) ON DELETE CASCADE,
-            category    TEXT NOT NULL DEFAULT 'other',
-            expense_date DATE,
-            amount      NUMERIC(12,2) NOT NULL DEFAULT 0,
-            note        TEXT DEFAULT '',
-            created_at  TIMESTAMPTZ DEFAULT NOW()
+            id              SERIAL PRIMARY KEY,
+            travel_id       INT REFERENCES travel_requests(id) ON DELETE CASCADE,
+            category        TEXT NOT NULL DEFAULT 'other',
+            expense_date    DATE,
+            amount          NUMERIC(12,2) NOT NULL DEFAULT 0,
+            note            TEXT DEFAULT '',
+            attachment      BYTEA,
+            attachment_name TEXT DEFAULT '',
+            attachment_type TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW()
         )""",
+        "ALTER TABLE travel_expenses ADD COLUMN IF NOT EXISTS attachment      BYTEA",
+        "ALTER TABLE travel_expenses ADD COLUMN IF NOT EXISTS attachment_name TEXT DEFAULT ''",
+        "ALTER TABLE travel_expenses ADD COLUMN IF NOT EXISTS attachment_type TEXT DEFAULT ''",
         # ── 資產/設備管理 ──────────────────────────────────────────────
         """CREATE TABLE IF NOT EXISTS assets (
             id              SERIAL PRIMARY KEY,
@@ -12526,6 +12532,64 @@ def api_travel_expense_delete(eid):
     with get_db() as conn:
         conn.execute("DELETE FROM travel_expenses WHERE id=%s", (eid,))
     return jsonify({'ok': True})
+
+
+@app.route('/api/travel/expenses/<int:eid>/attachment', methods=['POST'])
+def api_travel_expense_upload(eid):
+    """上傳差旅費用附件（管理員或本人皆可）"""
+    is_admin = session.get('logged_in')
+    sid      = session.get('punch_staff_id')
+    if not is_admin and not sid:
+        return jsonify({'error': 'not logged in'}), 401
+    file = request.files.get('file')
+    if not file: return jsonify({'error': '請選擇檔案'}), 400
+    raw = file.read()
+    if len(raw) > 10 * 1024 * 1024:
+        return jsonify({'error': '檔案大小不能超過 10MB'}), 413
+    media_type = file.content_type or 'application/octet-stream'
+    filename   = file.filename or 'attachment'
+    with get_db() as conn:
+        if not is_admin:
+            # 員工只能上傳自己的差旅費用
+            row = conn.execute("""
+                SELECT te.id FROM travel_expenses te
+                JOIN travel_requests tr ON tr.id=te.travel_id
+                WHERE te.id=%s AND tr.staff_id=%s
+            """, (eid, sid)).fetchone()
+            if not row: return jsonify({'error': '無權限'}), 403
+        conn.execute("""
+            UPDATE travel_expenses
+            SET attachment=%s, attachment_name=%s, attachment_type=%s
+            WHERE id=%s
+        """, (raw, filename, media_type, eid))
+    return jsonify({'ok': True, 'attachment_name': filename})
+
+
+@app.route('/api/travel/expenses/<int:eid>/attachment', methods=['GET'])
+def api_travel_expense_get_attachment(eid):
+    """下載/預覽差旅費用附件"""
+    is_admin = session.get('logged_in')
+    sid      = session.get('punch_staff_id')
+    if not is_admin and not sid:
+        return jsonify({'error': 'not logged in'}), 401
+    with get_db() as conn:
+        row = conn.execute("""
+            SELECT te.attachment, te.attachment_name, te.attachment_type,
+                   tr.staff_id
+            FROM travel_expenses te
+            JOIN travel_requests tr ON tr.id=te.travel_id
+            WHERE te.id=%s
+        """, (eid,)).fetchone()
+    if not row or not row['attachment']:
+        return ('', 404)
+    if not is_admin and row['staff_id'] != sid:
+        return jsonify({'error': '無權限'}), 403
+    from flask import Response
+    return Response(
+        bytes(row['attachment']),
+        mimetype=row['attachment_type'] or 'application/octet-stream',
+        headers={'Content-Disposition': f'inline; filename="{row["attachment_name"]}"'}
+    )
 
 
 @app.route('/api/travel/stats', methods=['GET'])
