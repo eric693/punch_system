@@ -12793,7 +12793,8 @@ def api_asset_loan_review(lid):
         """, (new_status, reviewed_by, review_note, lid))
         if action == 'approve':
             conn.execute("UPDATE assets SET status='loaned' WHERE id=%s", (loan['asset_id'],))
-    _notify_review_result(loan['staff_id'], '設備借用申請', new_status,
+    notify_action = 'approved' if action == 'approve' else 'rejected'
+    _notify_review_result(loan['staff_id'], '設備借用申請', notify_action,
         f"{loan['asset_name']} 借出日：{str(loan['loan_date'])[:10]}")
     return jsonify({'ok': True})
 

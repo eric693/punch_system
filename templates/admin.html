@@ -10450,10 +10450,8 @@ async function loadPendingLoanList() {
   const wrap = document.getElementById('loan-pending-list');
   if (!ok || !data.length) {
     wrap.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0">目前無待審借用申請</div>';
-    document.getElementById('ast-pending-loans').textContent = 0;
     return;
   }
-  document.getElementById('ast-pending-loans').textContent = data.length;
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
     <th>申請人</th><th>設備</th><th>類別</th><th>借用日</th><th>預計歸還</th><th>用途</th><th>操作</th>
   </tr></thead><tbody>${data.map(r=>`<tr>
