@@ -1893,6 +1893,10 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <option value="approved">已核准</option>
         <option value="rejected">已拒絕</option>
       </select>
+      <span class="filter-label">員工</span>
+      <select class="filter-input" id="travel-filter-staff" onchange="loadTravel()" style="min-width:120px">
+        <option value="">全部員工</option>
+      </select>
       <button class="btn btn-primary btn-sm" onclick="openTravelModal()">＋ 新增差旅申請</button>
       <button class="btn btn-outline btn-sm" onclick="loadTravel()">重新整理</button>
     </div>
@@ -9994,15 +9998,29 @@ let _travelList = [];
 async function initTravel() {
   const m = new Date(); document.getElementById('travel-filter-month').value =
     `${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,'0')}`;
+  // populate staff filter
+  const staffSel = document.getElementById('travel-filter-staff');
+  if (staffSel.options.length <= 1) {
+    const { ok, data } = await api('/api/punch/staff', {}, true);
+    if (ok) {
+      data.filter(s=>s.active).forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id; opt.textContent = s.name;
+        staffSel.appendChild(opt);
+      });
+    }
+  }
   await loadTravel();
 }
 
 async function loadTravel() {
-  const month  = document.getElementById('travel-filter-month').value;
-  const status = document.getElementById('travel-filter-status').value;
+  const month    = document.getElementById('travel-filter-month').value;
+  const status   = document.getElementById('travel-filter-status').value;
+  const staffId  = document.getElementById('travel-filter-staff').value;
   let url = '/api/travel/requests?';
-  if (month)  url += `month=${month}&`;
-  if (status) url += `status=${status}&`;
+  if (month)    url += `month=${month}&`;
+  if (status)   url += `status=${status}&`;
+  if (staffId)  url += `staff_id=${staffId}&`;
   const [r1, r2] = await Promise.all([
     api(url, {}, true),
     api(`/api/travel/stats${month ? '?month='+month : ''}`, {}, true),
@@ -10055,7 +10073,7 @@ async function openTravelModal(id=null) {
   // populate staff
   const staffSel = document.getElementById('tm-staff');
   if (!staffSel.options.length || staffSel.options.length === 1) {
-    const { ok, data } = await api('/api/staff/list?active=1', {}, true);
+    const { ok, data } = await api('/api/punch/staff', {}, true);
     if (ok) staffSel.innerHTML = data.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
   }
   if (id) {

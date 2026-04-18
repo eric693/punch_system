@@ -191,6 +191,8 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
         <button class="tab"        id="tab-payslip"       onclick="switchTab('payslip')">薪資單</button>
         <button class="tab"        id="tab-expense"       onclick="switchTab('expense')" style="position:relative">費用報帳<span id="expense-badge" style="display:none;position:absolute;top:6px;right:6px;background:var(--red);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;line-height:16px;text-align:center"></span></button>
         <button class="tab"        id="tab-myperf"        onclick="switchTab('myperf')">我的考核</button>
+        <button class="tab"        id="tab-mytravel"      onclick="switchTab('mytravel')">差旅申請</button>
+        <button class="tab"        id="tab-myloans"       onclick="switchTab('myloans')">我的借用</button>
         <button class="tab"        id="tab-biodev"        onclick="switchTab('biodev')">安全裝置</button>
       </div>
 
@@ -431,6 +433,88 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
         </div>
       </div>
 
+      <!-- 差旅申請 tab -->
+      <div id="panel-mytravel" class="tab-body" style="display:none">
+        <!-- 篩選列 -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+          <input type="month" id="myt-month" class="fi" style="width:auto;flex:none"
+                 onchange="loadMyTravel()">
+          <select id="myt-status" class="fi" style="width:auto;flex:none" onchange="loadMyTravel()">
+            <option value="">全部狀態</option>
+            <option value="pending">待審</option>
+            <option value="approved">已核准</option>
+            <option value="rejected">已拒絕</option>
+          </select>
+          <button onclick="openMyTravelModal()" class="btn btn-primary" style="flex:none;font-size:13px;padding:7px 14px">＋ 新增申請</button>
+        </div>
+
+        <!-- 申請列表 -->
+        <div id="my-travel-list">
+          <div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">載入中…</div>
+        </div>
+
+        <!-- 新增/編輯 申請表 -->
+        <div id="mytravel-form" style="display:none;background:#fff;border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid var(--border)">
+          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:14px" id="myt-form-title">新增差旅申請</div>
+          <input type="hidden" id="myt-edit-id">
+          <div class="fl">標題 *</div>
+          <input class="fi" id="myt-title" placeholder="例：台北客戶拜訪" style="margin-bottom:10px">
+          <div class="fl">目的地 *</div>
+          <input class="fi" id="myt-dest" placeholder="例：台北市" style="margin-bottom:10px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div><div class="fl">出發日期 *</div><input type="date" class="fi" id="myt-start"></div>
+            <div><div class="fl">返回日期 *</div><input type="date" class="fi" id="myt-end"></div>
+          </div>
+          <div class="fl">出差目的</div>
+          <textarea class="fi" id="myt-purpose" rows="2" style="resize:vertical;margin-bottom:10px" placeholder="說明目的（選填）"></textarea>
+          <div class="fl">預支金額 (NT$)</div>
+          <input type="number" class="fi" id="myt-advance" min="0" step="100" placeholder="0" style="margin-bottom:14px">
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" style="flex:1" onclick="saveMyTravel()">儲存</button>
+            <button class="btn btn-outline" style="flex:1" onclick="closeMyTravelForm()">取消</button>
+          </div>
+        </div>
+
+        <!-- 費用核銷區 -->
+        <div id="mytravel-exp-wrap" style="display:none;background:#fff;border-radius:14px;padding:18px;border:1.5px solid var(--border)">
+          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px">費用核銷</div>
+          <div id="myt-exp-sub" style="font-size:12px;color:var(--muted);margin-bottom:14px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div><div class="fl">類別</div>
+              <select class="fi" id="myt-exp-cat">
+                <option value="transport">交通費</option>
+                <option value="hotel">住宿費</option>
+                <option value="meal">餐費</option>
+                <option value="other">其他</option>
+              </select>
+            </div>
+            <div><div class="fl">日期</div><input type="date" class="fi" id="myt-exp-date"></div>
+          </div>
+          <div class="fl">金額 (NT$)</div>
+          <input type="number" class="fi" id="myt-exp-amount" placeholder="0" min="0" style="margin-bottom:8px">
+          <div class="fl">備註</div>
+          <input class="fi" id="myt-exp-note" placeholder="選填" style="margin-bottom:10px">
+          <button class="btn btn-primary" style="width:100%;margin-bottom:14px" onclick="addMyExpense()">新增費用</button>
+          <div id="myt-exp-list"></div>
+          <button onclick="closeMyTravelExp()" style="margin-top:10px;width:100%;padding:9px;border-radius:9px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:13px;cursor:pointer">關閉</button>
+        </div>
+      </div>
+
+      <!-- 我的借用 tab -->
+      <div id="panel-myloans" class="tab-body" style="display:none">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+          <select id="myl-status" class="fi" style="width:auto;flex:none" onchange="loadMyLoans()">
+            <option value="active">借用中</option>
+            <option value="returned">已歸還</option>
+            <option value="">全部</option>
+          </select>
+          <button onclick="loadMyLoans()" style="padding:7px 14px;border-radius:9px;border:1.5px solid var(--border);background:#fff;color:var(--navy);font-size:13px;font-weight:600;cursor:pointer">重新整理</button>
+        </div>
+        <div id="my-loan-list">
+          <div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">載入中…</div>
+        </div>
+      </div>
+
       <!-- 安全裝置 tab -->
       <div id="panel-biodev" class="tab-body" style="display:none">
         <div style="margin-bottom:16px">
@@ -590,7 +674,7 @@ function showMain(){
   switchTab('punch');
 }
 function switchTab(tab){
-  ['ann','punch','sched','leave','schedule-view','overtime','attendance','myanomalies','leavereport','payslip','expense','myperf','biodev'].forEach(t=>{
+  ['ann','punch','sched','leave','schedule-view','overtime','attendance','myanomalies','leavereport','payslip','expense','myperf','mytravel','myloans','biodev'].forEach(t=>{
     document.getElementById('tab-'+t).classList.toggle('active',t===tab);
     document.getElementById('panel-'+t).style.display=t===tab?'':'none';
   });
@@ -606,6 +690,8 @@ function switchTab(tab){
   if(tab==='payslip')initPayslipTab();
   if(tab==='expense')initExpenseTab();
   if(tab==='myperf')loadMyPerf();
+  if(tab==='mytravel')initMyTravel();
+  if(tab==='myloans')loadMyLoans();
   if(tab==='biodev')initBiodevTab();
 }
 
@@ -2517,6 +2603,231 @@ async function loadLeaveReport() {
   } catch(e) {
     balDiv.innerHTML = '<div style="color:var(--red);font-size:13px;padding:10px">載入失敗，請重試</div>';
     moDiv.innerHTML = lstDiv.innerHTML = '';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// 差旅申請（員工端）
+// ══════════════════════════════════════════════════════
+const MYT_STATUS_LABEL = { pending:'待審', approved:'已核准', rejected:'已拒絕' };
+const MYT_STATUS_COLOR = { pending:'#e07b2a', approved:'#27ae60', rejected:'#c0392b' };
+const MYT_CAT_LABEL    = { transport:'交通費', hotel:'住宿費', meal:'餐費', other:'其他' };
+let _mytExpTravelId = null;
+
+function initMyTravel() {
+  const m = new Date();
+  document.getElementById('myt-month').value =
+    `${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,'0')}`;
+  loadMyTravel();
+}
+
+async function loadMyTravel() {
+  const month  = document.getElementById('myt-month').value;
+  const status = document.getElementById('myt-status').value;
+  let url = '/api/staff/travel?';
+  if (month)  url += `month=${month}&`;
+  if (status) url += `status=${status}&`;
+  const wrap = document.getElementById('my-travel-list');
+  try {
+    const r = await fetch(url);
+    const data = await r.json();
+    if (!data.length) {
+      wrap.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">本月尚無差旅申請</div>';
+      return;
+    }
+    wrap.innerHTML = data.map(t => {
+      const days = Math.ceil((new Date(t.end_date)-new Date(t.start_date))/(86400000))+1;
+      return `<div style="background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;border:1.5px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="font-size:14px;font-weight:700;color:var(--navy)">${esc(t.title)}</div>
+          <span style="font-size:11px;font-weight:700;color:${MYT_STATUS_COLOR[t.status]||'#888'}">${MYT_STATUS_LABEL[t.status]||t.status}</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">📍 ${esc(t.destination)}　${t.start_date} ~ ${t.end_date}（${days}天）</div>
+        ${t.purpose ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">📝 ${esc(t.purpose)}</div>` : ''}
+        ${parseFloat(t.advance_amount||0) > 0 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">預支：NT$ ${Number(t.advance_amount).toLocaleString()}</div>` : ''}
+        ${t.review_note ? `<div style="font-size:12px;color:#c0392b;margin-bottom:6px">審核意見：${esc(t.review_note)}</div>` : ''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button onclick="openMyTravelExp(${t.id},'${esc(t.title)}')"
+            style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;cursor:pointer">費用核銷</button>
+          ${t.status==='pending' ? `
+            <button onclick="openMyTravelEdit(${t.id})"
+              style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--border);background:transparent;color:var(--navy);font-size:12px;cursor:pointer">編輯</button>
+            <button onclick="deleteMyTravel(${t.id})"
+              style="padding:5px 12px;border-radius:7px;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;font-size:12px;cursor:pointer">刪除</button>
+          ` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    wrap.innerHTML = '<div style="color:var(--red);font-size:13px;padding:12px">載入失敗</div>';
+  }
+}
+
+function openMyTravelModal() {
+  document.getElementById('myt-form-title').textContent = '新增差旅申請';
+  document.getElementById('myt-edit-id').value = '';
+  document.getElementById('myt-title').value   = '';
+  document.getElementById('myt-dest').value    = '';
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('myt-start').value   = today;
+  document.getElementById('myt-end').value     = today;
+  document.getElementById('myt-purpose').value = '';
+  document.getElementById('myt-advance').value = '';
+  document.getElementById('mytravel-form').style.display = '';
+  document.getElementById('mytravel-exp-wrap').style.display = 'none';
+  document.getElementById('mytravel-form').scrollIntoView({behavior:'smooth'});
+}
+
+async function openMyTravelEdit(id) {
+  try {
+    const r = await fetch(`/api/staff/travel?`); // fetch list and find
+    const list = await r.json();
+    const t = list.find(x=>x.id===id);
+    if (!t) return;
+    document.getElementById('myt-form-title').textContent = '編輯差旅申請';
+    document.getElementById('myt-edit-id').value = id;
+    document.getElementById('myt-title').value   = t.title||'';
+    document.getElementById('myt-dest').value    = t.destination||'';
+    document.getElementById('myt-start').value   = (t.start_date||'').slice(0,10);
+    document.getElementById('myt-end').value     = (t.end_date||'').slice(0,10);
+    document.getElementById('myt-purpose').value = t.purpose||'';
+    document.getElementById('myt-advance').value = t.advance_amount||'';
+    document.getElementById('mytravel-form').style.display = '';
+    document.getElementById('mytravel-form').scrollIntoView({behavior:'smooth'});
+  } catch(e) {}
+}
+
+function closeMyTravelForm() {
+  document.getElementById('mytravel-form').style.display = 'none';
+}
+
+async function saveMyTravel() {
+  const id   = document.getElementById('myt-edit-id').value;
+  const body = {
+    title:          document.getElementById('myt-title').value.trim(),
+    destination:    document.getElementById('myt-dest').value.trim(),
+    start_date:     document.getElementById('myt-start').value,
+    end_date:       document.getElementById('myt-end').value,
+    purpose:        document.getElementById('myt-purpose').value.trim(),
+    advance_amount: parseFloat(document.getElementById('myt-advance').value)||0,
+  };
+  if (!body.title||!body.destination||!body.start_date||!body.end_date) {
+    alert('請填寫必填欄位（標題、目的地、日期）'); return;
+  }
+  const url    = id ? `/api/staff/travel/${id}` : '/api/staff/travel';
+  const method = id ? 'PUT' : 'POST';
+  try {
+    const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    if (!r.ok) { const d=await r.json(); alert(d.error||'儲存失敗'); return; }
+    closeMyTravelForm();
+    loadMyTravel();
+  } catch(e) { alert('儲存失敗'); }
+}
+
+async function deleteMyTravel(id) {
+  if (!confirm('確定刪除此差旅申請？')) return;
+  await fetch(`/api/staff/travel/${id}`, { method:'DELETE' });
+  loadMyTravel();
+}
+
+// 費用核銷
+async function openMyTravelExp(id, title) {
+  _mytExpTravelId = id;
+  document.getElementById('myt-exp-sub').textContent = title;
+  document.getElementById('myt-exp-date').value   = new Date().toISOString().slice(0,10);
+  document.getElementById('myt-exp-amount').value = '';
+  document.getElementById('myt-exp-note').value   = '';
+  document.getElementById('mytravel-exp-wrap').style.display = '';
+  document.getElementById('mytravel-form').style.display = 'none';
+  document.getElementById('mytravel-exp-wrap').scrollIntoView({behavior:'smooth'});
+  await renderMyExpList();
+}
+
+function closeMyTravelExp() {
+  document.getElementById('mytravel-exp-wrap').style.display = 'none';
+  _mytExpTravelId = null;
+}
+
+async function renderMyExpList() {
+  const wrap = document.getElementById('myt-exp-list');
+  try {
+    const r = await fetch(`/api/staff/travel/${_mytExpTravelId}/expenses`);
+    const data = await r.json();
+    if (!data.length) { wrap.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px 0">尚無費用記錄</div>'; return; }
+    const total = data.reduce((a,r)=>a+parseFloat(r.amount||0),0);
+    wrap.innerHTML = data.map(r => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--navy)">${MYT_CAT_LABEL[r.category]||r.category}</div>
+          <div style="font-size:11px;color:var(--muted)">${r.expense_date||''} ${r.note ? '· '+esc(r.note) : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700">NT$ ${Number(r.amount).toLocaleString()}</div>
+          <button onclick="deleteMyExpense(${r.id})" style="padding:3px 8px;border-radius:6px;border:1px solid #e74c3c;background:transparent;color:#e74c3c;font-size:11px;cursor:pointer">刪除</button>
+        </div>
+      </div>`).join('') +
+      `<div style="padding:10px 0;font-size:13px;font-weight:700;color:var(--navy);text-align:right">合計：NT$ ${total.toLocaleString()}</div>`;
+  } catch(e) { wrap.innerHTML='<div style="color:var(--red);font-size:13px">載入失敗</div>'; }
+}
+
+async function addMyExpense() {
+  const body = {
+    category:     document.getElementById('myt-exp-cat').value,
+    expense_date: document.getElementById('myt-exp-date').value,
+    amount:       parseFloat(document.getElementById('myt-exp-amount').value)||0,
+    note:         document.getElementById('myt-exp-note').value.trim(),
+  };
+  if (!body.amount) { alert('請填入金額'); return; }
+  await fetch(`/api/staff/travel/${_mytExpTravelId}/expenses`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+  });
+  document.getElementById('myt-exp-amount').value = '';
+  document.getElementById('myt-exp-note').value   = '';
+  renderMyExpList();
+}
+
+async function deleteMyExpense(eid) {
+  if (!confirm('刪除此筆費用？')) return;
+  await fetch(`/api/staff/travel/expenses/${eid}`, { method:'DELETE' });
+  renderMyExpList();
+}
+
+// ══════════════════════════════════════════════════════
+// 我的借用（員工端）
+// ══════════════════════════════════════════════════════
+const LOAN_CAT = { computer:'電腦/3C', vehicle:'車輛', furniture:'辦公家具', tool:'工具設備', other:'其他' };
+
+async function loadMyLoans() {
+  const status = document.getElementById('myl-status').value;
+  const wrap   = document.getElementById('my-loan-list');
+  try {
+    const r    = await fetch(`/api/staff/assets/loans?status=${status}`);
+    const data = await r.json();
+    if (!data.length) {
+      wrap.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">${status==='active'?'目前無借用中的設備':'無記錄'}</div>`;
+      return;
+    }
+    const today = new Date().toISOString().slice(0,10);
+    wrap.innerHTML = data.map(r => {
+      const overdue = r.expected_return && r.expected_return < today && r.status==='active';
+      return `<div style="background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;border:1.5px solid ${overdue?'#e74c3c':'var(--border)'}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--navy)">${esc(r.asset_name)}</div>
+            ${r.asset_code ? `<div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${esc(r.asset_code)}</div>` : ''}
+          </div>
+          <span style="font-size:11px;font-weight:700;color:${r.status==='active'?'#e07b2a':'#27ae60'}">${r.status==='active'?'借用中':'已歸還'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">類別：${LOAN_CAT[r.asset_category]||r.asset_category}</div>
+        ${r.asset_location ? `<div style="font-size:12px;color:var(--muted)">位置：${esc(r.asset_location)}</div>` : ''}
+        <div style="font-size:12px;color:var(--muted)">借出日：${r.loan_date}</div>
+        ${r.expected_return ? `<div style="font-size:12px;color:${overdue?'#e74c3c':'var(--muted)'}">預計歸還：${r.expected_return}${overdue?' ⚠️ 已逾期':''}</div>` : ''}
+        ${r.actual_return   ? `<div style="font-size:12px;color:var(--muted)">實際歸還：${r.actual_return}</div>` : ''}
+        ${r.purpose ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">用途：${esc(r.purpose)}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    wrap.innerHTML = '<div style="color:var(--red);font-size:13px;padding:12px">載入失敗</div>';
   }
 }
 </script>

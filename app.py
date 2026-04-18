@@ -12733,3 +12733,158 @@ def api_asset_stats():
             FROM assets WHERE active=TRUE
         """).fetchone()
     return jsonify(dict(row))
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Staff-portal: 差旅申請（員工自助）
+# ═══════════════════════════════════════════════════════════════════
+
+def _staff_auth():
+    """Return staff_id from session, or None."""
+    return session.get('punch_staff_id')
+
+
+@app.route('/api/staff/travel', methods=['GET'])
+def api_staff_travel_list():
+    sid = _staff_auth()
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    month  = request.args.get('month', '')
+    status = request.args.get('status', '')
+    conds, params = ['tr.staff_id=%s'], [sid]
+    if month:  conds.append("TO_CHAR(tr.start_date,'YYYY-MM')=%s"); params.append(month)
+    if status: conds.append('tr.status=%s'); params.append(status)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT tr.* FROM travel_requests tr
+            WHERE {' AND '.join(conds)}
+            ORDER BY tr.created_at DESC LIMIT 100
+        """, params).fetchall()
+    return jsonify([_travel_row(r) for r in rows])
+
+
+@app.route('/api/staff/travel', methods=['POST'])
+def api_staff_travel_create():
+    sid = _staff_auth()
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    b = request.get_json(force=True)
+    required = ('title','destination','start_date','end_date')
+    if not all(b.get(k) for k in required):
+        return jsonify({'error': '缺少必填欄位'}), 400
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO travel_requests
+                (staff_id, title, destination, start_date, end_date, purpose, advance_amount)
+            VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING *
+        """, (sid, b['title'].strip(), b['destination'].strip(),
+              b['start_date'], b['end_date'],
+              b.get('purpose','').strip(),
+              float(b.get('advance_amount') or 0))).fetchone()
+    return jsonify(_travel_row(row)), 201
+
+
+@app.route('/api/staff/travel/<int:rid>', methods=['PUT'])
+def api_staff_travel_update(rid):
+    sid = _staff_auth()
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    b = request.get_json(force=True)
+    with get_db() as conn:
+        row = conn.execute("""
+            UPDATE travel_requests
+            SET title=%s, destination=%s, start_date=%s, end_date=%s, purpose=%s, advance_amount=%s
+            WHERE id=%s AND staff_id=%s AND status='pending' RETURNING *
+        """, (b.get('title','').strip(), b.get('destination','').strip(),
+              b.get('start_date'), b.get('end_date'),
+              b.get('purpose','').strip(),
+              float(b.get('advance_amount') or 0),
+              rid, sid)).fetchone()
+    if not row: return jsonify({'error': '找不到或已審核'}), 404
+    return jsonify(_travel_row(row))
+
+
+@app.route('/api/staff/travel/<int:rid>', methods=['DELETE'])
+def api_staff_travel_delete(rid):
+    sid = _staff_auth()
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    with get_db() as conn:
+        conn.execute(
+            "DELETE FROM travel_requests WHERE id=%s AND staff_id=%s AND status='pending'",
+            (rid, sid))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/staff/travel/<int:rid>/expenses', methods=['GET'])
+def api_staff_travel_expenses(rid):
+    sid = _staff_auth()
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    with get_db() as conn:
+        req = conn.execute("SELECT id FROM travel_requests WHERE id=%s AND staff_id=%s", (rid, sid)).fetchone()
+        if not req: return jsonify({'error': 'not found'}), 404
+        rows = conn.execute(
+            "SELECT * FROM travel_expenses WHERE travel_id=%s ORDER BY expense_date, id", (rid,)
+        ).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        if d.get('expense_date'): d['expense_date'] = str(d['expense_date'])
+        if d.get('created_at'):   d['created_at']   = d['created_at'].isoformat()
+        d['amount'] = float(d.get('amount') or 0)
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/staff/travel/<int:rid>/expenses', methods=['POST'])
+def api_staff_travel_expense_add(rid):
+    sid = _staff_auth()
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    with get_db() as conn:
+        req = conn.execute("SELECT id FROM travel_requests WHERE id=%s AND staff_id=%s", (rid, sid)).fetchone()
+        if not req: return jsonify({'error': 'not found'}), 404
+        b = request.get_json(force=True)
+        if not b.get('amount'): return jsonify({'error': '金額必填'}), 400
+        row = conn.execute("""
+            INSERT INTO travel_expenses (travel_id, category, expense_date, amount, note)
+            VALUES (%s,%s,%s,%s,%s) RETURNING *
+        """, (rid, b.get('category','other'),
+              b.get('expense_date') or None,
+              float(b['amount']),
+              b.get('note','').strip())).fetchone()
+    d = dict(row)
+    if d.get('expense_date'): d['expense_date'] = str(d['expense_date'])
+    d['amount'] = float(d.get('amount') or 0)
+    return jsonify(d), 201
+
+
+@app.route('/api/staff/travel/expenses/<int:eid>', methods=['DELETE'])
+def api_staff_travel_expense_del(eid):
+    sid = _staff_auth()
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    with get_db() as conn:
+        exp = conn.execute("""
+            SELECT te.id FROM travel_expenses te
+            JOIN travel_requests tr ON tr.id=te.travel_id
+            WHERE te.id=%s AND tr.staff_id=%s
+        """, (eid, sid)).fetchone()
+        if not exp: return jsonify({'error': 'not found'}), 404
+        conn.execute("DELETE FROM travel_expenses WHERE id=%s", (eid,))
+    return jsonify({'ok': True})
+
+
+# ── 員工查自己的借用記錄 ───────────────────────────────────────────
+
+@app.route('/api/staff/assets/loans', methods=['GET'])
+def api_staff_asset_loans():
+    sid = _staff_auth()
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    status = request.args.get('status', '')
+    conds, params = ['al.staff_id=%s'], [sid]
+    if status: conds.append('al.status=%s'); params.append(status)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT al.*, a.name as asset_name, a.code as asset_code,
+                   a.category as asset_category, a.location as asset_location
+            FROM asset_loans al
+            JOIN assets a ON a.id=al.asset_id
+            WHERE {' AND '.join(conds)}
+            ORDER BY al.loan_date DESC LIMIT 100
+        """, params).fetchall()
+    return jsonify([_loan_row(r) for r in rows])
