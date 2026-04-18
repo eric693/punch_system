@@ -4189,12 +4189,54 @@ def api_leave_request_review(rid):
     action      = b.get('action')
     reviewed_by = b.get('reviewed_by', '').strip()
     review_note = b.get('review_note', '').strip()
+    force       = b.get('force', False)   # True = 忽略衝突強制核准
     if action not in ('approve', 'reject'):
         return jsonify({'error': 'invalid action'}), 400
     new_status = 'approved' if action == 'approve' else 'rejected'
     with get_db() as conn:
         old = conn.execute("SELECT * FROM leave_requests WHERE id=%s", (rid,)).fetchone()
         if not old: return ('', 404)
+
+        # ── 衝突檢查（核准時才做，拒絕不需要）──
+        conflicts = []
+        if action == 'approve' and not force:
+            # 1. 同期間已有核准加班
+            ot_rows = conn.execute("""
+                SELECT request_date, ot_hours, day_type
+                FROM overtime_requests
+                WHERE staff_id=%s AND status='approved'
+                  AND request_date BETWEEN %s AND %s
+                ORDER BY request_date
+            """, (old['staff_id'], old['start_date'], old['end_date'])).fetchall()
+            for r in ot_rows:
+                conflicts.append({
+                    'type':    'overtime',
+                    'date':    str(r['request_date']),
+                    'detail':  f"加班 {float(r['ot_hours'])}h（{r['day_type']}）",
+                })
+
+            # 2. 同期間已有其他核准假單（重複請假）
+            dup_rows = conn.execute("""
+                SELECT lr.start_date, lr.end_date, lt.name as leave_type_name
+                FROM leave_requests lr
+                JOIN leave_types lt ON lt.id=lr.leave_type_id
+                WHERE lr.staff_id=%s AND lr.status='approved' AND lr.id != %s
+                  AND lr.start_date <= %s AND lr.end_date >= %s
+            """, (old['staff_id'], rid, old['end_date'], old['start_date'])).fetchall()
+            for r in dup_rows:
+                conflicts.append({
+                    'type':   'leave_overlap',
+                    'date':   f"{r['start_date']} ~ {r['end_date']}",
+                    'detail': f"已核准「{r['leave_type_name']}」與本次重疊",
+                })
+
+            if conflicts:
+                return jsonify({
+                    'warning':   True,
+                    'conflicts': conflicts,
+                    'message':   f'發現 {len(conflicts)} 筆衝突，如確認核准請加上 force:true 重新送出',
+                }), 409
+
         row = conn.execute("""
             UPDATE leave_requests
             SET status=%s, reviewed_by=%s, review_note=%s,
