@@ -344,6 +344,57 @@ def init_db():
             sent_by     TEXT DEFAULT '',
             sent_at     TIMESTAMPTZ DEFAULT NOW()
         )""",
+        # ── 差旅申請 ──────────────────────────────────────────────────
+        """CREATE TABLE IF NOT EXISTS travel_requests (
+            id              SERIAL PRIMARY KEY,
+            staff_id        INT REFERENCES punch_staff(id) ON DELETE CASCADE,
+            title           TEXT NOT NULL DEFAULT '',
+            destination     TEXT NOT NULL DEFAULT '',
+            start_date      DATE NOT NULL,
+            end_date        DATE NOT NULL,
+            purpose         TEXT DEFAULT '',
+            advance_amount  NUMERIC(12,2) DEFAULT 0,
+            status          TEXT NOT NULL DEFAULT 'pending',
+            reviewed_by     TEXT DEFAULT '',
+            review_note     TEXT DEFAULT '',
+            reviewed_at     TIMESTAMPTZ,
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS travel_expenses (
+            id          SERIAL PRIMARY KEY,
+            travel_id   INT REFERENCES travel_requests(id) ON DELETE CASCADE,
+            category    TEXT NOT NULL DEFAULT 'other',
+            expense_date DATE,
+            amount      NUMERIC(12,2) NOT NULL DEFAULT 0,
+            note        TEXT DEFAULT '',
+            created_at  TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        # ── 資產/設備管理 ──────────────────────────────────────────────
+        """CREATE TABLE IF NOT EXISTS assets (
+            id              SERIAL PRIMARY KEY,
+            name            TEXT NOT NULL,
+            code            TEXT NOT NULL DEFAULT '',
+            category        TEXT NOT NULL DEFAULT 'other',
+            purchase_date   DATE,
+            purchase_price  NUMERIC(12,2),
+            status          TEXT NOT NULL DEFAULT 'available',
+            location        TEXT DEFAULT '',
+            note            TEXT DEFAULT '',
+            active          BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS asset_loans (
+            id              SERIAL PRIMARY KEY,
+            asset_id        INT REFERENCES assets(id) ON DELETE CASCADE,
+            staff_id        INT REFERENCES punch_staff(id) ON DELETE CASCADE,
+            loan_date       DATE NOT NULL,
+            expected_return DATE,
+            actual_return   DATE,
+            purpose         TEXT DEFAULT '',
+            status          TEXT NOT NULL DEFAULT 'active',
+            note            TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
     ]
     for sql in migrations:
         try:
@@ -12322,3 +12373,363 @@ def api_export_stores_excel():
 
 
 # ── 17. 教育訓練 Excel → 已移至 blueprints/training.py ──────────────────────────
+
+# ═══════════════════════════════════════════════════════════════════
+# Feature: 差旅申請 (Business Trip Management)
+# ═══════════════════════════════════════════════════════════════════
+
+def _travel_row(r, expenses=None):
+    d = dict(r)
+    for k in ('start_date','end_date','reviewed_at','created_at'):
+        if d.get(k):
+            d[k] = d[k].isoformat() if hasattr(d[k], 'isoformat') else str(d[k])
+    d['advance_amount'] = float(d.get('advance_amount') or 0)
+    if expenses is not None:
+        d['expenses'] = expenses
+        d['total_expense'] = sum(float(e.get('amount') or 0) for e in expenses)
+    return d
+
+
+@app.route('/api/travel/requests', methods=['GET'])
+@login_required
+def api_travel_list():
+    status   = request.args.get('status', '')
+    staff_id = request.args.get('staff_id', '')
+    month    = request.args.get('month', '')
+    conds, params = ['TRUE'], []
+    if status:   conds.append('tr.status=%s');   params.append(status)
+    if staff_id: conds.append('tr.staff_id=%s'); params.append(int(staff_id))
+    if month:    conds.append("TO_CHAR(tr.start_date,'YYYY-MM')=%s"); params.append(month)
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT tr.*, ps.name as staff_name
+            FROM travel_requests tr
+            JOIN punch_staff ps ON ps.id=tr.staff_id
+            WHERE {' AND '.join(conds)}
+            ORDER BY tr.created_at DESC LIMIT 200
+        """, params).fetchall()
+    return jsonify([_travel_row(r) for r in rows])
+
+
+@app.route('/api/travel/requests', methods=['POST'])
+@login_required
+def api_travel_create():
+    b = request.get_json(force=True)
+    required = ('staff_id','title','destination','start_date','end_date')
+    if not all(b.get(k) for k in required):
+        return jsonify({'error': '缺少必填欄位'}), 400
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO travel_requests
+                (staff_id, title, destination, start_date, end_date, purpose, advance_amount)
+            VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING *
+        """, (b['staff_id'], b['title'].strip(), b['destination'].strip(),
+              b['start_date'], b['end_date'],
+              b.get('purpose','').strip(),
+              float(b.get('advance_amount') or 0))).fetchone()
+    return jsonify(_travel_row(row)), 201
+
+
+@app.route('/api/travel/requests/<int:rid>', methods=['GET'])
+@login_required
+def api_travel_get(rid):
+    with get_db() as conn:
+        row = conn.execute("""
+            SELECT tr.*, ps.name as staff_name
+            FROM travel_requests tr
+            JOIN punch_staff ps ON ps.id=tr.staff_id
+            WHERE tr.id=%s
+        """, (rid,)).fetchone()
+        if not row: return ('', 404)
+        exps = conn.execute(
+            "SELECT * FROM travel_expenses WHERE travel_id=%s ORDER BY expense_date, id",
+            (rid,)).fetchall()
+    return jsonify(_travel_row(row, [dict(e) for e in exps]))
+
+
+@app.route('/api/travel/requests/<int:rid>', methods=['PUT'])
+@login_required
+def api_travel_update(rid):
+    b = request.get_json(force=True)
+    with get_db() as conn:
+        row = conn.execute("""
+            UPDATE travel_requests
+            SET title=%s, destination=%s, start_date=%s, end_date=%s,
+                purpose=%s, advance_amount=%s
+            WHERE id=%s AND status='pending' RETURNING *
+        """, (b.get('title','').strip(), b.get('destination','').strip(),
+              b.get('start_date'), b.get('end_date'),
+              b.get('purpose','').strip(),
+              float(b.get('advance_amount') or 0), rid)).fetchone()
+    if not row: return jsonify({'error': '找不到或已審核，無法修改'}), 404
+    return jsonify(_travel_row(row))
+
+
+@app.route('/api/travel/requests/<int:rid>', methods=['DELETE'])
+@login_required
+def api_travel_delete(rid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM travel_requests WHERE id=%s AND status='pending'", (rid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/travel/requests/<int:rid>/review', methods=['POST'])
+@login_required
+def api_travel_review(rid):
+    b           = request.get_json(force=True)
+    action      = b.get('action')
+    reviewed_by = b.get('reviewed_by', '').strip()
+    review_note = b.get('review_note', '').strip()
+    if action not in ('approve', 'reject'):
+        return jsonify({'error': 'invalid action'}), 400
+    new_status = 'approved' if action == 'approve' else 'rejected'
+    with get_db() as conn:
+        row = conn.execute("""
+            UPDATE travel_requests
+            SET status=%s, reviewed_by=%s, review_note=%s, reviewed_at=NOW()
+            WHERE id=%s RETURNING *
+        """, (new_status, reviewed_by, review_note, rid)).fetchone()
+    if not row: return ('', 404)
+    return jsonify(_travel_row(row))
+
+
+@app.route('/api/travel/requests/<int:rid>/expenses', methods=['GET'])
+@login_required
+def api_travel_expenses_list(rid):
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM travel_expenses WHERE travel_id=%s ORDER BY expense_date, id",
+            (rid,)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/travel/requests/<int:rid>/expenses', methods=['POST'])
+@login_required
+def api_travel_expense_add(rid):
+    b = request.get_json(force=True)
+    if not b.get('amount'):
+        return jsonify({'error': '金額必填'}), 400
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO travel_expenses (travel_id, category, expense_date, amount, note)
+            VALUES (%s,%s,%s,%s,%s) RETURNING *
+        """, (rid, b.get('category','other'),
+              b.get('expense_date') or None,
+              float(b['amount']),
+              b.get('note','').strip())).fetchone()
+    return jsonify(dict(row)), 201
+
+
+@app.route('/api/travel/expenses/<int:eid>', methods=['DELETE'])
+@login_required
+def api_travel_expense_delete(eid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM travel_expenses WHERE id=%s", (eid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/travel/stats', methods=['GET'])
+@login_required
+def api_travel_stats():
+    month = request.args.get('month', '')
+    cond, params = 'TRUE', []
+    if month:
+        cond = "TO_CHAR(tr.start_date,'YYYY-MM')=%s"
+        params.append(month)
+    with get_db() as conn:
+        summary = conn.execute(f"""
+            SELECT
+                COUNT(*) FILTER (WHERE tr.status='pending')  as pending,
+                COUNT(*) FILTER (WHERE tr.status='approved') as approved,
+                COUNT(*) FILTER (WHERE tr.status='rejected') as rejected,
+                COALESCE(SUM(CASE WHEN tr.status='approved' THEN tr.advance_amount END),0) as total_advance,
+                COALESCE(SUM(CASE WHEN tr.status='approved' THEN te_sum.total END),0)      as total_expense
+            FROM travel_requests tr
+            LEFT JOIN (
+                SELECT travel_id, SUM(amount) as total FROM travel_expenses GROUP BY travel_id
+            ) te_sum ON te_sum.travel_id=tr.id
+            WHERE {cond}
+        """, params).fetchone()
+    return jsonify(dict(summary))
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Feature: 資產/設備管理 (Asset Management)
+# ═══════════════════════════════════════════════════════════════════
+
+def _asset_row(r):
+    d = dict(r)
+    for k in ('purchase_date','created_at'):
+        if d.get(k):
+            d[k] = d[k].isoformat() if hasattr(d[k], 'isoformat') else str(d[k])
+    d['purchase_price'] = float(d.get('purchase_price') or 0)
+    return d
+
+
+def _loan_row(r):
+    d = dict(r)
+    for k in ('loan_date','expected_return','actual_return','created_at'):
+        if d.get(k):
+            d[k] = d[k].isoformat() if hasattr(d[k], 'isoformat') else str(d[k])
+    return d
+
+
+@app.route('/api/assets', methods=['GET'])
+@login_required
+def api_asset_list():
+    category = request.args.get('category', '')
+    status   = request.args.get('status', '')
+    q        = request.args.get('q', '').strip()
+    conds, params = ['a.active=TRUE'], []
+    if category: conds.append('a.category=%s'); params.append(category)
+    if status:   conds.append('a.status=%s');   params.append(status)
+    if q:        conds.append('(a.name ILIKE %s OR a.code ILIKE %s)'); params += [f'%{q}%', f'%{q}%']
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT a.*,
+                   al.staff_id as loaned_to_id,
+                   ps.name     as loaned_to_name,
+                   al.loan_date, al.expected_return
+            FROM assets a
+            LEFT JOIN asset_loans al ON al.asset_id=a.id AND al.status='active'
+            LEFT JOIN punch_staff ps ON ps.id=al.staff_id
+            WHERE {' AND '.join(conds)}
+            ORDER BY a.category, a.name
+        """, params).fetchall()
+    return jsonify([_asset_row(r) for r in rows])
+
+
+@app.route('/api/assets', methods=['POST'])
+@login_required
+def api_asset_create():
+    b = request.get_json(force=True)
+    if not b.get('name'):
+        return jsonify({'error': '名稱必填'}), 400
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO assets (name, code, category, purchase_date, purchase_price, location, note)
+            VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING *
+        """, (b['name'].strip(), b.get('code','').strip(),
+              b.get('category','other'),
+              b.get('purchase_date') or None,
+              float(b.get('purchase_price') or 0) or None,
+              b.get('location','').strip(),
+              b.get('note','').strip())).fetchone()
+    return jsonify(_asset_row(row)), 201
+
+
+@app.route('/api/assets/<int:aid>', methods=['PUT'])
+@login_required
+def api_asset_update(aid):
+    b = request.get_json(force=True)
+    with get_db() as conn:
+        row = conn.execute("""
+            UPDATE assets
+            SET name=%s, code=%s, category=%s, purchase_date=%s, purchase_price=%s,
+                location=%s, note=%s, status=%s
+            WHERE id=%s RETURNING *
+        """, (b.get('name','').strip(), b.get('code','').strip(),
+              b.get('category','other'),
+              b.get('purchase_date') or None,
+              float(b.get('purchase_price') or 0) or None,
+              b.get('location','').strip(),
+              b.get('note','').strip(),
+              b.get('status','available'),
+              aid)).fetchone()
+    if not row: return ('', 404)
+    return jsonify(_asset_row(row))
+
+
+@app.route('/api/assets/<int:aid>', methods=['DELETE'])
+@login_required
+def api_asset_delete(aid):
+    with get_db() as conn:
+        conn.execute("UPDATE assets SET active=FALSE WHERE id=%s", (aid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/assets/<int:aid>/loans', methods=['GET'])
+@login_required
+def api_asset_loans(aid):
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT al.*, ps.name as staff_name
+            FROM asset_loans al
+            JOIN punch_staff ps ON ps.id=al.staff_id
+            WHERE al.asset_id=%s ORDER BY al.loan_date DESC
+        """, (aid,)).fetchall()
+    return jsonify([_loan_row(r) for r in rows])
+
+
+@app.route('/api/assets/<int:aid>/loans', methods=['POST'])
+@login_required
+def api_asset_loan_create(aid):
+    b = request.get_json(force=True)
+    if not b.get('staff_id') or not b.get('loan_date'):
+        return jsonify({'error': '借用人及日期必填'}), 400
+    with get_db() as conn:
+        existing = conn.execute(
+            "SELECT id FROM asset_loans WHERE asset_id=%s AND status='active'", (aid,)
+        ).fetchone()
+        if existing:
+            return jsonify({'error': '此設備目前已被借出'}), 409
+        row = conn.execute("""
+            INSERT INTO asset_loans (asset_id, staff_id, loan_date, expected_return, purpose)
+            VALUES (%s,%s,%s,%s,%s) RETURNING *
+        """, (aid, int(b['staff_id']), b['loan_date'],
+              b.get('expected_return') or None,
+              b.get('purpose','').strip())).fetchone()
+        conn.execute("UPDATE assets SET status='loaned' WHERE id=%s", (aid,))
+    return jsonify(_loan_row(row)), 201
+
+
+@app.route('/api/assets/loans/<int:lid>/return', methods=['POST'])
+@login_required
+def api_asset_loan_return(lid):
+    b = request.get_json(force=True)
+    return_date = b.get('return_date') or date.today().isoformat()
+    note        = b.get('note', '').strip()
+    with get_db() as conn:
+        loan = conn.execute("SELECT * FROM asset_loans WHERE id=%s", (lid,)).fetchone()
+        if not loan: return ('', 404)
+        conn.execute("""
+            UPDATE asset_loans SET status='returned', actual_return=%s, note=%s WHERE id=%s
+        """, (return_date, note, lid))
+        conn.execute("UPDATE assets SET status='available' WHERE id=%s", (loan['asset_id'],))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/assets/loans', methods=['GET'])
+@login_required
+def api_all_loans():
+    status   = request.args.get('status', 'active')
+    staff_id = request.args.get('staff_id', '')
+    conds, params = ['al.status=%s'], [status]
+    if staff_id: conds.append('al.staff_id=%s'); params.append(int(staff_id))
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT al.*, a.name as asset_name, a.code as asset_code,
+                   a.category as asset_category, ps.name as staff_name
+            FROM asset_loans al
+            JOIN assets a ON a.id=al.asset_id
+            JOIN punch_staff ps ON ps.id=al.staff_id
+            WHERE {' AND '.join(conds)}
+            ORDER BY al.loan_date DESC LIMIT 200
+        """, params).fetchall()
+    return jsonify([_loan_row(r) for r in rows])
+
+
+@app.route('/api/assets/stats', methods=['GET'])
+@login_required
+def api_asset_stats():
+    with get_db() as conn:
+        row = conn.execute("""
+            SELECT
+                COUNT(*) FILTER (WHERE status='available')   as available,
+                COUNT(*) FILTER (WHERE status='loaned')      as loaned,
+                COUNT(*) FILTER (WHERE status='maintenance') as maintenance,
+                COUNT(*) FILTER (WHERE status='retired')     as retired,
+                COUNT(*)                                      as total
+            FROM assets WHERE active=TRUE
+        """).fetchone()
+    return jsonify(dict(row))

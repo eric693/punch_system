@@ -208,6 +208,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <a href="#" class="nav-item"        id="nav-perf" onclick="showPage('perf',event)">績效考核</a>
     <a href="#" class="nav-item"        id="nav-stores"   onclick="showPage('stores',event)">門市管理</a>
     <a href="#" class="nav-item"        id="nav-training" onclick="showPage('training',event)">教育訓練</a>
+    <a href="#" class="nav-item"        id="nav-travel"   onclick="showPage('travel',event)">差旅申請<span class="nav-badge" id="badge-travel" style="display:none"></span></a>
+    <a href="#" class="nav-item"        id="nav-assets"   onclick="showPage('assets',event)">資產管理</a>
     <a href="#" class="nav-item"        id="nav-adminmgr" onclick="showPage('adminmgr',event)" style="display:none">帳號管理</a>
   </nav>
   <div class="sidebar-bottom">
@@ -1879,8 +1881,280 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
   </div><!-- end page-perf -->
 
+  <!-- ── 差旅申請 ── -->
+  <div class="page" id="page-travel" style="display:none">
+    <div class="filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:16px">
+      <span class="filter-label">月份</span>
+      <input type="month" class="filter-input" id="travel-filter-month" style="min-width:140px" onchange="loadTravel()">
+      <span class="filter-label">狀態</span>
+      <select class="filter-input" id="travel-filter-status" onchange="loadTravel()">
+        <option value="">全部</option>
+        <option value="pending">待審</option>
+        <option value="approved">已核准</option>
+        <option value="rejected">已拒絕</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="openTravelModal()">＋ 新增差旅申請</button>
+      <button class="btn btn-outline btn-sm" onclick="loadTravel()">重新整理</button>
+    </div>
+
+    <!-- 統計卡片 -->
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px" id="travel-stats-row">
+      <div class="stat-card" style="border-left:4px solid var(--orange)">
+        <div class="stat-label">待審</div><div class="stat-value" id="tv-pending">—</div>
+      </div>
+      <div class="stat-card" style="border-left:4px solid var(--green)">
+        <div class="stat-label">已核准</div><div class="stat-value" id="tv-approved">—</div>
+      </div>
+      <div class="stat-card" style="border-left:4px solid var(--accent)">
+        <div class="stat-label">預支總額</div><div class="stat-value" id="tv-advance">—</div>
+      </div>
+      <div class="stat-card" style="border-left:4px solid var(--navy)">
+        <div class="stat-label">費用核銷總額</div><div class="stat-value" id="tv-expense">—</div>
+      </div>
+    </div>
+
+    <div id="travel-list"><div style="padding:32px;text-align:center;color:var(--muted)">載入中…</div></div>
+  </div><!-- end page-travel -->
+
+  <!-- ── 資產管理 ── -->
+  <div class="page" id="page-assets" style="display:none">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+      <button class="btn btn-primary btn-sm" onclick="openAssetModal()">＋ 新增資產</button>
+      <select class="filter-input" id="asset-filter-cat" onchange="loadAssets()" style="min-width:120px">
+        <option value="">全部類別</option>
+        <option value="computer">電腦/3C</option>
+        <option value="vehicle">車輛</option>
+        <option value="furniture">辦公家具</option>
+        <option value="tool">工具設備</option>
+        <option value="other">其他</option>
+      </select>
+      <select class="filter-input" id="asset-filter-status" onchange="loadAssets()" style="min-width:120px">
+        <option value="">全部狀態</option>
+        <option value="available">可借用</option>
+        <option value="loaned">借出中</option>
+        <option value="maintenance">維修中</option>
+        <option value="retired">報廢</option>
+      </select>
+      <input class="filter-input" id="asset-filter-q" placeholder="搜尋名稱/編號…" oninput="loadAssets()" style="min-width:160px">
+      <button class="btn btn-outline btn-sm" onclick="loadAssets()">重新整理</button>
+    </div>
+
+    <!-- 資產統計 -->
+    <div class="stats-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px">
+      <div class="stat-card" style="border-left:4px solid var(--green)">
+        <div class="stat-label">可借用</div><div class="stat-value" id="ast-available">—</div>
+      </div>
+      <div class="stat-card" style="border-left:4px solid var(--orange)">
+        <div class="stat-label">借出中</div><div class="stat-value" id="ast-loaned">—</div>
+      </div>
+      <div class="stat-card" style="border-left:4px solid var(--red)">
+        <div class="stat-label">維修中</div><div class="stat-value" id="ast-maintenance">—</div>
+      </div>
+      <div class="stat-card" style="border-left:4px solid var(--muted)">
+        <div class="stat-label">報廢</div><div class="stat-value" id="ast-retired">—</div>
+      </div>
+      <div class="stat-card" style="border-left:4px solid var(--navy)">
+        <div class="stat-label">總計</div><div class="stat-value" id="ast-total">—</div>
+      </div>
+    </div>
+
+    <div id="asset-list"><div style="padding:32px;text-align:center;color:var(--muted)">載入中…</div></div>
+
+    <!-- 借用記錄子頁 -->
+    <div style="margin-top:24px">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">
+        目前借出中的設備
+      </div>
+      <div id="loan-active-list"></div>
+    </div>
+  </div><!-- end page-assets -->
+
 
 </main>
+
+<!-- ── 差旅申請 Modal ── -->
+<div id="travel-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:28px 32px;position:relative">
+    <button onclick="closeTravelModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    <h3 style="margin:0 0 20px;font-size:16px;color:var(--navy)" id="travel-modal-title">新增差旅申請</h3>
+    <input type="hidden" id="tm-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="grid-column:1/-1">
+        <label class="form-label">員工</label>
+        <select class="form-input" id="tm-staff"></select>
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="form-label">申請標題 *</label>
+        <input class="form-input" id="tm-title" placeholder="例：台北客戶拜訪">
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="form-label">目的地 *</label>
+        <input class="form-input" id="tm-destination" placeholder="例：台北市信義區">
+      </div>
+      <div>
+        <label class="form-label">出發日期 *</label>
+        <input type="date" class="form-input" id="tm-start">
+      </div>
+      <div>
+        <label class="form-label">返回日期 *</label>
+        <input type="date" class="form-input" id="tm-end">
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="form-label">出差目的</label>
+        <textarea class="form-input" id="tm-purpose" rows="2" style="resize:vertical" placeholder="說明出差原因"></textarea>
+      </div>
+      <div>
+        <label class="form-label">預支金額 (NT$)</label>
+        <input type="number" class="form-input" id="tm-advance" min="0" step="100" placeholder="0">
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeTravelModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveTravelModal()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 差旅審核 Modal ── -->
+<div id="travel-review-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:480px;max-width:95vw;padding:28px 32px;position:relative">
+    <button onclick="closeTravelReviewModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    <h3 style="margin:0 0 20px;font-size:16px;color:var(--navy)">審核差旅申請</h3>
+    <input type="hidden" id="trv-id">
+    <div style="margin-bottom:12px">
+      <label class="form-label">審核意見</label>
+      <textarea class="form-input" id="trv-note" rows="3" style="resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-outline" onclick="closeTravelReviewModal()">取消</button>
+      <button class="btn btn-danger" onclick="submitTravelReview('reject')">拒絕</button>
+      <button class="btn btn-primary" onclick="submitTravelReview('approve')">核准</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 差旅費用 Modal ── -->
+<div id="travel-expense-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:680px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:28px 32px;position:relative">
+    <button onclick="closeTravelExpModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    <h3 style="margin:0 0 4px;font-size:16px;color:var(--navy)" id="exp-modal-title">費用核銷明細</h3>
+    <p id="exp-modal-sub" style="margin:0 0 20px;font-size:12px;color:var(--muted)"></p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:16px">
+      <div>
+        <label class="form-label">類別</label>
+        <select class="form-input" id="exp-cat">
+          <option value="transport">交通費</option>
+          <option value="hotel">住宿費</option>
+          <option value="meal">餐費</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">日期</label>
+        <input type="date" class="form-input" id="exp-date">
+      </div>
+      <div>
+        <label class="form-label">金額 (NT$)</label>
+        <input type="number" class="form-input" id="exp-amount" min="0" step="10" placeholder="0">
+      </div>
+      <button class="btn btn-primary btn-sm" style="height:36px" onclick="addExpense()">新增</button>
+    </div>
+    <div style="margin-bottom:10px">
+      <label class="form-label">備註</label>
+      <input class="form-input" id="exp-note" placeholder="說明（選填）">
+    </div>
+    <div id="exp-list" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- ── 資產 Modal ── -->
+<div id="asset-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:520px;max-width:95vw;padding:28px 32px;position:relative">
+    <button onclick="closeAssetModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    <h3 style="margin:0 0 20px;font-size:16px;color:var(--navy)" id="asset-modal-title">新增資產</h3>
+    <input type="hidden" id="am-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="grid-column:1/-1">
+        <label class="form-label">名稱 *</label>
+        <input class="form-input" id="am-name" placeholder="例：MacBook Pro 16吋">
+      </div>
+      <div>
+        <label class="form-label">資產編號</label>
+        <input class="form-input" id="am-code" placeholder="例：IT-001">
+      </div>
+      <div>
+        <label class="form-label">類別</label>
+        <select class="form-input" id="am-category">
+          <option value="computer">電腦/3C</option>
+          <option value="vehicle">車輛</option>
+          <option value="furniture">辦公家具</option>
+          <option value="tool">工具設備</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">購入日期</label>
+        <input type="date" class="form-input" id="am-purchase-date">
+      </div>
+      <div>
+        <label class="form-label">購入金額 (NT$)</label>
+        <input type="number" class="form-input" id="am-price" min="0" step="100" placeholder="0">
+      </div>
+      <div>
+        <label class="form-label">狀態</label>
+        <select class="form-input" id="am-status">
+          <option value="available">可借用</option>
+          <option value="maintenance">維修中</option>
+          <option value="retired">報廢</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="form-label">存放位置</label>
+        <input class="form-input" id="am-location" placeholder="例：辦公室 2F 資訊室">
+      </div>
+      <div style="grid-column:1/-1">
+        <label class="form-label">備註</label>
+        <input class="form-input" id="am-note">
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeAssetModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveAssetModal()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 借用 Modal ── -->
+<div id="loan-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:440px;max-width:95vw;padding:28px 32px;position:relative">
+    <button onclick="closeLoanModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    <h3 style="margin:0 0 4px;font-size:16px;color:var(--navy)">登記借用</h3>
+    <p id="loan-modal-sub" style="margin:0 0 20px;font-size:12px;color:var(--muted)"></p>
+    <input type="hidden" id="lm-asset-id">
+    <div style="display:grid;gap:14px">
+      <div>
+        <label class="form-label">借用人 *</label>
+        <select class="form-input" id="lm-staff"></select>
+      </div>
+      <div>
+        <label class="form-label">借用日期 *</label>
+        <input type="date" class="form-input" id="lm-loan-date">
+      </div>
+      <div>
+        <label class="form-label">預計歸還日期</label>
+        <input type="date" class="form-input" id="lm-return-date">
+      </div>
+      <div>
+        <label class="form-label">用途</label>
+        <input class="form-input" id="lm-purpose" placeholder="說明用途（選填）">
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeLoanModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveLoanModal()">確認借出</button>
+    </div>
+  </div>
+</div>
 
 <!-- Salary Preview Modal -->
 <!-- ── 生物辨識 Modal ── -->
@@ -3725,10 +3999,10 @@ function showPage(page, e) {
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
   setTimeout(refreshBadges, 600);
-  ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training'].forEach(p =>
+  ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training','travel','assets'].forEach(p =>
     document.getElementById('page-' + p).style.display = p === page ? '' : 'none'
   );
-  const titles = { dash:'儀表板', punch:'打卡管理', sched:'排班管理', leave:'請假管理', salary:'薪資管理', ann:'公告管理', holiday:'國定假日', finance:'財務管理', adminmgr:'帳號管理', 'expense-review':'費用審核', perf:'績效考核', stores:'門市管理', training:'教育訓練追蹤' };
+  const titles = { dash:'儀表板', punch:'打卡管理', sched:'排班管理', leave:'請假管理', salary:'薪資管理', ann:'公告管理', holiday:'國定假日', finance:'財務管理', adminmgr:'帳號管理', 'expense-review':'費用審核', perf:'績效考核', stores:'門市管理', training:'教育訓練追蹤', travel:'差旅申請', assets:'資產管理' };
   document.getElementById('page-title').textContent = titles[page] || page;
   if (page === 'dash')            initDash();
   if (page === 'punch')           initPunch();
@@ -3743,6 +4017,8 @@ function showPage(page, e) {
   if (page === 'perf')            initPerf();
   if (page === 'stores')          loadStores();
   if (page === 'training')        initTraining();
+  if (page === 'travel')          initTravel();
+  if (page === 'assets')          initAssets();
 }
 
 // ── Toast ─────────────────────────────────────────────────────
@@ -9708,6 +9984,375 @@ async function deleteAdminBioCred(credId){
 
 function escStr(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════════════════════
+// 差旅申請
+// ══════════════════════════════════════════════════════
+let _travelList = [];
+
+async function initTravel() {
+  const m = new Date(); document.getElementById('travel-filter-month').value =
+    `${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,'0')}`;
+  await loadTravel();
+}
+
+async function loadTravel() {
+  const month  = document.getElementById('travel-filter-month').value;
+  const status = document.getElementById('travel-filter-status').value;
+  let url = '/api/travel/requests?';
+  if (month)  url += `month=${month}&`;
+  if (status) url += `status=${status}&`;
+  const [r1, r2] = await Promise.all([
+    api(url, {}, true),
+    api(`/api/travel/stats${month ? '?month='+month : ''}`, {}, true),
+  ]);
+  _travelList = r1.ok ? r1.data : [];
+  if (r2.ok) {
+    const s = r2.data;
+    document.getElementById('tv-pending').textContent   = s.pending;
+    document.getElementById('tv-approved').textContent  = s.approved;
+    document.getElementById('tv-advance').textContent   = '$'+Number(s.total_advance).toLocaleString();
+    document.getElementById('tv-expense').textContent   = '$'+Number(s.total_expense).toLocaleString();
+  }
+  renderTravelList();
+}
+
+const TRAVEL_STATUS = { pending:'待審', approved:'已核准', rejected:'已拒絕' };
+const TRAVEL_STATUS_COLOR = { pending:'var(--orange)', approved:'var(--green)', rejected:'var(--red)' };
+
+function renderTravelList() {
+  const wrap = document.getElementById('travel-list');
+  if (!_travelList.length) {
+    wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">本月尚無差旅申請</div>';
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>員工</th><th>標題</th><th>目的地</th><th>出發</th><th>返回</th>
+    <th style="text-align:right">預支</th><th>狀態</th><th>操作</th>
+  </tr></thead><tbody>${_travelList.map(r => `<tr>
+    <td style="font-weight:600">${escHtml(r.staff_name||'')}</td>
+    <td>${escHtml(r.title)}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.destination)}</td>
+    <td style="font-size:12px">${r.start_date||''}</td>
+    <td style="font-size:12px">${r.end_date||''}</td>
+    <td style="text-align:right;font-family:'DM Mono',monospace">$${Number(r.advance_amount||0).toLocaleString()}</td>
+    <td><span style="font-size:11px;font-weight:700;color:${TRAVEL_STATUS_COLOR[r.status]||'#888'}">${TRAVEL_STATUS[r.status]||r.status}</span></td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openTravelExpModal(${r.id},'${escHtml(r.title)}')">費用</button>
+      ${r.status==='pending'?`
+        <button class="btn btn-outline btn-sm" onclick="openTravelModal(${r.id})" style="margin-left:4px">編輯</button>
+        <button class="btn btn-primary btn-sm" onclick="openTravelReviewModal(${r.id})" style="margin-left:4px">審核</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTravel(${r.id})" style="margin-left:4px">刪除</button>
+      `:''}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function openTravelModal(id=null) {
+  document.getElementById('travel-modal-title').textContent = id ? '編輯差旅申請' : '新增差旅申請';
+  document.getElementById('tm-id').value = id||'';
+  // populate staff
+  const staffSel = document.getElementById('tm-staff');
+  if (!staffSel.options.length || staffSel.options.length === 1) {
+    const { ok, data } = await api('/api/staff/list?active=1', {}, true);
+    if (ok) staffSel.innerHTML = data.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+  }
+  if (id) {
+    const { ok, data } = await api(`/api/travel/requests/${id}`, {}, true);
+    if (ok) {
+      document.getElementById('tm-staff').value       = data.staff_id;
+      document.getElementById('tm-title').value       = data.title||'';
+      document.getElementById('tm-destination').value = data.destination||'';
+      document.getElementById('tm-start').value       = (data.start_date||'').slice(0,10);
+      document.getElementById('tm-end').value         = (data.end_date||'').slice(0,10);
+      document.getElementById('tm-purpose').value     = data.purpose||'';
+      document.getElementById('tm-advance').value     = data.advance_amount||0;
+    }
+  } else {
+    ['tm-title','tm-destination','tm-purpose'].forEach(i => document.getElementById(i).value='');
+    document.getElementById('tm-start').value = new Date().toISOString().slice(0,10);
+    document.getElementById('tm-end').value   = new Date().toISOString().slice(0,10);
+    document.getElementById('tm-advance').value = 0;
+  }
+  document.getElementById('travel-modal').style.display = 'flex';
+}
+function closeTravelModal(){ document.getElementById('travel-modal').style.display='none'; }
+
+async function saveTravelModal() {
+  const id   = document.getElementById('tm-id').value;
+  const body = {
+    staff_id:       parseInt(document.getElementById('tm-staff').value),
+    title:          document.getElementById('tm-title').value.trim(),
+    destination:    document.getElementById('tm-destination').value.trim(),
+    start_date:     document.getElementById('tm-start').value,
+    end_date:       document.getElementById('tm-end').value,
+    purpose:        document.getElementById('tm-purpose').value.trim(),
+    advance_amount: parseFloat(document.getElementById('tm-advance').value)||0,
+  };
+  if (!body.title||!body.destination||!body.start_date||!body.end_date) {
+    return showToast('請填寫必填欄位','warning');
+  }
+  const url    = id ? `/api/travel/requests/${id}` : '/api/travel/requests';
+  const method = id ? 'PUT' : 'POST';
+  const { ok } = await api(url, { method, body: JSON.stringify(body) });
+  if (ok) { closeTravelModal(); loadTravel(); showToast(id?'已更新':'已新增','success'); }
+}
+
+function openTravelReviewModal(id) {
+  document.getElementById('trv-id').value = id;
+  document.getElementById('trv-note').value = '';
+  document.getElementById('travel-review-modal').style.display = 'flex';
+}
+function closeTravelReviewModal(){ document.getElementById('travel-review-modal').style.display='none'; }
+
+async function submitTravelReview(action) {
+  const id   = document.getElementById('trv-id').value;
+  const note = document.getElementById('trv-note').value.trim();
+  const { ok } = await api(`/api/travel/requests/${id}/review`, {
+    method:'POST', body:JSON.stringify({ action, review_note:note, reviewed_by: _adminName||'' })
+  });
+  if (ok) { closeTravelReviewModal(); loadTravel(); showToast(action==='approve'?'已核准':'已拒絕','success'); }
+}
+
+async function deleteTravel(id) {
+  if (!confirm('確定刪除此差旅申請？')) return;
+  const { ok } = await api(`/api/travel/requests/${id}`, { method:'DELETE' });
+  if (ok) { loadTravel(); showToast('已刪除','success'); }
+}
+
+// 費用核銷
+let _expTravelId = null;
+async function openTravelExpModal(id, title) {
+  _expTravelId = id;
+  document.getElementById('exp-modal-title').textContent = `費用核銷：${title}`;
+  document.getElementById('travel-expense-modal').style.display = 'flex';
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('exp-date').value   = today;
+  document.getElementById('exp-amount').value = '';
+  document.getElementById('exp-note').value   = '';
+  await renderExpList();
+}
+function closeTravelExpModal(){ document.getElementById('travel-expense-modal').style.display='none'; _expTravelId=null; }
+
+async function renderExpList() {
+  const { ok, data } = await api(`/api/travel/requests/${_expTravelId}/expenses`, {}, true);
+  const wrap = document.getElementById('exp-list');
+  if (!ok||!data.length) { wrap.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px 0">尚無費用記錄</div>'; return; }
+  const catLabel = { transport:'交通費', hotel:'住宿費', meal:'餐費', other:'其他' };
+  const total = data.reduce((a,r)=>a+parseFloat(r.amount||0),0);
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>類別</th><th>日期</th><th style="text-align:right">金額</th><th>備註</th><th></th>
+  </tr></thead><tbody>${data.map(r=>`<tr>
+    <td>${catLabel[r.category]||r.category}</td>
+    <td style="font-size:12px">${r.expense_date||''}</td>
+    <td style="text-align:right;font-family:'DM Mono',monospace">$${Number(r.amount).toLocaleString()}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.note||'')}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteExpense(${r.id})">刪除</button></td>
+  </tr>`).join('')}</tbody>
+  <tfoot><tr><td colspan="2" style="font-weight:700">合計</td>
+    <td style="text-align:right;font-weight:700;font-family:'DM Mono',monospace">$${total.toLocaleString()}</td>
+    <td colspan="2"></td></tr></tfoot></table>`;
+}
+
+async function addExpense() {
+  const body = {
+    category:     document.getElementById('exp-cat').value,
+    expense_date: document.getElementById('exp-date').value,
+    amount:       parseFloat(document.getElementById('exp-amount').value)||0,
+    note:         document.getElementById('exp-note').value.trim(),
+  };
+  if (!body.amount) return showToast('請填入金額','warning');
+  const { ok } = await api(`/api/travel/requests/${_expTravelId}/expenses`, { method:'POST', body:JSON.stringify(body) });
+  if (ok) { document.getElementById('exp-amount').value=''; renderExpList(); }
+}
+
+async function deleteExpense(eid) {
+  if (!confirm('刪除此筆費用？')) return;
+  await api(`/api/travel/expenses/${eid}`, { method:'DELETE' });
+  renderExpList();
+}
+
+
+// ══════════════════════════════════════════════════════
+// 資產管理
+// ══════════════════════════════════════════════════════
+let _assetList = [];
+
+async function initAssets() {
+  await Promise.all([loadAssets(), loadActiveLoanList()]);
+}
+
+async function loadAssets() {
+  const cat    = document.getElementById('asset-filter-cat').value;
+  const status = document.getElementById('asset-filter-status').value;
+  const q      = document.getElementById('asset-filter-q').value.trim();
+  let url = '/api/assets?';
+  if (cat)    url += `category=${cat}&`;
+  if (status) url += `status=${status}&`;
+  if (q)      url += `q=${encodeURIComponent(q)}&`;
+  const [r1, r2] = await Promise.all([
+    api(url, {}, true),
+    api('/api/assets/stats', {}, true),
+  ]);
+  _assetList = r1.ok ? r1.data : [];
+  if (r2.ok) {
+    const s = r2.data;
+    document.getElementById('ast-available').textContent   = s.available;
+    document.getElementById('ast-loaned').textContent      = s.loaned;
+    document.getElementById('ast-maintenance').textContent = s.maintenance;
+    document.getElementById('ast-retired').textContent     = s.retired;
+    document.getElementById('ast-total').textContent       = s.total;
+  }
+  renderAssetList();
+}
+
+const ASSET_CAT_LABEL  = { computer:'電腦/3C', vehicle:'車輛', furniture:'辦公家具', tool:'工具設備', other:'其他' };
+const ASSET_STATUS_COLOR = { available:'var(--green)', loaned:'var(--orange)', maintenance:'var(--red)', retired:'#aaa' };
+const ASSET_STATUS_LABEL = { available:'可借用', loaned:'借出中', maintenance:'維修中', retired:'報廢' };
+
+function renderAssetList() {
+  const wrap = document.getElementById('asset-list');
+  if (!_assetList.length) {
+    wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無資產記錄</div>';
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>編號</th><th>名稱</th><th>類別</th><th>存放位置</th>
+    <th style="text-align:right">購入金額</th><th>狀態</th><th>借用人</th><th>操作</th>
+  </tr></thead><tbody>${_assetList.map(r => `<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${escHtml(r.code||'—')}</td>
+    <td style="font-weight:600">${escHtml(r.name)}</td>
+    <td style="font-size:12px">${ASSET_CAT_LABEL[r.category]||r.category}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.location||'—')}</td>
+    <td style="text-align:right;font-family:'DM Mono',monospace;font-size:12px">${r.purchase_price?'$'+Number(r.purchase_price).toLocaleString():'—'}</td>
+    <td><span style="font-size:11px;font-weight:700;color:${ASSET_STATUS_COLOR[r.status]||'#888'}">${ASSET_STATUS_LABEL[r.status]||r.status}</span></td>
+    <td style="font-size:12px">${r.loaned_to_name||'—'}${r.expected_return?'<br><span style="color:var(--muted)">預計'+r.expected_return+'歸還</span>':''}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openAssetModal(${r.id})">編輯</button>
+      ${r.status==='available'?`<button class="btn btn-primary btn-sm" onclick="openLoanModal(${r.id},'${escHtml(r.name)}')" style="margin-left:4px">借出</button>`:''}
+      ${r.status==='loaned'?`<button class="btn btn-outline btn-sm" onclick="returnLoan(${r.id})" style="margin-left:4px">歸還</button>`:''}
+      <button class="btn btn-danger btn-sm" onclick="deleteAsset(${r.id})" style="margin-left:4px">刪除</button>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function openAssetModal(id=null) {
+  document.getElementById('asset-modal-title').textContent = id ? '編輯資產' : '新增資產';
+  document.getElementById('am-id').value = id||'';
+  if (id) {
+    const a = _assetList.find(x=>x.id===id);
+    if (a) {
+      document.getElementById('am-name').value          = a.name||'';
+      document.getElementById('am-code').value          = a.code||'';
+      document.getElementById('am-category').value      = a.category||'other';
+      document.getElementById('am-purchase-date').value = (a.purchase_date||'').slice(0,10);
+      document.getElementById('am-price').value         = a.purchase_price||'';
+      document.getElementById('am-status').value        = a.status||'available';
+      document.getElementById('am-location').value      = a.location||'';
+      document.getElementById('am-note').value          = a.note||'';
+    }
+  } else {
+    ['am-name','am-code','am-price','am-location','am-note'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('am-category').value = 'computer';
+    document.getElementById('am-status').value   = 'available';
+    document.getElementById('am-purchase-date').value = new Date().toISOString().slice(0,10);
+  }
+  document.getElementById('asset-modal').style.display = 'flex';
+}
+function closeAssetModal(){ document.getElementById('asset-modal').style.display='none'; }
+
+async function saveAssetModal() {
+  const id   = document.getElementById('am-id').value;
+  const body = {
+    name:          document.getElementById('am-name').value.trim(),
+    code:          document.getElementById('am-code').value.trim(),
+    category:      document.getElementById('am-category').value,
+    purchase_date: document.getElementById('am-purchase-date').value||null,
+    purchase_price:parseFloat(document.getElementById('am-price').value)||0,
+    status:        document.getElementById('am-status').value,
+    location:      document.getElementById('am-location').value.trim(),
+    note:          document.getElementById('am-note').value.trim(),
+  };
+  if (!body.name) return showToast('名稱必填','warning');
+  const url    = id ? `/api/assets/${id}` : '/api/assets';
+  const method = id ? 'PUT' : 'POST';
+  const { ok } = await api(url, { method, body: JSON.stringify(body) });
+  if (ok) { closeAssetModal(); loadAssets(); showToast(id?'已更新':'已新增','success'); }
+}
+
+async function deleteAsset(id) {
+  if (!confirm('確定刪除此資產？')) return;
+  const { ok } = await api(`/api/assets/${id}`, { method:'DELETE' });
+  if (ok) { loadAssets(); showToast('已刪除','success'); }
+}
+
+// 借用
+async function openLoanModal(assetId, assetName) {
+  document.getElementById('lm-asset-id').value = assetId;
+  document.getElementById('loan-modal-sub').textContent = `設備：${assetName}`;
+  document.getElementById('lm-loan-date').value   = new Date().toISOString().slice(0,10);
+  document.getElementById('lm-return-date').value = '';
+  document.getElementById('lm-purpose').value     = '';
+  const staffSel = document.getElementById('lm-staff');
+  if (!staffSel.options.length) {
+    const { ok, data } = await api('/api/staff/list?active=1', {}, true);
+    if (ok) staffSel.innerHTML = data.map(s=>`<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+  }
+  document.getElementById('loan-modal').style.display = 'flex';
+}
+function closeLoanModal(){ document.getElementById('loan-modal').style.display='none'; }
+
+async function saveLoanModal() {
+  const aid  = document.getElementById('lm-asset-id').value;
+  const body = {
+    staff_id:        parseInt(document.getElementById('lm-staff').value),
+    loan_date:       document.getElementById('lm-loan-date').value,
+    expected_return: document.getElementById('lm-return-date').value||null,
+    purpose:         document.getElementById('lm-purpose').value.trim(),
+  };
+  if (!body.loan_date||!body.staff_id) return showToast('請選擇借用人及日期','warning');
+  const { ok, data } = await api(`/api/assets/${aid}/loans`, { method:'POST', body:JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'借出失敗','error'); return; }
+  closeLoanModal(); loadAssets(); loadActiveLoanList(); showToast('已登記借出','success');
+}
+
+async function returnLoan(assetId) {
+  const asset = _assetList.find(x=>x.id===assetId);
+  if (!asset) return;
+  if (!confirm(`確定登記「${asset.name}」已歸還？`)) return;
+  // find active loan
+  const { ok, data } = await api(`/api/assets/${assetId}/loans`, {}, true);
+  if (!ok) return;
+  const active = data.find(l=>l.status==='active');
+  if (!active) return showToast('找不到借出記錄','error');
+  const { ok: ok2 } = await api(`/api/assets/loans/${active.id}/return`, { method:'POST', body:JSON.stringify({ return_date: new Date().toISOString().slice(0,10) }) });
+  if (ok2) { loadAssets(); loadActiveLoanList(); showToast('已登記歸還','success'); }
+}
+
+async function loadActiveLoanList() {
+  const { ok, data } = await api('/api/assets/loans?status=active', {}, true);
+  const wrap = document.getElementById('loan-active-list');
+  if (!ok||!data.length) {
+    wrap.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0">目前無設備借出</div>';
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>設備</th><th>類別</th><th>借用人</th><th>借出日</th><th>預計歸還</th><th>操作</th>
+  </tr></thead><tbody>${data.map(r=>`<tr>
+    <td style="font-weight:600">${escHtml(r.asset_name)} <span style="font-size:11px;color:var(--muted)">${escHtml(r.asset_code||'')}</span></td>
+    <td style="font-size:12px">${ASSET_CAT_LABEL[r.asset_category]||r.asset_category}</td>
+    <td>${escHtml(r.staff_name)}</td>
+    <td style="font-size:12px">${r.loan_date}</td>
+    <td style="font-size:12px;color:${r.expected_return&&r.expected_return<new Date().toISOString().slice(0,10)?'var(--red)':'inherit'}">${r.expected_return||'未設定'}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="returnLoanById(${r.id})">登記歸還</button></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function returnLoanById(lid) {
+  if (!confirm('確定登記歸還？')) return;
+  const { ok } = await api(`/api/assets/loans/${lid}/return`, { method:'POST', body:JSON.stringify({ return_date: new Date().toISOString().slice(0,10) }) });
+  if (ok) { loadAssets(); loadActiveLoanList(); showToast('已登記歸還','success'); }
 }
 </script>
 </html>
