@@ -24,7 +24,26 @@ from db import get_db, _hash_pw, DATABASE_URL
 from auth import login_required, require_module, require_super
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+
+# SECRET_KEY 必須穩定，否則每次重啟都會讓所有 session 失效
+_secret_key = os.environ.get('SECRET_KEY')
+if not _secret_key:
+    import hashlib as _hashlib
+    # 以 DATABASE_URL 衍生穩定 key，重啟後 session 仍有效
+    # 強烈建議在環境變數設定 SECRET_KEY
+    _seed = DATABASE_URL or 'punch-app-stable-fallback-key'
+    _secret_key = _hashlib.sha256(_seed.encode()).hexdigest()
+    print("[WARNING] SECRET_KEY env var not set — using derived key. Please set SECRET_KEY for security.")
+app.secret_key = _secret_key
+
+from datetime import timedelta as _td_session
+app.config['PERMANENT_SESSION_LIFETIME'] = _td_session(hours=12)
+
+@app.before_request
+def _refresh_session():
+    """每次請求刷新 session 存活時間，避免使用中途登出。"""
+    if session.get('logged_in'):
+        session.modified = True
 
 LINE_CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
 LINE_CHANNEL_SECRET       = os.environ.get('LINE_CHANNEL_SECRET', '')
@@ -559,6 +578,7 @@ def admin_login():
                 if isinstance(perms, str):
                     try: perms = _json.loads(perms)
                     except: perms = []
+                session.permanent             = True
                 session['logged_in']          = True
                 session['admin_id']           = row['id']
                 session['admin_username']     = row['username']
