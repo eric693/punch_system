@@ -23,12 +23,17 @@ def _init_pool():
         from psycopg_pool import ConnectionPool
         _pool = ConnectionPool(
             DATABASE_URL,
-            kwargs={'row_factory': dict_row},
+            kwargs={'row_factory': dict_row, 'connect_timeout': 10},
             min_size=1,
-            max_size=10,
+            max_size=5,
             open=True,
+            check=ConnectionPool.check_connection,
+            reconnect_timeout=30,
+            max_waiting=20,
+            max_lifetime=600,
+            max_idle=300,
         )
-        print("[DB] Connection pool initialised (min=1, max=10)")
+        print("[DB] Connection pool initialised (min=1, max=5)")
     except Exception as e:
         print(f"[DB] Pool init failed, falling back to single connections: {e}")
 
