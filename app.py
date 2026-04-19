@@ -489,7 +489,7 @@ def keep_alive():
             )
         except Exception as e:
             print(f"[keep-alive] ping failed: {e}")
-        time.sleep(14 * 60)
+        time.sleep(9 * 60)
 
 threading.Thread(target=keep_alive, daemon=True).start()
 
