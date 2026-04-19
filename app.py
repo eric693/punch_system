@@ -404,6 +404,16 @@ def init_db():
         "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS reviewed_by  TEXT DEFAULT ''",
         "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS review_note  TEXT DEFAULT ''",
         "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS reviewed_at  TIMESTAMPTZ",
+        # ── 效能索引 ──────────────────────────────────────────────────────────
+        "CREATE INDEX IF NOT EXISTS idx_punch_records_staff_at      ON punch_records(staff_id, punched_at)",
+        "CREATE INDEX IF NOT EXISTS idx_punch_records_punched_at    ON punch_records(punched_at)",
+        "CREATE INDEX IF NOT EXISTS idx_punch_records_active        ON punch_records(deleted_at) WHERE deleted_at IS NULL",
+        "CREATE INDEX IF NOT EXISTS idx_shift_assignments_staff_date ON shift_assignments(staff_id, shift_date)",
+        "CREATE INDEX IF NOT EXISTS idx_leave_requests_staff        ON leave_requests(staff_id, status, start_date)",
+        "CREATE INDEX IF NOT EXISTS idx_overtime_requests_staff     ON overtime_requests(staff_id, status, request_date)",
+        "CREATE INDEX IF NOT EXISTS idx_schedule_requests_month     ON schedule_requests(staff_id, month)",
+        "CREATE INDEX IF NOT EXISTS idx_punch_staff_active          ON punch_staff(active)",
+        "CREATE INDEX IF NOT EXISTS idx_salary_records_staff_month  ON salary_records(staff_id, month)",
     ]
     for sql in migrations:
         try:
@@ -5031,11 +5041,12 @@ def _calc_punch_hours(conn, staff_id, month):
     return round(total_hours, 2), len(day_map), details
 
 
-def _auto_generate_salary(conn, staff, month, work_days=None):
+def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
     """
     自動產生員工月薪資料
     ─ 月薪制：底薪 + 薪資項目公式 + 加班費 - 請假扣款
     ─ 時薪制：打卡實際工時 × 時薪 + 加班費 - 請假扣款
+    batch_ctx: 批次產生時傳入預先載入的資料，避免 N+1 查詢
     """
     import calendar as _cal2
     from datetime import date as _d5, timedelta as _td5, datetime as _dts5, timezone as _tz5
@@ -5046,29 +5057,47 @@ def _auto_generate_salary(conn, staff, month, work_days=None):
     scheduled_dates = set()
 
     if total_work_days is None:
-        # 1. 優先從排班取工作日
-        shift_date_rows = conn.execute("""
-            SELECT DISTINCT date FROM shift_assignments
-            WHERE staff_id=%s AND TO_CHAR(date,'YYYY-MM')=%s
-            ORDER BY date
-        """, (staff['id'], month)).fetchall()
-        if shift_date_rows:
-            scheduled_dates = {r['date'].isoformat() if hasattr(r['date'], 'isoformat') else str(r['date']) for r in shift_date_rows}
-            total_work_days = len(scheduled_dates)
+        if batch_ctx is not None:
+            # 使用批次預載資料
+            shift_dates = batch_ctx['shift_dates'].get(staff['id'], [])
+            if shift_dates:
+                scheduled_dates = set(
+                    d.isoformat() if hasattr(d, 'isoformat') else str(d) for d in shift_dates
+                )
+                total_work_days = len(scheduled_dates)
+            else:
+                holiday_dates = batch_ctx['holiday_dates']
+                days_in_month = _cal2.monthrange(y, m)[1]
+                for _d in range(1, days_in_month + 1):
+                    _dt = _d5(y, m, _d)
+                    _ds = _dt.isoformat()
+                    if _dt.weekday() != 6 and _ds not in holiday_dates:
+                        scheduled_dates.add(_ds)
+                total_work_days = len(scheduled_dates)
         else:
-            # 2. 備援：日曆扣除週日 + 國定假日
-            holiday_rows = conn.execute("""
-                SELECT date FROM public_holidays
-                WHERE TO_CHAR(date,'YYYY-MM')=%s
-            """, (month,)).fetchall()
-            holiday_dates = {r['date'].isoformat() if hasattr(r['date'], 'isoformat') else str(r['date']) for r in holiday_rows}
-            days_in_month = _cal2.monthrange(y, m)[1]
-            for _d in range(1, days_in_month + 1):
-                _dt = _d5(y, m, _d)
-                _ds = _dt.isoformat()
-                if _dt.weekday() != 6 and _ds not in holiday_dates:
-                    scheduled_dates.add(_ds)
-            total_work_days = len(scheduled_dates)
+            # 1. 優先從排班取工作日
+            shift_date_rows = conn.execute("""
+                SELECT DISTINCT date FROM shift_assignments
+                WHERE staff_id=%s AND TO_CHAR(date,'YYYY-MM')=%s
+                ORDER BY date
+            """, (staff['id'], month)).fetchall()
+            if shift_date_rows:
+                scheduled_dates = {r['date'].isoformat() if hasattr(r['date'], 'isoformat') else str(r['date']) for r in shift_date_rows}
+                total_work_days = len(scheduled_dates)
+            else:
+                # 2. 備援：日曆扣除週日 + 國定假日
+                holiday_rows = conn.execute("""
+                    SELECT date FROM public_holidays
+                    WHERE TO_CHAR(date,'YYYY-MM')=%s
+                """, (month,)).fetchall()
+                holiday_dates = {r['date'].isoformat() if hasattr(r['date'], 'isoformat') else str(r['date']) for r in holiday_rows}
+                days_in_month = _cal2.monthrange(y, m)[1]
+                for _d in range(1, days_in_month + 1):
+                    _dt = _d5(y, m, _d)
+                    _ds = _dt.isoformat()
+                    if _dt.weekday() != 6 and _ds not in holiday_dates:
+                        scheduled_dates.add(_ds)
+                total_work_days = len(scheduled_dates)
 
     salary_type    = staff.get('salary_type', 'monthly') or 'monthly'
     base_salary    = float(staff.get('base_salary')    or 0)
@@ -5091,22 +5120,28 @@ def _auto_generate_salary(conn, staff, month, work_days=None):
         hourly_base_pay = 0.0
 
     # ── 已核准加班費 ────────────────────────────────────────
-    ot_rows = conn.execute("""
-        SELECT COALESCE(SUM(ot_pay), 0) as total
-        FROM overtime_requests
-        WHERE staff_id=%s AND status='approved'
-          AND to_char(request_date,'YYYY-MM')=%s
-    """, (staff['id'], month)).fetchone()
-    ot_pay = float(ot_rows['total']) if ot_rows else 0.0
+    if batch_ctx is not None:
+        ot_pay = batch_ctx['ot_totals'].get(staff['id'], 0.0)
+    else:
+        ot_rows = conn.execute("""
+            SELECT COALESCE(SUM(ot_pay), 0) as total
+            FROM overtime_requests
+            WHERE staff_id=%s AND status='approved'
+              AND to_char(request_date,'YYYY-MM')=%s
+        """, (staff['id'], month)).fetchone()
+        ot_pay = float(ot_rows['total']) if ot_rows else 0.0
 
     # ── 請假資訊 ────────────────────────────────────────────
-    leave_rows = conn.execute("""
-        SELECT lr.total_days, lt.pay_rate, lt.code, lt.name as leave_name
-        FROM leave_requests lr
-        JOIN leave_types lt ON lt.id = lr.leave_type_id
-        WHERE lr.staff_id=%s AND lr.status='approved'
-          AND to_char(lr.start_date,'YYYY-MM')=%s
-    """, (staff['id'], month)).fetchall()
+    if batch_ctx is not None:
+        leave_rows = batch_ctx['leave_rows'].get(staff['id'], [])
+    else:
+        leave_rows = conn.execute("""
+            SELECT lr.total_days, lt.pay_rate, lt.code, lt.name as leave_name
+            FROM leave_requests lr
+            JOIN leave_types lt ON lt.id = lr.leave_type_id
+            WHERE lr.staff_id=%s AND lr.status='approved'
+              AND to_char(lr.start_date,'YYYY-MM')=%s
+        """, (staff['id'], month)).fetchall()
     leave_days    = sum(float(r['total_days']) for r in leave_rows)
     unpaid_days   = sum(float(r['total_days']) for r in leave_rows if float(r['pay_rate']) == 0)
     half_pay_days = sum(float(r['total_days']) for r in leave_rows if 0 < float(r['pay_rate']) < 1)
@@ -5168,7 +5203,19 @@ def _auto_generate_salary(conn, staff, month, work_days=None):
 
         # 時薪制只加入保險類扣除項（若員工有指定則只取指定中的保險項）
         staff_item_ids = staff.get('salary_item_ids')
-        if staff_item_ids:
+        if batch_ctx is not None:
+            all_items = batch_ctx['salary_items']
+            deduct_ins_items = [
+                it for it in all_items
+                if it['item_type'] == 'deduction'
+                and ('insured_salary' in (it['formula'] or '') or 'base_salary' in (it['formula'] or ''))
+            ]
+            if staff_item_ids:
+                staff_item_ids_set = set(staff_item_ids)
+                salary_items_rows = [it for it in deduct_ins_items if it['id'] in staff_item_ids_set]
+            else:
+                salary_items_rows = deduct_ins_items
+        elif staff_item_ids:
             placeholders = ','.join(['%s'] * len(staff_item_ids))
             salary_items_rows = conn.execute(f"""
                 SELECT * FROM salary_items
@@ -5200,7 +5247,14 @@ def _auto_generate_salary(conn, staff, month, work_days=None):
     else:
         # 月薪制：跑啟用的薪資項目（若員工有指定則只跑指定項目）
         staff_item_ids = staff.get('salary_item_ids')
-        if staff_item_ids:
+        if batch_ctx is not None:
+            all_items = batch_ctx['salary_items']
+            if staff_item_ids:
+                staff_item_ids_set = set(staff_item_ids)
+                items_rows = [it for it in all_items if it['id'] in staff_item_ids_set]
+            else:
+                items_rows = all_items
+        elif staff_item_ids:
             placeholders = ','.join(['%s'] * len(staff_item_ids))
             items_rows = conn.execute(
                 f"SELECT * FROM salary_items WHERE active=TRUE AND id IN ({placeholders}) ORDER BY sort_order, id",
@@ -5267,25 +5321,29 @@ def _auto_generate_salary(conn, staff, month, work_days=None):
     # ── 月薪制：缺勤扣款（打卡記錄核查） ─────────────────────
     absent_days = 0
     if salary_type == 'monthly' and scheduled_dates and daily_wage > 0:
-        punch_rows = conn.execute("""
-            SELECT DISTINCT (punched_at AT TIME ZONE 'Asia/Taipei')::date as work_date
-            FROM punch_records WHERE staff_id=%s
-              AND TO_CHAR(punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
-        """, (staff['id'], month)).fetchall()
-        punched_dates = {r['work_date'].isoformat() if hasattr(r['work_date'], 'isoformat') else str(r['work_date']) for r in punch_rows}
-        # 已核准請假日期集合
-        leave_date_rows = conn.execute("""
-            SELECT start_date, end_date FROM leave_requests
-            WHERE staff_id=%s AND status='approved'
-              AND TO_CHAR(start_date,'YYYY-MM')=%s
-        """, (staff['id'], month)).fetchall()
-        leave_date_set = set()
-        for _lr in leave_date_rows:
-            _ld = _lr['start_date']
-            _le = _lr['end_date']
-            while _ld <= _le:
-                leave_date_set.add(_ld.isoformat() if hasattr(_ld, 'isoformat') else str(_ld))
-                _ld += _td5(days=1)
+        if batch_ctx is not None:
+            punched_dates = batch_ctx['punch_dates'].get(staff['id'], set())
+            leave_date_set = batch_ctx['leave_date_sets'].get(staff['id'], set())
+        else:
+            punch_rows = conn.execute("""
+                SELECT DISTINCT (punched_at AT TIME ZONE 'Asia/Taipei')::date as work_date
+                FROM punch_records WHERE staff_id=%s
+                  AND TO_CHAR(punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
+            """, (staff['id'], month)).fetchall()
+            punched_dates = {r['work_date'].isoformat() if hasattr(r['work_date'], 'isoformat') else str(r['work_date']) for r in punch_rows}
+            # 已核准請假日期集合
+            leave_date_rows = conn.execute("""
+                SELECT start_date, end_date FROM leave_requests
+                WHERE staff_id=%s AND status='approved'
+                  AND TO_CHAR(start_date,'YYYY-MM')=%s
+            """, (staff['id'], month)).fetchall()
+            leave_date_set = set()
+            for _lr in leave_date_rows:
+                _ld = _lr['start_date']
+                _le = _lr['end_date']
+                while _ld <= _le:
+                    leave_date_set.add(_ld.isoformat() if hasattr(_ld, 'isoformat') else str(_ld))
+                    _ld += _td5(days=1)
         # 缺勤 = 排班但未打卡且非假日，僅計算過去日期
         absent_date_list = sorted(
             ds for ds in scheduled_dates
@@ -5450,9 +5508,103 @@ def api_salary_generate():
             staff_list = conn.execute(
                 "SELECT * FROM punch_staff WHERE active=TRUE"
             ).fetchall()
+            staff_ids = [s['id'] for s in staff_list]
+
+            # 批次預載所有員工的資料，避免 N+1 查詢
+            from datetime import date as _d_batch, timedelta as _td_batch
+            import calendar as _cal_batch
+            _y_b, _m_b = int(month[:4]), int(month[5:])
+            _days_b = _cal_batch.monthrange(_y_b, _m_b)[1]
+            _next_month_b = (_d_batch(_y_b, _m_b, _days_b) + _td_batch(days=1)).isoformat()
+
+            # 1. 全員排班日期
+            _shift_rows_b = conn.execute("""
+                SELECT staff_id, date FROM shift_assignments
+                WHERE staff_id = ANY(%s) AND TO_CHAR(date,'YYYY-MM')=%s
+            """, (staff_ids, month)).fetchall()
+            _shift_dates_b: dict = {}
+            for _r in _shift_rows_b:
+                _shift_dates_b.setdefault(_r['staff_id'], []).append(_r['date'])
+
+            # 2. 國定假日（全員共用）
+            _hol_rows_b = conn.execute(
+                "SELECT date FROM public_holidays WHERE TO_CHAR(date,'YYYY-MM')=%s", (month,)
+            ).fetchall()
+            _holiday_dates_b = {
+                r['date'].isoformat() if hasattr(r['date'], 'isoformat') else str(r['date'])
+                for r in _hol_rows_b
+            }
+
+            # 3. 全員加班費合計
+            _ot_rows_b = conn.execute("""
+                SELECT staff_id, COALESCE(SUM(ot_pay),0) as total
+                FROM overtime_requests
+                WHERE staff_id = ANY(%s) AND status='approved'
+                  AND to_char(request_date,'YYYY-MM')=%s
+                GROUP BY staff_id
+            """, (staff_ids, month)).fetchall()
+            _ot_totals_b = {r['staff_id']: float(r['total']) for r in _ot_rows_b}
+
+            # 4. 全員請假記錄（含假別）
+            _leave_rows_b = conn.execute("""
+                SELECT lr.staff_id, lr.total_days, lt.pay_rate, lt.code, lt.name as leave_name
+                FROM leave_requests lr
+                JOIN leave_types lt ON lt.id = lr.leave_type_id
+                WHERE lr.staff_id = ANY(%s) AND lr.status='approved'
+                  AND to_char(lr.start_date,'YYYY-MM')=%s
+            """, (staff_ids, month)).fetchall()
+            _leave_map_b: dict = {}
+            for _r in _leave_rows_b:
+                _leave_map_b.setdefault(_r['staff_id'], []).append(dict(_r))
+
+            # 5. 全員打卡日期集合（用於缺勤計算）
+            _punch_rows_b = conn.execute("""
+                SELECT DISTINCT staff_id,
+                       (punched_at AT TIME ZONE 'Asia/Taipei')::date as work_date
+                FROM punch_records
+                WHERE staff_id = ANY(%s)
+                  AND TO_CHAR(punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
+                  AND deleted_at IS NULL
+            """, (staff_ids, month)).fetchall()
+            _punch_dates_b: dict = {}
+            for _r in _punch_rows_b:
+                _ds = _r['work_date'].isoformat() if hasattr(_r['work_date'], 'isoformat') else str(_r['work_date'])
+                _punch_dates_b.setdefault(_r['staff_id'], set()).add(_ds)
+
+            # 6. 全員請假日期範圍（用於缺勤判斷）
+            _leave_date_rows_b = conn.execute("""
+                SELECT staff_id, start_date, end_date FROM leave_requests
+                WHERE staff_id = ANY(%s) AND status='approved'
+                  AND TO_CHAR(start_date,'YYYY-MM')=%s
+            """, (staff_ids, month)).fetchall()
+            _leave_date_sets_b: dict = {}
+            for _lr in _leave_date_rows_b:
+                _sid = _lr['staff_id']
+                _ld, _le = _lr['start_date'], _lr['end_date']
+                if _sid not in _leave_date_sets_b:
+                    _leave_date_sets_b[_sid] = set()
+                while _ld <= _le:
+                    _leave_date_sets_b[_sid].add(_ld.isoformat() if hasattr(_ld, 'isoformat') else str(_ld))
+                    _ld += _td_batch(days=1)
+
+            # 7. 全部薪資項目（一次載入）
+            _salary_items_b = [dict(r) for r in conn.execute(
+                "SELECT * FROM salary_items WHERE active=TRUE ORDER BY sort_order, id"
+            ).fetchall()]
+
+            batch_ctx = {
+                'shift_dates':     _shift_dates_b,
+                'holiday_dates':   _holiday_dates_b,
+                'ot_totals':       _ot_totals_b,
+                'leave_rows':      _leave_map_b,
+                'punch_dates':     _punch_dates_b,
+                'leave_date_sets': _leave_date_sets_b,
+                'salary_items':    _salary_items_b,
+            }
+
             generated = 0
             for staff in staff_list:
-                data = _auto_generate_salary(conn, dict(staff), month)
+                data = _auto_generate_salary(conn, dict(staff), month, batch_ctx=batch_ctx)
                 items_json = _json.dumps(data['items'], ensure_ascii=False)
                 conn.execute("""
                     INSERT INTO salary_records
