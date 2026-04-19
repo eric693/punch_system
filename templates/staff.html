@@ -122,6 +122,9 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
 .so-dist{font-size:12px;color:rgba(255,255,255,.6);margin-top:7px}
 .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);padding:11px 20px;border-radius:9px;font-size:13px;font-weight:600;z-index:999;opacity:0;pointer-events:none;transition:opacity .2s;max-width:88vw;text-align:center;white-space:pre-line}
 .toast.show{opacity:1}.toast-ok{background:var(--green);color:#fff}.toast-err{background:var(--red);color:#fff}
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.skel{display:inline-block;border-radius:4px;background:linear-gradient(90deg,#e8ecf4 25%,#f4f6fb 50%,#e8ecf4 75%);background-size:400px 100%;animation:shimmer 1.4s infinite linear}
+.skel-block{border-radius:8px;background:linear-gradient(90deg,#e8ecf4 25%,#f4f6fb 50%,#e8ecf4 75%);background-size:400px 100%;animation:shimmer 1.4s infinite linear}
 
 .ann-card{border-radius:10px;overflow:hidden;margin-bottom:10px;border:1.5px solid var(--border)}
 .ann-card.pinned{border-color:var(--gold)}
@@ -1237,8 +1240,9 @@ async function submitOTRequest(){
   }
 }
 async function loadMyOTRequests(){
-  const res=await fetch('/api/overtime/my-requests');const list=await res.json();
   const wrap=document.getElementById('my-ot-list');
+  wrap.innerHTML=Array(2).fill(0).map(()=>'<div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;padding:12px 14px"><div class="skel-block" style="height:14px;width:60%;margin-bottom:8px"></div><div class="skel-block" style="height:12px;width:40%"></div></div>').join('');
+  const res=await fetch('/api/overtime/my-requests');const list=await res.json();
   if(!list.length){wrap.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">尚無申請記錄</div>';return;}
   const DAY_LABEL={weekday:'平日',rest_day:'休息日',holiday:'國定假日',special:'例假日'};
   wrap.innerHTML=list.map(r=>{
@@ -1275,7 +1279,7 @@ async function loadAttendance(){
   if (!month) return;
   const cal = document.getElementById('att-calendar');
   const sum = document.getElementById('att-summary');
-  cal.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:24px">載入中...</div>';
+  cal.innerHTML = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:8px 0">${Array(28).fill(0).map(()=>'<div class="skel-block" style="height:52px;border-radius:8px"></div>').join('')}</div>`;
   await _loadHolidaysForMonth(month);
 
   let records = {};
@@ -1728,6 +1732,8 @@ async function loadAnnualLeaveCard() {
 }
 
 async function loadMyLeaveBalance() {
+  const wrap = document.getElementById('leave-balance-overview');
+  if (wrap) wrap.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 0">${Array(4).fill(0).map(()=>`<div class="skel-block" style="height:64px;border-radius:10px"></div>`).join('')}</div>`;
   try {
     const year = new Date().getFullYear();
     const res  = await fetch(`/api/leave/balances?year=${year}&staff_id=` + (me ? me.id : ''));
@@ -2035,7 +2041,12 @@ async function loadMyPayslip() {
   const month = document.getElementById('payslip-month').value;
   const wrap  = document.getElementById('payslip-wrap');
   if (!month || !me) return;
-  wrap.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入中...</div>';
+  wrap.innerHTML = `<div style="padding:20px 0">
+    <div class="skel-block" style="height:24px;width:140px;margin-bottom:16px"></div>
+    <div class="skel-block" style="height:80px;margin-bottom:12px"></div>
+    <div class="skel-block" style="height:60px;margin-bottom:12px"></div>
+    <div class="skel-block" style="height:40px;width:60%;margin:0 auto"></div>
+  </div>`;
   try {
     // 找自己這個月的薪資記錄
     const res  = await fetch(`/api/salary/my-payslip?month=${month}&_=${Date.now()}`);

@@ -1525,10 +1525,15 @@ def api_attendance_monthly_stats():
     from datetime import date as _date3, timedelta as _td3
     import calendar as _cal3
     _y3, _m3 = int(month[:4]), int(month[5:])
-    _next_date3 = (_date3(_y3, _m3, _cal3.monthrange(_y3, _m3)[1]) + _td3(days=1)).isoformat()
+    _last_day3 = _cal3.monthrange(_y3, _m3)[1]
+    _month_start3 = f"{month}-01"
+    # 多抓兩天以涵蓋跨日班次的下班打卡
+    _fetch_end3 = (_date3(_y3, _m3, _last_day3) + _td3(days=2)).isoformat()
+    _next_date3 = (_date3(_y3, _m3, _last_day3) + _td3(days=1)).isoformat()
+    _shift_end3 = (_date3(_y3, _m3, _last_day3) + _td3(days=1)).isoformat()
 
     with get_db() as conn:
-        # 每人每日打卡彙整（多抓下個月第一天，供跨日班次合併）
+        # 使用日期範圍取代 TO_CHAR，讓索引 idx_punch_records_staff_at 生效
         rows = conn.execute("""
             SELECT ps.id as staff_id, ps.name as staff_name,
                    ps.department, ps.role,
@@ -1539,21 +1544,21 @@ def api_attendance_monthly_stats():
                    BOOL_OR(pr.punch_type='out') as has_out
             FROM punch_records pr
             JOIN punch_staff ps ON ps.id = pr.staff_id AND ps.active = TRUE
-            WHERE (TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM') = %s
-               OR (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date = %s)
+            WHERE pr.punched_at >= %s::date AT TIME ZONE 'Asia/Taipei'
+              AND pr.punched_at <  %s::date AT TIME ZONE 'Asia/Taipei'
               AND pr.deleted_at IS NULL
             GROUP BY ps.id, ps.name, ps.department, ps.role,
                      (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
             ORDER BY ps.name, work_date
-        """, (month, _next_date3)).fetchall()
+        """, (_month_start3, _fetch_end3)).fetchall()
 
-        # 班別指派（用於遲到判斷）
+        # 班別指派：使用日期範圍讓索引 idx_shift_assignments_staff_date 生效
         shift_rows = conn.execute("""
             SELECT sa.staff_id, sa.date, st.start_time, st.end_time
             FROM shift_assignments sa
             JOIN shift_types st ON st.id = sa.shift_type_id
-            WHERE TO_CHAR(sa.date,'YYYY-MM') = %s
-        """, (month,)).fetchall()
+            WHERE sa.date >= %s::date AND sa.date < %s::date
+        """, (_month_start3, _shift_end3)).fetchall()
         shift_map = {(r['staff_id'], str(r['date'])): r for r in shift_rows}
 
     # 建立 (staff_id, date_str) → row_dict，並合併跨日班次
@@ -8765,37 +8770,140 @@ def api_salary_preview():
         staff_list = conn.execute(
             "SELECT * FROM punch_staff WHERE active=TRUE ORDER BY name"
         ).fetchall()
+        staff_ids = [s['id'] for s in staff_list]
+
+        # 批次預載，避免 N+1 查詢
+        from datetime import date as _d_pv, timedelta as _td_pv
+        import calendar as _cal_pv
+        _y_pv, _m_pv = int(month[:4]), int(month[5:])
+        _last_pv = _cal_pv.monthrange(_y_pv, _m_pv)[1]
+        _mstart_pv = f"{month}-01"
+        _mend_pv = (_d_pv(_y_pv, _m_pv, _last_pv) + _td_pv(days=1)).isoformat()
+
+        _shift_rows_pv = conn.execute("""
+            SELECT staff_id, date FROM shift_assignments
+            WHERE staff_id = ANY(%s) AND date >= %s::date AND date < %s::date
+        """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
+        _shift_dates_pv: dict = {}
+        for _r in _shift_rows_pv:
+            _shift_dates_pv.setdefault(_r['staff_id'], []).append(_r['date'])
+
+        _hol_rows_pv = conn.execute(
+            "SELECT date FROM public_holidays WHERE date >= %s::date AND date < %s::date",
+            (_mstart_pv, _mend_pv)
+        ).fetchall()
+        _holiday_dates_pv = {
+            r['date'].isoformat() if hasattr(r['date'], 'isoformat') else str(r['date'])
+            for r in _hol_rows_pv
+        }
+
+        _ot_rows_pv = conn.execute("""
+            SELECT staff_id, COALESCE(SUM(ot_pay),0) as total
+            FROM overtime_requests
+            WHERE staff_id = ANY(%s) AND status='approved'
+              AND request_date >= %s::date AND request_date < %s::date
+            GROUP BY staff_id
+        """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
+        _ot_totals_pv = {r['staff_id']: float(r['total']) for r in _ot_rows_pv}
+
+        _leave_rows_pv = conn.execute("""
+            SELECT lr.staff_id, lr.total_days, lt.pay_rate, lt.code, lt.name as leave_name
+            FROM leave_requests lr
+            JOIN leave_types lt ON lt.id = lr.leave_type_id
+            WHERE lr.staff_id = ANY(%s) AND lr.status='approved'
+              AND lr.start_date >= %s::date AND lr.start_date < %s::date
+        """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
+        _leave_map_pv: dict = {}
+        for _r in _leave_rows_pv:
+            _leave_map_pv.setdefault(_r['staff_id'], []).append(dict(_r))
+
+        _punch_rows_pv = conn.execute("""
+            SELECT DISTINCT staff_id,
+                   (punched_at AT TIME ZONE 'Asia/Taipei')::date as work_date
+            FROM punch_records
+            WHERE staff_id = ANY(%s)
+              AND punched_at >= %s::date AT TIME ZONE 'Asia/Taipei'
+              AND punched_at <  %s::date AT TIME ZONE 'Asia/Taipei'
+              AND deleted_at IS NULL
+        """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
+        _punch_dates_pv: dict = {}
+        for _r in _punch_rows_pv:
+            _ds = _r['work_date'].isoformat() if hasattr(_r['work_date'], 'isoformat') else str(_r['work_date'])
+            _punch_dates_pv.setdefault(_r['staff_id'], set()).add(_ds)
+
+        _leave_date_rows_pv = conn.execute("""
+            SELECT staff_id, start_date, end_date FROM leave_requests
+            WHERE staff_id = ANY(%s) AND status='approved'
+              AND start_date >= %s::date AND start_date < %s::date
+        """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
+        _leave_date_sets_pv: dict = {}
+        for _lr in _leave_date_rows_pv:
+            _sid = _lr['staff_id']
+            _ld, _le = _lr['start_date'], _lr['end_date']
+            if _sid not in _leave_date_sets_pv:
+                _leave_date_sets_pv[_sid] = set()
+            while _ld <= _le:
+                _leave_date_sets_pv[_sid].add(_ld.isoformat() if hasattr(_ld, 'isoformat') else str(_ld))
+                _ld += _td_pv(days=1)
+
+        _salary_items_pv = [dict(r) for r in conn.execute(
+            "SELECT * FROM salary_items WHERE active=TRUE ORDER BY sort_order, id"
+        ).fetchall()]
+
+        # 批次統計打卡天數
+        _punch_count_pv = conn.execute("""
+            SELECT staff_id, COUNT(DISTINCT (punched_at AT TIME ZONE 'Asia/Taipei')::date) AS n
+            FROM punch_records
+            WHERE staff_id = ANY(%s)
+              AND punched_at >= %s::date AT TIME ZONE 'Asia/Taipei'
+              AND punched_at <  %s::date AT TIME ZONE 'Asia/Taipei'
+              AND deleted_at IS NULL
+            GROUP BY staff_id
+        """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
+        _punch_count_map = {r['staff_id']: int(r['n']) for r in _punch_count_pv}
+
+        # 批次統計加班申請
+        _ot_stat_pv = conn.execute("""
+            SELECT staff_id, COUNT(*) AS n, COALESCE(SUM(ot_hours),0) AS hrs
+            FROM overtime_requests
+            WHERE staff_id = ANY(%s) AND status='approved'
+              AND COALESCE(ot_date, request_date) >= %s::date
+              AND COALESCE(ot_date, request_date) < %s::date
+            GROUP BY staff_id
+        """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
+        _ot_stat_map = {r['staff_id']: {'n': int(r['n']), 'hrs': float(r['hrs'])} for r in _ot_stat_pv}
+
+        batch_ctx_pv = {
+            'shift_dates':     _shift_dates_pv,
+            'holiday_dates':   _holiday_dates_pv,
+            'ot_totals':       _ot_totals_pv,
+            'leave_rows':      _leave_map_pv,
+            'punch_dates':     _punch_dates_pv,
+            'leave_date_sets': _leave_date_sets_pv,
+            'salary_items':    _salary_items_pv,
+        }
+
         for staff in staff_list:
-            data = _auto_generate_salary(conn, dict(staff), month)
-            # punch attendance days this month
-            punch_days = conn.execute("""
-                SELECT COUNT(DISTINCT punched_at::date) AS n
-                FROM punch_records WHERE staff_id=%s
-                  AND to_char(punched_at,'YYYY-MM')=%s
-            """, (staff['id'], month)).fetchone()['n']
-            approved_ot = conn.execute("""
-                SELECT COUNT(*) AS n, COALESCE(SUM(ot_hours),0) AS hrs
-                FROM overtime_requests WHERE staff_id=%s
-                  AND status='approved'
-                  AND to_char(COALESCE(ot_date, request_date),'YYYY-MM')=%s
-            """, (staff['id'], month)).fetchone()
+            data = _auto_generate_salary(conn, dict(staff), month, batch_ctx=batch_ctx_pv)
+            punch_days  = _punch_count_map.get(staff['id'], 0)
+            ot_stat     = _ot_stat_map.get(staff['id'], {'n': 0, 'hrs': 0.0})
             result.append({
-                'staff_id':       data['staff_id'],
-                'staff_name':     staff['name'],
-                'department':     staff['department'],
-                'salary_type':    staff['salary_type'],
-                'punch_days':     punch_days,
-                'work_days':      float(data['work_days']),
-                'actual_days':    float(data['actual_days']),
-                'leave_days':     float(data['leave_days']),
-                'unpaid_days':    float(data['unpaid_days']),
-                'ot_count':       int(approved_ot['n']),
-                'ot_hours':       float(approved_ot['hrs']),
-                'ot_pay':         float(data['ot_pay']),
-                'base_salary':    float(data['base_salary']),
+                'staff_id':        data['staff_id'],
+                'staff_name':      staff['name'],
+                'department':      staff['department'],
+                'salary_type':     staff['salary_type'],
+                'punch_days':      punch_days,
+                'work_days':       float(data['work_days']),
+                'actual_days':     float(data['actual_days']),
+                'leave_days':      float(data['leave_days']),
+                'unpaid_days':     float(data['unpaid_days']),
+                'ot_count':        ot_stat['n'],
+                'ot_hours':        ot_stat['hrs'],
+                'ot_pay':          float(data['ot_pay']),
+                'base_salary':     float(data['base_salary']),
                 'allowance_total': float(data['allowance_total']),
                 'deduction_total': float(data['deduction_total']),
-                'net_pay':        float(data['net_pay']),
+                'net_pay':         float(data['net_pay']),
             })
     return jsonify({'ok': True, 'month': month, 'records': result})
 
