@@ -606,6 +606,7 @@ def admin_dashboard():
         admin_display_name=session.get('admin_display_name',''),
         admin_permissions=perms,
         admin_is_super=is_super,
+        google_maps_api_key=GOOGLE_MAPS_API_KEY,
     )
 
 # ── Admin Accounts API ────────────────────────────────────────────────────────
@@ -8245,7 +8246,8 @@ def api_formula_preview():
 # Finance Module (財務模組)
 # ═══════════════════════════════════════════════════════════════════
 
-ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+ANTHROPIC_API_KEY   = os.environ.get('ANTHROPIC_API_KEY', '')
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
 
 def init_finance_db():
     migrations = [
