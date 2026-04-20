@@ -1748,6 +1748,7 @@ def api_punch_req_delete(rid):
 CUSTOM_RICHMENU_IMAGE_PATH = '/tmp/custom_richmenu.png'
 _pending_line_punches = {}   # {line_user_id: punch_type}
 _line_conv_state      = {}   # {line_user_id: {'flow': str, 'step': int, 'data': {}}}
+_line_ctx             = threading.local()  # per-thread reply_token for current webhook event
 
 
 def get_line_punch_config():
@@ -1764,6 +1765,21 @@ def _send_line_punch(user_id, text):
     cfg = get_line_punch_config()
     if not cfg or not cfg.get('enabled') or not cfg.get('channel_access_token'):
         return
+    reply_token = getattr(_line_ctx, 'reply_token', None)
+    if reply_token:
+        _line_ctx.reply_token = None  # consume: reply_token can only be used once
+        body = _json.dumps({'replyToken': reply_token,
+                            'messages': [{'type': 'text', 'text': text}]}).encode('utf-8')
+        req = urllib.request.Request(
+            'https://api.line.me/v2/bot/message/reply', data=body, method='POST',
+            headers={'Content-Type': 'application/json',
+                     'Authorization': f'Bearer {cfg["channel_access_token"]}'}
+        )
+        try:
+            urllib.request.urlopen(req, timeout=15)
+            return
+        except Exception as e:
+            print(f"[LINE PUNCH] reply_message error: {e}")
     try:
         LineBotApi(cfg['channel_access_token']).push_message(
             user_id, TextSendMessage(text=text)
