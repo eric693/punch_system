@@ -1789,15 +1789,31 @@ def _send_line_punch(user_id, text):
 
 
 def _push_line_msg(user_id, *messages):
-    """Push one or more raw message dicts via LINE push API."""
+    """Send one or more raw message dicts; uses reply API (free) on first call per webhook event."""
     cfg = get_line_punch_config()
     if not cfg or not cfg.get('enabled') or not cfg.get('channel_access_token'):
         return
+    token = cfg['channel_access_token']
+    reply_token = getattr(_line_ctx, 'reply_token', None)
+    if reply_token:
+        _line_ctx.reply_token = None  # consume
+        body = _json.dumps({'replyToken': reply_token,
+                            'messages': list(messages)[:5]}).encode('utf-8')
+        req = urllib.request.Request(
+            'https://api.line.me/v2/bot/message/reply', data=body, method='POST',
+            headers={'Content-Type': 'application/json',
+                     'Authorization': f'Bearer {token}'}
+        )
+        try:
+            urllib.request.urlopen(req, timeout=15)
+            return
+        except Exception as e:
+            print(f'[LINE] reply error: {e}')
     body = _json.dumps({'to': user_id, 'messages': list(messages)}).encode('utf-8')
     req = urllib.request.Request(
         'https://api.line.me/v2/bot/message/push', data=body, method='POST',
         headers={'Content-Type': 'application/json',
-                 'Authorization': f'Bearer {cfg["channel_access_token"]}'}
+                 'Authorization': f'Bearer {token}'}
     )
     try:
         urllib.request.urlopen(req, timeout=15)
@@ -2241,6 +2257,9 @@ def _handle_line_punch_event(event, cfg):
     user_id  = source.get('userId')
     evt_type = event.get('type')
     if not user_id: return
+
+    # Store reply_token so _send_line_punch/_push_line_msg can use reply API (free)
+    _line_ctx.reply_token = event.get('replyToken') or None
 
     msg      = event.get('message', {})
     msg_type = msg.get('type', '')
