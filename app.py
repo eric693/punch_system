@@ -20,7 +20,7 @@ from linebot.models import (
 )
 
 # shared modules (extracted for blueprint reuse)
-from db import get_db, get_db_direct, _hash_pw, DATABASE_URL
+from db import get_db, _hash_pw, DATABASE_URL
 from auth import login_required, require_module, require_super
 
 app = Flask(__name__)
@@ -545,12 +545,21 @@ threading.Thread(target=_annual_leave_sync_loop, daemon=True).start()
 
 @app.route('/health')
 def health():
+    db_ok = False
     try:
-        with get_db_direct() as conn:
+        with get_db() as conn:
             conn.execute('SELECT 1')
-        return jsonify({'status': 'ok', 'db': 'connected'}), 200
-    except Exception as e:
-        return jsonify({'status': 'error', 'detail': str(e)}), 500
+        db_ok = True
+    except Exception:
+        pass
+    return jsonify({'status': 'ok', 'db': 'connected' if db_ok else 'unavailable'}), 200
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    import traceback
+    print(f"[ERROR] Unhandled exception: {traceback.format_exc()}")
+    return jsonify({'error': 'service temporarily unavailable', 'detail': str(e)}), 503
 
 # ─── Admin Auth ───────────────────────────────────────────────────────────────
 # login_required / require_module / require_super are imported from auth.py

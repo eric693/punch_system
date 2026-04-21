@@ -41,16 +41,12 @@ def _init_pool():
 @contextmanager
 def get_db(timeout: float = 5.0):
     if _pool is not None:
-        with _pool.connection(timeout=timeout) as conn:
-            yield conn
-    else:
-        with psycopg.connect(DATABASE_URL, row_factory=dict_row) as conn:
-            yield conn
-
-
-@contextmanager
-def get_db_direct():
-    """Open a direct connection, bypassing the pool. Use for health checks."""
+        try:
+            with _pool.connection(timeout=timeout) as conn:
+                yield conn
+            return
+        except Exception as e:
+            print(f"[DB] Pool unavailable ({e}), falling back to direct connection")
     with psycopg.connect(DATABASE_URL, row_factory=dict_row, connect_timeout=5) as conn:
         yield conn
 
