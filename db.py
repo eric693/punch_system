@@ -24,28 +24,35 @@ def _init_pool():
         _pool = ConnectionPool(
             DATABASE_URL,
             kwargs={'row_factory': dict_row, 'connect_timeout': 10},
-            min_size=1,
-            max_size=5,
+            min_size=2,
+            max_size=10,
             open=True,
             check=ConnectionPool.check_connection,
             reconnect_timeout=30,
-            max_waiting=20,
+            max_waiting=30,
             max_lifetime=600,
             max_idle=300,
         )
-        print("[DB] Connection pool initialised (min=1, max=5)")
+        print("[DB] Connection pool initialised (min=2, max=10)")
     except Exception as e:
         print(f"[DB] Pool init failed, falling back to single connections: {e}")
 
 
 @contextmanager
-def get_db():
+def get_db(timeout: float = 5.0):
     if _pool is not None:
-        with _pool.connection() as conn:
+        with _pool.connection(timeout=timeout) as conn:
             yield conn
     else:
         with psycopg.connect(DATABASE_URL, row_factory=dict_row) as conn:
             yield conn
+
+
+@contextmanager
+def get_db_direct():
+    """Open a direct connection, bypassing the pool. Use for health checks."""
+    with psycopg.connect(DATABASE_URL, row_factory=dict_row, connect_timeout=5) as conn:
+        yield conn
 
 
 _init_pool()

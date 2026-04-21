@@ -20,7 +20,7 @@ from linebot.models import (
 )
 
 # shared modules (extracted for blueprint reuse)
-from db import get_db, _hash_pw, DATABASE_URL
+from db import get_db, get_db_direct, _hash_pw, DATABASE_URL
 from auth import login_required, require_module, require_super
 
 app = Flask(__name__)
@@ -546,7 +546,7 @@ threading.Thread(target=_annual_leave_sync_loop, daemon=True).start()
 @app.route('/health')
 def health():
     try:
-        with get_db() as conn:
+        with get_db_direct() as conn:
             conn.execute('SELECT 1')
         return jsonify({'status': 'ok', 'db': 'connected'}), 200
     except Exception as e:
