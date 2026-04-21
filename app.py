@@ -557,6 +557,9 @@ def health():
 
 @app.errorhandler(Exception)
 def handle_exception(e):
+    from werkzeug.exceptions import HTTPException
+    if isinstance(e, HTTPException):
+        return e
     import traceback
     print(f"[ERROR] Unhandled exception: {traceback.format_exc()}")
     return jsonify({'error': 'service temporarily unavailable', 'detail': str(e)}), 503

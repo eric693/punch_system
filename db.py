@@ -40,13 +40,21 @@ def _init_pool():
 
 @contextmanager
 def get_db(timeout: float = 5.0):
+    """Get a DB connection. Falls back to direct connection if pool is exhausted."""
     if _pool is not None:
+        # Try to acquire from pool — these errors happen before yield, so fallback is safe
+        try:
+            from psycopg_pool import PoolTimeout, TooManyRequests
+            _pool_exc = (PoolTimeout, TooManyRequests)
+        except ImportError:
+            _pool_exc = (Exception,)
         try:
             with _pool.connection(timeout=timeout) as conn:
                 yield conn
             return
-        except Exception as e:
-            print(f"[DB] Pool unavailable ({e}), falling back to direct connection")
+        except _pool_exc as e:
+            print(f"[DB] Pool unavailable ({type(e).__name__}), falling back to direct connection")
+    # Direct connection fallback
     with psycopg.connect(DATABASE_URL, row_factory=dict_row, connect_timeout=5) as conn:
         yield conn
 
