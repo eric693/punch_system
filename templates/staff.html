@@ -139,7 +139,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
 <body>
 <div class="wrap">
   <div class="header">
-    <div class="header-brand">打卡管理系統</div>
+    <div class="header-brand" id="staff-brand">打卡管理系統</div>
     <div class="header-bar"></div>
     <div class="clock-time" id="clock-time">--:--:--</div>
     <div class="clock-date" id="clock-date"></div>
@@ -148,10 +148,10 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
   <!-- LOGIN -->
   <div class="card" id="screen-login">
     <div class="card-body">
-      <div class="login-title">員工登入</div>
-      <div class="fl">帳號</div>
+      <div class="login-title" id="staff-login-title">員工登入</div>
+      <div class="fl" id="staff-label-user">帳號</div>
       <input class="fi" type="text" id="inp-user" placeholder="請輸入帳號" autocapitalize="none" spellcheck="false" autocomplete="username">
-      <div class="fl">密碼</div>
+      <div class="fl" id="staff-label-pw">密碼</div>
       <input class="fi" type="password" id="inp-pass" placeholder="請輸入密碼" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
       <button class="login-btn" id="login-btn" onclick="doLogin()">登入</button>
       <!-- WebAuthn biometric (shown only when supported) -->
@@ -162,7 +162,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
           <div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
         <button class="login-btn" id="bio-login-btn" onclick="doBioLogin()" style="background:var(--navy-mid)">
-          <span id="bio-label">指紋 / Face ID 登入</span>
+          <span id="staff-bio-label">指紋 / Face ID 登入</span>
         </button>
       </div>
       <div class="login-err" id="login-err"></div>
@@ -180,23 +180,23 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
         <button class="logout-btn" onclick="doLogout()">登出</button>
       </div>
       <div class="tab-bar">
-        <button class="tab" id="tab-ann" onclick="switchTab('ann')" style="position:relative">
+        <button class="tab" id="tab-ann" data-i18n-staff="tab.ann" onclick="switchTab('ann')" style="position:relative">
           公告<span id="ann-unread-dot" style="display:none;position:absolute;top:8px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--red)"></span>
         </button>
-        <button class="tab active" id="tab-punch" onclick="switchTab('punch')">打卡</button>
-        <button class="tab"        id="tab-sched"         onclick="switchTab('sched')">排休申請</button>
-        <button class="tab"        id="tab-leave"         onclick="switchTab('leave')">請假申請</button>
-        <button class="tab"        id="tab-schedule-view" onclick="switchTab('schedule-view')">我的排班</button>
-        <button class="tab"        id="tab-overtime"      onclick="switchTab('overtime')">加班申請</button>
-        <button class="tab"        id="tab-attendance"    onclick="switchTab('attendance')">出勤月曆</button>
-        <button class="tab"        id="tab-myanomalies"   onclick="switchTab('myanomalies')">異常查詢</button>
-        <button class="tab"        id="tab-leavereport"   onclick="switchTab('leavereport')">假別年報</button>
-        <button class="tab"        id="tab-payslip"       onclick="switchTab('payslip')">薪資單</button>
-        <button class="tab"        id="tab-expense"       onclick="switchTab('expense')" style="position:relative">費用報帳<span id="expense-badge" style="display:none;position:absolute;top:6px;right:6px;background:var(--red);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;line-height:16px;text-align:center"></span></button>
-        <button class="tab"        id="tab-myperf"        onclick="switchTab('myperf')">我的考核</button>
-        <button class="tab"        id="tab-mytravel"      onclick="switchTab('mytravel')">差旅申請</button>
-        <button class="tab"        id="tab-myloans"       onclick="switchTab('myloans')">我的借用</button>
-        <button class="tab"        id="tab-biodev"        onclick="switchTab('biodev')">安全裝置</button>
+        <button class="tab active" id="tab-punch"          data-i18n-staff="tab.punch"         onclick="switchTab('punch')">打卡</button>
+        <button class="tab"        id="tab-sched"          data-i18n-staff="tab.sched"         onclick="switchTab('sched')">排休申請</button>
+        <button class="tab"        id="tab-leave"          data-i18n-staff="tab.leave"         onclick="switchTab('leave')">請假申請</button>
+        <button class="tab"        id="tab-schedule-view"  data-i18n-staff="tab.schedule_view" onclick="switchTab('schedule-view')">我的排班</button>
+        <button class="tab"        id="tab-overtime"       data-i18n-staff="tab.overtime"      onclick="switchTab('overtime')">加班申請</button>
+        <button class="tab"        id="tab-attendance"     data-i18n-staff="tab.attendance"    onclick="switchTab('attendance')">出勤月曆</button>
+        <button class="tab"        id="tab-myanomalies"    data-i18n-staff="tab.myanomalies"   onclick="switchTab('myanomalies')">異常查詢</button>
+        <button class="tab"        id="tab-leavereport"    data-i18n-staff="tab.leavereport"   onclick="switchTab('leavereport')">假別年報</button>
+        <button class="tab"        id="tab-payslip"        data-i18n-staff="tab.payslip"       onclick="switchTab('payslip')">薪資單</button>
+        <button class="tab"        id="tab-expense"        data-i18n-staff="tab.expense"       onclick="switchTab('expense')" style="position:relative">費用報帳<span id="expense-badge" style="display:none;position:absolute;top:6px;right:6px;background:var(--red);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;line-height:16px;text-align:center"></span></button>
+        <button class="tab"        id="tab-myperf"         data-i18n-staff="tab.myperf"        onclick="switchTab('myperf')">我的考核</button>
+        <button class="tab"        id="tab-mytravel"       data-i18n-staff="tab.mytravel"      onclick="switchTab('mytravel')">差旅申請</button>
+        <button class="tab"        id="tab-myloans"  data-i18n-staff="tab.myloans"  onclick="switchTab('myloans')">我的借用</button>
+        <button class="tab"        id="tab-biodev"   data-i18n-staff="tab.biodev"   onclick="switchTab('biodev')">安全裝置</button>
       </div>
 
       <!-- 打卡 tab -->
@@ -2962,6 +2962,76 @@ async function cancelMyLoanRequest(lid) {
   if (r.ok) { loadMyLoans(); showToast('已取消申請','success'); }
   else { const d = await r.json(); showToast(d.error||'取消失敗','error'); }
 }
+
+// ── i18n ─────────────────────────────────────────────────────────
+const STAFF_I18N = {
+  'zh-TW': {
+    brand:'打卡管理系統', loginTitle:'員工登入', labelUser:'帳號', labelPw:'密碼',
+    userPh:'請輸入帳號', pwPh:'請輸入密碼', loginBtn:'登入', bio:'指紋 / Face ID 登入',
+    logout:'登出',
+    'tab.ann':'公告','tab.punch':'打卡','tab.sched':'排休申請','tab.leave':'請假申請',
+    'tab.schedule_view':'我的排班','tab.overtime':'加班申請','tab.attendance':'出勤月曆',
+    'tab.myanomalies':'異常查詢','tab.leavereport':'假別年報','tab.payslip':'薪資單',
+    'tab.expense':'費用報帳','tab.myperf':'我的考核','tab.mytravel':'差旅申請',
+    'tab.myloans':'我的借用','tab.biodev':'安全裝置',
+    toggle:'EN',
+  },
+  'en': {
+    brand:'Attendance System', loginTitle:'Employee Login', labelUser:'Username', labelPw:'Password',
+    userPh:'Enter username', pwPh:'Enter password', loginBtn:'Sign In', bio:'Fingerprint / Face ID',
+    logout:'Logout',
+    'tab.ann':'Notices','tab.punch':'Punch','tab.sched':'Schedule Req.','tab.leave':'Leave Req.',
+    'tab.schedule_view':'My Schedule','tab.overtime':'Overtime','tab.attendance':'Attendance',
+    'tab.myanomalies':'Anomalies','tab.leavereport':'Leave Report','tab.payslip':'Payslip',
+    'tab.expense':'Expenses','tab.myperf':'Performance','tab.mytravel':'Travel',
+    'tab.myloans':'My Loans','tab.biodev':'Security',
+    toggle:'中文',
+  }
+};
+let _staffLang = localStorage.getItem('adminLang') || 'zh-TW';
+function staffT(k) { return (STAFF_I18N[_staffLang]||STAFF_I18N['zh-TW'])[k] || k; }
+function staffApplyI18n() {
+  const s = (id, txt) => { const e = document.getElementById(id); if (e) { if (e.children.length > 0) { for (const n of e.childNodes) { if (n.nodeType === Node.TEXT_NODE && n.textContent.trim()) { n.textContent = txt; break; } } } else { e.textContent = txt; } } };
+  const p = (id, txt) => { const e = document.getElementById(id); if (e) e.placeholder = txt; };
+  s('staff-brand', staffT('brand'));
+  s('staff-login-title', staffT('loginTitle'));
+  s('staff-label-user', staffT('labelUser'));
+  s('staff-label-pw', staffT('labelPw'));
+  p('inp-user', staffT('userPh'));
+  p('inp-pass', staffT('pwPh'));
+  s('login-btn', staffT('loginBtn'));
+  s('staff-bio-label', staffT('bio'));
+  const logoutEl = document.querySelector('.logout-btn');
+  if (logoutEl) logoutEl.textContent = staffT('logout');
+  document.querySelectorAll('[data-i18n-staff]').forEach(el => {
+    const val = staffT(el.dataset.i18nStaff);
+    if (el.children.length > 0) {
+      for (const n of el.childNodes) { if (n.nodeType === Node.TEXT_NODE && n.textContent.trim()) { n.textContent = val; break; } }
+    } else { el.textContent = val; }
+  });
+  const btn = document.getElementById('staff-lang-btn');
+  if (btn) btn.textContent = staffT('toggle');
+  document.documentElement.lang = _staffLang;
+}
+function staffToggleLang() {
+  _staffLang = _staffLang === 'zh-TW' ? 'en' : 'zh-TW';
+  localStorage.setItem('adminLang', _staffLang);
+  staffApplyI18n();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  // Inject lang toggle button into header
+  const hdr = document.querySelector('.header');
+  if (hdr && !document.getElementById('staff-lang-btn')) {
+    const btn = document.createElement('button');
+    btn.id = 'staff-lang-btn';
+    btn.textContent = _staffLang === 'zh-TW' ? 'EN' : '中文';
+    btn.onclick = staffToggleLang;
+    btn.style.cssText = 'position:absolute;top:14px;right:14px;padding:4px 10px;border-radius:6px;border:1.5px solid rgba(255,255,255,0.25);background:transparent;color:rgba(255,255,255,0.5);font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.08em;font-family:inherit;';
+    document.body.style.position = 'relative';
+    document.body.insertBefore(btn, document.body.firstChild);
+  }
+  if (_staffLang !== 'zh-TW') staffApplyI18n();
+});
 </script>
 </body>
 </html>

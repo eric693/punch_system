@@ -90,12 +90,15 @@
   .bio-msg { font-size: 12px; text-align: center; margin-top: 6px; min-height: 16px; }
   .bio-msg.err { color: var(--red); }
   .bio-msg.ok  { color: #2e9e6b; }
+  .lang-toggle { position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; cursor: pointer; letter-spacing: 0.08em; transition: all 0.15s; font-family: 'Noto Sans TC', sans-serif; }
+  .lang-toggle:hover { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.5); }
 </style>
 </head>
 <body>
+<button class="lang-toggle" id="login-lang-btn" onclick="loginToggleLang()">EN</button>
 <div class="login-card">
   <div class="brand">
-    <div class="brand-title">管理後台</div>
+    <div class="brand-title" id="login-brand-title">管理後台</div>
     <div class="divider"></div>
     <div class="brand-sub">Management System</div>
   </div>
@@ -107,26 +110,64 @@
     </button>
     <div class="divider-row">
       <div class="divider-line"></div>
-      <span class="divider-text">或使用密碼登入</span>
+      <span class="divider-text" id="login-or-text">或使用密碼登入</span>
       <div class="divider-line"></div>
     </div>
   </div>
 
   <form method="POST" id="login-form">
-    <label for="un">管理員帳號</label>
+    <label for="un" id="login-label-user">管理員帳號</label>
     <input type="text" id="un" name="username" placeholder="輸入帳號" autofocus autocomplete="username" autocapitalize="none">
-    <label for="pw">密碼</label>
+    <label for="pw" id="login-label-pw">密碼</label>
     <input type="password" id="pw" name="password" placeholder="輸入密碼" autocomplete="current-password">
     {% if error %}
     <div class="error-msg">{{ error }}</div>
     {% endif %}
-    <button type="submit">登入</button>
+    <button type="submit" id="login-submit-btn">登入</button>
   </form>
   <div class="bio-msg" id="bio-msg"></div>
-  <div class="footer-note">打卡 &amp; 排班管理系統</div>
+  <div class="footer-note" id="login-footer">打卡 &amp; 排班管理系統</div>
 </div>
 
 <script>
+// ── Login page i18n ───────────────────────────────────────────────
+const LOGIN_I18N = {
+  'zh-TW': { brand:'管理後台', bio:'指紋 / Face ID 登入', orPw:'或使用密碼登入', userLabel:'管理員帳號',
+             userPh:'輸入帳號', pwLabel:'密碼', pwPh:'輸入密碼', submit:'登入',
+             footer:'打卡 & 排班管理系統', toggle:'EN', verifying:'正在驗證...',
+             noDevice:'找不到已綁定的裝置', success:'驗證成功，正在跳轉...', cancelled:'已取消或逾時', failed:'驗證失敗：' },
+  'en':    { brand:'Admin Panel', bio:'Fingerprint / Face ID', orPw:'or sign in with password', userLabel:'Username',
+             userPh:'Enter username', pwLabel:'Password', pwPh:'Enter password', submit:'Sign In',
+             footer:'Attendance & Schedule System', toggle:'中文', verifying:'Verifying...',
+             noDevice:'No registered device found', success:'Verified, redirecting...', cancelled:'Cancelled or timed out', failed:'Verification failed: ' }
+};
+let _loginLang = localStorage.getItem('adminLang') || 'zh-TW';
+function loginT(k) { return (LOGIN_I18N[_loginLang]||LOGIN_I18N['zh-TW'])[k] || k; }
+function loginApplyI18n() {
+  const s = (id, txt) => { const e = document.getElementById(id); if (e) e.textContent = txt; };
+  const p = (id, txt) => { const e = document.getElementById(id); if (e) e.placeholder = txt; };
+  s('login-brand-title', loginT('brand'));
+  s('bio-label', loginT('bio'));
+  s('login-or-text', loginT('orPw'));
+  s('login-label-user', loginT('userLabel'));
+  s('login-label-pw', loginT('pwLabel'));
+  s('login-submit-btn', loginT('submit'));
+  s('login-footer', loginT('footer'));
+  s('login-lang-btn', loginT('toggle'));
+  p('un', loginT('userPh'));
+  p('pw', loginT('pwPh'));
+  document.documentElement.lang = _loginLang;
+}
+function loginToggleLang() {
+  _loginLang = _loginLang === 'zh-TW' ? 'en' : 'zh-TW';
+  localStorage.setItem('adminLang', _loginLang);
+  loginApplyI18n();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  if (_loginLang !== 'zh-TW') loginApplyI18n();
+  else { const btn = document.getElementById('login-lang-btn'); if (btn) btn.textContent = 'EN'; }
+});
+
 // ── WebAuthn helpers ──────────────────────────────────────────────
 function b2b64url(buf){
   const b=new Uint8Array(buf);let s='';
@@ -158,7 +199,7 @@ if(window.PublicKeyCredential){
 async function doBioLogin(){
   const btn=document.getElementById('bio-btn');
   btn.disabled=true;
-  bioMsg('正在驗證...');
+  bioMsg(loginT('verifying'));
   // Use username from input if filled, otherwise let server return all credentials
   const username=document.getElementById('un').value.trim()||null;
   try{
@@ -167,7 +208,7 @@ async function doBioLogin(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({username})
     });
-    if(!beginRes.ok){const d=await beginRes.json();bioMsg(d.error||'找不到已綁定的裝置','err');return;}
+    if(!beginRes.ok){const d=await beginRes.json();bioMsg(d.error||loginT('noDevice'),'err');return;}
     const opts=await beginRes.json();
     // Convert base64url → ArrayBuffer
     opts.challenge=b64url2buf(opts.challenge);
@@ -192,11 +233,11 @@ async function doBioLogin(){
     });
     const result=await completeRes.json().catch(()=>({}));
     if(!completeRes.ok){bioMsg(result.error||'伺服器錯誤（'+completeRes.status+'）','err');return;}
-    bioMsg('驗證成功，正在跳轉...','ok');
+    bioMsg(loginT('success'),'ok');
     window.location.href='/admin';
   }catch(e){
-    if(e.name==='NotAllowedError'){bioMsg('已取消或逾時','err');}
-    else{bioMsg('驗證失敗：'+e.message,'err');}
+    if(e.name==='NotAllowedError'){bioMsg(loginT('cancelled'),'err');}
+    else{bioMsg(loginT('failed')+e.message,'err');}
   }finally{
     btn.disabled=false;
   }

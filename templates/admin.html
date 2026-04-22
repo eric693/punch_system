@@ -198,31 +198,31 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
-    <div class="sidebar-brand-title">管理後台</div>
-    <div class="sidebar-brand-sub">Management System</div>
+    <div class="sidebar-brand-title" data-i18n="brand.title">管理後台</div>
+    <div class="sidebar-brand-sub" data-i18n="brand.sub">Management System</div>
     <div class="sidebar-brand-bar"></div>
   </div>
   <nav class="sidebar-nav">
-    <div class="nav-label">功能選單</div>
-    <a href="#" class="nav-item"        id="nav-dash"  onclick="showPage('dash',event)">儀表板</a>
-    <a href="#" class="nav-item active" id="nav-punch" onclick="showPage('punch',event)">打卡管理<span class="nav-badge" id="badge-punch" style="display:none"></span></a>
-    <a href="#" class="nav-item"        id="nav-sched"  onclick="showPage('sched',event)">排班管理<span class="nav-badge" id="badge-sched" style="display:none"></span></a>
-    <a href="#" class="nav-item"        id="nav-leave"  onclick="showPage('leave',event)">請假管理<span class="nav-badge" id="badge-leave" style="display:none"></span></a>
-    <a href="#" class="nav-item"        id="nav-salary" onclick="showPage('salary',event)">薪資管理</a>
-    <a href="#" class="nav-item"        id="nav-ann"    onclick="showPage('ann',event)">公告管理</a>
-    <a href="#" class="nav-item"        id="nav-holiday" onclick="showPage('holiday',event)">國定假日</a>
-    <a href="#" class="nav-item"        id="nav-finance" onclick="showPage('finance',event)">財務管理</a>
-    <a href="#" class="nav-item"        id="nav-expense-review" onclick="showPage('expense-review',event)">費用審核<span class="nav-badge" id="badge-expense-review" style="display:none"></span></a>
-    <a href="#" class="nav-item"        id="nav-perf" onclick="showPage('perf',event)">績效考核</a>
-    <a href="#" class="nav-item"        id="nav-stores"   onclick="showPage('stores',event)">門市管理</a>
-    <a href="#" class="nav-item"        id="nav-training" onclick="showPage('training',event)">教育訓練</a>
-    <a href="#" class="nav-item"        id="nav-travel"   onclick="showPage('travel',event)">差旅申請<span class="nav-badge" id="badge-travel" style="display:none"></span></a>
-    <a href="#" class="nav-item"        id="nav-assets"   onclick="showPage('assets',event)">資產管理</a>
-    <a href="#" class="nav-item"        id="nav-adminmgr" onclick="showPage('adminmgr',event)" style="display:none">帳號管理</a>
+    <div class="nav-label" data-i18n="nav.menu">功能選單</div>
+    <a href="#" class="nav-item"        id="nav-dash"  data-i18n="nav.dash"  onclick="showPage('dash',event)">儀表板</a>
+    <a href="#" class="nav-item active" id="nav-punch" data-i18n="nav.punch" onclick="showPage('punch',event)">打卡管理<span class="nav-badge" id="badge-punch" style="display:none"></span></a>
+    <a href="#" class="nav-item"        id="nav-sched"  data-i18n="nav.sched"  onclick="showPage('sched',event)">排班管理<span class="nav-badge" id="badge-sched" style="display:none"></span></a>
+    <a href="#" class="nav-item"        id="nav-leave"  data-i18n="nav.leave"  onclick="showPage('leave',event)">請假管理<span class="nav-badge" id="badge-leave" style="display:none"></span></a>
+    <a href="#" class="nav-item"        id="nav-salary" data-i18n="nav.salary" onclick="showPage('salary',event)">薪資管理</a>
+    <a href="#" class="nav-item"        id="nav-ann"    data-i18n="nav.ann"    onclick="showPage('ann',event)">公告管理</a>
+    <a href="#" class="nav-item"        id="nav-holiday" data-i18n="nav.holiday" onclick="showPage('holiday',event)">國定假日</a>
+    <a href="#" class="nav-item"        id="nav-finance" data-i18n="nav.finance" onclick="showPage('finance',event)">財務管理</a>
+    <a href="#" class="nav-item"        id="nav-expense-review" data-i18n="nav.expense" onclick="showPage('expense-review',event)">費用審核<span class="nav-badge" id="badge-expense-review" style="display:none"></span></a>
+    <a href="#" class="nav-item"        id="nav-perf" data-i18n="nav.perf" onclick="showPage('perf',event)">績效考核</a>
+    <a href="#" class="nav-item"        id="nav-stores"   data-i18n="nav.stores"   onclick="showPage('stores',event)">門市管理</a>
+    <a href="#" class="nav-item"        id="nav-training" data-i18n="nav.training" onclick="showPage('training',event)">教育訓練</a>
+    <a href="#" class="nav-item"        id="nav-travel"   data-i18n="nav.travel"   onclick="showPage('travel',event)">差旅申請<span class="nav-badge" id="badge-travel" style="display:none"></span></a>
+    <a href="#" class="nav-item"        id="nav-assets"   data-i18n="nav.assets"   onclick="showPage('assets',event)">資產管理</a>
+    <a href="#" class="nav-item"        id="nav-adminmgr" data-i18n="nav.adminmgr" onclick="showPage('adminmgr',event)" style="display:none">帳號管理</a>
   </nav>
   <div class="sidebar-bottom">
-    <a href="#" class="logout-btn" onclick="openBioPanel(event)" style="display:block;margin-bottom:8px;color:rgba(255,255,255,0.35)" id="bio-nav-link">生物辨識綁定</a>
-    <a href="/admin/logout" class="logout-btn">登出系統</a>
+    <a href="#" class="logout-btn" data-i18n="nav.bio" onclick="openBioPanel(event)" style="display:block;margin-bottom:8px;color:rgba(255,255,255,0.35)" id="bio-nav-link">生物辨識綁定</a>
+    <a href="/admin/logout" class="logout-btn" data-i18n="nav.logout">登出系統</a>
   </div>
 </aside>
 
@@ -244,6 +244,12 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
              width:280px;background:#fff;border-radius:8px;border:1px solid var(--border);
              box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:2000;max-height:320px;overflow-y:auto"></div>
       </div>
+      <button id="lang-toggle-btn" onclick="toggleLang()"
+        style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--border);background:transparent;
+               font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;letter-spacing:0.05em;
+               font-family:'Noto Sans TC',sans-serif;transition:all 0.15s"
+        onmouseover="this.style.color='var(--text)';this.style.borderColor='#aaa'"
+        onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">EN</button>
       <span style="font-size:12px;color:var(--muted)" id="topbar-admin-name"></span>
     </div>
   </header>
@@ -413,30 +419,30 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- ── 打卡管理 ── -->
   <div class="page" id="page-punch">
     <div class="inv-tab-bar">
-      <button class="inv-tab active" id="punchtab-summary"  onclick="switchPunchTab('summary')">出勤摘要</button>
-      <button class="inv-tab"        id="punchtab-anomaly"  onclick="switchPunchTab('anomaly')">異常告警<span class="tab-badge" id="tabdot-anomaly" style="display:none"></span></button>
-      <button class="inv-tab"        id="punchtab-mstats"   onclick="switchPunchTab('mstats')">月統計</button>
-      <button class="inv-tab"        id="punchtab-records"  onclick="switchPunchTab('records')">打卡記錄</button>
-      <button class="inv-tab"        id="punchtab-manual"   onclick="switchPunchTab('manual')">代補打卡</button>
-      <button class="inv-tab"        id="punchtab-requests" onclick="switchPunchTab('requests')">補打申請<span class="tab-badge" id="tabdot-punchrq" style="display:none"></span></button>
-      <button class="inv-tab"        id="punchtab-overtime" onclick="switchPunchTab('overtime')">加班申請<span class="tab-badge" id="tabdot-overtime" style="display:none"></span></button>
-      <button class="inv-tab"        id="punchtab-staff"    onclick="switchPunchTab('staff')">員工管理</button>
-      <button class="inv-tab"        id="punchtab-resigned"  onclick="switchPunchTab('resigned')">離職員工</button>
-      <button class="inv-tab"        id="punchtab-gps"      onclick="switchPunchTab('gps')">GPS 設定</button>
-      <button class="inv-tab"        id="punchtab-line"     onclick="switchPunchTab('line')">LINE 打卡</button>
+      <button class="inv-tab active" id="punchtab-summary"  data-i18n="punch.tab.summary"  onclick="switchPunchTab('summary')">出勤摘要</button>
+      <button class="inv-tab"        id="punchtab-anomaly"  data-i18n="punch.tab.anomaly"  onclick="switchPunchTab('anomaly')">異常告警<span class="tab-badge" id="tabdot-anomaly" style="display:none"></span></button>
+      <button class="inv-tab"        id="punchtab-mstats"   data-i18n="punch.tab.mstats"   onclick="switchPunchTab('mstats')">月統計</button>
+      <button class="inv-tab"        id="punchtab-records"  data-i18n="punch.tab.records"  onclick="switchPunchTab('records')">打卡記錄</button>
+      <button class="inv-tab"        id="punchtab-manual"   data-i18n="punch.tab.manual"   onclick="switchPunchTab('manual')">代補打卡</button>
+      <button class="inv-tab"        id="punchtab-requests" data-i18n="punch.tab.requests" onclick="switchPunchTab('requests')">補打申請<span class="tab-badge" id="tabdot-punchrq" style="display:none"></span></button>
+      <button class="inv-tab"        id="punchtab-overtime" data-i18n="punch.tab.overtime" onclick="switchPunchTab('overtime')">加班申請<span class="tab-badge" id="tabdot-overtime" style="display:none"></span></button>
+      <button class="inv-tab"        id="punchtab-staff"    data-i18n="punch.tab.staff"    onclick="switchPunchTab('staff')">員工管理</button>
+      <button class="inv-tab"        id="punchtab-resigned" data-i18n="punch.tab.resigned" onclick="switchPunchTab('resigned')">離職員工</button>
+      <button class="inv-tab"        id="punchtab-gps"      data-i18n="punch.tab.gps"      onclick="switchPunchTab('gps')">GPS 設定</button>
+      <button class="inv-tab"        id="punchtab-line"     data-i18n="punch.tab.line"     onclick="switchPunchTab('line')">LINE 打卡</button>
     </div>
 
     <!-- 出勤摘要 -->
     <div id="punch-panel-summary">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sum-month" onchange="loadPunchSummary()">
         <span style="flex:1"></span>
         <a href="/staff" target="_blank" class="btn btn-outline btn-sm">員工系統</a>
-        <button class="btn btn-primary btn-sm" onclick="exportAttSummaryExcel()">匯出摘要 Excel</button>
-        <button class="btn btn-ghost btn-sm" onclick="exportAttDetailExcel()">匯出明細 Excel</button>
-        <button class="btn btn-outline btn-sm" onclick="exportAttSummary()">摘要 CSV</button>
-        <button class="btn btn-outline btn-sm" onclick="exportAttDetail()">明細 CSV</button>
+        <button class="btn btn-primary btn-sm" data-i18n="btn.export_sum_excel" onclick="exportAttSummaryExcel()">匯出摘要 Excel</button>
+        <button class="btn btn-ghost btn-sm" data-i18n="btn.export_detail_excel" onclick="exportAttDetailExcel()">匯出明細 Excel</button>
+        <button class="btn btn-outline btn-sm" data-i18n="btn.export_sum_csv" onclick="exportAttSummary()">摘要 CSV</button>
+        <button class="btn btn-outline btn-sm" data-i18n="btn.export_detail_csv" onclick="exportAttDetail()">明細 CSV</button>
       </div>
       <div class="card">
         <div class="table-wrap">
@@ -451,15 +457,15 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 打卡記錄 -->
     <div id="punch-panel-records" style="display:none">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">員工</span>
+        <span class="filter-label" data-i18n="label.staff">員工</span>
         <select class="filter-input" id="rec-filter-staff" onchange="loadPunchRecords()" style="min-width:120px"><option value="">全部</option></select>
         <div class="filter-divider"></div>
-        <span class="filter-label">日期</span>
+        <span class="filter-label" data-i18n="label.date">日期</span>
         <input class="filter-input" type="date" id="rec-filter-from" onchange="loadPunchRecords()">
         <span class="filter-sep">—</span>
         <input class="filter-input" type="date" id="rec-filter-to" onchange="loadPunchRecords()">
         <div class="filter-divider"></div>
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="rec-filter-month" onchange="recMonthChange()">
         <button class="btn btn-ghost btn-sm" onclick="clearRecFilter()">清除</button>
       </div>
@@ -526,7 +532,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 補打申請 -->
     <div id="punch-panel-requests" style="display:none">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">狀態</span>
+        <span class="filter-label" data-i18n="label.status">狀態</span>
         <select class="filter-input" id="preq-filter-status" onchange="loadPunchRequests()" style="min-width:120px">
           <option value="pending">待審核</option><option value="">全部</option>
           <option value="approved">已核准</option><option value="rejected">已退回</option>
@@ -546,10 +552,10 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 加班申請 -->
     <div id="punch-panel-overtime" style="display:none">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="ot-filter-month" onchange="otFilterChanged()">
         <div class="filter-divider"></div>
-        <span class="filter-label">狀態</span>
+        <span class="filter-label" data-i18n="label.status">狀態</span>
         <select class="filter-input" id="ot-filter-status" onchange="loadOTRequests()" style="min-width:120px">
           <option value="pending">待審核</option><option value="">全部</option>
           <option value="approved">已核准</option><option value="rejected">已退回</option>
@@ -615,7 +621,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- GPS 設定 -->
     <div id="punch-panel-gps" style="display:none">
       <div class="filter-bar" style="margin-bottom:20px;gap:14px;flex-wrap:wrap">
-        <span class="filter-label">GPS 驗證模式</span>
+        <span class="filter-label" data-i18n="label.gps_mode">GPS 驗證模式</span>
         <select class="filter-input" id="gps-required" onchange="saveGpsConfig()" style="min-width:220px">
           <option value="0">不強制（記錄距離但不阻擋打卡）</option>
           <option value="1">強制（超出所有地點範圍則禁止打卡）</option>
@@ -711,7 +717,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
         <span style="font-size:13px;color:var(--muted)">自動偵測近 7 天出勤異常（遲到、早退、缺打卡、今日未出勤）</span>
         <span style="flex:1"></span>
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="anomaly-export-month" style="width:140px">
         <button class="btn btn-outline btn-sm" onclick="exportAnomalyExcel()">匯出 Excel</button>
         <button class="btn btn-outline btn-sm" onclick="loadPunchAnomalies()">重新整理</button>
@@ -729,7 +735,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 月統計 -->
     <div id="punch-panel-mstats" style="display:none">
       <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="mstats-month" onchange="loadMonthlyStats()">
         <button class="btn btn-primary btn-sm" onclick="loadMonthlyStats()">查詢</button>
         <span style="flex:1"></span>
@@ -762,20 +768,20 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- ── 排班管理 ── -->
   <div class="page" id="page-sched" style="display:none">
     <div class="inv-tab-bar">
-      <button class="inv-tab active" id="schedtab-shift"      onclick="switchSchedTab('shift')">班別排班</button>
-      <button class="inv-tab"        id="schedtab-shifttypes" onclick="switchSchedTab('shifttypes')">班別設定</button>
-      <button class="inv-tab"        id="schedtab-calendar"   onclick="switchSchedTab('calendar')">排休月曆</button>
-      <button class="inv-tab"        id="schedtab-requests"   onclick="switchSchedTab('requests')">排休申請<span class="tab-badge" id="tabdot-schedrq" style="display:none"></span></button>
-      <button class="inv-tab"        id="schedtab-summary"    onclick="switchSchedTab('summary')">人員摘要</button>
-      <button class="inv-tab"        id="schedtab-conflicts"  onclick="switchSchedTab('conflicts')" style="position:relative">衝突警示<span id="conflicts-badge" style="display:none;position:absolute;top:4px;right:4px;background:var(--red);color:#fff;border-radius:8px;padding:0 5px;font-size:10px;font-weight:700;line-height:16px"></span></button>
-      <button class="inv-tab"        id="schedtab-config"     onclick="switchSchedTab('config')">月份設定</button>
-      <button class="inv-tab"        id="schedtab-autogen"    onclick="switchSchedTab('autogen')">自動排班</button>
+      <button class="inv-tab active" id="schedtab-shift"      data-i18n="sched.tab.shift"      onclick="switchSchedTab('shift')">班別排班</button>
+      <button class="inv-tab"        id="schedtab-shifttypes" data-i18n="sched.tab.shifttypes" onclick="switchSchedTab('shifttypes')">班別設定</button>
+      <button class="inv-tab"        id="schedtab-calendar"   data-i18n="sched.tab.calendar"   onclick="switchSchedTab('calendar')">排休月曆</button>
+      <button class="inv-tab"        id="schedtab-requests"   data-i18n="sched.tab.requests"   onclick="switchSchedTab('requests')">排休申請<span class="tab-badge" id="tabdot-schedrq" style="display:none"></span></button>
+      <button class="inv-tab"        id="schedtab-summary"    data-i18n="sched.tab.summary"    onclick="switchSchedTab('summary')">人員摘要</button>
+      <button class="inv-tab"        id="schedtab-conflicts"  data-i18n="sched.tab.conflicts"  onclick="switchSchedTab('conflicts')" style="position:relative">衝突警示<span id="conflicts-badge" style="display:none;position:absolute;top:4px;right:4px;background:var(--red);color:#fff;border-radius:8px;padding:0 5px;font-size:10px;font-weight:700;line-height:16px"></span></button>
+      <button class="inv-tab"        id="schedtab-config"     data-i18n="sched.tab.config"     onclick="switchSchedTab('config')">月份設定</button>
+      <button class="inv-tab"        id="schedtab-autogen"    data-i18n="sched.tab.autogen"    onclick="switchSchedTab('autogen')">自動排班</button>
     </div>
 
     <!-- 班別排班 -->
     <div id="sched-panel-shift">
       <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="shift-month" onchange="loadShiftCalendar()">
         <span style="flex:1"></span>
         <button class="btn btn-outline btn-sm" onclick="exportShiftExcel()">匯出 Excel</button>
@@ -805,7 +811,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 排休月曆 -->
     <div id="sched-panel-calendar" style="display:none">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sched-cal-month" onchange="loadSchedCalendar()">
         <span style="flex:1"></span>
         <a href="/staff" target="_blank" class="btn btn-outline btn-sm">員工系統</a>
@@ -816,10 +822,10 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 排休申請 -->
     <div id="sched-panel-requests" style="display:none">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sched-req-month" onchange="loadSchedRequests()">
         <div class="filter-divider"></div>
-        <span class="filter-label">狀態</span>
+        <span class="filter-label" data-i18n="label.status">狀態</span>
         <select class="filter-input" id="sched-req-status" onchange="loadSchedRequests()" style="min-width:120px">
           <option value="">全部</option><option value="pending">審核中</option>
           <option value="approved">已核准</option><option value="rejected">已退回</option>
@@ -835,7 +841,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 人員摘要 -->
     <div id="sched-panel-summary" style="display:none">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sched-sum-month" onchange="loadSchedSummary()">
         <span style="flex:1"></span>
         <button class="btn btn-outline btn-sm" onclick="exportSchedSummaryExcel()">匯出 Excel</button>
@@ -853,7 +859,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 衝突警示 -->
     <div id="sched-panel-conflicts" style="display:none">
       <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="conflicts-month" onchange="loadShiftConflicts()">
         <span style="flex:1"></span>
         <button class="btn btn-outline btn-sm" onclick="loadShiftConflicts()">重新檢查</button>
@@ -918,25 +924,25 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- ── 請假管理 ── -->
   <div class="page" id="page-leave" style="display:none">
     <div class="inv-tab-bar">
-      <button class="inv-tab active" id="leavetab-requests"  onclick="switchLeaveTab('requests')">請假申請<span class="tab-badge" id="tabdot-leaverq" style="display:none"></span></button>
-      <button class="inv-tab"        id="leavetab-calendar"  onclick="switchLeaveTab('calendar')">請假月曆</button>
-      <button class="inv-tab"        id="leavetab-balance"   onclick="switchLeaveTab('balance')">假別餘額</button>
-      <button class="inv-tab"        id="leavetab-types"     onclick="switchLeaveTab('types')">假別設定</button>
+      <button class="inv-tab active" id="leavetab-requests"  data-i18n="leave.tab.requests"  onclick="switchLeaveTab('requests')">請假申請<span class="tab-badge" id="tabdot-leaverq" style="display:none"></span></button>
+      <button class="inv-tab"        id="leavetab-calendar"  data-i18n="leave.tab.calendar"  onclick="switchLeaveTab('calendar')">請假月曆</button>
+      <button class="inv-tab"        id="leavetab-balance"   data-i18n="leave.tab.balance"   onclick="switchLeaveTab('balance')">假別餘額</button>
+      <button class="inv-tab"        id="leavetab-types"     data-i18n="leave.tab.types"     onclick="switchLeaveTab('types')">假別設定</button>
     </div>
 
     <!-- 請假申請 -->
     <div id="leave-panel-requests">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="leave-req-month" onchange="loadLeaveRequests()">
         <div class="filter-divider"></div>
-        <span class="filter-label">狀態</span>
+        <span class="filter-label" data-i18n="label.status">狀態</span>
         <select class="filter-input" id="leave-req-status" onchange="loadLeaveRequests()" style="min-width:110px">
           <option value="pending">待審核</option><option value="">全部</option>
           <option value="approved">已核准</option><option value="rejected">已退回</option>
         </select>
         <div class="filter-divider"></div>
-        <span class="filter-label">員工</span>
+        <span class="filter-label" data-i18n="label.staff">員工</span>
         <select class="filter-input" id="leave-req-staff" onchange="loadLeaveRequests()" style="min-width:120px">
           <option value="">全部</option>
         </select>
@@ -956,7 +962,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 請假月曆 -->
     <div id="leave-panel-calendar" style="display:none">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="leave-cal-month" onchange="loadLeaveCalendar()">
       </div>
       <div id="leave-cal-wrap"></div>
@@ -965,7 +971,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 假別餘額 -->
     <div id="leave-panel-balance" style="display:none">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">年度</span>
+        <span class="filter-label" data-i18n="label.year">年度</span>
         <select class="filter-input" id="leave-bal-year" onchange="loadLeaveBalances()" style="min-width:100px"></select>
         <button class="btn btn-outline btn-sm" onclick="initAnnualLeave()">自動計算特休（依年資）</button>
         <span style="flex:1"></span>
@@ -1004,25 +1010,25 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- ── 薪資管理 ── -->
   <div class="page" id="page-salary" style="display:none">
     <div class="inv-tab-bar">
-      <button class="inv-tab active" id="salarytab-calc"        onclick="switchSalaryTab('calc')">月薪計算</button>
-      <button class="inv-tab"        id="salarytab-settings"    onclick="switchSalaryTab('settings')">薪資設定</button>
-      <button class="inv-tab"        id="salarytab-items"       onclick="switchSalaryTab('items')">薪資項目</button>
-      <button class="inv-tab"        id="salarytab-withholding" onclick="switchSalaryTab('withholding')">扣繳憑單</button>
-      <button class="inv-tab"        id="salarytab-edi"         onclick="switchSalaryTab('edi')">勞健保 EDI</button>
+      <button class="inv-tab active" id="salarytab-calc"        data-i18n="salary.tab.calc"        onclick="switchSalaryTab('calc')">月薪計算</button>
+      <button class="inv-tab"        id="salarytab-settings"    data-i18n="salary.tab.settings"    onclick="switchSalaryTab('settings')">薪資設定</button>
+      <button class="inv-tab"        id="salarytab-items"       data-i18n="salary.tab.items"       onclick="switchSalaryTab('items')">薪資項目</button>
+      <button class="inv-tab"        id="salarytab-withholding" data-i18n="salary.tab.withholding" onclick="switchSalaryTab('withholding')">扣繳憑單</button>
+      <button class="inv-tab"        id="salarytab-edi"         data-i18n="salary.tab.edi"         onclick="switchSalaryTab('edi')">勞健保 EDI</button>
     </div>
 
     <!-- 月薪計算 -->
     <div id="salary-panel-calc">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sal-month" onchange="loadSalaryRecords()">
         <button class="btn btn-outline btn-sm" onclick="previewSalary()">預覽計算明細</button>
         <button class="btn btn-primary btn-sm" onclick="generateSalary()">確認產生薪資</button>
         <button class="btn btn-outline btn-sm" id="sal-confirm-all-btn" onclick="confirmAllSalary()" style="display:none">全部確認</button>
         <button class="btn btn-outline btn-sm" id="sal-bulk-print-btn" onclick="bulkPrintPayslips()" style="display:none">列印全部薪資單</button>
-        <button class="btn btn-primary btn-sm" onclick="exportSalaryExcel()">匯出薪資 Excel</button>
-        <button class="btn btn-outline btn-sm" onclick="exportLeaveExcel()">匯出請假 Excel</button>
-        <button class="btn btn-ghost btn-sm" onclick="exportSalaryCSV()">薪資 CSV</button>
+        <button class="btn btn-primary btn-sm" data-i18n="btn.export_salary_excel" onclick="exportSalaryExcel()">匯出薪資 Excel</button>
+        <button class="btn btn-outline btn-sm" data-i18n="btn.export_leave_excel" onclick="exportLeaveExcel()">匯出請假 Excel</button>
+        <button class="btn btn-ghost btn-sm" data-i18n="btn.salary_csv" onclick="exportSalaryCSV()">薪資 CSV</button>
         <span style="flex:1"></span>
         <span id="sal-count" style="font-size:12px;color:var(--muted)"></span>
       </div>
@@ -1085,7 +1091,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 扣繳憑單 -->
     <div id="salary-panel-withholding" style="display:none">
       <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">年度</span>
+        <span class="filter-label" data-i18n="label.year">年度</span>
         <select id="wh-year" class="filter-input" style="width:100px"></select>
         <button class="btn btn-outline btn-sm" onclick="openWithholdingReport('html')">產生報表（列印）</button>
         <button class="btn btn-outline btn-sm" onclick="openWithholdingReport('xlsx')">匯出 Excel</button>
@@ -1176,7 +1182,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- ── 國定假日 ── -->
   <div class="page" id="page-holiday" style="display:none">
     <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
-      <span class="filter-label">年度</span>
+      <span class="filter-label" data-i18n="label.year">年度</span>
       <select class="filter-input" id="holiday-year" onchange="loadHolidays()" style="min-width:100px"></select>
       <button class="btn btn-outline btn-sm" onclick="loadHolidays()">重新整理</button>
       <span style="flex:1"></span>
@@ -1218,25 +1224,25 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- ── 財務管理 ── -->
   <div class="page" id="page-finance" style="display:none">
     <div class="inv-tab-bar">
-      <button class="inv-tab active" id="fintab-dash"    onclick="switchFinTab('dash')">損益儀表板</button>
-      <button class="inv-tab"        id="fintab-records" onclick="switchFinTab('records')">收支記錄</button>
-      <button class="inv-tab"        id="fintab-cats"    onclick="switchFinTab('cats')">類別設定</button>
-      <button class="inv-tab"        id="fintab-ocr"     onclick="switchFinTab('ocr')">OCR辨識</button>
-      <button class="inv-tab"        id="fintab-docs"      onclick="switchFinTab('docs')">文件庫</button>
-      <button class="inv-tab"        id="fintab-recurring" onclick="switchFinTab('recurring')">定期分錄</button>
-      <button class="inv-tab"        id="fintab-bank"      onclick="switchFinTab('bank')">銀行對帳</button>
-      <button class="inv-tab"        id="fintab-tax"       onclick="switchFinTab('tax')">稅務申報</button>
-      <button class="inv-tab"        id="fintab-ap"        onclick="switchFinTab('ap')">應收付款</button>
-      <button class="inv-tab"        id="fintab-budget"    onclick="switchFinTab('budget')">預算管理</button>
-      <button class="inv-tab"        id="fintab-payroll"   onclick="switchFinTab('payroll')">薪資連動</button>
-      <button class="inv-tab"        id="fintab-stmts"     onclick="switchFinTab('stmts')">財務報表</button>
-      <button class="inv-tab"        id="fintab-settings"  onclick="switchFinTab('settings')">財務設定</button>
+      <button class="inv-tab active" id="fintab-dash"      data-i18n="fin.tab.dash"      onclick="switchFinTab('dash')">損益儀表板</button>
+      <button class="inv-tab"        id="fintab-records"   data-i18n="fin.tab.records"   onclick="switchFinTab('records')">收支記錄</button>
+      <button class="inv-tab"        id="fintab-cats"      data-i18n="fin.tab.cats"      onclick="switchFinTab('cats')">類別設定</button>
+      <button class="inv-tab"        id="fintab-ocr"       data-i18n="fin.tab.ocr"       onclick="switchFinTab('ocr')">OCR辨識</button>
+      <button class="inv-tab"        id="fintab-docs"      data-i18n="fin.tab.docs"      onclick="switchFinTab('docs')">文件庫</button>
+      <button class="inv-tab"        id="fintab-recurring" data-i18n="fin.tab.recurring" onclick="switchFinTab('recurring')">定期分錄</button>
+      <button class="inv-tab"        id="fintab-bank"      data-i18n="fin.tab.bank"      onclick="switchFinTab('bank')">銀行對帳</button>
+      <button class="inv-tab"        id="fintab-tax"       data-i18n="fin.tab.tax"       onclick="switchFinTab('tax')">稅務申報</button>
+      <button class="inv-tab"        id="fintab-ap"        data-i18n="fin.tab.ap"        onclick="switchFinTab('ap')">應收付款</button>
+      <button class="inv-tab"        id="fintab-budget"    data-i18n="fin.tab.budget"    onclick="switchFinTab('budget')">預算管理</button>
+      <button class="inv-tab"        id="fintab-payroll"   data-i18n="fin.tab.payroll"   onclick="switchFinTab('payroll')">薪資連動</button>
+      <button class="inv-tab"        id="fintab-stmts"     data-i18n="fin.tab.stmts"     onclick="switchFinTab('stmts')">財務報表</button>
+      <button class="inv-tab"        id="fintab-settings"  data-i18n="fin.tab.settings"  onclick="switchFinTab('settings')">財務設定</button>
     </div>
 
     <!-- 損益儀表板 -->
     <div id="fin-panel-dash">
       <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="fin-dash-month" onchange="loadFinSummary()">
         <span style="flex:1"></span>
         <button class="btn btn-primary btn-sm" onclick="exportFinanceExcel()">匯出 Excel</button>
@@ -1284,7 +1290,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 收支記錄 -->
     <div id="fin-panel-records" style="display:none">
       <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="fin-rec-month" onchange="loadFinRecords()">
         <select class="filter-input" id="fin-rec-type" onchange="loadFinRecords()" style="min-width:100px">
           <option value="">全部</option><option value="income">收入</option><option value="expense">支出</option>
@@ -1415,7 +1421,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 稅務申報 -->
     <div id="fin-panel-tax" style="display:none">
       <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">年度</span>
+        <span class="filter-label" data-i18n="label.year">年度</span>
         <input class="filter-input" type="number" id="tax-year" style="width:90px" min="2020" max="2099">
         <span class="filter-label">期別（雙月）</span>
         <select class="filter-input" id="tax-period" style="min-width:140px">
@@ -1512,7 +1518,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 財務報表 -->
     <div id="fin-panel-stmts" style="display:none">
       <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
-        <span class="filter-label">月份</span>
+        <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="fin-stmt-month">
         <button class="btn btn-primary btn-sm" onclick="loadStatements()">產生報表</button>
         <span style="flex:1"></span>
@@ -1744,7 +1750,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- ── 費用審核 ── -->
   <div class="page" id="page-expense-review" style="display:none">
     <div class="filter-bar" style="margin-bottom:20px">
-      <span class="filter-label">狀態</span>
+      <span class="filter-label" data-i18n="label.status">狀態</span>
       <select id="exp-review-status" class="filter-input" style="min-width:100px" onchange="loadExpenseReview()">
         <option value="pending">待審核</option>
         <option value="approved">已核准</option>
@@ -1780,7 +1786,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 考核記錄 tab -->
     <div id="perf-panel-reviews">
       <div class="filter-bar" style="margin-bottom:20px">
-        <span class="filter-label">員工</span>
+        <span class="filter-label" data-i18n="label.staff">員工</span>
         <select id="perf-filter-staff" class="filter-input" style="min-width:140px">
           <option value="">全部員工</option>
         </select>
@@ -1892,16 +1898,16 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- ── 差旅申請 ── -->
   <div class="page" id="page-travel" style="display:none">
     <div class="filter-bar" style="flex-wrap:wrap;gap:10px;margin-bottom:16px">
-      <span class="filter-label">月份</span>
+      <span class="filter-label" data-i18n="label.month">月份</span>
       <input type="month" class="filter-input" id="travel-filter-month" style="min-width:140px" onchange="loadTravel()">
-      <span class="filter-label">狀態</span>
+      <span class="filter-label" data-i18n="label.status">狀態</span>
       <select class="filter-input" id="travel-filter-status" onchange="loadTravel()">
         <option value="">全部</option>
         <option value="pending">待審</option>
         <option value="approved">已核准</option>
         <option value="rejected">已拒絕</option>
       </select>
-      <span class="filter-label">員工</span>
+      <span class="filter-label" data-i18n="label.staff">員工</span>
       <select class="filter-input" id="travel-filter-staff" onchange="loadTravel()" style="min-width:120px">
         <option value="">全部員工</option>
       </select>
@@ -3225,6 +3231,199 @@ const ALL_MODULES = [
 ];
 function hasModule(m) { return ADMIN_IS_SUPER || ADMIN_PERMS.includes(m); }
 
+// ══════════════════════════════════════════════════════════════
+// i18n — 多語言支援  (zh-TW / en)
+// ══════════════════════════════════════════════════════════════
+const TRANSLATIONS = {
+  'zh-TW': {
+    // Sidebar nav
+    'nav.menu':'功能選單','nav.dash':'儀表板','nav.punch':'打卡管理','nav.sched':'排班管理',
+    'nav.leave':'請假管理','nav.salary':'薪資管理','nav.ann':'公告管理','nav.holiday':'國定假日',
+    'nav.finance':'財務管理','nav.expense':'費用審核','nav.perf':'績效考核','nav.stores':'門市管理',
+    'nav.training':'教育訓練','nav.travel':'差旅申請','nav.assets':'資產管理','nav.adminmgr':'帳號管理',
+    'nav.bio':'生物辨識綁定','nav.logout':'登出系統',
+    // Page titles
+    'page.dash':'儀表板','page.punch':'打卡管理','page.sched':'排班管理','page.leave':'請假管理',
+    'page.salary':'薪資管理','page.ann':'公告管理','page.holiday':'國定假日','page.finance':'財務管理',
+    'page.adminmgr':'帳號管理','page.expense-review':'費用審核','page.perf':'績效考核',
+    'page.stores':'門市管理','page.training':'教育訓練追蹤','page.travel':'差旅申請','page.assets':'資產管理',
+    // Brand
+    'brand.title':'管理後台','brand.sub':'Management System',
+    // Punch tabs
+    'punch.tab.summary':'出勤摘要','punch.tab.anomaly':'異常告警','punch.tab.mstats':'月統計',
+    'punch.tab.records':'打卡記錄','punch.tab.manual':'代補打卡','punch.tab.requests':'補打申請',
+    'punch.tab.overtime':'加班申請','punch.tab.staff':'員工管理','punch.tab.resigned':'離職員工',
+    'punch.tab.gps':'GPS 設定','punch.tab.line':'LINE 打卡',
+    // Sched tabs
+    'sched.tab.shift':'班別排班','sched.tab.shifttypes':'班別設定','sched.tab.calendar':'排休月曆',
+    'sched.tab.requests':'排休申請','sched.tab.summary':'人員摘要','sched.tab.conflicts':'衝突警示',
+    'sched.tab.config':'月份設定','sched.tab.autogen':'自動排班',
+    // Leave tabs
+    'leave.tab.requests':'請假申請','leave.tab.calendar':'請假月曆',
+    'leave.tab.balance':'假別餘額','leave.tab.types':'假別設定',
+    // Salary tabs
+    'salary.tab.calc':'月薪計算','salary.tab.settings':'薪資設定','salary.tab.items':'薪資項目',
+    'salary.tab.withholding':'扣繳憑單','salary.tab.edi':'勞健保 EDI',
+    // Finance tabs
+    'fin.tab.dash':'損益儀表板','fin.tab.records':'收支記錄','fin.tab.cats':'類別設定',
+    'fin.tab.ocr':'OCR辨識','fin.tab.docs':'文件庫','fin.tab.recurring':'定期分錄',
+    'fin.tab.bank':'銀行對帳','fin.tab.tax':'稅務申報','fin.tab.ap':'應收付款',
+    'fin.tab.budget':'預算管理','fin.tab.payroll':'薪資連動','fin.tab.stmts':'財務報表',
+    'fin.tab.settings':'財務設定',
+    // Filter labels
+    'label.month':'月份','label.year':'年度','label.staff':'員工','label.date':'日期',
+    'label.status':'狀態','label.gps_mode':'GPS 驗證模式','label.store':'門市','label.dept':'部門',
+    'label.keyword':'關鍵字','label.type':'類型','label.category':'類別','label.range':'期間',
+    // Common buttons
+    'btn.search':'查詢','btn.add':'新增','btn.save':'儲存','btn.cancel':'取消',
+    'btn.delete':'刪除','btn.edit':'編輯','btn.approve':'核准','btn.reject':'駁回',
+    'btn.export_excel':'匯出 Excel','btn.export_csv':'匯出 CSV','btn.export_sum_excel':'匯出摘要 Excel',
+    'btn.export_detail_excel':'匯出明細 Excel','btn.export_sum_csv':'摘要 CSV','btn.export_detail_csv':'明細 CSV',
+    'btn.export_salary_excel':'匯出薪資 Excel','btn.export_leave_excel':'匯出請假 Excel','btn.salary_csv':'薪資 CSV',
+    'btn.close':'關閉','btn.submit':'送出','btn.confirm':'確認','btn.generate':'產生',
+    'btn.refresh':'重新整理','btn.import':'匯入','btn.calc':'計算',
+    // Status
+    'status.pending':'待審核','status.approved':'已核准','status.rejected':'已駁回',
+    'status.all':'全部','status.active':'在職','status.resigned':'離職',
+    // Dash
+    'dash.label.today_attendance':'今日出勤','dash.label.present':'出勤','dash.label.absent':'缺勤',
+    'dash.label.leave':'請假','dash.label.late':'遲到','dash.label.pending_approval':'待審核',
+    // Search
+    'search.staff_placeholder':'🔍 搜尋員工...',
+    // Punch labels
+    'punch.label.in':'上班打卡','punch.label.out':'下班打卡',
+    'punch.label.break_out':'休息開始','punch.label.break_in':'休息結束',
+    // Request status labels
+    'req.status.pending':'待審核','req.status.approved':'已核准','req.status.rejected':'已退回',
+    // Sched status labels
+    'sched.status.pending':'審核中','sched.status.approved':'已核准','sched.status.rejected':'已退回',
+    'sched.status.modified_pending':'修改待審','sched.status.not_submitted':'未申請',
+    // Travel status
+    'travel.status.pending':'待審','travel.status.approved':'已核准','travel.status.rejected':'已拒絕',
+    // Asset status
+    'asset.status.available':'可借用','asset.status.loaned':'借出中',
+    'asset.status.maintenance':'維修中','asset.status.retired':'報廢',
+    // Lang toggle
+    'lang.toggle':'EN',
+  },
+  'en': {
+    // Sidebar nav
+    'nav.menu':'Menu','nav.dash':'Dashboard','nav.punch':'Attendance','nav.sched':'Schedule',
+    'nav.leave':'Leave','nav.salary':'Salary','nav.ann':'Announcements','nav.holiday':'Holidays',
+    'nav.finance':'Finance','nav.expense':'Expense Review','nav.perf':'Performance','nav.stores':'Stores',
+    'nav.training':'Training','nav.travel':'Travel','nav.assets':'Assets','nav.adminmgr':'Accounts',
+    'nav.bio':'Biometric Binding','nav.logout':'Logout',
+    // Page titles
+    'page.dash':'Dashboard','page.punch':'Attendance','page.sched':'Schedule','page.leave':'Leave',
+    'page.salary':'Salary','page.ann':'Announcements','page.holiday':'Holidays','page.finance':'Finance',
+    'page.adminmgr':'Accounts','page.expense-review':'Expense Review','page.perf':'Performance',
+    'page.stores':'Stores','page.training':'Training','page.travel':'Travel','page.assets':'Assets',
+    // Brand
+    'brand.title':'Admin Panel','brand.sub':'Management System',
+    // Punch tabs
+    'punch.tab.summary':'Summary','punch.tab.anomaly':'Alerts','punch.tab.mstats':'Monthly Stats',
+    'punch.tab.records':'Records','punch.tab.manual':'Manual Punch','punch.tab.requests':'Punch Req.',
+    'punch.tab.overtime':'Overtime','punch.tab.staff':'Staff','punch.tab.resigned':'Resigned',
+    'punch.tab.gps':'GPS Settings','punch.tab.line':'LINE Punch',
+    // Sched tabs
+    'sched.tab.shift':'Shift Schedule','sched.tab.shifttypes':'Shift Types','sched.tab.calendar':'Calendar',
+    'sched.tab.requests':'Leave Req.','sched.tab.summary':'Summary','sched.tab.conflicts':'Conflicts',
+    'sched.tab.config':'Month Config','sched.tab.autogen':'Auto Schedule',
+    // Leave tabs
+    'leave.tab.requests':'Leave Req.','leave.tab.calendar':'Calendar',
+    'leave.tab.balance':'Balances','leave.tab.types':'Leave Types',
+    // Salary tabs
+    'salary.tab.calc':'Monthly Calc','salary.tab.settings':'Settings','salary.tab.items':'Items',
+    'salary.tab.withholding':'Withholding','salary.tab.edi':'Labor EDI',
+    // Finance tabs
+    'fin.tab.dash':'P&L Dashboard','fin.tab.records':'Records','fin.tab.cats':'Categories',
+    'fin.tab.ocr':'OCR','fin.tab.docs':'Documents','fin.tab.recurring':'Recurring',
+    'fin.tab.bank':'Bank Recon.','fin.tab.tax':'Tax Filing','fin.tab.ap':'AP/AR',
+    'fin.tab.budget':'Budget','fin.tab.payroll':'Payroll Link','fin.tab.stmts':'Statements',
+    'fin.tab.settings':'Settings',
+    // Filter labels
+    'label.month':'Month','label.year':'Year','label.staff':'Staff','label.date':'Date',
+    'label.status':'Status','label.gps_mode':'GPS Mode','label.store':'Store','label.dept':'Dept.',
+    'label.keyword':'Keyword','label.type':'Type','label.category':'Category','label.range':'Period',
+    // Common buttons
+    'btn.search':'Search','btn.add':'Add','btn.save':'Save','btn.cancel':'Cancel',
+    'btn.delete':'Delete','btn.edit':'Edit','btn.approve':'Approve','btn.reject':'Reject',
+    'btn.export_excel':'Export Excel','btn.export_csv':'Export CSV','btn.export_sum_excel':'Summary Excel',
+    'btn.export_detail_excel':'Detail Excel','btn.export_sum_csv':'Summary CSV','btn.export_detail_csv':'Detail CSV',
+    'btn.export_salary_excel':'Salary Excel','btn.export_leave_excel':'Leave Excel','btn.salary_csv':'Salary CSV',
+    'btn.close':'Close','btn.submit':'Submit','btn.confirm':'Confirm','btn.generate':'Generate',
+    'btn.refresh':'Refresh','btn.import':'Import','btn.calc':'Calculate',
+    // Status
+    'status.pending':'Pending','status.approved':'Approved','status.rejected':'Rejected',
+    'status.all':'All','status.active':'Active','status.resigned':'Resigned',
+    // Dash
+    'dash.label.today_attendance':'Today\'s Attendance','dash.label.present':'Present',
+    'dash.label.absent':'Absent','dash.label.leave':'On Leave','dash.label.late':'Late',
+    'dash.label.pending_approval':'Pending',
+    // Search
+    'search.staff_placeholder':'🔍 Search staff...',
+    // Punch labels
+    'punch.label.in':'Clock In','punch.label.out':'Clock Out',
+    'punch.label.break_out':'Break Start','punch.label.break_in':'Break End',
+    // Request status labels
+    'req.status.pending':'Pending','req.status.approved':'Approved','req.status.rejected':'Rejected',
+    // Sched status labels
+    'sched.status.pending':'Reviewing','sched.status.approved':'Approved','sched.status.rejected':'Rejected',
+    'sched.status.modified_pending':'Mod. Pending','sched.status.not_submitted':'Not Submitted',
+    // Travel status
+    'travel.status.pending':'Pending','travel.status.approved':'Approved','travel.status.rejected':'Rejected',
+    // Asset status
+    'asset.status.available':'Available','asset.status.loaned':'Loaned',
+    'asset.status.maintenance':'Maintenance','asset.status.retired':'Retired',
+    // Lang toggle
+    'lang.toggle':'中文',
+  }
+};
+
+let _currentLang = localStorage.getItem('adminLang') || 'zh-TW';
+
+function t(key) {
+  return (TRANSLATIONS[_currentLang] || TRANSLATIONS['zh-TW'])[key] || (TRANSLATIONS['zh-TW'][key] || key);
+}
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const val = t(el.dataset.i18n);
+    if (el.children.length > 0) {
+      for (const node of el.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+          node.textContent = val;
+          break;
+        }
+      }
+    } else {
+      el.textContent = val;
+    }
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  const togBtn = document.getElementById('lang-toggle-btn');
+  if (togBtn) togBtn.textContent = t('lang.toggle');
+  document.documentElement.lang = _currentLang;
+}
+
+function setLang(lang) {
+  _currentLang = lang;
+  localStorage.setItem('adminLang', lang);
+  applyI18n();
+  // Re-render dynamic page title
+  const activePage = [...document.querySelectorAll('.page')].find(el => el.style.display !== 'none');
+  if (activePage) {
+    const pageId = activePage.id.replace('page-', '');
+    document.getElementById('page-title').textContent = t('page.' + pageId) || document.getElementById('page-title').textContent;
+  }
+}
+
+function toggleLang() {
+  setLang(_currentLang === 'zh-TW' ? 'en' : 'zh-TW');
+}
+
 // ── Unified API helper ────────────────────────────────────────
 // Returns { ok, data } — data.error is set on failure
 // Never throws; always shows toast on non-ok unless silent=true
@@ -4100,8 +4299,7 @@ function showPage(page, e) {
   ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training','travel','assets'].forEach(p =>
     document.getElementById('page-' + p).style.display = p === page ? '' : 'none'
   );
-  const titles = { dash:'儀表板', punch:'打卡管理', sched:'排班管理', leave:'請假管理', salary:'薪資管理', ann:'公告管理', holiday:'國定假日', finance:'財務管理', adminmgr:'帳號管理', 'expense-review':'費用審核', perf:'績效考核', stores:'門市管理', training:'教育訓練追蹤', travel:'差旅申請', assets:'資產管理' };
-  document.getElementById('page-title').textContent = titles[page] || page;
+  document.getElementById('page-title').textContent = t('page.' + page) || page;
   if (page === 'dash')            initDash();
   if (page === 'punch')           initPunch();
   if (page === 'sched')           initSched();
@@ -4135,7 +4333,7 @@ let punchRecords   = [];
 let punchEditRecId = null;
 let punchEditStaffId = null;
 
-const PUNCH_LABEL = { in:'上班打卡', out:'下班打卡', break_out:'休息開始', break_in:'休息結束' };
+const PUNCH_LABEL = { get in(){return t('punch.label.in');}, get out(){return t('punch.label.out');}, get break_out(){return t('punch.label.break_out');}, get break_in(){return t('punch.label.break_in');} };
 const PUNCH_COLOR = { in:'var(--green)', out:'var(--red)', break_out:'#e07b2a', break_in:'var(--accent)' };
 
 function initPunch() {
@@ -4688,7 +4886,7 @@ async function unsetRichMenu() {
 
 // ── 補打卡申請 ────────────────────────────────────────────────
 let punchReqList = [];
-const PREQ_LABEL = {pending:'待審核', approved:'已核准', rejected:'已退回'};
+const PREQ_LABEL = { get pending(){return t('req.status.pending');}, get approved(){return t('req.status.approved');}, get rejected(){return t('req.status.rejected');} };
 const PREQ_COLOR = {pending:'var(--orange)', approved:'var(--green)', rejected:'var(--red)'};
 
 async function loadPunchRequests() {
@@ -4755,7 +4953,7 @@ async function deletePunchReq(id) {
 // ── 加班申請 ──────────────────────────────────────────────────
 let otReqData = [];
 let otCurrentView = 'list';
-const OT_STATUS_LABEL = {pending:'待審核', approved:'已核准', rejected:'已退回'};
+const OT_STATUS_LABEL = { get pending(){return t('req.status.pending');}, get approved(){return t('req.status.approved');}, get rejected(){return t('req.status.rejected');} };
 const OT_STATUS_COLOR = {pending:'var(--orange)', approved:'var(--green)', rejected:'var(--red)'};
 
 function setOTView(view) {
@@ -4900,7 +5098,7 @@ async function deleteOTReq(id) {
 // ══════════════════════════════════════════════════════════════
 // 排班管理模組
 // ══════════════════════════════════════════════════════════════
-const SCHED_STATUS_LABEL = { pending:'審核中', approved:'已核准', rejected:'已退回', modified_pending:'修改待審', not_submitted:'未申請' };
+const SCHED_STATUS_LABEL = { get pending(){return t('sched.status.pending');}, get approved(){return t('sched.status.approved');}, get rejected(){return t('sched.status.rejected');}, get modified_pending(){return t('sched.status.modified_pending');}, get not_submitted(){return t('sched.status.not_submitted');} };
 const SCHED_STATUS_COLOR = { pending:'var(--orange)', approved:'var(--green)', rejected:'var(--red)', modified_pending:'var(--accent)', not_submitted:'var(--muted)' };
 const WEEKDAY_ZH = ['日','一','二','三','四','五','六'];
 let schedReviewId = null, schedReqData = [];
@@ -5469,7 +5667,7 @@ async function loadShiftConflicts() {
 // ══════════════════════════════════════════════════════════════
 // 請假管理模組
 // ══════════════════════════════════════════════════════════════
-const LEAVE_STATUS_LABEL = {pending:'待審核',approved:'已核准',rejected:'已退回'};
+const LEAVE_STATUS_LABEL = { get pending(){return t('req.status.pending');}, get approved(){return t('req.status.approved');}, get rejected(){return t('req.status.rejected');} };
 const LEAVE_STATUS_COLOR = {pending:'var(--orange)',approved:'var(--green)',rejected:'var(--red)'};
 let leaveReqData=[], leaveTypesList=[], leaveStaffList=[];
 let _leaveBalCache = {};   // key: `${staff_id}_${leave_type_id}` → {total, used, remain}
@@ -7087,6 +7285,9 @@ document.addEventListener('DOMContentLoaded', () => { refreshBadges(); setInterv
 
 // ── Init ──────────────────────────────────────────────────────
 (function initAdminUI() {
+  // 套用語言設定
+  applyI18n();
+
   // 顯示管理員名稱
   const nameEl = document.getElementById('topbar-admin-name');
   if (nameEl && ADMIN_DISPLAY_NAME) nameEl.textContent = ADMIN_DISPLAY_NAME;
@@ -8832,7 +9033,7 @@ async function loadExpenseReview() {
     setBadge('badge-expense-review', 0);
     return;
   }
-  const statusMap   = { pending:'待審核', approved:'已核准', rejected:'已拒絕' };
+  const statusMap   = { get pending(){return t('req.status.pending');}, get approved(){return t('req.status.approved');}, get rejected(){return t('req.status.rejected');} };
   const statusColor = { pending:'var(--accent)', approved:'var(--green)', rejected:'var(--red)' };
   tbody.innerHTML = claims.map(c => `
     <tr>
@@ -10159,7 +10360,7 @@ async function loadTravel() {
   renderTravelList();
 }
 
-const TRAVEL_STATUS = { pending:'待審', approved:'已核准', rejected:'已拒絕' };
+const TRAVEL_STATUS = { get pending(){return t('travel.status.pending');}, get approved(){return t('travel.status.approved');}, get rejected(){return t('travel.status.rejected');} };
 const TRAVEL_STATUS_COLOR = { pending:'var(--orange)', approved:'var(--green)', rejected:'var(--red)' };
 
 function renderTravelList() {
@@ -10387,7 +10588,7 @@ async function loadAssets() {
 
 const ASSET_CAT_LABEL  = { computer:'電腦/3C', vehicle:'車輛', furniture:'辦公家具', tool:'工具設備', other:'其他' };
 const ASSET_STATUS_COLOR = { available:'var(--green)', loaned:'var(--orange)', maintenance:'var(--red)', retired:'#aaa' };
-const ASSET_STATUS_LABEL = { available:'可借用', loaned:'借出中', maintenance:'維修中', retired:'報廢' };
+const ASSET_STATUS_LABEL = { get available(){return t('asset.status.available');}, get loaned(){return t('asset.status.loaned');}, get maintenance(){return t('asset.status.maintenance');}, get retired(){return t('asset.status.retired');} };
 
 function renderAssetList() {
   const wrap = document.getElementById('asset-list');
