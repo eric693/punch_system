@@ -3252,6 +3252,31 @@ async function api(url, opts = {}, silent = false) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════
+// 前端快取層 — 避免同頁面重複打相同 API
+// ══════════════════════════════════════════════════════════════
+const _apiCache = new Map(); // key → { data, ts }
+const _CACHE_TTL = {
+  '/api/punch/staff':           5 * 60 * 1000,   // 5 分鐘
+  '/api/shifts/types/public':   30 * 60 * 1000,  // 30 分鐘
+  '/api/leave/types/public':    30 * 60 * 1000,  // 30 分鐘
+  '/api/holidays/public':       60 * 60 * 1000,  // 1 小時
+  '/api/punch/locations':       10 * 60 * 1000,  // 10 分鐘
+};
+
+async function cachedApi(url) {
+  const ttl = _CACHE_TTL[url] || 0;
+  if (ttl) {
+    const hit = _apiCache.get(url);
+    if (hit && Date.now() - hit.ts < ttl) return { ok: true, data: hit.data };
+  }
+  const res = await api(url, {}, true);
+  if (res.ok && ttl) _apiCache.set(url, { data: res.data, ts: Date.now() });
+  return res;
+}
+
+function invalidateCache(url) { _apiCache.delete(url); }
+
 // ── Session keep-alive：每 8 分鐘 ping 一次，避免閒置逾時 ────
 setInterval(async () => {
   try { await fetch('/api/admin/me', { headers: {'Content-Type':'application/json'} }); }
@@ -3640,17 +3665,23 @@ async function initDash() {
 
   const { ok, data } = await api(`/api/dashboard?month=${month}`, {}, true);
   if (!ok) return;
+
+  // 先渲染主要統計（立即顯示）
   renderDashStats(data, isCurrentMonth);
   renderDashTodayDetail(data.today_detail || [], isCurrentMonth);
   renderDashPending(data.pending);
-  await renderDashDailyChart(data.daily_attendance || [], data.month);
-  loadAnomalies();
   renderDashTodayPie(data.today_summary, isCurrentMonth);
   renderDashLeavePie(data.leave_distribution || []);
   renderDashOTBar(data.ot_ranking || []);
-  renderLaborCostChart();
-  renderAttendanceHeatmap(month);
-  renderAnnualLeavePie();
+  renderDashDailyChart(data.daily_attendance || [], data.month);
+
+  // 次要圖表並行載入，不阻塞主畫面
+  Promise.all([
+    loadAnomalies(),
+    renderLaborCostChart(),
+    renderAttendanceHeatmap(month),
+    renderAnnualLeavePie(),
+  ]);
 }
 
 function resetDashMonth() {
@@ -3962,7 +3993,7 @@ let _staffSearchCache = null;
 
 async function _getStaffList() {
   if (!_staffSearchCache) {
-    const { ok, data } = await api('/api/punch/staff', {}, true);
+    const { ok, data } = await cachedApi('/api/punch/staff');
     _staffSearchCache = ok ? data.filter(s => s.active) : [];
   }
   return _staffSearchCache;
@@ -4123,8 +4154,8 @@ function switchPunchTab(tab) {
     document.getElementById('punch-panel-' + t).style.display = t === tab ? '' : 'none';
   });
   if (tab === 'summary')   loadPunchSummary();
-  if (tab === 'records')   { loadPunchStaffOptions(); loadPunchRecords(); }
-  if (tab === 'manual')    { loadManualStaffOptions(); loadManualRecords(); }
+  if (tab === 'records')   Promise.all([loadPunchStaffOptions(), loadPunchRecords()]);
+  if (tab === 'manual')    Promise.all([loadManualStaffOptions(), loadManualRecords()]);
   if (tab === 'staff')     loadPunchStaff();
   if (tab === 'requests')  { loadPunchRequests(); setTabDot('tabdot-punchrq', 0); }
   if (tab === 'overtime')  { otFilterChanged(); setTabDot('tabdot-overtime', 0); }
@@ -4261,7 +4292,7 @@ async function loadPunchSummary() {
 // ── 打卡記錄 ──────────────────────────────────────────────────
 async function loadPunchStaffOptions(selId='rec-filter-staff') {
   if (!punchStaffList.length) {
-    const { ok, data } = await api('/api/punch/staff', {}, true);
+    const { ok, data } = await cachedApi('/api/punch/staff');
     if (ok) punchStaffList = data;
   }
   const sel = document.getElementById(selId);
@@ -4339,7 +4370,7 @@ async function deletePunchRec(id) {
 // ── 補打卡 ────────────────────────────────────────────────────
 async function loadManualStaffOptions() {
   if (!punchStaffList.length) {
-    const { ok, data } = await api('/api/punch/staff', {}, true);
+    const { ok, data } = await cachedApi('/api/punch/staff');
     if (ok) punchStaffList = data;
   }
   const sel = document.getElementById('man-staff');
@@ -4373,7 +4404,7 @@ async function submitManualPunch() {
 async function loadPunchStaff() {
   const tb = document.getElementById('punch-staff-tbody');
   tb.innerHTML = Array(4).fill(0).map(() => `<tr class="skeleton-row">${Array(7).fill(0).map((_,i)=>`<td><span class="skel" style="width:${[80,60,60,80,100,40,80][i]}px"></span></td>`).join('')}</tr>`).join('');
-  const { ok, data } = await api('/api/punch/staff', {}, true);
+  const { ok, data } = await cachedApi('/api/punch/staff');
   punchStaffList = ok ? data : [];
   document.getElementById('punch-staff-count').textContent = `共 ${punchStaffList.length} 位員工`;
   if (!punchStaffList.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-text">尚無員工</div></td></tr>'; return; }
@@ -4464,11 +4495,13 @@ async function savePunchStaff() {
   const method = id ? 'PUT' : 'POST';
   const { ok } = await api(url, { method, body: JSON.stringify(body) });
   if (!ok) return;
+  invalidateCache('/api/punch/staff');
   closePunchStaffModal(); showToast(id ? '已更新' : '員工已新增', 'success'); await loadPunchStaff();
 }
 async function deletePunchStaff(id) {
   if (!confirm('確定刪除此員工？其所有打卡記錄也會一併刪除。')) return;
   await api(`/api/punch/staff/${id}`, { method: 'DELETE' });
+  invalidateCache('/api/punch/staff');
   showToast('已刪除', 'success'); await loadPunchStaff();
 }
 
@@ -4476,10 +4509,12 @@ async function deletePunchStaff(id) {
 let gpsLocList = [], editingLocId = null;
 
 async function loadGpsSettings() {
-  const { ok: ok1, data: s } = await api('/api/punch/settings', {}, true);
-  if (ok1) document.getElementById('gps-required').value = s.gps_required ? '1' : '0';
-  const { ok: ok2, data: locs } = await api('/api/punch/locations', {}, true);
-  gpsLocList = ok2 ? locs : [];
+  const [r1, r2] = await Promise.all([
+    api('/api/punch/settings', {}, true),
+    cachedApi('/api/punch/locations'),
+  ]);
+  if (r1.ok) document.getElementById('gps-required').value = r1.data.gps_required ? '1' : '0';
+  gpsLocList = r2.ok ? r2.data : [];
   renderLocList();
 }
 async function saveGpsConfig() {
@@ -5142,7 +5177,7 @@ async function openShiftAssignModal(prefillDate=null, prefillStaffId=null) {
     shiftTypes = ok ? data.filter(t=>t.active) : [];
   }
   if (!punchStaffList.length) {
-    const { ok, data } = await api('/api/punch/staff', {}, true);
+    const { ok, data } = await cachedApi('/api/punch/staff');
     punchStaffList = ok ? data : [];
   }
   const sl = document.getElementById('sam-staff-list');
@@ -5461,7 +5496,7 @@ function switchLeaveTab(tab) {
     document.getElementById('leavetab-'+t).classList.toggle('active', t===tab);
     document.getElementById('leave-panel-'+t).style.display = t===tab?'':'none';
   });
-  if (tab==='requests') { loadLeaveStaffOptions(); loadLeaveRequests(); setTabDot('tabdot-leaverq', 0); }
+  if (tab==='requests') { Promise.all([loadLeaveStaffOptions(), loadLeaveRequests()]); setTabDot('tabdot-leaverq', 0); }
   if (tab==='calendar') loadLeaveCalendar();
   if (tab==='balance')  loadLeaveBalances();
   if (tab==='types')    loadLeaveTypes();
@@ -5469,7 +5504,7 @@ function switchLeaveTab(tab) {
 
 async function loadLeaveStaffOptions() {
   if (!leaveStaffList.length) {
-    const {ok,data} = await api('/api/punch/staff',{},true);
+    const {ok,data} = await cachedApi('/api/punch/staff');
     leaveStaffList = ok?data:[];
   }
   const sel = document.getElementById('leave-req-staff');
@@ -5558,7 +5593,7 @@ async function openLeaveAdminModal(id=null) {
     leaveTypesList = ok?data:[];
   }
   if (!leaveStaffList.length) {
-    const {ok,data} = await api('/api/punch/staff',{},true);
+    const {ok,data} = await cachedApi('/api/punch/staff');
     leaveStaffList = ok?data.filter(s=>s.active):[];
   }
   document.getElementById('lam-staff').innerHTML = leaveStaffList.map(s=>`<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
@@ -8861,7 +8896,7 @@ async function initPerf() {
   // Pre-populate staff filter dropdown
   const filterStaff = document.getElementById('perf-filter-staff');
   if (filterStaff && filterStaff.options.length <= 1) {
-    const d = await api('/api/punch/staff');
+    const d = await cachedApi('/api/punch/staff');
     if (d.ok) {
       const list = Array.isArray(d.data) ? d.data : [];
       filterStaff.innerHTML = '<option value="">全部員工</option>' +
@@ -8910,7 +8945,7 @@ async function initPerfNewForm() {
   // 填充員工選單
   const staffSel = document.getElementById('pf-staff');
   if (staffSel && staffSel.options.length <= 1) {
-    const d = await api('/api/punch/staff');
+    const d = await cachedApi('/api/punch/staff');
     if (d.ok) {
       const list = Array.isArray(d.data) ? d.data : [];
       staffSel.innerHTML = '<option value="">選擇員工</option>' +
@@ -8931,7 +8966,7 @@ async function initPerfNewForm() {
   // 也填充考核記錄頁面的員工篩選
   const filterStaff = document.getElementById('perf-filter-staff');
   if (filterStaff && filterStaff.options.length <= 1) {
-    const d2 = await api('/api/punch/staff');
+    const d2 = await cachedApi('/api/punch/staff');
     if (d2.ok) {
       const list2 = Array.isArray(d2.data) ? d2.data : [];
       filterStaff.innerHTML = '<option value="">全部員工</option>' +
@@ -10089,7 +10124,7 @@ async function initTravel() {
   // populate staff filter
   const staffSel = document.getElementById('travel-filter-staff');
   if (staffSel.options.length <= 1) {
-    const { ok, data } = await api('/api/punch/staff', {}, true);
+    const { ok, data } = await cachedApi('/api/punch/staff');
     if (ok) {
       data.filter(s=>s.active).forEach(s => {
         const opt = document.createElement('option');
@@ -10161,7 +10196,7 @@ async function openTravelModal(id=null) {
   // populate staff
   const staffSel = document.getElementById('tm-staff');
   if (!staffSel.options.length || staffSel.options.length === 1) {
-    const { ok, data } = await api('/api/punch/staff', {}, true);
+    const { ok, data } = await cachedApi('/api/punch/staff');
     if (ok) staffSel.innerHTML = data.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
   }
   if (id) {
@@ -10439,7 +10474,7 @@ async function openLoanModal(assetId, assetName) {
   document.getElementById('lm-purpose').value     = '';
   const staffSel = document.getElementById('lm-staff');
   if (!staffSel.options.length) {
-    const { ok, data } = await api('/api/punch/staff', {}, true);
+    const { ok, data } = await cachedApi('/api/punch/staff');
     if (ok) staffSel.innerHTML = data.filter(s=>s.active).map(s=>`<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
   }
   document.getElementById('loan-modal').style.display = 'flex';

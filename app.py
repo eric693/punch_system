@@ -424,15 +424,26 @@ def init_db():
         "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS review_note  TEXT DEFAULT ''",
         "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS reviewed_at  TIMESTAMPTZ",
         # ── 效能索引 ──────────────────────────────────────────────────────────
-        "CREATE INDEX IF NOT EXISTS idx_punch_records_staff_at      ON punch_records(staff_id, punched_at)",
-        "CREATE INDEX IF NOT EXISTS idx_punch_records_punched_at    ON punch_records(punched_at)",
-        "CREATE INDEX IF NOT EXISTS idx_punch_records_active        ON punch_records(deleted_at) WHERE deleted_at IS NULL",
-        "CREATE INDEX IF NOT EXISTS idx_shift_assignments_staff_date ON shift_assignments(staff_id, shift_date)",
-        "CREATE INDEX IF NOT EXISTS idx_leave_requests_staff        ON leave_requests(staff_id, status, start_date)",
-        "CREATE INDEX IF NOT EXISTS idx_overtime_requests_staff     ON overtime_requests(staff_id, status, request_date)",
-        "CREATE INDEX IF NOT EXISTS idx_schedule_requests_month     ON schedule_requests(staff_id, month)",
-        "CREATE INDEX IF NOT EXISTS idx_punch_staff_active          ON punch_staff(active)",
-        "CREATE INDEX IF NOT EXISTS idx_salary_records_staff_month  ON salary_records(staff_id, month)",
+        "CREATE INDEX IF NOT EXISTS idx_punch_records_staff_at       ON punch_records(staff_id, punched_at)",
+        "CREATE INDEX IF NOT EXISTS idx_punch_records_punched_at     ON punch_records(punched_at)",
+        "CREATE INDEX IF NOT EXISTS idx_punch_records_active         ON punch_records(deleted_at) WHERE deleted_at IS NULL",
+        "CREATE INDEX IF NOT EXISTS idx_punch_records_type_date      ON punch_records(punch_type, (punched_at AT TIME ZONE 'Asia/Taipei')::date) WHERE deleted_at IS NULL",
+        "CREATE INDEX IF NOT EXISTS idx_shift_assignments_staff_date  ON shift_assignments(staff_id, shift_date)",
+        "CREATE INDEX IF NOT EXISTS idx_shift_assignments_date        ON shift_assignments(shift_date)",
+        "CREATE INDEX IF NOT EXISTS idx_leave_requests_staff         ON leave_requests(staff_id, status, start_date)",
+        "CREATE INDEX IF NOT EXISTS idx_leave_requests_date_range    ON leave_requests(start_date, end_date) WHERE status='approved'",
+        "CREATE INDEX IF NOT EXISTS idx_leave_requests_status        ON leave_requests(status)",
+        "CREATE INDEX IF NOT EXISTS idx_overtime_requests_staff      ON overtime_requests(staff_id, status, request_date)",
+        "CREATE INDEX IF NOT EXISTS idx_overtime_requests_status     ON overtime_requests(status)",
+        "CREATE INDEX IF NOT EXISTS idx_schedule_requests_month      ON schedule_requests(staff_id, month)",
+        "CREATE INDEX IF NOT EXISTS idx_schedule_requests_status     ON schedule_requests(status, month)",
+        "CREATE INDEX IF NOT EXISTS idx_punch_requests_status        ON punch_requests(status)",
+        "CREATE INDEX IF NOT EXISTS idx_punch_staff_active           ON punch_staff(active)",
+        "CREATE INDEX IF NOT EXISTS idx_salary_records_staff_month   ON salary_records(staff_id, month)",
+        "CREATE INDEX IF NOT EXISTS idx_salary_records_month         ON salary_records(month)",
+        "CREATE INDEX IF NOT EXISTS idx_finance_records_date_type    ON finance_records(record_date, type)",
+        "CREATE INDEX IF NOT EXISTS idx_announcements_status         ON announcements(status, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_public_holidays_date         ON public_holidays(date)",
     ]
     for sql in migrations:
         try:
@@ -2886,26 +2897,31 @@ def api_sched_submit():
                 return jsonify({'error': f'申請天數（{len(dates)}天）超過{quota_source}（{effective_quota}天）'}), 422
 
             overcrowded = []
-            for d in dates:
+            if dates:
+                # 一次查詢取出所有申請日期的他人排休計數，消滅 N+1
                 try:
-                    others = conn.execute("""
-                        SELECT COUNT(*) as cnt
+                    count_rows = conn.execute("""
+                        SELECT elem, COUNT(*) as cnt
                         FROM schedule_requests,
                              jsonb_array_elements_text(dates) as elem
                         WHERE month=%s AND status IN ('approved','pending')
-                          AND staff_id != %s AND elem=%s
-                    """, (month, sid, d)).fetchone()
-                    others_count = int(others['cnt']) if others else 0
+                          AND staff_id != %s
+                          AND elem = ANY(%s)
+                        GROUP BY elem
+                    """, (month, sid, dates)).fetchall()
+                    date_counts = {r['elem']: int(r['cnt']) for r in count_rows}
                 except Exception:
-                    others_count = 0
-                if others_count >= cfg['max_off_per_day']:
-                    dt_obj = _dt.strptime(d, '%Y-%m-%d')
-                    overcrowded.append({
-                        'date': d,
-                        'weekday': WEEKDAY_ZH[dt_obj.weekday()],
-                        'count': others_count,
-                        'max': cfg['max_off_per_day']
-                    })
+                    date_counts = {}
+                for d in dates:
+                    others_count = date_counts.get(d, 0)
+                    if others_count >= cfg['max_off_per_day']:
+                        dt_obj = _dt.strptime(d, '%Y-%m-%d')
+                        overcrowded.append({
+                            'date': d,
+                            'weekday': WEEKDAY_ZH[dt_obj.weekday()],
+                            'count': others_count,
+                            'max': cfg['max_off_per_day']
+                        })
             if overcrowded:
                 msgs = [f"{x['date']}（{x['weekday']}）已有 {x['count']} 人排休" for x in overcrowded]
                 return jsonify({'error': '以下日期休假人數已達上限：' + '、'.join(msgs), 'overcrowded': overcrowded}), 422
@@ -3122,7 +3138,9 @@ def api_shift_types_public():
         rows = conn.execute(
             "SELECT * FROM shift_types WHERE active=TRUE ORDER BY sort_order, id"
         ).fetchall()
-    return jsonify([shift_type_row(r) for r in rows])
+    resp = jsonify([shift_type_row(r) for r in rows])
+    resp.headers['Cache-Control'] = 'private, max-age=600'
+    return resp
 
 @app.route('/api/shifts/types', methods=['POST'])
 @require_module('sched')
@@ -4264,7 +4282,9 @@ def api_leave_types_list():
 def api_leave_types_public():
     with get_db() as conn:
         rows = conn.execute("SELECT * FROM leave_types WHERE active=TRUE ORDER BY sort_order, id").fetchall()
-    return jsonify([leave_type_row(r) for r in rows])
+    resp = jsonify([leave_type_row(r) for r in rows])
+    resp.headers['Cache-Control'] = 'private, max-age=600'
+    return resp
 
 @app.route('/api/leave/types', methods=['POST'])
 @require_module('leave')
@@ -6109,7 +6129,9 @@ def api_holidays_public():
             f"SELECT date, name FROM public_holidays WHERE {' AND '.join(conds)} ORDER BY date",
             params
         ).fetchall()
-    return jsonify({r['date'].isoformat(): r['name'] for r in rows})
+    resp = jsonify({r['date'].isoformat(): r['name'] for r in rows})
+    resp.headers['Cache-Control'] = 'private, max-age=3600'
+    return resp
 
 @app.route('/api/holidays', methods=['POST'])
 @require_module('holiday')
@@ -6692,78 +6714,58 @@ def api_dashboard():
 
     with get_db() as conn:
 
-        # ── 今日出勤狀況 ─────────────────────────────────────────
-        total_staff = conn.execute(
-            "SELECT COUNT(*) as c FROM punch_staff WHERE active=TRUE"
-        ).fetchone()['c']
-
-        # 今日已打上班卡的人數
-        clocked_in = conn.execute("""
-            SELECT COUNT(DISTINCT staff_id) as c
-            FROM punch_records
-            WHERE punch_type='in'
-              AND (punched_at AT TIME ZONE 'Asia/Taipei')::date = %s
-              AND deleted_at IS NULL
-        """, (today,)).fetchone()['c']
-
-        # 今日已打下班卡的人數
-        clocked_out = conn.execute("""
-            SELECT COUNT(DISTINCT staff_id) as c
-            FROM punch_records
-            WHERE punch_type='out'
-              AND (punched_at AT TIME ZONE 'Asia/Taipei')::date = %s
-              AND deleted_at IS NULL
-        """, (today,)).fetchone()['c']
-
-        # 今日請假人數（已核准）
-        on_leave_today = conn.execute("""
-            SELECT COUNT(DISTINCT staff_id) as c
-            FROM leave_requests
-            WHERE status='approved'
-              AND start_date <= %s AND end_date >= %s
-        """, (today, today)).fetchone()['c']
-
-        # 今日出勤明細（每人狀態）
+        # ── 今日出勤狀況 + 請假明細 (單一查詢，消滅 N+1) ─────────
+        # 一次 JOIN 取出每人打卡 + 請假資訊，避免逐人查詢
         today_detail_rows = conn.execute("""
             SELECT ps.id, ps.name, ps.role,
                    MAX(CASE WHEN pr.punch_type='in'  THEN to_char(pr.punched_at AT TIME ZONE 'Asia/Taipei','HH24:MI') END) as clock_in,
                    MAX(CASE WHEN pr.punch_type='out' THEN to_char(pr.punched_at AT TIME ZONE 'Asia/Taipei','HH24:MI') END) as clock_out,
-                   COUNT(pr.id) as punch_count
+                   COUNT(pr.id) as punch_count,
+                   MIN(lt.name) as leave_name
             FROM punch_staff ps
             LEFT JOIN punch_records pr
               ON pr.staff_id = ps.id
               AND (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date = %s
+              AND pr.deleted_at IS NULL
+            LEFT JOIN leave_requests lr
+              ON lr.staff_id = ps.id AND lr.status='approved'
+              AND lr.start_date <= %s AND lr.end_date >= %s
+            LEFT JOIN leave_types lt ON lt.id = lr.leave_type_id
             WHERE ps.active = TRUE
             GROUP BY ps.id, ps.name, ps.role
             ORDER BY ps.name
-        """, (today,)).fetchall()
+        """, (today, today, today)).fetchall()
+
+        # ── 待審申請數 (4 → 1 查詢) ──────────────────────────────
+        pending_row = conn.execute("""
+            SELECT
+              (SELECT COUNT(*) FROM punch_requests     WHERE status='pending')                          AS pending_punch,
+              (SELECT COUNT(*) FROM overtime_requests  WHERE status='pending')                          AS pending_ot,
+              (SELECT COUNT(*) FROM schedule_requests  WHERE status IN ('pending','modified_pending'))  AS pending_sched,
+              (SELECT COUNT(*) FROM leave_requests     WHERE status='pending')                          AS pending_leave
+        """).fetchone()
+        pending_punch = int(pending_row['pending_punch'])
+        pending_ot    = int(pending_row['pending_ot'])
+        pending_sched = int(pending_row['pending_sched'])
+        pending_leave = int(pending_row['pending_leave'])
+
+        # ── 彙整今日統計 ─────────────────────────────────────────
+        total_staff    = sum(1 for _ in today_detail_rows)
+        clocked_in     = sum(1 for r in today_detail_rows if r['clock_in'])
+        clocked_out    = sum(1 for r in today_detail_rows if r['clock_out'])
+        on_leave_today = sum(1 for r in today_detail_rows if r['leave_name'] and not r['clock_in'])
 
         today_detail = []
         for r in today_detail_rows:
-            # Check if on leave
-            leave_row = conn.execute("""
-                SELECT lt.name as leave_name
-                FROM leave_requests lr
-                JOIN leave_types lt ON lt.id = lr.leave_type_id
-                WHERE lr.staff_id=%s AND lr.status='approved'
-                  AND lr.start_date <= %s AND lr.end_date >= %s
-                LIMIT 1
-            """, (r['id'], today, today)).fetchone()
-
             if r['clock_in']:
                 if r['clock_out']:
-                    status = 'done'
-                    status_label = '已下班'
+                    status = 'done';   status_label = '已下班'
                 else:
-                    status = 'working'
-                    status_label = '上班中'
-            elif leave_row:
-                status = 'leave'
-                status_label = leave_row['leave_name']
+                    status = 'working'; status_label = '上班中'
+            elif r['leave_name']:
+                status = 'leave';  status_label = r['leave_name']
             else:
-                status = 'absent'
-                status_label = '未出勤'
-
+                status = 'absent'; status_label = '未出勤'
             today_detail.append({
                 'id':           r['id'],
                 'name':         r['name'],
@@ -6774,12 +6776,6 @@ def api_dashboard():
                 'status':       status,
                 'status_label': status_label,
             })
-
-        # ── 待審申請數 ───────────────────────────────────────────
-        pending_punch   = conn.execute("SELECT COUNT(*) as c FROM punch_requests WHERE status='pending'").fetchone()['c']
-        pending_ot      = conn.execute("SELECT COUNT(*) as c FROM overtime_requests WHERE status='pending'").fetchone()['c']
-        pending_sched   = conn.execute("SELECT COUNT(*) as c FROM schedule_requests WHERE status IN ('pending','modified_pending')").fetchone()['c']
-        pending_leave   = conn.execute("SELECT COUNT(*) as c FROM leave_requests WHERE status='pending'").fetchone()['c']
 
         # ── 本月薪資總覽 ─────────────────────────────────────────
         sal_rows = conn.execute("""
