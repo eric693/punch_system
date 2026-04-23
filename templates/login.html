@@ -138,8 +138,12 @@ const LOGIN_I18N = {
              noDevice:'找不到已綁定的裝置', success:'驗證成功，正在跳轉...', cancelled:'已取消或逾時', failed:'驗證失敗：' },
   'en':    { brand:'Admin Panel', bio:'Fingerprint / Face ID', orPw:'or sign in with password', userLabel:'Username',
              userPh:'Enter username', pwLabel:'Password', pwPh:'Enter password', submit:'Sign In',
-             footer:'Attendance & Schedule System', toggle:'中文', verifying:'Verifying...',
-             noDevice:'No registered device found', success:'Verified, redirecting...', cancelled:'Cancelled or timed out', failed:'Verification failed: ' }
+             footer:'Attendance & Schedule System', toggle:'日本語', verifying:'Verifying...',
+             noDevice:'No registered device found', success:'Verified, redirecting...', cancelled:'Cancelled or timed out', failed:'Verification failed: ' },
+  'ja':    { brand:'管理パネル', bio:'指紋 / Face ID ログイン', orPw:'またはパスワードでログイン', userLabel:'ユーザー名',
+             userPh:'ユーザー名を入力', pwLabel:'パスワード', pwPh:'パスワードを入力', submit:'ログイン',
+             footer:'勤怠 & シフト管理システム', toggle:'中文', verifying:'認証中...',
+             noDevice:'登録済みデバイスが見つかりません', success:'認証成功、転送中...', cancelled:'キャンセルまたはタイムアウト', failed:'認証失敗：' }
 };
 let _loginLang = localStorage.getItem('adminLang') || 'zh-TW';
 function loginT(k) { return (LOGIN_I18N[_loginLang]||LOGIN_I18N['zh-TW'])[k] || k; }
@@ -159,13 +163,13 @@ function loginApplyI18n() {
   document.documentElement.lang = _loginLang;
 }
 function loginToggleLang() {
-  _loginLang = _loginLang === 'zh-TW' ? 'en' : 'zh-TW';
+  const cycle = { 'zh-TW': 'en', 'en': 'ja', 'ja': 'zh-TW' };
+  _loginLang = cycle[_loginLang] || 'zh-TW';
   localStorage.setItem('adminLang', _loginLang);
   loginApplyI18n();
 }
 document.addEventListener('DOMContentLoaded', () => {
-  if (_loginLang !== 'zh-TW') loginApplyI18n();
-  else { const btn = document.getElementById('login-lang-btn'); if (btn) btn.textContent = 'EN'; }
+  loginApplyI18n();
 });
 
 // ── WebAuthn helpers ──────────────────────────────────────────────

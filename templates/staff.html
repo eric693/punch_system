@@ -2985,6 +2985,17 @@ const STAFF_I18N = {
     'tab.myanomalies':'Anomalies','tab.leavereport':'Leave Report','tab.payslip':'Payslip',
     'tab.expense':'Expenses','tab.myperf':'Performance','tab.mytravel':'Travel',
     'tab.myloans':'My Loans','tab.biodev':'Security',
+    toggle:'日本語',
+  },
+  'ja': {
+    brand:'勤怠管理システム', loginTitle:'従業員ログイン', labelUser:'ユーザー名', labelPw:'パスワード',
+    userPh:'ユーザー名を入力', pwPh:'パスワードを入力', loginBtn:'ログイン', bio:'指紋 / Face ID ログイン',
+    logout:'ログアウト',
+    'tab.ann':'お知らせ','tab.punch':'打刻','tab.sched':'シフト申請','tab.leave':'休暇申請',
+    'tab.schedule_view':'マイシフト','tab.overtime':'残業申請','tab.attendance':'出勤カレンダー',
+    'tab.myanomalies':'異常照会','tab.leavereport':'休暇年報','tab.payslip':'給与明細',
+    'tab.expense':'経費精算','tab.myperf':'マイ評価','tab.mytravel':'出張申請',
+    'tab.myloans':'借用品','tab.biodev':'セキュリティ',
     toggle:'中文',
   }
 };
@@ -3014,7 +3025,8 @@ function staffApplyI18n() {
   document.documentElement.lang = _staffLang;
 }
 function staffToggleLang() {
-  _staffLang = _staffLang === 'zh-TW' ? 'en' : 'zh-TW';
+  const cycle = { 'zh-TW': 'en', 'en': 'ja', 'ja': 'zh-TW' };
+  _staffLang = cycle[_staffLang] || 'zh-TW';
   localStorage.setItem('adminLang', _staffLang);
   staffApplyI18n();
 }
@@ -3024,13 +3036,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (hdr && !document.getElementById('staff-lang-btn')) {
     const btn = document.createElement('button');
     btn.id = 'staff-lang-btn';
-    btn.textContent = _staffLang === 'zh-TW' ? 'EN' : '中文';
     btn.onclick = staffToggleLang;
     btn.style.cssText = 'position:absolute;top:14px;right:14px;padding:4px 10px;border-radius:6px;border:1.5px solid rgba(255,255,255,0.25);background:transparent;color:rgba(255,255,255,0.5);font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.08em;font-family:inherit;';
     document.body.style.position = 'relative';
     document.body.insertBefore(btn, document.body.firstChild);
   }
-  if (_staffLang !== 'zh-TW') staffApplyI18n();
+  staffApplyI18n();
 });
 </script>
 </body>
