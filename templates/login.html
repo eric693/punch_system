@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>後台管理 - 登入</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Sans+Thai:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -15,7 +15,7 @@
     --border: #dde3ef; --red: #d64242;
   }
   body {
-    font-family: 'Noto Sans TC', sans-serif;
+    font-family: 'Noto Sans TC', 'Noto Sans Thai', sans-serif;
     background: var(--navy);
     min-height: 100vh;
     display: flex;
@@ -67,7 +67,7 @@
   button[type="submit"] {
     width: 100%; margin-top: 24px; padding: 13px;
     background: var(--navy); color: #fff; border: none; border-radius: 8px;
-    font-family: 'Noto Sans TC', sans-serif; font-size: 15px; font-weight: 500;
+    font-family: 'Noto Sans TC', 'Noto Sans Thai', sans-serif; font-size: 15px; font-weight: 500;
     cursor: pointer; letter-spacing: 0.06em;
     transition: background 0.2s, transform 0.1s;
   }
@@ -77,7 +77,7 @@
   .bio-btn {
     width: 100%; padding: 12px; margin-bottom: 16px;
     background: #fff; border: 2px solid var(--accent); border-radius: 8px;
-    font-family: 'Noto Sans TC', sans-serif; font-size: 14px; font-weight: 600;
+    font-family: 'Noto Sans TC', 'Noto Sans Thai', sans-serif; font-size: 14px; font-weight: 600;
     color: var(--accent); cursor: pointer; display: flex; align-items: center;
     justify-content: center; gap: 8px; transition: background 0.2s, transform 0.1s;
   }
@@ -90,7 +90,7 @@
   .bio-msg { font-size: 12px; text-align: center; margin-top: 6px; min-height: 16px; }
   .bio-msg.err { color: var(--red); }
   .bio-msg.ok  { color: #2e9e6b; }
-  .lang-toggle { position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; cursor: pointer; letter-spacing: 0.08em; transition: all 0.15s; font-family: 'Noto Sans TC', sans-serif; }
+  .lang-toggle { position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; cursor: pointer; letter-spacing: 0.08em; transition: all 0.15s; font-family: 'Noto Sans TC', 'Noto Sans Thai', sans-serif; }
   .lang-toggle:hover { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.5); }
 </style>
 </head>
@@ -142,8 +142,16 @@ const LOGIN_I18N = {
              noDevice:'No registered device found', success:'Verified, redirecting...', cancelled:'Cancelled or timed out', failed:'Verification failed: ' },
   'ja':    { brand:'管理パネル', bio:'指紋 / Face ID ログイン', orPw:'またはパスワードでログイン', userLabel:'ユーザー名',
              userPh:'ユーザー名を入力', pwLabel:'パスワード', pwPh:'パスワードを入力', submit:'ログイン',
-             footer:'勤怠 & シフト管理システム', toggle:'中文', verifying:'認証中...',
-             noDevice:'登録済みデバイスが見つかりません', success:'認証成功、転送中...', cancelled:'キャンセルまたはタイムアウト', failed:'認証失敗：' }
+             footer:'勤怠 & シフト管理システム', toggle:'Tiếng Việt', verifying:'認証中...',
+             noDevice:'登録済みデバイスが見つかりません', success:'認証成功、転送中...', cancelled:'キャンセルまたはタイムアウト', failed:'認証失敗：' },
+  'vi':    { brand:'Quản trị', bio:'Vân tay / Face ID', orPw:'hoặc đăng nhập bằng mật khẩu', userLabel:'Tên tài khoản',
+             userPh:'Nhập tên tài khoản', pwLabel:'Mật khẩu', pwPh:'Nhập mật khẩu', submit:'Đăng nhập',
+             footer:'Hệ thống Chấm công & Lịch làm việc', toggle:'ภาษาไทย', verifying:'Đang xác thực...',
+             noDevice:'Không tìm thấy thiết bị đã đăng ký', success:'Xác thực thành công, đang chuyển...', cancelled:'Đã hủy hoặc hết giờ', failed:'Xác thực thất bại: ' },
+  'th':    { brand:'ระบบจัดการ', bio:'ลายนิ้วมือ / Face ID', orPw:'หรือเข้าสู่ระบบด้วยรหัสผ่าน', userLabel:'ชื่อผู้ใช้',
+             userPh:'กรอกชื่อผู้ใช้', pwLabel:'รหัสผ่าน', pwPh:'กรอกรหัสผ่าน', submit:'เข้าสู่ระบบ',
+             footer:'ระบบบันทึกเวลา & ตารางงาน', toggle:'中文', verifying:'กำลังยืนยัน...',
+             noDevice:'ไม่พบอุปกรณ์ที่ลงทะเบียน', success:'ยืนยันสำเร็จ กำลังเปลี่ยนเส้นทาง...', cancelled:'ยกเลิกหรือหมดเวลา', failed:'การยืนยันล้มเหลว: ' }
 };
 let _loginLang = localStorage.getItem('adminLang') || 'zh-TW';
 function loginT(k) { return (LOGIN_I18N[_loginLang]||LOGIN_I18N['zh-TW'])[k] || k; }
@@ -163,7 +171,7 @@ function loginApplyI18n() {
   document.documentElement.lang = _loginLang;
 }
 function loginToggleLang() {
-  const cycle = { 'zh-TW': 'en', 'en': 'ja', 'ja': 'zh-TW' };
+  const cycle = { 'zh-TW': 'en', 'en': 'ja', 'ja': 'vi', 'vi': 'th', 'th': 'zh-TW' };
   _loginLang = cycle[_loginLang] || 'zh-TW';
   localStorage.setItem('adminLang', _loginLang);
   loginApplyI18n();

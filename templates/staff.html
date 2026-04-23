@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>員工系統</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Sans+Thai:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -14,7 +14,7 @@
   --gold:#c8a96e;--orange:#e07b2a;--orange-light:#fef3e8;
   --bg:#f0f2f8;--surface:#fff;--text:#1e2a45;--muted:#8892a4;--border:#dde3ef;
 }
-html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans-serif;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;-webkit-tap-highlight-color:transparent}
 .wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 14px 48px}
 .header{width:100%;max-width:460px;text-align:center;margin-bottom:18px}
 .header-brand{font-size:10px;letter-spacing:.22em;color:rgba(255,255,255,.28);text-transform:uppercase;margin-bottom:5px}
@@ -27,14 +27,14 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
 .card-title{font-size:14px;font-weight:700;color:var(--navy)}
 .login-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:16px}
 .fl{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
-.fi{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:9px;font-family:"Noto Sans TC",sans-serif;font-size:15px;color:var(--text);outline:none;transition:border-color .15s;margin-bottom:12px;background:#fff}
+.fi{width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:9px;font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;font-size:15px;color:var(--text);outline:none;transition:border-color .15s;margin-bottom:12px;background:#fff}
 .fi:focus{border-color:var(--accent)}
-.login-btn{width:100%;padding:13px;border-radius:9px;border:none;background:var(--navy);color:#fff;font-family:"Noto Sans TC",sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.login-btn{width:100%;padding:13px;border-radius:9px;border:none;background:var(--navy);color:#fff;font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s}
 .login-btn:active{opacity:.85}
 .login-btn:disabled{opacity:.5}
 .login-err{color:var(--red);font-size:12px;text-align:center;margin-top:8px;min-height:16px}
 .tab-bar{display:flex;background:var(--navy-mid);border-bottom:1px solid rgba(255,255,255,.08)}
-.tab{flex:1;padding:13px 8px;text-align:center;font-family:"Noto Sans TC",sans-serif;font-size:13px;font-weight:600;color:rgba(255,255,255,.45);cursor:pointer;border:none;background:transparent;transition:all .15s;border-bottom:3px solid transparent}
+.tab{flex:1;padding:13px 8px;text-align:center;font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;font-size:13px;font-weight:600;color:rgba(255,255,255,.45);cursor:pointer;border:none;background:transparent;transition:all .15s;border-bottom:3px solid transparent}
 .tab.active{color:#fff;border-bottom-color:var(--gold)}
 .tab-body{padding:20px}
 .gps-bar{display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:16px}
@@ -47,7 +47,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
 .dot-err{background:var(--red)}.dot-spin{background:var(--accent);animation:pulse .8s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 .punch-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
-.punch-btn{padding:20px 8px;border-radius:12px;border:none;font-family:"Noto Sans TC",sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-align:center;transition:all .12s}
+.punch-btn{padding:20px 8px;border-radius:12px;border:none;font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;font-size:14px;font-weight:700;cursor:pointer;text-align:center;transition:all .12s}
 .punch-btn:active:not(:disabled){transform:scale(.95)}
 .punch-btn:disabled{opacity:.32;cursor:not-allowed}
 .p-sub{font-size:10px;font-weight:400;opacity:.75;margin-top:3px}
@@ -64,7 +64,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
 .log-sub{font-size:10px;color:var(--muted);text-align:right;margin-top:1px}
 .log-empty{font-size:13px;color:var(--muted);text-align:center;padding:8px 0}
 .month-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.month-inp{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:"Noto Sans TC",sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .15s;background:#fff}
+.month-inp{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .15s;background:#fff}
 .month-inp:focus{border-color:var(--accent)}
 .quota-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);border-radius:8px;margin-bottom:14px;flex-wrap:wrap}
 .quota-num{font-family:"DM Mono",monospace;font-size:20px;font-weight:700}
@@ -96,17 +96,17 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC",sans
 .dbadge{position:absolute;top:2px;right:3px;font-size:8px;font-weight:700;color:var(--muted)}
 .dbadge.full-b{color:var(--red)}
 .sel-summary{font-size:11px;color:var(--muted);min-height:16px;margin-bottom:12px;line-height:1.7}
-.note-inp{width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:"Noto Sans TC",sans-serif;font-size:13px;color:var(--text);outline:none;margin-bottom:12px;background:#fff}
+.note-inp{width:100%;padding:8px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;font-size:13px;color:var(--text);outline:none;margin-bottom:12px;background:#fff}
 .note-inp:focus{border-color:var(--accent)}
 .btn-row{display:flex;gap:8px}
-.btn{padding:10px 16px;border-radius:8px;font-family:"Noto Sans TC",sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn{padding:10px 16px;border-radius:8px;font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
 .btn-primary{background:var(--navy);color:#fff}
 .btn-primary:disabled{opacity:.38;cursor:not-allowed}
 .btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text)}
 .user-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid rgba(255,255,255,.07);background:var(--navy-mid)}
 .user-name{font-size:13px;font-weight:600;color:#fff}
 .user-role{font-size:11px;color:rgba(255,255,255,.45);margin-top:1px}
-.logout-btn{background:transparent;border:none;font-size:11px;color:rgba(255,255,255,.38);cursor:pointer;font-family:"Noto Sans TC",sans-serif;transition:color .15s}
+.logout-btn{background:transparent;border:none;font-size:11px;color:rgba(255,255,255,.38);cursor:pointer;font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;transition:color .15s}
 .logout-btn:hover{color:rgba(255,255,255,.7)}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:200;display:flex;align-items:flex-end;justify-content:center}
 .confirm-sheet{background:#fff;border-radius:16px 16px 0 0;padding:24px 20px 36px;width:100%;max-width:460px}
@@ -2996,6 +2996,28 @@ const STAFF_I18N = {
     'tab.myanomalies':'異常照会','tab.leavereport':'休暇年報','tab.payslip':'給与明細',
     'tab.expense':'経費精算','tab.myperf':'マイ評価','tab.mytravel':'出張申請',
     'tab.myloans':'借用品','tab.biodev':'セキュリティ',
+    toggle:'Tiếng Việt',
+  },
+  'vi': {
+    brand:'Hệ thống Chấm công', loginTitle:'Đăng nhập', labelUser:'Tài khoản', labelPw:'Mật khẩu',
+    userPh:'Nhập tài khoản', pwPh:'Nhập mật khẩu', loginBtn:'Đăng nhập', bio:'Vân tay / Face ID',
+    logout:'Đăng xuất',
+    'tab.ann':'Thông báo','tab.punch':'Chấm công','tab.sched':'Xin nghỉ','tab.leave':'Nghỉ phép',
+    'tab.schedule_view':'Lịch của tôi','tab.overtime':'Tăng ca','tab.attendance':'Lịch chấm công',
+    'tab.myanomalies':'Bất thường','tab.leavereport':'Báo cáo phép','tab.payslip':'Phiếu lương',
+    'tab.expense':'Chi phí','tab.myperf':'Đánh giá','tab.mytravel':'Công tác',
+    'tab.myloans':'Đồ mượn','tab.biodev':'Bảo mật',
+    toggle:'ภาษาไทย',
+  },
+  'th': {
+    brand:'ระบบบันทึกเวลา', loginTitle:'เข้าสู่ระบบ', labelUser:'ชื่อผู้ใช้', labelPw:'รหัสผ่าน',
+    userPh:'กรอกชื่อผู้ใช้', pwPh:'กรอกรหัสผ่าน', loginBtn:'เข้าสู่ระบบ', bio:'ลายนิ้วมือ / Face ID',
+    logout:'ออกจากระบบ',
+    'tab.ann':'ประกาศ','tab.punch':'บันทึกเวลา','tab.sched':'ขอวันหยุด','tab.leave':'ขอลา',
+    'tab.schedule_view':'ตารางของฉัน','tab.overtime':'ล่วงเวลา','tab.attendance':'ปฏิทินการเข้างาน',
+    'tab.myanomalies':'ผิดปกติ','tab.leavereport':'รายงานการลา','tab.payslip':'สลิปเงินเดือน',
+    'tab.expense':'ค่าใช้จ่าย','tab.myperf':'การประเมิน','tab.mytravel':'เดินทาง',
+    'tab.myloans':'ของที่ยืม','tab.biodev':'ความปลอดภัย',
     toggle:'中文',
   }
 };
@@ -3025,7 +3047,7 @@ function staffApplyI18n() {
   document.documentElement.lang = _staffLang;
 }
 function staffToggleLang() {
-  const cycle = { 'zh-TW': 'en', 'en': 'ja', 'ja': 'zh-TW' };
+  const cycle = { 'zh-TW': 'en', 'en': 'ja', 'ja': 'vi', 'vi': 'th', 'th': 'zh-TW' };
   _staffLang = cycle[_staffLang] || 'zh-TW';
   localStorage.setItem('adminLang', _staffLang);
   staffApplyI18n();

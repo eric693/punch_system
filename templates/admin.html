@@ -9,7 +9,7 @@
 <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&language=zh-TW" async defer onload="initGooglePlaces()"></script>
 {% endif %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Sans+Thai:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -20,7 +20,7 @@
   --sidebar-w: 220px;
 }
 html, body { height: 100%; }
-body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); display: flex; overflow: hidden; }
+body { font-family: 'Noto Sans TC', 'Noto Sans Thai', sans-serif; background: var(--bg); color: var(--text); display: flex; overflow: hidden; }
 
 /* Sidebar */
 .sidebar { width: var(--sidebar-w); background: var(--navy); height: 100vh; display: flex; flex-direction: column; flex-shrink: 0; position: fixed; left: 0; top: 0; z-index: 100; }
@@ -3504,7 +3504,136 @@ const TRANSLATIONS = {
     'card.tax_sales':'売上（収入）','card.tax_purchase':'仕入（費用）',
     'card.budget_actual':'予算 vs 実績','card.salary_sync':'月次給与同期',
     'card.line_binding':'LINE連携状況',
-    // Lang toggle (shows next language → back to zh-TW)
+    // Lang toggle (ja → next: vi)
+    'lang.toggle':'Tiếng Việt',
+  },
+  'vi': {
+    'nav.menu':'Menu','nav.dash':'Bảng điều khiển','nav.punch':'Chấm công','nav.sched':'Lịch làm việc',
+    'nav.leave':'Nghỉ phép','nav.salary':'Lương','nav.ann':'Thông báo','nav.holiday':'Ngày lễ',
+    'nav.finance':'Tài chính','nav.expense':'Chi phí','nav.perf':'Đánh giá','nav.stores':'Cửa hàng',
+    'nav.training':'Đào tạo','nav.travel':'Công tác','nav.assets':'Tài sản','nav.adminmgr':'Tài khoản',
+    'nav.bio':'Đăng ký sinh trắc','nav.logout':'Đăng xuất',
+    'page.dash':'Bảng điều khiển','page.punch':'Chấm công','page.sched':'Lịch làm việc','page.leave':'Nghỉ phép',
+    'page.salary':'Lương','page.ann':'Thông báo','page.holiday':'Ngày lễ','page.finance':'Tài chính',
+    'page.adminmgr':'Tài khoản','page.expense-review':'Duyệt chi phí','page.perf':'Đánh giá',
+    'page.stores':'Cửa hàng','page.training':'Đào tạo','page.travel':'Công tác','page.assets':'Tài sản',
+    'brand.title':'Quản trị','brand.sub':'Management System',
+    'punch.tab.summary':'Tổng hợp','punch.tab.anomaly':'Cảnh báo','punch.tab.mstats':'Thống kê tháng',
+    'punch.tab.records':'Lịch sử','punch.tab.manual':'Chấm bù','punch.tab.requests':'Yêu cầu chấm',
+    'punch.tab.overtime':'Tăng ca','punch.tab.staff':'Nhân viên','punch.tab.resigned':'Đã nghỉ',
+    'punch.tab.gps':'Cài GPS','punch.tab.line':'LINE打卡',
+    'sched.tab.shift':'Ca làm việc','sched.tab.shifttypes':'Loại ca','sched.tab.calendar':'Lịch',
+    'sched.tab.requests':'Xin nghỉ','sched.tab.summary':'Tổng nhân sự','sched.tab.conflicts':'Xung đột',
+    'sched.tab.config':'Cấu hình tháng','sched.tab.autogen':'Tự động tạo',
+    'leave.tab.requests':'Xin nghỉ','leave.tab.calendar':'Lịch','leave.tab.balance':'Số ngày còn','leave.tab.types':'Loại phép',
+    'salary.tab.calc':'Tính lương','salary.tab.settings':'Cài lương','salary.tab.items':'Mục lương',
+    'salary.tab.withholding':'Khấu trừ thuế','salary.tab.edi':'EDI BHXH',
+    'fin.tab.dash':'Doanh thu','fin.tab.records':'Thu chi','fin.tab.cats':'Danh mục',
+    'fin.tab.ocr':'OCR','fin.tab.docs':'Tài liệu','fin.tab.recurring':'Định kỳ',
+    'fin.tab.bank':'Đối chiếu NH','fin.tab.tax':'Khai thuế','fin.tab.ap':'Công nợ',
+    'fin.tab.budget':'Ngân sách','fin.tab.payroll':'Liên kết lương','fin.tab.stmts':'Báo cáo','fin.tab.settings':'Cài tài chính',
+    'label.month':'Tháng','label.year':'Năm','label.staff':'Nhân viên','label.date':'Ngày',
+    'label.status':'Trạng thái','label.gps_mode':'Chế độ GPS','label.store':'Cửa hàng','label.dept':'Phòng ban',
+    'label.keyword':'Từ khóa','label.type':'Loại','label.category':'Danh mục','label.range':'Khoảng thời gian',
+    'label.month_query':'Tháng tra cứu','label.bi_month':'Hai tháng','label.yearmonth':'Năm-Tháng',
+    'label.advance_warn':'Cảnh báo sớm','label.eval_template':'Mẫu đánh giá','label.eval_period':'Kỳ đánh giá',
+    'label.evaluator':'Người đánh giá','label.score_items':'Tiêu chí','label.remark':'Ghi chú',
+    'label.code':'Mã','label.label_tag':'Nhãn','label.min_score':'Điểm tối thiểu',
+    'btn.search':'Tìm','btn.add':'Thêm','btn.save':'Lưu','btn.cancel':'Hủy',
+    'btn.delete':'Xóa','btn.edit':'Sửa','btn.approve':'Duyệt','btn.reject':'Từ chối',
+    'btn.export_excel':'Xuất Excel','btn.export_csv':'Xuất CSV','btn.export_sum_excel':'Excel tổng hợp',
+    'btn.export_detail_excel':'Excel chi tiết','btn.export_sum_csv':'CSV tổng hợp','btn.export_detail_csv':'CSV chi tiết',
+    'btn.export_salary_excel':'Excel lương','btn.export_leave_excel':'Excel phép','btn.salary_csv':'CSV lương',
+    'btn.close':'Đóng','btn.submit':'Gửi','btn.confirm':'Xác nhận','btn.generate':'Tạo',
+    'btn.refresh':'Làm mới','btn.import':'Nhập','btn.calc':'Tính',
+    'btn.approve_punch':'Duyệt & Bù chấm','btn.reject_alt':'Từ chối','btn.query':'Tra cứu',
+    'status.pending':'Chờ duyệt','status.approved':'Đã duyệt','status.rejected':'Từ chối',
+    'status.all':'Tất cả','status.active':'Đang làm','status.resigned':'Đã nghỉ',
+    'dash.label.today_attendance':'Chấm công hôm nay','dash.label.present':'Có mặt',
+    'dash.label.absent':'Vắng','dash.label.leave':'Nghỉ phép','dash.label.late':'Trễ',
+    'dash.label.pending_approval':'Chờ duyệt',
+    'search.staff_placeholder':'🔍 Tìm nhân viên...',
+    'punch.label.in':'Vào ca','punch.label.out':'Tan ca','punch.label.break_out':'Bắt đầu nghỉ','punch.label.break_in':'Kết thúc nghỉ',
+    'req.status.pending':'Chờ duyệt','req.status.approved':'Đã duyệt','req.status.rejected':'Từ chối',
+    'sched.status.pending':'Đang xét','sched.status.approved':'Đã duyệt','sched.status.rejected':'Từ chối',
+    'sched.status.modified_pending':'Sửa đổi chờ','sched.status.not_submitted':'Chưa nộp',
+    'travel.status.pending':'Chờ duyệt','travel.status.approved':'Đã duyệt','travel.status.rejected':'Từ chối',
+    'asset.status.available':'Sẵn có','asset.status.loaned':'Đang mượn','asset.status.maintenance':'Bảo trì','asset.status.retired':'Thanh lý',
+    'card.daily_att':'Chấm công hàng ngày','card.today_status':'Tình trạng hôm nay',
+    'card.leave_dist':'Phân loại nghỉ phép','card.ot_rank':'Xếp hạng tăng ca',
+    'card.anomaly_warn':'Cảnh báo bất thường','card.pending':'Chờ phê duyệt','card.today_table':'Nhân sự hôm nay',
+    'card.labor_trend':'Xu hướng chi phí 12 tháng','card.annual_leave_dist':'Phân bố phép năm',
+    'card.att_heatmap':'Nhiệt đồ chấm công','card.punch_records':'Lịch sử chấm công',
+    'card.recent_manual':'Chấm bù gần đây','card.resigned':'Nhân viên đã nghỉ','card.holidays':'Danh sách ngày lễ',
+    'card.income_detail':'Chi tiết thu nhập','card.expense_detail':'Chi tiết chi phí',
+    'card.income_cats':'Danh mục thu','card.expense_cats':'Danh mục chi',
+    'card.tax_sales':'Doanh thu (thu)','card.tax_purchase':'Mua vào (chi)',
+    'card.budget_actual':'Ngân sách vs Thực tế','card.salary_sync':'Đồng bộ lương tháng','card.line_binding':'Liên kết LINE',
+    'lang.toggle':'ภาษาไทย',
+  },
+  'th': {
+    'nav.menu':'เมนู','nav.dash':'แดชบอร์ด','nav.punch':'บันทึกเวลา','nav.sched':'ตารางงาน',
+    'nav.leave':'การลา','nav.salary':'เงินเดือน','nav.ann':'ประกาศ','nav.holiday':'วันหยุด',
+    'nav.finance':'การเงิน','nav.expense':'ค่าใช้จ่าย','nav.perf':'ประเมินผล','nav.stores':'สาขา',
+    'nav.training':'ฝึกอบรม','nav.travel':'เดินทาง','nav.assets':'สินทรัพย์','nav.adminmgr':'บัญชีผู้ใช้',
+    'nav.bio':'ลงทะเบียนไบโอเมตริก','nav.logout':'ออกจากระบบ',
+    'page.dash':'แดชบอร์ด','page.punch':'บันทึกเวลา','page.sched':'ตารางงาน','page.leave':'การลา',
+    'page.salary':'เงินเดือน','page.ann':'ประกาศ','page.holiday':'วันหยุด','page.finance':'การเงิน',
+    'page.adminmgr':'บัญชีผู้ใช้','page.expense-review':'อนุมัติค่าใช้จ่าย','page.perf':'ประเมินผล',
+    'page.stores':'สาขา','page.training':'ฝึกอบรม','page.travel':'เดินทาง','page.assets':'สินทรัพย์',
+    'brand.title':'ระบบจัดการ','brand.sub':'Management System',
+    'punch.tab.summary':'สรุปการเข้างาน','punch.tab.anomaly':'แจ้งเตือน','punch.tab.mstats':'สถิติรายเดือน',
+    'punch.tab.records':'บันทึก','punch.tab.manual':'บันทึกแทน','punch.tab.requests':'คำขอบันทึก',
+    'punch.tab.overtime':'ล่วงเวลา','punch.tab.staff':'พนักงาน','punch.tab.resigned':'พ้นงานแล้ว',
+    'punch.tab.gps':'ตั้งค่า GPS','punch.tab.line':'LINE打卡',
+    'sched.tab.shift':'ตารางกะ','sched.tab.shifttypes':'ประเภทกะ','sched.tab.calendar':'ปฏิทิน',
+    'sched.tab.requests':'ขอวันหยุด','sched.tab.summary':'สรุปบุคลากร','sched.tab.conflicts':'ความขัดแย้ง',
+    'sched.tab.config':'ตั้งค่าเดือน','sched.tab.autogen':'สร้างอัตโนมัติ',
+    'leave.tab.requests':'ขอลา','leave.tab.calendar':'ปฏิทิน','leave.tab.balance':'วันลาคงเหลือ','leave.tab.types':'ประเภทการลา',
+    'salary.tab.calc':'คำนวณเงินเดือน','salary.tab.settings':'ตั้งค่าเงินเดือน','salary.tab.items':'รายการเงินเดือน',
+    'salary.tab.withholding':'หัก ณ ที่จ่าย','salary.tab.edi':'EDI ประกันสังคม',
+    'fin.tab.dash':'แดชบอร์ด P&L','fin.tab.records':'บันทึกรายรับรายจ่าย','fin.tab.cats':'หมวดหมู่',
+    'fin.tab.ocr':'OCR','fin.tab.docs':'เอกสาร','fin.tab.recurring':'รายการประจำ',
+    'fin.tab.bank':'กระทบยอดธนาคาร','fin.tab.tax':'ยื่นภาษี','fin.tab.ap':'ลูกหนี้/เจ้าหนี้',
+    'fin.tab.budget':'งบประมาณ','fin.tab.payroll':'เชื่อมเงินเดือน','fin.tab.stmts':'งบการเงิน','fin.tab.settings':'ตั้งค่าการเงิน',
+    'label.month':'เดือน','label.year':'ปี','label.staff':'พนักงาน','label.date':'วันที่',
+    'label.status':'สถานะ','label.gps_mode':'โหมด GPS','label.store':'สาขา','label.dept':'แผนก',
+    'label.keyword':'คำค้นหา','label.type':'ประเภท','label.category':'หมวดหมู่','label.range':'ช่วงเวลา',
+    'label.month_query':'เดือนที่ค้นหา','label.bi_month':'สองเดือน','label.yearmonth':'ปี-เดือน',
+    'label.advance_warn':'แจ้งเตือนล่วงหน้า','label.eval_template':'แม่แบบประเมิน','label.eval_period':'ช่วงประเมิน',
+    'label.evaluator':'ผู้ประเมิน','label.score_items':'หัวข้อคะแนน','label.remark':'หมายเหตุ',
+    'label.code':'รหัส','label.label_tag':'ป้าย','label.min_score':'คะแนนขั้นต่ำ',
+    'btn.search':'ค้นหา','btn.add':'เพิ่ม','btn.save':'บันทึก','btn.cancel':'ยกเลิก',
+    'btn.delete':'ลบ','btn.edit':'แก้ไข','btn.approve':'อนุมัติ','btn.reject':'ปฏิเสธ',
+    'btn.export_excel':'ส่งออก Excel','btn.export_csv':'ส่งออก CSV','btn.export_sum_excel':'Excel สรุป',
+    'btn.export_detail_excel':'Excel รายละเอียด','btn.export_sum_csv':'CSV สรุป','btn.export_detail_csv':'CSV รายละเอียด',
+    'btn.export_salary_excel':'Excel เงินเดือน','btn.export_leave_excel':'Excel การลา','btn.salary_csv':'CSV เงินเดือน',
+    'btn.close':'ปิด','btn.submit':'ส่ง','btn.confirm':'ยืนยัน','btn.generate':'สร้าง',
+    'btn.refresh':'รีเฟรช','btn.import':'นำเข้า','btn.calc':'คำนวณ',
+    'btn.approve_punch':'อนุมัติ & บันทึก','btn.reject_alt':'ปฏิเสธ','btn.query':'ค้นหา',
+    'status.pending':'รออนุมัติ','status.approved':'อนุมัติแล้ว','status.rejected':'ปฏิเสธ',
+    'status.all':'ทั้งหมด','status.active':'ทำงานอยู่','status.resigned':'ลาออกแล้ว',
+    'dash.label.today_attendance':'การเข้างานวันนี้','dash.label.present':'มาทำงาน',
+    'dash.label.absent':'ขาดงาน','dash.label.leave':'ลาหยุด','dash.label.late':'มาสาย',
+    'dash.label.pending_approval':'รออนุมัติ',
+    'search.staff_placeholder':'🔍 ค้นหาพนักงาน...',
+    'punch.label.in':'เข้างาน','punch.label.out':'ออกงาน','punch.label.break_out':'เริ่มพัก','punch.label.break_in':'สิ้นสุดพัก',
+    'req.status.pending':'รออนุมัติ','req.status.approved':'อนุมัติแล้ว','req.status.rejected':'ปฏิเสธ',
+    'sched.status.pending':'กำลังพิจารณา','sched.status.approved':'อนุมัติแล้ว','sched.status.rejected':'ปฏิเสธ',
+    'sched.status.modified_pending':'แก้ไขรออนุมัติ','sched.status.not_submitted':'ยังไม่ยื่น',
+    'travel.status.pending':'รออนุมัติ','travel.status.approved':'อนุมัติแล้ว','travel.status.rejected':'ปฏิเสธ',
+    'asset.status.available':'พร้อมใช้','asset.status.loaned':'ยืมอยู่','asset.status.maintenance':'ซ่อมบำรุง','asset.status.retired':'เลิกใช้',
+    'card.daily_att':'จำนวนเข้างานรายวัน','card.today_status':'สถานะวันนี้',
+    'card.leave_dist':'การกระจายประเภทการลา','card.ot_rank':'อันดับโอที',
+    'card.anomaly_warn':'แจ้งเตือนผิดปกติ','card.pending':'รออนุมัติ','card.today_table':'สถานะบุคลากรวันนี้',
+    'card.labor_trend':'แนวโน้มต้นทุนแรงงาน 12 เดือน','card.annual_leave_dist':'การกระจายการลารายปี',
+    'card.att_heatmap':'แผนที่ความร้อนการเข้างาน','card.punch_records':'บันทึกการเข้างาน',
+    'card.recent_manual':'บันทึกแทนล่าสุด','card.resigned':'พนักงานที่ลาออก','card.holidays':'รายการวันหยุด',
+    'card.income_detail':'รายละเอียดรายได้','card.expense_detail':'รายละเอียดค่าใช้จ่าย',
+    'card.income_cats':'หมวดหมู่รายได้','card.expense_cats':'หมวดหมู่รายจ่าย',
+    'card.tax_sales':'ภาษีขาย (รายได้)','card.tax_purchase':'ภาษีซื้อ (ค่าใช้จ่าย)',
+    'card.budget_actual':'งบประมาณ vs ความเป็นจริง','card.salary_sync':'การซิงค์เงินเดือน','card.line_binding':'สถานะการเชื่อม LINE',
+    // Lang toggle (th → back to zh-TW)
     'lang.toggle':'中文',
   }
 };
@@ -3588,9 +3717,9 @@ function setLang(lang) {
   }
 }
 
-// Cycle: 繁中 → English → 日本語 → 繁中
+// Cycle: 繁中 → English → 日本語 → Tiếng Việt → ภาษาไทย → 繁中
 function toggleLang() {
-  const cycle = { 'zh-TW': 'en', 'en': 'ja', 'ja': 'zh-TW' };
+  const cycle = { 'zh-TW': 'en', 'en': 'ja', 'ja': 'vi', 'vi': 'th', 'th': 'zh-TW' };
   setLang(cycle[_currentLang] || 'zh-TW');
 }
 
