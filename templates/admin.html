@@ -244,12 +244,16 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
              width:280px;background:#fff;border-radius:8px;border:1px solid var(--border);
              box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:2000;max-height:320px;overflow-y:auto"></div>
       </div>
-      <button id="lang-toggle-btn" onclick="toggleLang()"
-        style="padding:5px 12px;border-radius:6px;border:1.5px solid var(--border);background:transparent;
-               font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;letter-spacing:0.05em;
-               font-family:'Noto Sans TC',sans-serif;transition:all 0.15s"
-        onmouseover="this.style.color='var(--text)';this.style.borderColor='#aaa'"
-        onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">EN</button>
+      <select id="lang-select" onchange="setLang(this.value)"
+        style="padding:4px 8px;border-radius:6px;border:1.5px solid var(--border);background:#fff;
+               font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;
+               font-family:'Noto Sans TC','Noto Sans Thai',sans-serif;outline:none;transition:all 0.15s">
+        <option value="zh-TW">繁體中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+        <option value="vi">Tiếng Việt</option>
+        <option value="th">ภาษาไทย</option>
+      </select>
       <span style="font-size:12px;color:var(--muted)" id="topbar-admin-name"></span>
     </div>
   </header>
@@ -1699,18 +1703,18 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div id="training-panel-records" style="display:none">
       <div class="filter-bar" style="margin-bottom:16px;flex-wrap:wrap;gap:8px">
         <select id="training-filter-staff" class="filter-input" style="min-width:130px" onchange="loadTrainingRecords()">
-          <option value="">全部員工</option>
+          <option value="" data-i18n="training.staff.all">全部員工</option>
         </select>
         <select id="training-filter-cat" class="filter-input" style="min-width:120px" onchange="loadTrainingRecords()">
-          <option value="">全部類別</option>
-          <option value="food_safety">食品安全</option>
-          <option value="fire_safety">消防安全</option>
-          <option value="first_aid">急救訓練</option>
-          <option value="hygiene">衛生管理</option>
-          <option value="service">服務禮儀</option>
-          <option value="equipment">設備操作</option>
-          <option value="general">一般訓練</option>
-          <option value="other">其他</option>
+          <option value="" data-i18n="training.cat.all">全部類別</option>
+          <option value="food_safety" data-i18n="training.cat.food_safety">食品安全</option>
+          <option value="fire_safety" data-i18n="training.cat.fire_safety">消防安全</option>
+          <option value="first_aid" data-i18n="training.cat.first_aid">急救訓練</option>
+          <option value="hygiene" data-i18n="training.cat.hygiene">衛生管理</option>
+          <option value="service" data-i18n="training.cat.service">服務禮儀</option>
+          <option value="equipment" data-i18n="training.cat.equipment">設備操作</option>
+          <option value="general" data-i18n="training.cat.general">一般訓練</option>
+          <option value="other" data-i18n="training.cat.other">其他</option>
         </select>
         <button class="btn btn-primary btn-sm" onclick="openTrainingModal()">新增記錄</button>
         <span style="flex:1"></span>
@@ -2285,14 +2289,14 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div>
           <label class="form-label">類別 *</label>
           <select class="form-input" id="tm-category">
-            <option value="food_safety">食品安全</option>
-            <option value="fire_safety">消防安全</option>
-            <option value="first_aid">急救訓練</option>
-            <option value="hygiene">衛生管理</option>
-            <option value="service">服務禮儀</option>
-            <option value="equipment">設備操作</option>
-            <option value="general">一般訓練</option>
-            <option value="other">其他</option>
+            <option value="food_safety" data-i18n="training.cat.food_safety">食品安全</option>
+            <option value="fire_safety" data-i18n="training.cat.fire_safety">消防安全</option>
+            <option value="first_aid" data-i18n="training.cat.first_aid">急救訓練</option>
+            <option value="hygiene" data-i18n="training.cat.hygiene">衛生管理</option>
+            <option value="service" data-i18n="training.cat.service">服務禮儀</option>
+            <option value="equipment" data-i18n="training.cat.equipment">設備操作</option>
+            <option value="general" data-i18n="training.cat.general">一般訓練</option>
+            <option value="other" data-i18n="training.cat.other">其他</option>
           </select>
         </div>
       </div>
@@ -3322,6 +3326,17 @@ const TRANSLATIONS = {
     'card.tax_sales':'銷項（收入）','card.tax_purchase':'進項（費用）',
     'card.budget_actual':'類別預算 vs 實際支出','card.salary_sync':'各月薪資同步狀態',
     'card.line_binding':'員工 LINE 綁定狀態',
+    // Training categories
+    'training.cat.all':'全部類別','training.staff.all':'全部員工',
+    'training.cat.food_safety':'食品安全','training.cat.fire_safety':'消防安全',
+    'training.cat.first_aid':'急救訓練','training.cat.hygiene':'衛生管理',
+    'training.cat.service':'服務禮儀','training.cat.equipment':'設備操作',
+    'training.cat.general':'一般訓練','training.cat.other':'其他',
+    // Client-side error messages
+    'err.session_expired':'登入已逾時，即將跳轉至登入頁...',
+    'err.request_failed':'請求失敗（HTTP {n}）',
+    'err.network_retry':'網路錯誤，請重試',
+    'err.network':'網路錯誤',
     // Lang toggle (shows next language)
     'lang.toggle':'EN',
   },
@@ -3413,6 +3428,17 @@ const TRANSLATIONS = {
     'card.tax_sales':'Sales (Income)','card.tax_purchase':'Purchases (Expenses)',
     'card.budget_actual':'Budget vs Actual','card.salary_sync':'Monthly Salary Sync',
     'card.line_binding':'LINE Binding Status',
+    // Training categories
+    'training.cat.all':'All Categories','training.staff.all':'All Staff',
+    'training.cat.food_safety':'Food Safety','training.cat.fire_safety':'Fire Safety',
+    'training.cat.first_aid':'First Aid','training.cat.hygiene':'Hygiene Management',
+    'training.cat.service':'Service Etiquette','training.cat.equipment':'Equipment Operation',
+    'training.cat.general':'General Training','training.cat.other':'Other',
+    // Client-side error messages
+    'err.session_expired':'Session expired, redirecting to login...',
+    'err.request_failed':'Request failed (HTTP {n})',
+    'err.network_retry':'Network error, please retry',
+    'err.network':'Network error',
     // Lang toggle (shows next language)
     'lang.toggle':'日本語',
   },
@@ -3504,6 +3530,17 @@ const TRANSLATIONS = {
     'card.tax_sales':'売上（収入）','card.tax_purchase':'仕入（費用）',
     'card.budget_actual':'予算 vs 実績','card.salary_sync':'月次給与同期',
     'card.line_binding':'LINE連携状況',
+    // Training categories
+    'training.cat.all':'全カテゴリ','training.staff.all':'全スタッフ',
+    'training.cat.food_safety':'食品安全','training.cat.fire_safety':'消防安全',
+    'training.cat.first_aid':'応急処置訓練','training.cat.hygiene':'衛生管理',
+    'training.cat.service':'サービスマナー','training.cat.equipment':'設備操作',
+    'training.cat.general':'一般訓練','training.cat.other':'その他',
+    // Client-side error messages
+    'err.session_expired':'セッションが期限切れです。ログイン画面に戻ります...',
+    'err.request_failed':'リクエスト失敗（HTTP {n}）',
+    'err.network_retry':'ネットワークエラー。再試行してください',
+    'err.network':'ネットワークエラー',
     // Lang toggle (ja → next: vi)
     'lang.toggle':'Tiếng Việt',
   },
@@ -3569,6 +3606,17 @@ const TRANSLATIONS = {
     'card.income_cats':'Danh mục thu','card.expense_cats':'Danh mục chi',
     'card.tax_sales':'Doanh thu (thu)','card.tax_purchase':'Mua vào (chi)',
     'card.budget_actual':'Ngân sách vs Thực tế','card.salary_sync':'Đồng bộ lương tháng','card.line_binding':'Liên kết LINE',
+    // Training categories
+    'training.cat.all':'Tất cả danh mục','training.staff.all':'Tất cả nhân viên',
+    'training.cat.food_safety':'An toàn thực phẩm','training.cat.fire_safety':'An toàn phòng cháy',
+    'training.cat.first_aid':'Sơ cứu','training.cat.hygiene':'Quản lý vệ sinh',
+    'training.cat.service':'Lễ nghi dịch vụ','training.cat.equipment':'Vận hành thiết bị',
+    'training.cat.general':'Đào tạo chung','training.cat.other':'Khác',
+    // Client-side error messages
+    'err.session_expired':'Phiên đăng nhập hết hạn, đang chuyển hướng...',
+    'err.request_failed':'Yêu cầu thất bại (HTTP {n})',
+    'err.network_retry':'Lỗi mạng, vui lòng thử lại',
+    'err.network':'Lỗi mạng',
     'lang.toggle':'ภาษาไทย',
   },
   'th': {
@@ -3633,6 +3681,17 @@ const TRANSLATIONS = {
     'card.income_cats':'หมวดหมู่รายได้','card.expense_cats':'หมวดหมู่รายจ่าย',
     'card.tax_sales':'ภาษีขาย (รายได้)','card.tax_purchase':'ภาษีซื้อ (ค่าใช้จ่าย)',
     'card.budget_actual':'งบประมาณ vs ความเป็นจริง','card.salary_sync':'การซิงค์เงินเดือน','card.line_binding':'สถานะการเชื่อม LINE',
+    // Training categories
+    'training.cat.all':'ทุกหมวดหมู่','training.staff.all':'พนักงานทั้งหมด',
+    'training.cat.food_safety':'ความปลอดภัยด้านอาหาร','training.cat.fire_safety':'ความปลอดภัยจากอัคคีภัย',
+    'training.cat.first_aid':'การปฐมพยาบาล','training.cat.hygiene':'การจัดการสุขอนามัย',
+    'training.cat.service':'มารยาทการบริการ','training.cat.equipment':'การใช้อุปกรณ์',
+    'training.cat.general':'การฝึกอบรมทั่วไป','training.cat.other':'อื่นๆ',
+    // Client-side error messages
+    'err.session_expired':'เซสชันหมดอายุ กำลังเปลี่ยนเส้นทางไปยังหน้าเข้าสู่ระบบ...',
+    'err.request_failed':'คำขอล้มเหลว (HTTP {n})',
+    'err.network_retry':'เกิดข้อผิดพลาดเครือข่าย กรุณาลองใหม่',
+    'err.network':'ข้อผิดพลาดเครือข่าย',
     // Lang toggle (th → back to zh-TW)
     'lang.toggle':'中文',
   }
@@ -3700,8 +3759,8 @@ function applyI18n() {
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
   });
-  const togBtn = document.getElementById('lang-toggle-btn');
-  if (togBtn) togBtn.textContent = t('lang.toggle');
+  const langSel = document.getElementById('lang-select');
+  if (langSel) langSel.value = _currentLang;
   document.documentElement.lang = _currentLang;
 }
 
@@ -3729,24 +3788,27 @@ function toggleLang() {
 let _sessionExpired = false;
 async function api(url, opts = {}, silent = false) {
   try {
-    const res  = await fetch(url, { headers: {'Content-Type':'application/json'}, ...opts });
+    const res = await fetch(url, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', 'X-Lang': _currentLang, ...(opts.headers || {}) }
+    });
     let data;
     try { data = await res.json(); } catch(e) { data = {}; }
     if (!res.ok) {
       if (res.status === 401 && !_sessionExpired) {
         _sessionExpired = true;
-        showToast('登入已逾時，即將跳轉至登入頁...', 'error');
+        showToast(t('err.session_expired'), 'error');
         setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
         return { ok: false, data, status: 401 };
       }
-      const msg = data.error || `請求失敗（HTTP ${res.status}）`;
+      const msg = data.error || t('err.request_failed').replace('{n}', res.status);
       if (!silent) showToast(msg, 'error');
       return { ok: false, data, status: res.status };
     }
     return { ok: true, data, status: res.status };
   } catch(e) {
-    if (!silent) showToast('網路錯誤，請重試', 'error');
-    return { ok: false, data: { error: '網路錯誤' }, status: 0 };
+    if (!silent) showToast(t('err.network_retry'), 'error');
+    return { ok: false, data: { error: t('err.network') }, status: 0 };
   }
 }
 
@@ -10270,11 +10332,10 @@ async function loadAllStaffForAssign() {
 /* =====================================================================
    教育訓練追蹤
    ===================================================================== */
-const TRAINING_CAT_LABELS = {
-  food_safety:'食品安全', fire_safety:'消防安全', first_aid:'急救訓練',
-  hygiene:'衛生管理', service:'服務禮儀', equipment:'設備操作',
-  general:'一般訓練', other:'其他',
-};
+function trainingCatLabel(key) {
+  return t('training.cat.' + key) || key;
+}
+const TRAINING_CAT_LABELS = new Proxy({}, { get: (_, key) => trainingCatLabel(key) });
 
 async function initTraining() {
   await loadTrainingStaffFilter();

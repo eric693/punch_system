@@ -22,6 +22,7 @@ from linebot.models import (
 # shared modules (extracted for blueprint reuse)
 from db import get_db, _hash_pw, DATABASE_URL
 from auth import login_required, require_module, require_super
+from i18n import register_translate_hook
 
 app = Flask(__name__)
 
@@ -35,6 +36,7 @@ if not _secret_key:
     _secret_key = _hashlib.sha256(_seed.encode()).hexdigest()
     print("[WARNING] SECRET_KEY env var not set — using derived key. Please set SECRET_KEY for security.")
 app.secret_key = _secret_key
+register_translate_hook(app)
 
 from datetime import timedelta as _td_session
 app.config['PERMANENT_SESSION_LIFETIME'] = _td_session(hours=12)

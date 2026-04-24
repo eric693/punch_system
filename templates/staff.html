@@ -3023,6 +3023,16 @@ const STAFF_I18N = {
 };
 let _staffLang = localStorage.getItem('adminLang') || 'zh-TW';
 function staffT(k) { return (STAFF_I18N[_staffLang]||STAFF_I18N['zh-TW'])[k] || k; }
+
+// Inject X-Lang header into all fetch calls so backend can return translated messages
+(function(){
+  const _orig = window.fetch.bind(window);
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    const headers = Object.assign({'X-Lang': _staffLang}, opts.headers || {});
+    return _orig(url, Object.assign({}, opts, {headers}));
+  };
+})();
 function staffApplyI18n() {
   const s = (id, txt) => { const e = document.getElementById(id); if (e) { if (e.children.length > 0) { for (const n of e.childNodes) { if (n.nodeType === Node.TEXT_NODE && n.textContent.trim()) { n.textContent = txt; break; } } } else { e.textContent = txt; } } };
   const p = (id, txt) => { const e = document.getElementById(id); if (e) e.placeholder = txt; };
@@ -3042,26 +3052,29 @@ function staffApplyI18n() {
       for (const n of el.childNodes) { if (n.nodeType === Node.TEXT_NODE && n.textContent.trim()) { n.textContent = val; break; } }
     } else { el.textContent = val; }
   });
-  const btn = document.getElementById('staff-lang-btn');
-  if (btn) btn.textContent = staffT('toggle');
+  const sel = document.getElementById('staff-lang-btn');
+  if (sel && sel.tagName === 'SELECT') sel.value = _staffLang;
   document.documentElement.lang = _staffLang;
 }
-function staffToggleLang() {
-  const cycle = { 'zh-TW': 'en', 'en': 'ja', 'ja': 'vi', 'vi': 'th', 'th': 'zh-TW' };
-  _staffLang = cycle[_staffLang] || 'zh-TW';
-  localStorage.setItem('adminLang', _staffLang);
+function staffSetLang(lang) {
+  _staffLang = lang;
+  localStorage.setItem('adminLang', lang);
   staffApplyI18n();
 }
 document.addEventListener('DOMContentLoaded', () => {
-  // Inject lang toggle button into header
-  const hdr = document.querySelector('.header');
-  if (hdr && !document.getElementById('staff-lang-btn')) {
-    const btn = document.createElement('button');
-    btn.id = 'staff-lang-btn';
-    btn.onclick = staffToggleLang;
-    btn.style.cssText = 'position:absolute;top:14px;right:14px;padding:4px 10px;border-radius:6px;border:1.5px solid rgba(255,255,255,0.25);background:transparent;color:rgba(255,255,255,0.5);font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.08em;font-family:inherit;';
-    document.body.style.position = 'relative';
-    document.body.insertBefore(btn, document.body.firstChild);
+  // Inject lang select dropdown into header
+  if (!document.getElementById('staff-lang-btn')) {
+    const sel = document.createElement('select');
+    sel.id = 'staff-lang-btn';
+    sel.onchange = function() { staffSetLang(this.value); };
+    sel.style.cssText = 'position:fixed;top:14px;right:14px;z-index:999;padding:3px 6px;border-radius:6px;border:1.5px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;outline:none;';
+    [['zh-TW','繁體中文'],['en','English'],['ja','日本語'],['vi','Tiếng Việt'],['th','ภาษาไทย']].forEach(([v,l]) => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = l;
+      if (v === _staffLang) o.selected = true;
+      sel.appendChild(o);
+    });
+    document.body.appendChild(sel);
   }
   staffApplyI18n();
 });

@@ -90,12 +90,19 @@
   .bio-msg { font-size: 12px; text-align: center; margin-top: 6px; min-height: 16px; }
   .bio-msg.err { color: var(--red); }
   .bio-msg.ok  { color: #2e9e6b; }
-  .lang-toggle { position: absolute; top: 16px; right: 16px; padding: 4px 10px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.2); background: transparent; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; cursor: pointer; letter-spacing: 0.08em; transition: all 0.15s; font-family: 'Noto Sans TC', 'Noto Sans Thai', sans-serif; }
-  .lang-toggle:hover { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.5); }
+  .lang-select { position: absolute; top: 16px; right: 16px; padding: 4px 8px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'Noto Sans TC', 'Noto Sans Thai', sans-serif; outline: none; transition: all 0.15s; }
+  .lang-select:hover { border-color: rgba(255,255,255,0.5); color: rgba(255,255,255,0.95); }
+  .lang-select option { background: #1e2a45; color: #fff; }
 </style>
 </head>
 <body>
-<button class="lang-toggle" id="login-lang-btn" onclick="loginToggleLang()">EN</button>
+<select class="lang-select" id="login-lang-btn" onchange="loginSetLang(this.value)">
+  <option value="zh-TW">繁體中文</option>
+  <option value="en">English</option>
+  <option value="ja">日本語</option>
+  <option value="vi">Tiếng Việt</option>
+  <option value="th">ภาษาไทย</option>
+</select>
 <div class="login-card">
   <div class="brand">
     <div class="brand-title" id="login-brand-title">管理後台</div>
@@ -165,15 +172,15 @@ function loginApplyI18n() {
   s('login-label-pw', loginT('pwLabel'));
   s('login-submit-btn', loginT('submit'));
   s('login-footer', loginT('footer'));
-  s('login-lang-btn', loginT('toggle'));
+  const sel = document.getElementById('login-lang-btn');
+  if (sel) sel.value = _loginLang;
   p('un', loginT('userPh'));
   p('pw', loginT('pwPh'));
   document.documentElement.lang = _loginLang;
 }
-function loginToggleLang() {
-  const cycle = { 'zh-TW': 'en', 'en': 'ja', 'ja': 'vi', 'vi': 'th', 'th': 'zh-TW' };
-  _loginLang = cycle[_loginLang] || 'zh-TW';
-  localStorage.setItem('adminLang', _loginLang);
+function loginSetLang(lang) {
+  _loginLang = lang;
+  localStorage.setItem('adminLang', lang);
   loginApplyI18n();
 }
 document.addEventListener('DOMContentLoaded', () => {
@@ -217,7 +224,7 @@ async function doBioLogin(){
   try{
     const beginRes=await fetch('/api/webauthn/auth/begin',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','X-Lang':_loginLang},
       body:JSON.stringify({username})
     });
     if(!beginRes.ok){const d=await beginRes.json();bioMsg(d.error||loginT('noDevice'),'err');return;}
@@ -230,7 +237,7 @@ async function doBioLogin(){
     const cred=await navigator.credentials.get({publicKey:opts});
     const completeRes=await fetch('/api/webauthn/auth/complete',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','X-Lang':_loginLang},
       body:JSON.stringify({
         id:cred.id,
         rawId:b2b64url(cred.rawId),
