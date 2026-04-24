@@ -237,6 +237,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div class="topbar-actions">
       <div style="position:relative" id="staff-search-wrap">
         <input class="search-box" id="staff-search-input" placeholder="🔍 搜尋員工..."
+               data-i18n-placeholder="search.staff_placeholder"
                oninput="staffSearchInput(this.value)" onfocus="staffSearchInput(this.value)"
                onblur="setTimeout(closeStaffSearch,200)"
                style="width:180px;padding:7px 12px;font-size:13px">
@@ -277,22 +278,22 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px" id="dash-stat-cards">
       <div class="stat-card" style="border-left:4px solid var(--green)">
-        <div class="stat-label">今日出勤</div>
+        <div class="stat-label" data-i18n="dash.label.today_attendance">今日出勤</div>
         <div class="stat-value" id="ds-working">—</div>
-        <div class="stat-sub" id="ds-working-sub">人正在工作</div>
+        <div class="stat-sub" id="ds-working-sub"></div>
       </div>
       <div class="stat-card" style="border-left:4px solid var(--orange)">
-        <div class="stat-label">待審申請</div>
+        <div class="stat-label" data-i18n="dash.label.pending_approval">待審申請</div>
         <div class="stat-value" id="ds-pending">—</div>
-        <div class="stat-sub" id="ds-pending-sub">筆需要處理</div>
+        <div class="stat-sub" id="ds-pending-sub"></div>
       </div>
       <div class="stat-card" style="border-left:4px solid var(--accent)">
         <div class="stat-label" id="ds-salary-label">本月薪資總額</div>
         <div class="stat-value" id="ds-salary">—</div>
-        <div class="stat-sub" id="ds-salary-sub">已確認 / 全部</div>
+        <div class="stat-sub" id="ds-salary-sub"></div>
       </div>
       <div class="stat-card" style="border-left:4px solid var(--navy)">
-        <div class="stat-label">在職人員</div>
+        <div class="stat-label" data-i18n="dash.label.active_staff">在職人員</div>
         <div class="stat-value" id="ds-total">—</div>
         <div class="stat-sub" id="ds-total-sub">位員工</div>
       </div>
@@ -538,17 +539,17 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
         <span class="filter-label" data-i18n="label.status">狀態</span>
         <select class="filter-input" id="preq-filter-status" onchange="loadPunchRequests()" style="min-width:120px">
-          <option value="pending">待審核</option><option value="">全部</option>
-          <option value="approved">已核准</option><option value="rejected">已退回</option>
+          <option value="pending" data-i18n="req.status.pending">待審核</option><option value="" data-i18n="status.all">全部</option>
+          <option value="approved" data-i18n="req.status.approved">已核准</option><option value="rejected" data-i18n="req.status.rejected">已退回</option>
         </select>
-        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text)">
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text)" data-i18n="btn.select_all">
           <input type="checkbox" id="preq-select-all" onchange="selectAllBatch('punch',this.checked)">全選
         </label>
         <span style="flex:1"></span>
         <span id="preq-count" style="font-size:12px;color:var(--muted)"></span>
         <button class="btn btn-outline btn-sm" onclick="exportPunchRequestsExcel()">匯出 Excel</button>
-        <button class="btn btn-primary btn-sm" id="preq-batch-approve" style="display:none" onclick="batchReview('punch','approve')">批次核准</button>
-        <button class="btn btn-danger btn-sm"  id="preq-batch-reject"  style="display:none" onclick="batchReview('punch','reject')">批次退回</button>
+        <button class="btn btn-primary btn-sm" id="preq-batch-approve" style="display:none" data-i18n="btn.batch_approve" onclick="batchReview('punch','approve')">批次核准</button>
+        <button class="btn btn-danger btn-sm"  id="preq-batch-reject"  style="display:none" data-i18n="btn.batch_reject" onclick="batchReview('punch','reject')">批次退回</button>
       </div>
       <div id="preq-list"></div>
     </div>
@@ -561,22 +562,22 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div class="filter-divider"></div>
         <span class="filter-label" data-i18n="label.status">狀態</span>
         <select class="filter-input" id="ot-filter-status" onchange="loadOTRequests()" style="min-width:120px">
-          <option value="pending">待審核</option><option value="">全部</option>
-          <option value="approved">已核准</option><option value="rejected">已退回</option>
+          <option value="pending" data-i18n="req.status.pending">待審核</option><option value="" data-i18n="status.all">全部</option>
+          <option value="approved" data-i18n="req.status.approved">已核准</option><option value="rejected" data-i18n="req.status.rejected">已退回</option>
         </select>
         <div class="filter-divider"></div>
         <div style="display:flex;gap:4px">
           <button class="btn btn-sm" id="ot-view-list-btn" onclick="setOTView('list')" style="background:var(--navy);color:#fff;border:none">申請列表</button>
           <button class="btn btn-sm btn-outline" id="ot-view-summary-btn" onclick="setOTView('summary')">月統計</button>
         </div>
-        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text)">
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text)" data-i18n="btn.select_all">
           <input type="checkbox" id="ot-select-all" onchange="selectAllBatch('ot',this.checked)">全選
         </label>
         <span style="flex:1"></span>
         <span id="ot-req-count" style="font-size:12px;color:var(--muted)"></span>
         <button class="btn btn-outline btn-sm" onclick="exportOvertimeExcel()">匯出 Excel</button>
-        <button class="btn btn-primary btn-sm" id="ot-batch-approve" style="display:none" onclick="batchReview('ot','approve')">批次核准</button>
-        <button class="btn btn-danger btn-sm"  id="ot-batch-reject"  style="display:none" onclick="batchReview('ot','reject')">批次退回</button>
+        <button class="btn btn-primary btn-sm" id="ot-batch-approve" style="display:none" data-i18n="btn.batch_approve" onclick="batchReview('ot','approve')">批次核准</button>
+        <button class="btn btn-danger btn-sm"  id="ot-batch-reject"  style="display:none" data-i18n="btn.batch_reject" onclick="batchReview('ot','reject')">批次退回</button>
       </div>
       <div id="ot-req-list"></div>
       <div id="ot-summary-wrap" style="display:none">
@@ -831,9 +832,9 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div class="filter-divider"></div>
         <span class="filter-label" data-i18n="label.status">狀態</span>
         <select class="filter-input" id="sched-req-status" onchange="loadSchedRequests()" style="min-width:120px">
-          <option value="">全部</option><option value="pending">審核中</option>
-          <option value="approved">已核准</option><option value="rejected">已退回</option>
-          <option value="modified_pending">修改待審</option>
+          <option value="" data-i18n="status.all">全部</option><option value="pending" data-i18n="sched.status.pending">審核中</option>
+          <option value="approved" data-i18n="sched.status.approved">已核准</option><option value="rejected" data-i18n="sched.status.rejected">已退回</option>
+          <option value="modified_pending" data-i18n="sched.status.modified_pending">修改待審</option>
         </select>
         <span style="flex:1"></span>
         <button class="btn btn-outline btn-sm" onclick="exportSchedRequestsExcel()">匯出 Excel</button>
@@ -942,8 +943,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div class="filter-divider"></div>
         <span class="filter-label" data-i18n="label.status">狀態</span>
         <select class="filter-input" id="leave-req-status" onchange="loadLeaveRequests()" style="min-width:110px">
-          <option value="pending">待審核</option><option value="">全部</option>
-          <option value="approved">已核准</option><option value="rejected">已退回</option>
+          <option value="pending" data-i18n="req.status.pending">待審核</option><option value="" data-i18n="status.all">全部</option>
+          <option value="approved" data-i18n="req.status.approved">已核准</option><option value="rejected" data-i18n="req.status.rejected">已退回</option>
         </select>
         <div class="filter-divider"></div>
         <span class="filter-label" data-i18n="label.staff">員工</span>
@@ -951,14 +952,14 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <option value="">全部</option>
         </select>
         <span style="flex:1"></span>
-        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text)">
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text)" data-i18n="btn.select_all">
           <input type="checkbox" id="leave-select-all" onchange="selectAllBatch('leave',this.checked)">全選
         </label>
         <button class="btn btn-outline btn-sm" onclick="exportLeaveExcel()">匯出 Excel</button>
-        <button class="btn btn-primary" onclick="openLeaveAdminModal()">管理員代填</button>
+        <button class="btn btn-primary" data-i18n="btn.admin_fill" onclick="openLeaveAdminModal()">管理員代填</button>
         <span id="leave-req-count" style="font-size:12px;color:var(--muted)"></span>
-        <button class="btn btn-primary btn-sm" id="leave-batch-approve" style="display:none" onclick="batchReview('leave','approve')">批次核准</button>
-        <button class="btn btn-danger btn-sm"  id="leave-batch-reject"  style="display:none" onclick="batchReview('leave','reject')">批次退回</button>
+        <button class="btn btn-primary btn-sm" id="leave-batch-approve" style="display:none" data-i18n="btn.batch_approve" onclick="batchReview('leave','approve')">批次核准</button>
+        <button class="btn btn-danger btn-sm"  id="leave-batch-reject"  style="display:none" data-i18n="btn.batch_reject" onclick="batchReview('leave','reject')">批次退回</button>
       </div>
       <div id="leave-req-list"></div>
     </div>
@@ -1756,10 +1757,10 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div class="filter-bar" style="margin-bottom:20px">
       <span class="filter-label" data-i18n="label.status">狀態</span>
       <select id="exp-review-status" class="filter-input" style="min-width:100px" onchange="loadExpenseReview()">
-        <option value="pending">待審核</option>
-        <option value="approved">已核准</option>
-        <option value="rejected">已拒絕</option>
-        <option value="">全部</option>
+        <option value="pending" data-i18n="req.status.pending">待審核</option>
+        <option value="approved" data-i18n="req.status.approved">已核准</option>
+        <option value="rejected" data-i18n="req.status.rejected">已退回</option>
+        <option value="" data-i18n="status.all">全部</option>
       </select>
       <button class="btn btn-outline btn-sm" onclick="exportExpenseClaimsExcel()">匯出 Excel</button>
       <button class="btn btn-outline btn-sm" onclick="loadExpenseReview()">重新整理</button>
@@ -1906,10 +1907,10 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <input type="month" class="filter-input" id="travel-filter-month" style="min-width:140px" onchange="loadTravel()">
       <span class="filter-label" data-i18n="label.status">狀態</span>
       <select class="filter-input" id="travel-filter-status" onchange="loadTravel()">
-        <option value="">全部</option>
-        <option value="pending">待審</option>
-        <option value="approved">已核准</option>
-        <option value="rejected">已拒絕</option>
+        <option value="" data-i18n="status.all">全部</option>
+        <option value="pending" data-i18n="travel.status.pending">待審</option>
+        <option value="approved" data-i18n="travel.status.approved">已核准</option>
+        <option value="rejected" data-i18n="travel.status.rejected">已拒絕</option>
       </select>
       <span class="filter-label" data-i18n="label.staff">員工</span>
       <select class="filter-input" id="travel-filter-staff" onchange="loadTravel()" style="min-width:120px">
@@ -2700,7 +2701,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="lam-end-half"> <span class="form-label" style="margin:0">結束日半天</span></label></div>
       </div>
       <div id="lam-days-preview" style="font-size:13px;color:var(--accent);margin-bottom:12px;min-height:18px"></div>
-      <div style="margin-bottom:12px"><label class="form-label">狀態</label><select class="form-input" id="lam-status" style="width:auto"><option value="approved">直接核准</option><option value="pending">待審核</option></select></div>
+      <div style="margin-bottom:12px"><label class="form-label">狀態</label><select class="form-input" id="lam-status" style="width:auto"><option value="approved" data-i18n="status.direct_approve">直接核准</option><option value="pending" data-i18n="req.status.pending">待審核</option></select></div>
       <div><label class="form-label">原因/備註</label><input class="form-input" id="lam-reason" placeholder="選填" style="width:100%"></div>
     </div>
     <div class="modal-footer"><button class="btn btn-outline" onclick="closeLeaveAdminModal()">取消</button><button class="btn btn-primary" onclick="saveLeaveAdmin()">儲存</button></div>
@@ -3291,7 +3292,22 @@ const TRANSLATIONS = {
     'status.all':'全部','status.active':'在職','status.resigned':'離職',
     // Dash
     'dash.label.today_attendance':'今日出勤','dash.label.present':'出勤','dash.label.absent':'缺勤',
-    'dash.label.leave':'請假','dash.label.late':'遲到','dash.label.pending_approval':'待審核',
+    'dash.label.leave':'請假','dash.label.late':'遲到','dash.label.pending_approval':'待審申請',
+    'dash.label.monthly_salary':'本月薪資總額','dash.label.active_staff':'在職人員',
+    'dash.label.monthly_punches':'月出勤人次',
+    'dash.sub.working_detail':'上班中 | 已下班 {0} | 請假 {1}',
+    'dash.sub.absent_count':'未出勤 {0} 人',
+    'dash.sub.punch_days':'{0} 個出勤日',
+    'dash.sub.pending_detail':'補打{0} 加班{1} 排休{2} 請假{3}',
+    'dash.sub.salary_confirmed':'已確認 {0} / 共 {1} 筆',
+    'dash.sub.salary_month':'{0} 薪資總額',
+    'dash.pie.today':'今日出勤狀態','dash.pie.month':'月度出勤狀態',
+    'dash.table.today':'今日人員狀態','dash.table.month':'該月人員出勤摘要',
+    'dash.no_records':'今日尚無出勤記錄',
+    'pie.working':'上班中','pie.clocked_out':'已下班','pie.on_leave':'請假中','pie.absent':'未出勤',
+    'btn.admin_fill':'管理員代填','btn.select_all':'全選',
+    'btn.batch_approve':'批次核准','btn.batch_reject':'批次退回',
+    'status.direct_approve':'直接核准',
     // Search
     'search.staff_placeholder':'🔍 搜尋員工...',
     // Punch labels
@@ -3393,7 +3409,22 @@ const TRANSLATIONS = {
     // Dash
     'dash.label.today_attendance':'Today\'s Attendance','dash.label.present':'Present',
     'dash.label.absent':'Absent','dash.label.leave':'On Leave','dash.label.late':'Late',
-    'dash.label.pending_approval':'Pending',
+    'dash.label.pending_approval':'Pending Requests',
+    'dash.label.monthly_salary':'Monthly Salary','dash.label.active_staff':'Active Staff',
+    'dash.label.monthly_punches':'Monthly Punches',
+    'dash.sub.working_detail':'On duty | Clocked out {0} | On leave {1}',
+    'dash.sub.absent_count':'Absent: {0}',
+    'dash.sub.punch_days':'{0} attendance days',
+    'dash.sub.pending_detail':'Punch {0} OT {1} Sched {2} Leave {3}',
+    'dash.sub.salary_confirmed':'Confirmed {0} / Total {1}',
+    'dash.sub.salary_month':'{0} Salary Total',
+    'dash.pie.today':'Today\'s Status','dash.pie.month':'Monthly Status',
+    'dash.table.today':'Today\'s Staff Status','dash.table.month':'Monthly Attendance Summary',
+    'dash.no_records':'No attendance records today',
+    'pie.working':'On Duty','pie.clocked_out':'Clocked Out','pie.on_leave':'On Leave','pie.absent':'Absent',
+    'btn.admin_fill':'Admin Fill','btn.select_all':'Select All',
+    'btn.batch_approve':'Batch Approve','btn.batch_reject':'Batch Reject',
+    'status.direct_approve':'Directly Approve',
     // Search
     'search.staff_placeholder':'🔍 Search staff...',
     // Punch labels
@@ -3495,7 +3526,22 @@ const TRANSLATIONS = {
     // Dash
     'dash.label.today_attendance':'本日の出勤','dash.label.present':'出勤',
     'dash.label.absent':'欠勤','dash.label.leave':'休暇中','dash.label.late':'遅刻',
-    'dash.label.pending_approval':'審査中',
+    'dash.label.pending_approval':'審査待ち申請',
+    'dash.label.monthly_salary':'今月の給与総額','dash.label.active_staff':'在職スタッフ',
+    'dash.label.monthly_punches':'月次出勤人数',
+    'dash.sub.working_detail':'出勤中 | 退勤 {0} | 休暇 {1}',
+    'dash.sub.absent_count':'未出勤 {0}人',
+    'dash.sub.punch_days':'{0}日 出勤',
+    'dash.sub.pending_detail':'補打{0} 残業{1} 休暇{2} 申請{3}',
+    'dash.sub.salary_confirmed':'確認済 {0} / 合計 {1}件',
+    'dash.sub.salary_month':'{0} 給与総額',
+    'dash.pie.today':'本日の出勤状況','dash.pie.month':'月次出勤状況',
+    'dash.table.today':'本日のスタッフ状況','dash.table.month':'月次出勤サマリー',
+    'dash.no_records':'本日の出勤記録はありません',
+    'pie.working':'出勤中','pie.clocked_out':'退勤','pie.on_leave':'休暇中','pie.absent':'未出勤',
+    'btn.admin_fill':'管理者代入力','btn.select_all':'全て選択',
+    'btn.batch_approve':'一括承認','btn.batch_reject':'一括却下',
+    'status.direct_approve':'直接承認',
     // Search
     'search.staff_placeholder':'🔍 スタッフ検索...',
     // Punch labels
@@ -3558,7 +3604,7 @@ const TRANSLATIONS = {
     'punch.tab.summary':'Tổng hợp','punch.tab.anomaly':'Cảnh báo','punch.tab.mstats':'Thống kê tháng',
     'punch.tab.records':'Lịch sử','punch.tab.manual':'Chấm bù','punch.tab.requests':'Yêu cầu chấm',
     'punch.tab.overtime':'Tăng ca','punch.tab.staff':'Nhân viên','punch.tab.resigned':'Đã nghỉ',
-    'punch.tab.gps':'Cài GPS','punch.tab.line':'LINE打卡',
+    'punch.tab.gps':'Cài GPS','punch.tab.line':'LINE Chấm công',
     'sched.tab.shift':'Ca làm việc','sched.tab.shifttypes':'Loại ca','sched.tab.calendar':'Lịch',
     'sched.tab.requests':'Xin nghỉ','sched.tab.summary':'Tổng nhân sự','sched.tab.conflicts':'Xung đột',
     'sched.tab.config':'Cấu hình tháng','sched.tab.autogen':'Tự động tạo',
@@ -3588,7 +3634,22 @@ const TRANSLATIONS = {
     'status.all':'Tất cả','status.active':'Đang làm','status.resigned':'Đã nghỉ',
     'dash.label.today_attendance':'Chấm công hôm nay','dash.label.present':'Có mặt',
     'dash.label.absent':'Vắng','dash.label.leave':'Nghỉ phép','dash.label.late':'Trễ',
-    'dash.label.pending_approval':'Chờ duyệt',
+    'dash.label.pending_approval':'Yêu cầu chờ duyệt',
+    'dash.label.monthly_salary':'Tổng lương tháng','dash.label.active_staff':'Nhân viên đang làm',
+    'dash.label.monthly_punches':'Lượt chấm công tháng',
+    'dash.sub.working_detail':'Đang làm | Đã về {0} | Nghỉ {1}',
+    'dash.sub.absent_count':'Vắng: {0}',
+    'dash.sub.punch_days':'{0} ngày đi làm',
+    'dash.sub.pending_detail':'Chấm bù {0} Tăng ca {1} Lịch {2} Nghỉ {3}',
+    'dash.sub.salary_confirmed':'Đã xác nhận {0} / Tổng {1}',
+    'dash.sub.salary_month':'Tổng lương {0}',
+    'dash.pie.today':'Tình trạng hôm nay','dash.pie.month':'Tình trạng tháng',
+    'dash.table.today':'Trạng thái nhân viên hôm nay','dash.table.month':'Tóm tắt chấm công tháng',
+    'dash.no_records':'Hôm nay chưa có dữ liệu chấm công',
+    'pie.working':'Đang làm','pie.clocked_out':'Đã về','pie.on_leave':'Đang nghỉ','pie.absent':'Vắng',
+    'btn.admin_fill':'Điền thay','btn.select_all':'Chọn tất cả',
+    'btn.batch_approve':'Duyệt hàng loạt','btn.batch_reject':'Từ chối hàng loạt',
+    'status.direct_approve':'Duyệt trực tiếp',
     'search.staff_placeholder':'🔍 Tìm nhân viên...',
     'punch.label.in':'Vào ca','punch.label.out':'Tan ca','punch.label.break_out':'Bắt đầu nghỉ','punch.label.break_in':'Kết thúc nghỉ',
     'req.status.pending':'Chờ duyệt','req.status.approved':'Đã duyệt','req.status.rejected':'Từ chối',
@@ -3633,7 +3694,7 @@ const TRANSLATIONS = {
     'punch.tab.summary':'สรุปการเข้างาน','punch.tab.anomaly':'แจ้งเตือน','punch.tab.mstats':'สถิติรายเดือน',
     'punch.tab.records':'บันทึก','punch.tab.manual':'บันทึกแทน','punch.tab.requests':'คำขอบันทึก',
     'punch.tab.overtime':'ล่วงเวลา','punch.tab.staff':'พนักงาน','punch.tab.resigned':'พ้นงานแล้ว',
-    'punch.tab.gps':'ตั้งค่า GPS','punch.tab.line':'LINE打卡',
+    'punch.tab.gps':'ตั้งค่า GPS','punch.tab.line':'LINE บันทึกเวลา',
     'sched.tab.shift':'ตารางกะ','sched.tab.shifttypes':'ประเภทกะ','sched.tab.calendar':'ปฏิทิน',
     'sched.tab.requests':'ขอวันหยุด','sched.tab.summary':'สรุปบุคลากร','sched.tab.conflicts':'ความขัดแย้ง',
     'sched.tab.config':'ตั้งค่าเดือน','sched.tab.autogen':'สร้างอัตโนมัติ',
@@ -3663,7 +3724,22 @@ const TRANSLATIONS = {
     'status.all':'ทั้งหมด','status.active':'ทำงานอยู่','status.resigned':'ลาออกแล้ว',
     'dash.label.today_attendance':'การเข้างานวันนี้','dash.label.present':'มาทำงาน',
     'dash.label.absent':'ขาดงาน','dash.label.leave':'ลาหยุด','dash.label.late':'มาสาย',
-    'dash.label.pending_approval':'รออนุมัติ',
+    'dash.label.pending_approval':'คำขอที่รออนุมัติ',
+    'dash.label.monthly_salary':'เงินเดือนรวมเดือนนี้','dash.label.active_staff':'พนักงานที่ทำงาน',
+    'dash.label.monthly_punches':'จำนวนบันทึกเดือนนี้',
+    'dash.sub.working_detail':'กำลังทำงาน | กลับบ้านแล้ว {0} | ลา {1}',
+    'dash.sub.absent_count':'ขาดงาน: {0}',
+    'dash.sub.punch_days':'{0} วันที่มาทำงาน',
+    'dash.sub.pending_detail':'บันทึกย้อนหลัง {0} โอที {1} กะ {2} ลา {3}',
+    'dash.sub.salary_confirmed':'ยืนยันแล้ว {0} / รวม {1}',
+    'dash.sub.salary_month':'เงินเดือนรวม {0}',
+    'dash.pie.today':'สถานะวันนี้','dash.pie.month':'สถานะรายเดือน',
+    'dash.table.today':'สถานะพนักงานวันนี้','dash.table.month':'สรุปการเข้างานรายเดือน',
+    'dash.no_records':'ยังไม่มีบันทึกการเข้างานวันนี้',
+    'pie.working':'กำลังทำงาน','pie.clocked_out':'กลับบ้านแล้ว','pie.on_leave':'ลาหยุด','pie.absent':'ขาดงาน',
+    'btn.admin_fill':'กรอกแทน','btn.select_all':'เลือกทั้งหมด',
+    'btn.batch_approve':'อนุมัติเป็นชุด','btn.batch_reject':'ปฏิเสธเป็นชุด',
+    'status.direct_approve':'อนุมัติโดยตรง',
     'search.staff_placeholder':'🔍 ค้นหาพนักงาน...',
     'punch.label.in':'เข้างาน','punch.label.out':'ออกงาน','punch.label.break_out':'เริ่มพัก','punch.label.break_in':'สิ้นสุดพัก',
     'req.status.pending':'รออนุมัติ','req.status.approved':'อนุมัติแล้ว','req.status.rejected':'ปฏิเสธ',
@@ -3698,9 +3774,15 @@ const TRANSLATIONS = {
 };
 
 let _currentLang = localStorage.getItem('adminLang') || 'zh-TW';
+let _lastDashData = null, _lastDashIsCurrentMonth = true;
 
 function t(key) {
   return (TRANSLATIONS[_currentLang] || TRANSLATIONS['zh-TW'])[key] || (TRANSLATIONS['zh-TW'][key] || key);
+}
+function tf(key, ...args) {
+  let s = t(key);
+  args.forEach((v, i) => { s = s.replace(new RegExp(`\\{${i}\\}`, 'g'), v); });
+  return s;
 }
 
 // Map Chinese text → i18n key, auto-tagged once on init
@@ -3773,6 +3855,11 @@ function setLang(lang) {
   if (activePage) {
     const pageId = activePage.id.replace('page-', '');
     document.getElementById('page-title').textContent = t('page.' + pageId) || document.getElementById('page-title').textContent;
+    if (pageId === 'dash' && _lastDashData) {
+      renderDashStats(_lastDashData, _lastDashIsCurrentMonth);
+      renderDashTodayDetail(_lastDashData.today_detail || [], _lastDashIsCurrentMonth);
+      renderDashTodayPie(_lastDashData.today_summary, _lastDashIsCurrentMonth);
+    }
   }
 }
 
@@ -4226,6 +4313,8 @@ async function initDash() {
   const { ok, data } = await api(`/api/dashboard?month=${month}`, {}, true);
   if (!ok) return;
 
+  _lastDashData = data; _lastDashIsCurrentMonth = isCurrentMonth;
+
   // 先渲染主要統計（立即顯示）
   renderDashStats(data, isCurrentMonth);
   renderDashTodayDetail(data.today_detail || [], isCurrentMonth);
@@ -4262,29 +4351,32 @@ function renderDashStats(data, isCurrentMonth) {
   const statCards = document.querySelectorAll('#dash-stat-cards .stat-card');
   const card1Label = statCards[0] && statCards[0].querySelector('.stat-label');
   if (isCurrentMonth) {
-    if (card1Label) card1Label.textContent = '今日出勤';
+    if (card1Label) { card1Label.dataset.i18n = 'dash.label.today_attendance'; card1Label.textContent = t('dash.label.today_attendance'); }
     document.getElementById('ds-working').textContent     = ts.working;
-    document.getElementById('ds-working-sub').textContent = `上班中 | 已下班 ${ts.clocked_out} | 請假 ${ts.on_leave}`;
+    document.getElementById('ds-working-sub').textContent = tf('dash.sub.working_detail', ts.clocked_out, ts.on_leave);
     document.getElementById('ds-total').textContent       = ts.total;
-    document.getElementById('ds-total-sub').textContent   = `未出勤 ${ts.absent} 人`;
+    document.getElementById('ds-total-sub').textContent   = tf('dash.sub.absent_count', ts.absent);
   } else {
-    if (card1Label) card1Label.textContent = '月出勤人次';
+    if (card1Label) { card1Label.dataset.i18n = 'dash.label.monthly_punches'; card1Label.textContent = t('dash.label.monthly_punches'); }
     const totalPunches = (data.daily_attendance || []).reduce((s, d) => s + d.count, 0);
     const punchDays    = (data.daily_attendance || []).filter(d => d.count > 0).length;
     document.getElementById('ds-working').textContent     = totalPunches;
-    document.getElementById('ds-working-sub').textContent = `${punchDays} 個出勤日`;
+    document.getElementById('ds-working-sub').textContent = tf('dash.sub.punch_days', punchDays);
     document.getElementById('ds-total').textContent       = ts.total;
-    document.getElementById('ds-total-sub').textContent   = `在職人員`;
+    document.getElementById('ds-total-sub').textContent   = t('dash.label.active_staff');
   }
 
   document.getElementById('ds-pending').textContent     = data.pending.total;
-  document.getElementById('ds-pending-sub').textContent = `補打${data.pending.punch} 加班${data.pending.ot} 排休${data.pending.sched} 請假${data.pending.leave}`;
+  document.getElementById('ds-pending-sub').textContent = tf('dash.sub.pending_detail', data.pending.punch, data.pending.ot, data.pending.sched, data.pending.leave);
 
   const salLabel = document.getElementById('ds-salary-label');
-  if (salLabel) salLabel.textContent = isCurrentMonth ? '本月薪資總額' : `${data.month} 薪資總額`;
+  if (salLabel) {
+    salLabel.textContent = isCurrentMonth ? t('dash.label.monthly_salary') : tf('dash.sub.salary_month', data.month);
+    salLabel.dataset.i18n = isCurrentMonth ? 'dash.label.monthly_salary' : '';
+  }
   const netFmt = sal.total_net > 0 ? '$' + sal.total_net.toLocaleString('zh-TW', {maximumFractionDigits:0}) : '—';
   document.getElementById('ds-salary').textContent     = netFmt;
-  document.getElementById('ds-salary-sub').textContent = `已確認 ${sal.confirmed_count} / 共 ${sal.total_count} 筆`;
+  document.getElementById('ds-salary-sub').textContent = tf('dash.sub.salary_confirmed', sal.confirmed_count, sal.total_count);
 }
 
 // ── 今日出勤明細表 ────────────────────────────────────────────
@@ -4295,7 +4387,7 @@ function renderDashTodayDetail(detail, isCurrentMonth) {
   };
   // 更新卡片標題
   const titleEl = document.querySelector('[id="ds-today-table"]')?.closest('.card')?.querySelector('.card-title');
-  if (titleEl) titleEl.textContent = isCurrentMonth ? '今日人員狀態' : '該月人員出勤摘要';
+  if (titleEl) titleEl.textContent = isCurrentMonth ? t('dash.table.today') : t('dash.table.month');
 
   const tb = document.getElementById('ds-today-table');
   if (!detail.length) {
@@ -4393,7 +4485,7 @@ async function renderDashDailyChart(daily, month) {
 // ── 今日出勤圓餅圖 ────────────────────────────────────────────
 function renderDashTodayPie(ts, isCurrentMonth) {
   const pieTitle = document.getElementById('ds-today-pie-title');
-  if (pieTitle) pieTitle.textContent = isCurrentMonth ? '今日出勤狀態' : '月度出勤狀態';
+  if (pieTitle) pieTitle.textContent = isCurrentMonth ? t('dash.pie.today') : t('dash.pie.month');
   _destroyChart('today-pie');
   const ctx = document.getElementById('chart-today-pie');
   if (!ctx || !ts) return;
@@ -4410,15 +4502,15 @@ function renderDashTodayPie(ts, isCurrentMonth) {
   if (!hasPie) {
     document.getElementById('ds-pie-center').textContent = '0';
     document.getElementById('ds-today-legend').innerHTML =
-      '<div style="color:var(--muted);font-size:12px">今日尚無出勤記錄</div>';
+      `<div style="color:var(--muted);font-size:12px">${t('dash.no_records')}</div>`;
     return;
   }
 
   const pieData = [
-    { label: '上班中',  value: inWork,  color: '#2e9e6b' },
-    { label: '已下班',  value: done,    color: '#8892a4' },
-    { label: '請假中',  value: onLeave, color: '#4a7bda' },
-    { label: '未出勤',  value: absent,  color: '#f0f2f8' },
+    { label: t('pie.working'),     value: inWork,  color: '#2e9e6b' },
+    { label: t('pie.clocked_out'), value: done,    color: '#8892a4' },
+    { label: t('pie.on_leave'),    value: onLeave, color: '#4a7bda' },
+    { label: t('pie.absent'),      value: absent,  color: '#f0f2f8' },
   ].filter(d => d.value > 0);
 
   _dashCharts['today-pie'] = new Chart(ctx, {
@@ -4435,10 +4527,10 @@ function renderDashTodayPie(ts, isCurrentMonth) {
   });
 
   document.getElementById('ds-today-legend').innerHTML = [
-    { label: '上班中',  value: inWork,  color: '#2e9e6b' },
-    { label: '已下班',  value: done,    color: '#8892a4' },
-    { label: '請假中',  value: onLeave, color: '#4a7bda' },
-    { label: '未出勤',  value: absent,  color: '#dde3ef' },
+    { label: t('pie.working'),     value: inWork,  color: '#2e9e6b' },
+    { label: t('pie.clocked_out'), value: done,    color: '#8892a4' },
+    { label: t('pie.on_leave'),    value: onLeave, color: '#4a7bda' },
+    { label: t('pie.absent'),      value: absent,  color: '#dde3ef' },
   ].map(d => `<div style="display:flex;align-items:center;gap:8px">
     <div style="width:10px;height:10px;border-radius:50%;background:${d.color};flex-shrink:0"></div>
     <span style="flex:1;color:var(--muted)">${d.label}</span>
