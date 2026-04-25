@@ -322,7 +322,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
           <button class="btn btn-primary" style="width:100%" onclick="submitOTRequest()" data-i18n-staff="btn.submit_ot">送出加班申請</button>
         </div>
         <div class="section-label" style="margin-bottom:10px" data-i18n-staff="lbl.my_requests">我的申請記錄</div>
-        <div id="my-ot-list"><div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">載入中...</div></div>
+        <div id="my-ot-list"><div style="text-align:center;color:var(--muted);font-size:13px;padding:16px" data-i18n-staff="loading">載入中...</div></div>
       </div>
 
 
@@ -330,7 +330,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
       <!-- 公告 tab -->
       <div id="panel-ann" class="tab-body" style="display:none">
         <div id="ann-staff-list">
-          <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">載入中...</div>
+          <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px" data-i18n-staff="loading">載入中...</div>
         </div>
       </div>
       <!-- 請假申請 tab -->
@@ -382,7 +382,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
 
         <!-- 我的請假記錄 -->
         <div class="section-label" style="margin-bottom:10px" data-i18n-staff="lbl.my_leave_records">我的請假記錄</div>
-        <div id="my-leave-list"><div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">載入中...</div></div>
+        <div id="my-leave-list"><div style="text-align:center;color:var(--muted);font-size:13px;padding:16px" data-i18n-staff="loading">載入中...</div></div>
       </div>
 
       <!-- 薪資單 tab -->
@@ -414,7 +414,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
           <button onclick="loadMyAnomalies()" style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer" data-i18n-staff="btn.refresh">重新整理</button>
         </div>
         <div id="my-anomaly-list">
-          <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入中...</div>
+          <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px" data-i18n-staff="loading">載入中...</div>
         </div>
       </div>
 
@@ -432,7 +432,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
       <!-- 我的考核 tab -->
       <div id="panel-myperf" class="tab-body" style="display:none">
         <div id="myperf-list">
-          <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入中...</div>
+          <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px" data-i18n-staff="loading">載入中...</div>
         </div>
       </div>
 
@@ -453,7 +453,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
 
         <!-- 申請列表 -->
         <div id="my-travel-list">
-          <div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">載入中…</div>
+          <div style="text-align:center;color:var(--muted);font-size:13px;padding:32px" data-i18n-staff="loading">載入中…</div>
         </div>
 
         <!-- 新增/編輯 申請表 -->
@@ -525,7 +525,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
           <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:14px" data-i18n-staff="form.loan_new">申請借用設備</div>
           <div class="fl" data-i18n-staff="field.select_asset_required">選擇設備 *</div>
           <select class="fi" id="mlr-asset" style="margin-bottom:10px">
-            <option value="">載入中…</option>
+            <option value="" data-i18n-staff="loading">載入中…</option>
           </select>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
             <div><div class="fl" data-i18n-staff="field.loan_date_required">借用日期 *</div><input type="date" class="fi" id="mlr-loan-date"></div>
@@ -540,7 +540,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
         </div>
 
         <div id="my-loan-list">
-          <div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">載入中…</div>
+          <div style="text-align:center;color:var(--muted);font-size:13px;padding:32px" data-i18n-staff="loading">載入中…</div>
         </div>
       </div>
 
@@ -560,7 +560,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
         </div>
         <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px" data-i18n-staff="bio.bound_devices">已綁定裝置</div>
         <div id="bio-cred-list">
-          <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">載入中...</div>
+          <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px" data-i18n-staff="loading">載入中...</div>
         </div>
       </div>
 
@@ -602,7 +602,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
                   <span data-i18n-staff="hint.upload_photo">點擊上傳或拍照</span>
                 </div>
                 <img id="exp-photo-preview" style="display:none;max-width:100%;max-height:180px;border-radius:8px;object-fit:contain">
-                <div id="exp-ocr-loading" style="display:none;margin-top:8px;font-size:12px;color:var(--accent)">OCR 辨識中...</div>
+                <div id="exp-ocr-loading" style="display:none;margin-top:8px;font-size:12px;color:var(--accent)" data-i18n-staff="exp.ocr_loading">OCR 辨識中...</div>
               </div>
             </div>
             <button class="btn btn-primary" style="width:100%" onclick="submitExpense()" data-i18n-staff="btn.submit">送出申請</button>
@@ -616,7 +616,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
             <button class="btn btn-sm" onclick="loadMyExpenses()" data-i18n-staff="btn.refresh">重新整理</button>
           </div>
           <div id="exp-list" style="padding:0 16px 12px">
-            <div style="text-align:center;color:var(--muted);font-size:13px;padding:24px">載入中...</div>
+            <div style="text-align:center;color:var(--muted);font-size:13px;padding:24px" data-i18n-staff="loading">載入中...</div>
           </div>
         </div>
       </div>
@@ -926,7 +926,7 @@ async function submitSchedRequest(){
   closeConfirm();
   try{
     const res=await fetch('/api/schedule/my-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({month:curSchedMonth,dates,submit_note:note})});
-    let d;try{d=await res.json();}catch(e){d={error:'伺服器回應格式錯誤'};}
+    let d;try{d=await res.json();}catch(e){d={error:staffT('server_err')};}
     if(!res.ok){showToast(d.error||staffT('sched.submit_fail').replace('{0}',res.status),'err');return;}
     showToast(staffT('sched.submit_ok'),'ok');schedExistingReq=d;renderStatusArea();renderCalendar();
   }catch(e){showToast(staffT('sched.net_fail'),'err');}
@@ -2392,11 +2392,11 @@ async function doBioLogin(){
       })
     });
     const result=await completeRes.json().catch(()=>({}));
-    if(!completeRes.ok){err.textContent=result.error||'伺服器錯誤（'+completeRes.status+'）';return;}
+    if(!completeRes.ok){err.textContent=result.error||staffT('net_err')+'('+completeRes.status+')';return;}
     // Session is now set by server — reload me info
     const r=await fetch('/api/punch/me');
     if(r.ok){me=await r.json();showMain();loadAnnStaff();}
-    else{err.textContent='登入失敗，請重試';}
+    else{err.textContent=staffT('submit_fail');}
   }catch(e){
     if(e.name==='NotAllowedError'){err.textContent='已取消或逾時';}
     else{err.textContent='驗證失敗：'+e.message;}
@@ -3189,6 +3189,7 @@ const STAFF_I18N = {
     'leave.preview_days':'預計請假：{0} 天（已排除週日）',
     'leave.schedule_fail':'無法載入排程',
     'leave.no_start_date':'尚未設定到職日，請聯絡管理員',
+    'exp.ocr_loading':'OCR 辨識中...','server_err':'伺服器回應格式錯誤',
     toggle:'EN',
   },
   'en': {
@@ -3422,6 +3423,7 @@ const STAFF_I18N = {
     'leave.preview_days':'Estimated leave: {0} days (Sundays excluded)',
     'leave.schedule_fail':'Cannot load schedule',
     'leave.no_start_date':'Start date not set, please contact admin',
+    'exp.ocr_loading':'OCR recognizing...','server_err':'Server response format error',
     toggle:'日本語',
   },
   'ja': {
@@ -3655,6 +3657,7 @@ const STAFF_I18N = {
     'leave.preview_days':'予定休暇：{0}日（日曜除く）',
     'leave.schedule_fail':'スケジュールを読み���めません',
     'leave.no_start_date':'入社日が未設定です。管理者に連絡してください',
+    'exp.ocr_loading':'OCR認識中...','server_err':'サーバー応答形式エラー',
     toggle:'Tiếng Việt',
   },
   'vi': {
@@ -3888,6 +3891,7 @@ const STAFF_I18N = {
     'leave.preview_days':'Dự kiến nghỉ: {0} ngày (không tính CN)',
     'leave.schedule_fail':'Không thể tải lịch',
     'leave.no_start_date':'Chưa đặt ngày vào làm, vui lòng liên hệ quản trị',
+    'exp.ocr_loading':'Đang nhận dạng OCR...','server_err':'Lỗi định dạng phản hồi máy chủ',
     toggle:'ภาษาไทย',
   },
   'th': {
@@ -4121,6 +4125,7 @@ const STAFF_I18N = {
     'leave.preview_days':'ลาโดยประมาณ: {0} วัน (ไม่นับวันอาทิตย์)',
     'leave.schedule_fail':'ไม่สามารถโหลดตาราง',
     'leave.no_start_date':'ยังไม่ได้ตั้งวันเริ่มงาน กรุณาติดต่อผู้ดูแล',
+    'exp.ocr_loading':'กำลังประมวลผล OCR...','server_err':'รูปแบบการตอบกลับของเซิร์ฟเวอร์ผิดพลาด',
     toggle:'中文',
   }
 };

@@ -6,7 +6,7 @@
 <title>後台管理系統</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 {% if google_maps_api_key %}
-<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&language=zh-TW" async defer onload="initGooglePlaces()"></script>
+<script>const _GMAPS_KEY = '{{ google_maps_api_key }}';</script>
 {% endif %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Sans+Thai:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -634,7 +634,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <span style="font-size:12px;color:var(--muted)">變更後自動儲存</span>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-        <span id="gps-loc-count" style="font-size:13px;color:var(--muted)">載入中...</span>
+        <span id="gps-loc-count" style="font-size:13px;color:var(--muted)" data-i18n="loading">載入中...</span>
         <button class="btn btn-primary" onclick="openLocModal()">新增地點</button>
       </div>
       <div id="gps-loc-list" style="margin-bottom:20px"></div>
@@ -663,7 +663,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <div id="lp-save-msg" style="font-size:12px;color:var(--green);margin-top:10px;min-height:16px"></div>
           <div style="margin-top:20px;padding:14px;background:var(--bg);border-radius:8px">
             <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">Webhook URL</div>
-            <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);word-break:break-all;padding:8px;background:#fff;border-radius:6px;border:1px solid var(--border)" id="lp-webhook-url">載入中...</div>
+            <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);word-break:break-all;padding:8px;background:#fff;border-radius:6px;border:1px solid var(--border)" id="lp-webhook-url" data-i18n="loading">載入中...</div>
           </div>
         </div>
         <div>
@@ -1382,7 +1382,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <span id="fin-docs-count" style="font-size:12px;color:var(--muted)"></span>
         </div>
         <div id="fin-docs-list" style="padding:0 4px 12px">
-          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
+          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px" data-i18n="loading">載入中…</div>
         </div>
       </div>
     </div>
@@ -1398,7 +1398,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       </div>
       <div class="card">
         <div id="recurring-list" style="padding:0 4px 12px">
-          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
+          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px" data-i18n="loading">載入中…</div>
         </div>
       </div>
     </div>
@@ -1484,7 +1484,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div id="ap-aging-cards" style="display:none;margin-bottom:14px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px"></div>
       <div class="card">
         <div id="ap-list" style="padding:0 4px 12px">
-          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
+          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px" data-i18n="loading">載入中…</div>
         </div>
       </div>
     </div>
@@ -1501,7 +1501,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="card-header"><span class="card-title">類別預算 vs 實際支出</span></div>
         <div id="budget-list" style="padding:0 12px 16px">
-          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
+          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px" data-i18n="loading">載入中…</div>
         </div>
       </div>
     </div>
@@ -1515,7 +1515,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="card-header"><span class="card-title">各月薪資同步狀態</span></div>
         <div id="payroll-sync-list" style="padding:0 4px 12px">
-          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
+          <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px" data-i18n="loading">載入中…</div>
         </div>
       </div>
     </div>
@@ -1936,7 +1936,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       </div>
     </div>
 
-    <div id="travel-list"><div style="padding:32px;text-align:center;color:var(--muted)">載入中…</div></div>
+    <div id="travel-list"><div style="padding:32px;text-align:center;color:var(--muted)" data-i18n="loading">載入中…</div></div>
   </div><!-- end page-travel -->
 
   <!-- ── 資產管理 ── -->
@@ -1984,7 +1984,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       </div>
     </div>
 
-    <div id="asset-list"><div style="padding:32px;text-align:center;color:var(--muted)">載入中…</div></div>
+    <div id="asset-list"><div style="padding:32px;text-align:center;color:var(--muted)" data-i18n="loading">載入中…</div></div>
 
     <!-- 待審借用申請 -->
     <div style="margin-top:24px" id="pending-loan-section">
@@ -2235,7 +2235,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       </button>
       <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">已綁定裝置</div>
       <div id="bio-panel-cred-list">
-        <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">載入中...</div>
+        <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px" data-i18n="loading">載入中...</div>
       </div>
     </div>
   </div>
@@ -2248,7 +2248,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <button class="modal-close" onclick="document.getElementById('salary-preview-modal').style.display='none'">&times;</button>
     </div>
     <div class="modal-body" style="padding:0">
-      <div id="salary-preview-loading" style="padding:32px;text-align:center;color:var(--muted)">計算中，請稍候...</div>
+      <div id="salary-preview-loading" style="padding:32px;text-align:center;color:var(--muted)" data-i18n="salary_preview.loading">計算中，請稍候...</div>
       <div id="salary-preview-content" style="display:none">
         <div style="padding:12px 16px;background:var(--gray-50,#f9fafb);border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)">
           ⚠️ 此為預覽，尚未寫入資料庫。確認無誤後請點下方「確認產生薪資」。
@@ -3923,6 +3923,9 @@ const TRANSLATIONS = {
     'module.key.salary':'薪資管理','module.key.ann':'公告管理','module.key.holiday':'國定假日',
     'module.key.finance':'財務管理','module.key.expense-review':'費用審核',
     'module.key.perf':'績效考核','module.key.stores':'門市管理','module.key.training':'教育訓練',
+    'loading':'載入中...','load_fail':'載入失敗','salary_preview.loading':'計算中，請稍候...',
+    'anomaly.no_records':'近 7 天無異常記錄',
+    'anomaly.sev.error':'嚴重','anomaly.sev.warning':'警告','anomaly.sev.info':'提示',
     // Lang toggle (shows next language)
     'lang.toggle':'EN',
   },
@@ -4606,6 +4609,9 @@ const TRANSLATIONS = {
     'module.key.salary':'Salary','module.key.ann':'Announcements','module.key.holiday':'Holidays',
     'module.key.finance':'Finance','module.key.expense-review':'Expense Review',
     'module.key.perf':'Performance','module.key.stores':'Stores','module.key.training':'Training',
+    'loading':'Loading...','load_fail':'Load failed','salary_preview.loading':'Calculating, please wait...',
+    'anomaly.no_records':'No anomalies in the past 7 days',
+    'anomaly.sev.error':'Critical','anomaly.sev.warning':'Warning','anomaly.sev.info':'Info',
     // Lang toggle (shows next language)
     'lang.toggle':'日本語',
   },
@@ -5289,6 +5295,9 @@ const TRANSLATIONS = {
     'module.key.salary':'給与管理','module.key.ann':'お知らせ','module.key.holiday':'祝日設定',
     'module.key.finance':'財務管理','module.key.expense-review':'経費審査',
     'module.key.perf':'人事評価','module.key.stores':'店舗管理','module.key.training':'トレーニング',
+    'loading':'読込中...','load_fail':'読込失敗','salary_preview.loading':'計算中、お待ちください...',
+    'anomaly.no_records':'過去7日間に異常はありません',
+    'anomaly.sev.error':'重大','anomaly.sev.warning':'警告','anomaly.sev.info':'情報',
     // Lang toggle (ja → next: vi)
     'lang.toggle':'Tiếng Việt',
   },
@@ -5946,6 +5955,9 @@ const TRANSLATIONS = {
     'module.key.salary':'Lương','module.key.ann':'Thông báo','module.key.holiday':'Ngày lễ',
     'module.key.finance':'Tài chính','module.key.expense-review':'Chi phí',
     'module.key.perf':'Đánh giá','module.key.stores':'Cửa hàng','module.key.training':'Đào tạo',
+    'loading':'Đang tải...','load_fail':'Tải thất bại','salary_preview.loading':'Đang tính toán, vui lòng chờ...',
+    'anomaly.no_records':'Không có bất thường trong 7 ngày qua',
+    'anomaly.sev.error':'Nghiêm trọng','anomaly.sev.warning':'Cảnh báo','anomaly.sev.info':'Thông tin',
     'lang.toggle':'ภาษาไทย',
   },
   'th': {
@@ -6602,6 +6614,9 @@ const TRANSLATIONS = {
     'module.key.salary':'เงินเดือน','module.key.ann':'ประกาศ','module.key.holiday':'วันหยุด',
     'module.key.finance':'การเงิน','module.key.expense-review':'ค่าใช้จ่าย',
     'module.key.perf':'ประเมินผล','module.key.stores':'สาขา','module.key.training':'ฝึกอบรม',
+    'loading':'กำลังโหลด...','load_fail':'โหลดล้มเหลว','salary_preview.loading':'กำลังคำนวณ กรุณารอ...',
+    'anomaly.no_records':'ไม่มีความผิดปกติใน 7 วันที่ผ่านมา',
+    'anomaly.sev.error':'วิกฤต','anomaly.sev.warning':'คำเตือน','anomaly.sev.info':'ข้อมูล',
     // Lang toggle (th → back to zh-TW)
     'lang.toggle':'中文',
   }
@@ -6621,6 +6636,8 @@ function tf(key, ...args) {
 
 // Map Chinese text → i18n key, auto-tagged once on init
 const _AUTO_TAG_MAP = {
+  // Loading states
+  '載入中...':'loading','載入中…':'loading','載入失敗':'load_fail',
   // Buttons
   '重新整理':'btn.refresh','查詢':'btn.search','新增':'btn.add','儲存':'btn.save',
   '取消':'btn.cancel','刪除':'btn.delete','確認':'btn.confirm','核准':'btn.approve',
@@ -6823,6 +6840,7 @@ function autoTagI18n() {
     '.filter-label:not([data-i18n])', '.card-title:not([data-i18n])',
     'th:not([data-i18n])', 'label.form-label:not([data-i18n])',
     '.modal-title:not([data-i18n])', '.section-title:not([data-i18n])',
+    '.empty-state-text:not([data-i18n])',
   ].join(',');
   document.querySelectorAll(sel).forEach(el => {
     // Strip trailing required-marker (* or ＊) and whitespace for label matching
@@ -7834,13 +7852,13 @@ let _mstatsData = [];
 
 async function loadPunchAnomalies() {
   const tb = document.getElementById('anomaly-tbody');
-  tb.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>';
+  tb.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="empty-state-text">${t('loading')}</div></td></tr>`;
   const { ok, data } = await api('/api/attendance/anomalies', {}, true);
   if (!ok || !data.anomalies || !data.anomalies.length) {
-    tb.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-state-text">近 7 天無異常記錄</div></td></tr>';
+    tb.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="empty-state-text">${t('anomaly.no_records')}</div></td></tr>`;
     return;
   }
-  const SEV_LABEL = { error: '嚴重', warning: '警告', info: '提示' };
+  const SEV_LABEL = { error: t('anomaly.sev.error'), warning: t('anomaly.sev.warning'), info: t('anomaly.sev.info') };
   const SEV_COLOR = { error: 'var(--red)', warning: '#e07b2a', info: 'var(--accent)' };
   const SEV_BG    = { error: '#fff5f5', warning: '#fffbeb', info: '#eff6ff' };
   const dot = document.getElementById('tabdot-anomaly');
@@ -8173,6 +8191,7 @@ async function deletePunchStaff(id) {
 let gpsLocList = [], editingLocId = null;
 
 async function loadGpsSettings() {
+  loadGoogleMapsApi();
   const [r1, r2] = await Promise.all([
     api('/api/punch/settings', {}, true),
     cachedApi('/api/punch/locations'),
@@ -8237,6 +8256,16 @@ function getLocGPS() {
   }, () => { msg.style.color = 'var(--red)'; msg.textContent = '無法取得位置'; }, { enableHighAccuracy: true, timeout: 10000 });
 }
 let _placesAutocomplete = null;
+let _gmapsLoaded = false;
+function loadGoogleMapsApi() {
+  if (_gmapsLoaded || !window._GMAPS_KEY) return;
+  _gmapsLoaded = true;
+  const lang = _currentLang === 'zh-TW' ? 'zh-TW' : _currentLang;
+  const s = document.createElement('script');
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${_GMAPS_KEY}&libraries=places&language=${lang}&callback=initGooglePlaces`;
+  s.async = true; s.defer = true;
+  document.head.appendChild(s);
+}
 function initGooglePlaces() {
   document.getElementById('glm-search-wrap').style.display = '';
   const input = document.getElementById('glm-search');
@@ -9058,11 +9087,11 @@ async function loadShiftConflicts() {
   const month   = monthEl.value;
   const summary = document.getElementById('conflicts-summary');
   const list    = document.getElementById('conflicts-list');
-  summary.innerHTML = '<span style="color:var(--muted);font-size:13px">檢查中...</span>';
+  summary.innerHTML = `<span style="color:var(--muted);font-size:13px">${t('sched.checking')}</span>`;
   list.innerHTML = '';
 
   const { ok, data } = await api(`/api/shifts/conflicts?month=${month}`, {}, true);
-  if (!ok) { summary.innerHTML = '<span style="color:var(--red)">載入失敗</span>'; return; }
+  if (!ok) { summary.innerHTML = `<span style="color:var(--red)">${t('sched.check_fail')}</span>`; return; }
 
   const conflicts = data.conflicts || [];
   const errCnt  = conflicts.filter(c=>c.severity==='error').length;
@@ -9080,9 +9109,9 @@ async function loadShiftConflicts() {
 
   // Summary cards
   summary.innerHTML = [
-    { label: '錯誤', count: errCnt,  color: 'var(--red)',    bg: 'rgba(214,66,66,.08)',  icon: '🚫' },
-    { label: '警告', count: warnCnt, color: 'var(--orange,#e07b2a)', bg: 'rgba(224,123,42,.08)', icon: '⚠️' },
-    { label: '提示', count: infoCnt, color: 'var(--accent)', bg: 'rgba(74,123,218,.08)', icon: 'ℹ️' },
+    { label: t('sched.conflict.error'),   count: errCnt,  color: 'var(--red)',    bg: 'rgba(214,66,66,.08)',  icon: '🚫' },
+    { label: t('sched.conflict.warning'), count: warnCnt, color: 'var(--orange,#e07b2a)', bg: 'rgba(224,123,42,.08)', icon: '⚠️' },
+    { label: t('sched.conflict.info'),    count: infoCnt, color: 'var(--accent)', bg: 'rgba(74,123,218,.08)', icon: 'ℹ️' },
   ].map(s => `
     <div style="flex:1;min-width:80px;padding:10px 14px;background:${s.bg};border-radius:10px;border:1.5px solid ${s.color};text-align:center">
       <div style="font-size:18px">${s.icon}</div>
@@ -9093,21 +9122,21 @@ async function loadShiftConflicts() {
   if (!conflicts.length) {
     list.innerHTML = `<div class="card" style="padding:32px;text-align:center">
       <div style="font-size:32px;margin-bottom:10px">✅</div>
-      <div style="font-size:15px;font-weight:600;color:var(--green)">本月班表無衝突</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:6px">已完成：超時檢查 · 連續排班檢查 · 跨日班別檢查</div>
+      <div style="font-size:15px;font-weight:600;color:var(--green)">${t('sched.no_conflicts')}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">${t('sched.conflict_check_done')}</div>
     </div>`;
     return;
   }
 
   const sevConfig = {
-    error:   { color:'var(--red)',            bg:'rgba(214,66,66,.06)',   border:'var(--red)',            icon:'🚫', label:'違規' },
-    warning: { color:'var(--orange,#e07b2a)', bg:'rgba(224,123,42,.06)', border:'var(--orange,#e07b2a)', icon:'⚠️', label:'警告' },
-    info:    { color:'var(--accent)',          bg:'rgba(74,123,218,.06)', border:'var(--accent)',          icon:'ℹ️', label:'提示' },
+    error:   { color:'var(--red)',            bg:'rgba(214,66,66,.06)',   border:'var(--red)',            icon:'🚫', label:t('sched.conflict.error') },
+    warning: { color:'var(--orange,#e07b2a)', bg:'rgba(224,123,42,.06)', border:'var(--orange,#e07b2a)', icon:'⚠️', label:t('sched.conflict.warning') },
+    info:    { color:'var(--accent)',          bg:'rgba(74,123,218,.06)', border:'var(--accent)',          icon:'ℹ️', label:t('sched.conflict.info') },
   };
   const typeLabel = {
-    overtime_hours:   '超時班別',
-    consecutive_days: '連續排班',
-    midnight_cross:   '跨日班別',
+    overtime_hours:   t('sched.conflict.type.overtime_hours'),
+    consecutive_days: t('sched.conflict.type.consecutive_days'),
+    midnight_cross:   t('sched.conflict.type.midnight_cross'),
   };
 
   list.innerHTML = `<div class="card"><div class="table-wrap"><table>
@@ -11631,9 +11660,9 @@ function saveOcrEdit() {
 // ── OCR 文件庫 ────────────────────────────────────────────────
 async function loadFinDocuments() {
   const wrap = document.getElementById('fin-docs-list');
-  wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>';
+  wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">${t('loading')}</div>`;
   const { ok, data } = await api('/api/finance/documents', {}, true);
-  if (!ok) { wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red)">載入失敗</div>'; return; }
+  if (!ok) { wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red)">${t('load_fail')}</div>`; return; }
   document.getElementById('fin-docs-count').textContent = `共 ${data.length} 份文件`;
   if (!data.length) {
     wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">尚無 OCR 辨識記錄</div>';
@@ -11869,11 +11898,11 @@ async function loadBankStatements() {
     api('/api/finance/bank/summary?' + params, {}, true),
   ]);
   const wrap = document.getElementById('bank-list');
-  if (!stmtRes.ok) { wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red)">載入失敗</div>'; return; }
+  if (!stmtRes.ok) { wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red)">${t('fin.bank_load_fail')}</div>`; return; }
   const data = stmtRes.data;
   if (sumRes.ok) _renderBankSummary(sumRes.data);
   if (!data.length) {
-    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">此月份無對帳單資料</div>';
+    wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">${t('fin.bank_no_data')}</div>`;
     return;
   }
   wrap.innerHTML = `<table class="data-table" style="margin:0">
@@ -12525,12 +12554,12 @@ async function loadExpenseReview() {
   const status = document.getElementById('exp-review-status')?.value ?? 'pending';
   const tbody = document.getElementById('exp-review-tbody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>';
+  tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('expense.loading')}</div></td></tr>`;
   const qs = status ? `?status=${status}` : '';
   const {ok, data} = await api(`/api/expense/claims${qs}`, {}, true);
   const claims = Array.isArray(data) ? data : [];
   if (!ok || !claims.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-state-text">無資料</div></td></tr>';
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('expense.no_data')}</div></td></tr>`;
     setBadge('badge-expense-review', 0);
     return;
   }
@@ -12621,9 +12650,9 @@ async function loadPerfReviews() {
   if (staffId) url += `staff_id=${staffId}&`;
   if (period)  url += `period=${period}&`;
   const resp = await api(url);
-  if (!resp.ok) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><div class="empty-state-text">載入失敗</div></td></tr>'; return; }
+  if (!resp.ok) { tbody.innerHTML = `<tr><td colspan="10" class="empty-state"><div class="empty-state-text">${t('perf.load_fail')}</div></td></tr>`; return; }
   const rows = Array.isArray(resp.data) ? resp.data : [];
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><div class="empty-state-text">暫無考核記錄</div></td></tr>'; return; }
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="10" class="empty-state"><div class="empty-state-text">${t('perf.no_records')}</div></td></tr>`; return; }
   const gradeColor = {A:'var(--green)',B:'var(--accent)',C:'#e07b2a',D:'var(--red)'};
   tbody.innerHTML = rows.map(r => `
     <tr>
@@ -12787,9 +12816,9 @@ async function adjustPerfSalary(reviewId, delta) {
 async function loadPerfTemplates() {
   const tbody = document.getElementById('perf-templates-tbody');
   const d = await api('/api/performance/templates');
-  if (!d.ok) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-state-text">載入失敗</div></td></tr>'; return; }
+  if (!d.ok) { tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="empty-state-text">${t('perf.tmpl_load_fail')}</div></td></tr>`; return; }
   const rows = Array.isArray(d.data) ? d.data : [];
-  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-state-text">暫無範本</div></td></tr>'; return; }
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="empty-state-text">${t('perf.no_templates')}</div></td></tr>`; return; }
   tbody.innerHTML = rows.map(r => `
     <tr>
       <td style="font-weight:600">${escHtml(r.name)}</td>
@@ -13023,7 +13052,7 @@ async function renderAttendanceHeatmap(month) {
   if (!wrap) return;
   const m = month || (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`; })();
   const { ok, data } = await api(`/api/dashboard/attendance-heatmap?month=${m}`, {}, true);
-  if (!ok) { wrap.innerHTML = '<div style="color:var(--muted);font-size:12px">載入失敗</div>'; return; }
+  if (!ok) { wrap.innerHTML = `<div style="color:var(--muted);font-size:12px">${t('load_fail')}</div>`; return; }
   if (label) label.textContent = `${m}（${data.total_staff} 人）`;
 
   const WDAY = ['一','二','三','四','五','六','日'];
@@ -13427,12 +13456,12 @@ async function loadStoreStaff(storeId) {
 
   const listEl = document.getElementById('store-staff-list');
   if (!listEl) return;
-  listEl.innerHTML = '<span style="color:var(--muted)">載入中...</span>';
+  listEl.innerHTML = `<span style="color:var(--muted)">${t('loading')}</span>`;
 
   const r = await api(`/api/stores/${storeId}/staff`);
-  if (!r.ok) { listEl.innerHTML = '<span style="color:var(--red)">載入失敗</span>'; return; }
+  if (!r.ok) { listEl.innerHTML = `<span style="color:var(--red)">${t('load_fail')}</span>`; return; }
   listEl.innerHTML = r.data.length === 0
-    ? '<span style="color:var(--muted)">此門市尚無員工</span>'
+    ? `<span style="color:var(--muted)">${t('store.no_staff')}</span>`
     : r.data.map(s => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
         <span>${escHtml(s.name)} <span style="color:var(--muted);font-size:11px">${escHtml(s.department || '')}</span></span>
@@ -13443,21 +13472,21 @@ async function loadStoreStaff(storeId) {
 async function assignStaffStore() {
   const storeId = document.getElementById('store-assign-target')?.value;
   const staffId = document.getElementById('store-assign-staff')?.value;
-  if (!storeId || !staffId) { showToast('請選擇員工與目標門市', 'error'); return; }
+  if (!storeId || !staffId) { showToast(t('store.assign_required'), 'error'); return; }
   const r = await api(`/api/staff/${staffId}/store`, apiJSON({ store_id: parseInt(storeId) }, 'PUT'));
   if (r.ok) {
-    showToast('已指派', 'success');
+    showToast(t('store.assigned'), 'success');
     // Refresh list if viewing the target store
     const viewStoreId = document.getElementById('store-assign-store')?.value;
     if (viewStoreId === storeId) loadStoreStaff(storeId);
-  } else showToast('指派失敗：' + (r.error || ''), 'error');
+  } else showToast(tf('store.assign_fail', r.data?.error || ''), 'error');
 }
 
 async function removeStaffFromStore(staffId) {
   const storeId = document.getElementById('store-assign-store')?.value;
   const r = await api(`/api/staff/${staffId}/store`, apiJSON({ store_id: null }, 'PUT'));
-  if (r.ok) { showToast('已移出', 'success'); if (storeId) loadStoreStaff(storeId); }
-  else showToast('移出失敗：' + (r.error || ''), 'error');
+  if (r.ok) { showToast(t('store.removed'), 'success'); if (storeId) loadStoreStaff(storeId); }
+  else showToast(tf('store.remove_fail', r.data?.error || ''), 'error');
 }
 
 async function loadAllStaffForAssign() {
@@ -13511,9 +13540,9 @@ async function loadTrainingStaffFilter() {
 async function loadTrainingSummary() {
   const tbody = document.getElementById('training-summary-tbody');
   const alertBar = document.getElementById('training-alert-bar');
-  tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>';
+  tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('training.loading')}</div></td></tr>`;
   const r = await api('/api/training/summary');
-  if (!r.ok) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--red)">載入失敗</td></tr>'; return; }
+  if (!r.ok) { tbody.innerHTML = `<tr><td colspan="7" style="color:var(--red)">${t('training.load_fail')}</td></tr>`; return; }
   const data = r.data;
 
   // Show alert if any expiring soon / expired
@@ -13522,12 +13551,12 @@ async function loadTrainingSummary() {
     alertBar.style.display = '';
     const expiredCount  = data.reduce((s, d) => s + d.expired, 0);
     const expiringCount = data.reduce((s, d) => s + d.expiring_soon, 0);
-    alertBar.innerHTML = `⚠️ 共有 <strong>${expiredCount}</strong> 筆證書已過期、<strong>${expiringCount}</strong> 筆 60 天內到期，請盡速安排補訓。`;
+    alertBar.innerHTML = tf('training.expire_alert', `<strong>${expiredCount}</strong>`, `<strong>${expiringCount}</strong>`, 60);
   } else {
     alertBar.style.display = 'none';
   }
 
-  if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-text">尚無員工資料</div></td></tr>'; return; }
+  if (!data.length) { tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('training.no_data')}</div></td></tr>`; return; }
   tbody.innerHTML = data.map(d => `
     <tr>
       <td>${escHtml(d.name)}</td>
@@ -13545,15 +13574,15 @@ async function loadTrainingSummary() {
 
 async function loadTrainingRecords() {
   const tbody = document.getElementById('training-records-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>';
+  tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('training.loading')}</div></td></tr>`;
   const staffId  = document.getElementById('training-filter-staff')?.value || '';
   const category = document.getElementById('training-filter-cat')?.value   || '';
   let url = '/api/training/records?';
   if (staffId)  url += `staff_id=${staffId}&`;
   if (category) url += `category=${encodeURIComponent(category)}&`;
   const r = await api(url);
-  if (!r.ok) { tbody.innerHTML = '<tr><td colspan="8" style="color:var(--red)">載入失敗</td></tr>'; return; }
-  if (!r.data.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-state-text">尚無訓練記錄</div></td></tr>'; return; }
+  if (!r.ok) { tbody.innerHTML = `<tr><td colspan="8" style="color:var(--red)">${t('training.load_fail')}</td></tr>`; return; }
+  if (!r.data.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('training.no_records')}</div></td></tr>`; return; }
   tbody.innerHTML = r.data.map(rec => {
     const statusColor = rec.status === 'expired' ? 'var(--red)' : rec.status === 'expiring_soon' ? 'var(--amber,#d97706)' : 'var(--green)';
     const statusLabel = rec.status === 'expired' ? '已過期' : rec.status === 'expiring_soon' ? `${rec.days_left}天後到期` : rec.status === 'no_expiry' ? '長期有效' : `${rec.days_left}天後到期`;
@@ -13576,17 +13605,18 @@ async function loadTrainingRecords() {
 async function loadExpiringRecords() {
   const days = document.getElementById('training-expiring-days')?.value || 60;
   const wrap = document.getElementById('training-expiring-wrap');
-  wrap.innerHTML = '<div style="color:var(--muted);padding:24px;text-align:center">載入中...</div>';
-  const r = await api(`/api/training/records?expiring=${days}`);
-  if (!r.ok) { wrap.innerHTML = '<div style="color:var(--red)">載入失敗</div>'; return; }
+  wrap.innerHTML = `<div style="color:var(--muted);padding:24px;text-align:center">${t('training.loading')}</div>`;
+  const [r, rExp] = await Promise.all([
+    api(`/api/training/records?expiring=${days}`),
+    api('/api/training/records?expired=1')
+  ]);
+  if (!r.ok) { wrap.innerHTML = `<div style="color:var(--red)">${t('training.load_fail')}</div>`; return; }
 
-  // Also fetch expired
-  const rExp = await api('/api/training/records?expired=1');
   const expired = rExp.ok ? rExp.data : [];
 
   const allRecs = [...expired, ...r.data.filter(x => x.status !== 'expired')];
   if (!allRecs.length) {
-    wrap.innerHTML = `<div class="card" style="padding:32px;text-align:center;color:var(--green)">✅ ${days} 天內無到期或已過期訓練記錄</div>`;
+    wrap.innerHTML = `<div class="card" style="padding:32px;text-align:center;color:var(--green)">${tf('training.warn_none', days)}</div>`;
     return;
   }
 
@@ -13745,21 +13775,21 @@ async function loadAdminBioCredList(){
   const el=document.getElementById('bio-panel-cred-list');
   try{
     const r=await fetch('/api/webauthn/credentials');
-    if(!r.ok){el.innerHTML='<div style="color:var(--red);font-size:13px;padding:10px">載入失敗</div>';return;}
+    if(!r.ok){el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:10px">${t('bio.load_fail')}</div>`;return;}
     const list=await r.json();
-    if(!list.length){el.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">尚未綁定任何裝置</div>';return;}
+    if(!list.length){el.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">${t('bio.no_devices')}</div>`;return;}
     el.innerHTML=list.map(c=>`
       <div style="display:flex;align-items:center;background:var(--bg);border-radius:8px;padding:10px 14px;margin-bottom:8px">
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--text)">${escStr(c.device_name||'未知裝置')}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">綁定時間：${c.created_at?c.created_at.slice(0,16):'-'}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${escStr(c.device_name||t('bio.unknown_device'))}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${t('bio.bind_time')}${c.created_at?c.created_at.slice(0,16):'-'}</div>
         </div>
         <button onclick="deleteAdminBioCred('${escStr(c.id)}')"
           style="padding:5px 10px;border-radius:6px;border:1.5px solid var(--red);background:transparent;color:var(--red);font-size:12px;font-weight:600;cursor:pointer">
-          移除
+          ${t('btn.delete')}
         </button>
       </div>`).join('');
-  }catch(e){el.innerHTML='<div style="color:var(--red);font-size:13px;padding:10px">載入失敗</div>';}
+  }catch(e){el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:10px">${t('bio.load_fail')}</div>`;}
 }
 
 async function adminRegisterBio(){
