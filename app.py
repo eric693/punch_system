@@ -69,6 +69,38 @@ TW_TZ = _tz(_td(hours=8))   # Asia/Taipei (UTC+8)
 
 WEEKDAY_ZH = ['一', '二', '三', '四', '五', '六', '日']
 
+# ─── In-process TTL cache ─────────────────────────────────────────────────────
+_cache_store: dict = {}
+_cache_lock  = threading.Lock()
+
+def _cache_get(key: str):
+    with _cache_lock:
+        e = _cache_store.get(key)
+        if e and time.time() < e['exp']:
+            return e['data']
+        return None
+
+def _cache_set(key: str, data, ttl: int = 300):
+    with _cache_lock:
+        _cache_store[key] = {'data': data, 'exp': time.time() + ttl}
+
+def _cache_del(key: str):
+    with _cache_lock:
+        _cache_store.pop(key, None)
+
+def _cache_del_prefix(prefix: str):
+    with _cache_lock:
+        for k in list(_cache_store):
+            if k.startswith(prefix):
+                del _cache_store[k]
+
+def _month_range(month: str) -> tuple:
+    """Return (start_iso, end_exclusive_iso) for a 'YYYY-MM' string."""
+    import calendar as _cal_mr
+    y, m = int(month[:4]), int(month[5:])
+    end = (date(y, m, _cal_mr.monthrange(y, m)[1]) + _td(days=1)).isoformat()
+    return f"{month}-01", end
+
 
 def init_db():
     if not DATABASE_URL:
@@ -886,15 +918,20 @@ def api_punch_me():
 @app.route('/api/punch/settings', methods=['GET'])
 def api_punch_settings_get():
     """Public: GPS config + active locations for the punch page."""
+    cached = _cache_get('punch:settings')
+    if cached is not None:
+        return jsonify(cached)
     with get_db() as conn:
         cfg  = conn.execute("SELECT * FROM punch_config WHERE id=1").fetchone()
         locs = conn.execute(
             "SELECT * FROM punch_locations WHERE active=TRUE ORDER BY id"
         ).fetchall()
-    return jsonify({
+    data = {
         'gps_required': cfg['gps_required'] if cfg else False,
         'locations': [loc_row(r) for r in locs]
-    })
+    }
+    _cache_set('punch:settings', data, ttl=300)
+    return jsonify(data)
 
 @app.route('/api/punch/config', methods=['PUT'])
 @login_required
@@ -906,14 +943,20 @@ def api_punch_config_update():
             "UPDATE punch_config SET gps_required=%s, updated_at=NOW() WHERE id=1",
             (gps_required,)
         )
+    _cache_del('punch:settings')
     return jsonify({'gps_required': gps_required})
 
 @app.route('/api/punch/locations', methods=['GET'])
 @login_required
 def api_punch_locations_list():
+    cached = _cache_get('punch:locations')
+    if cached is not None:
+        return jsonify(cached)
     with get_db() as conn:
         rows = conn.execute("SELECT * FROM punch_locations ORDER BY id").fetchall()
-    return jsonify([loc_row(r) for r in rows])
+    data = [loc_row(r) for r in rows]
+    _cache_set('punch:locations', data, ttl=300)
+    return jsonify(data)
 
 @app.route('/api/punch/locations', methods=['POST'])
 @login_required
@@ -930,6 +973,8 @@ def api_punch_locations_create():
             "INSERT INTO punch_locations (location_name, lat, lng, radius_m) VALUES (%s,%s,%s,%s) RETURNING *",
             (name, lat, lng, radius_m)
         ).fetchone()
+    _cache_del('punch:settings')
+    _cache_del('punch:locations')
     return jsonify(loc_row(row)), 201
 
 @app.route('/api/punch/locations/<int:lid>', methods=['PUT'])
@@ -948,6 +993,8 @@ def api_punch_locations_update(lid):
             "UPDATE punch_locations SET location_name=%s,lat=%s,lng=%s,radius_m=%s,active=%s,updated_at=NOW() WHERE id=%s RETURNING *",
             (name, lat, lng, radius_m, active, lid)
         ).fetchone()
+    _cache_del('punch:settings')
+    _cache_del('punch:locations')
     return jsonify(loc_row(row)) if row else ('', 404)
 
 @app.route('/api/punch/locations/<int:lid>', methods=['DELETE'])
@@ -955,6 +1002,8 @@ def api_punch_locations_update(lid):
 def api_punch_locations_delete(lid):
     with get_db() as conn:
         conn.execute("DELETE FROM punch_locations WHERE id=%s", (lid,))
+    _cache_del('punch:settings')
+    _cache_del('punch:locations')
     return jsonify({'deleted': lid})
 
 # ── Clock In/Out ──────────────────────────────────────────────────
@@ -1053,15 +1102,17 @@ def api_punch_my_records():
     if not month:
         from datetime import timezone as _tz, timedelta as _tda
         month = _dt.now(_tz(_tda(hours=8))).strftime('%Y-%m')
+    _mr_start, _mr_end = _month_range(month)
     with get_db() as conn:
         rows = conn.execute("""
             SELECT punch_type, punched_at, gps_distance, location_name, is_manual
             FROM punch_records
             WHERE staff_id=%s
-              AND to_char(punched_at AT TIME ZONE 'Asia/Taipei', 'YYYY-MM') = %s
+              AND punched_at AT TIME ZONE 'Asia/Taipei' >= %s::date
+              AND punched_at AT TIME ZONE 'Asia/Taipei' < %s::date
               AND deleted_at IS NULL
             ORDER BY punched_at ASC
-        """, (sid, month)).fetchall()
+        """, (sid, _mr_start, _mr_end)).fetchall()
     from datetime import timezone as _tz2, timedelta as _tdb
     TW = _tz2(_tdb(hours=8))
     LABEL = {'in': '上班', 'out': '下班', 'break_out': '休息開始', 'break_in': '休息結束'}
@@ -1324,7 +1375,9 @@ def api_punch_records():
     conds, params = ["TRUE"], []
     if staff_id: conds.append("pr.staff_id=%s"); params.append(int(staff_id))
     if month:
-        conds.append("TO_CHAR(pr.punched_at,'YYYY-MM')=%s"); params.append(month)
+        _mr_s, _mr_e = _month_range(month)
+        conds.append("(pr.punched_at AT TIME ZONE 'Asia/Taipei') >= %s::date"); params.append(_mr_s)
+        conds.append("(pr.punched_at AT TIME ZONE 'Asia/Taipei') < %s::date");  params.append(_mr_e)
     elif date_from:
         conds.append("(pr.punched_at AT TIME ZONE 'Asia/Taipei')::date>=%s"); params.append(date_from)
         if date_to:
@@ -1502,6 +1555,7 @@ def api_punch_summary():
     import calendar as _cal2
     _y2, _m2 = int(month[:4]), int(month[5:])
     _next_date2 = (_date2(_y2, _m2, _cal2.monthrange(_y2, _m2)[1]) + _td2(days=1)).isoformat()
+    _range_end  = (_date2.fromisoformat(_next_date2) + _td2(days=1)).isoformat()
 
     with get_db() as conn:
         rows = conn.execute("""
@@ -1512,12 +1566,12 @@ def api_punch_summary():
                    COUNT(*) as punch_count,
                    BOOL_OR(pr.is_manual) as has_manual
             FROM punch_records pr JOIN punch_staff ps ON ps.id=pr.staff_id
-            WHERE (TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
-               OR (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date = %s)
+            WHERE pr.punched_at AT TIME ZONE 'Asia/Taipei' >= %s::date
+              AND pr.punched_at AT TIME ZONE 'Asia/Taipei' < %s::date
               AND pr.deleted_at IS NULL
             GROUP BY ps.id, ps.name, (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date
             ORDER BY (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date ASC, ps.name
-        """, (month, _next_date2)).fetchall()
+        """, (f"{month}-01", _range_end)).fetchall()
 
     # Build per-(staff, date) dict
     day_map = {}
@@ -3185,11 +3239,18 @@ def api_shift_types_list():
 @app.route('/api/shifts/types/public', methods=['GET'])
 def api_shift_types_public():
     """Public endpoint for employee page."""
+    cached = _cache_get('shift:types:public')
+    if cached is not None:
+        resp = jsonify(cached)
+        resp.headers['Cache-Control'] = 'private, max-age=600'
+        return resp
     with get_db() as conn:
         rows = conn.execute(
             "SELECT * FROM shift_types WHERE active=TRUE ORDER BY sort_order, id"
         ).fetchall()
-    resp = jsonify([shift_type_row(r) for r in rows])
+    data = [shift_type_row(r) for r in rows]
+    _cache_set('shift:types:public', data, ttl=600)
+    resp = jsonify(data)
     resp.headers['Cache-Control'] = 'private, max-age=600'
     return resp
 
@@ -3204,6 +3265,7 @@ def api_shift_type_create():
         """, (b['name'], b['start_time'], b['end_time'],
               b.get('color', '#4a7bda'), b.get('departments', ''),
               int(b.get('sort_order', 0)))).fetchone()
+    _cache_del('shift:types:public')
     return jsonify(shift_type_row(row)), 201
 
 @app.route('/api/shifts/types/<int:sid>', methods=['PUT'])
@@ -3220,6 +3282,7 @@ def api_shift_type_update(sid):
               b.get('color', '#4a7bda'), b.get('departments', ''),
               int(b.get('sort_order', 0)), bool(b.get('active', True)),
               sid)).fetchone()
+    _cache_del('shift:types:public')
     return jsonify(shift_type_row(row)) if row else ('', 404)
 
 @app.route('/api/shifts/types/<int:sid>', methods=['DELETE'])
@@ -3227,6 +3290,7 @@ def api_shift_type_update(sid):
 def api_shift_type_delete(sid):
     with get_db() as conn:
         conn.execute("DELETE FROM shift_types WHERE id=%s", (sid,))
+    _cache_del('shift:types:public')
     return jsonify({'deleted': sid})
 
 # ── Shift Assignments ─────────────────────────────────────────────
@@ -3237,7 +3301,9 @@ def api_shift_assignments_list():
     month = request.args.get('month', '')
     conds, params = ['TRUE'], []
     if month:
-        conds.append("to_char(sa.shift_date,'YYYY-MM')=%s"); params.append(month)
+        _sas, _sae = _month_range(month)
+        conds.append("sa.shift_date >= %s::date"); params.append(_sas)
+        conds.append("sa.shift_date < %s::date");  params.append(_sae)
     with get_db() as conn:
         rows = conn.execute(f"""
             SELECT sa.*,
@@ -3537,6 +3603,7 @@ def api_shift_conflicts():
     conflicts = []
 
     with get_db() as conn:
+        _scc_s, _scc_e = _month_range(month)
         rows = conn.execute("""
             SELECT sa.staff_id, sa.shift_date,
                    ps.name  AS staff_name,
@@ -3545,9 +3612,9 @@ def api_shift_conflicts():
             FROM shift_assignments sa
             JOIN punch_staff  ps ON ps.id = sa.staff_id
             JOIN shift_types  st ON st.id = sa.shift_type_id
-            WHERE TO_CHAR(sa.shift_date, 'YYYY-MM') = %s
+            WHERE sa.shift_date >= %s::date AND sa.shift_date < %s::date
             ORDER BY sa.staff_id, sa.shift_date
-        """, (month,)).fetchall()
+        """, (_scc_s, _scc_e)).fetchall()
 
     # ── 每班時數 & 跨日 ────────────────────────────────────────────
     for r in rows:
@@ -3654,15 +3721,17 @@ def api_shift_export():
         staff_list = conn.execute(
             "SELECT id, name, employee_code, role FROM punch_staff WHERE active=TRUE ORDER BY name"
         ).fetchall()
+        _xl_s, _xl_e = _month_range(month)
         assigns = conn.execute("""
             SELECT sa.staff_id, sa.shift_date, sa.note,
                    st.name AS shift_name, st.start_time, st.end_time
             FROM shift_assignments sa
             JOIN shift_types st ON st.id = sa.shift_type_id
-            WHERE TO_CHAR(sa.shift_date, 'YYYY-MM') = %s
-        """, (month,)).fetchall()
+            WHERE sa.shift_date >= %s::date AND sa.shift_date < %s::date
+        """, (_xl_s, _xl_e)).fetchall()
         holidays = {str(r['date']) for r in conn.execute(
-            "SELECT date FROM public_holidays WHERE TO_CHAR(date,'YYYY-MM')=%s", (month,)
+            "SELECT date FROM public_holidays WHERE date >= %s::date AND date < %s::date",
+            (_xl_s, _xl_e)
         ).fetchall()}
 
     lookup = {}
@@ -3749,15 +3818,26 @@ def api_my_shift_schedule():
     if not sid: return jsonify({'error': 'not logged in'}), 401
     month = request.args.get('month', '')
     with get_db() as conn:
-        rows = conn.execute("""
-            SELECT sa.shift_date, sa.note,
-                   st.name as shift_name, st.start_time, st.end_time, st.color
-            FROM shift_assignments sa
-            JOIN shift_types st ON st.id=sa.shift_type_id
-            WHERE sa.staff_id=%s
-              AND to_char(sa.shift_date,'YYYY-MM')=%s
-            ORDER BY sa.shift_date
-        """, (sid, month)).fetchall()
+        _msa_s, _msa_e = _month_range(month) if month else (None, None)
+        if month:
+            rows = conn.execute("""
+                SELECT sa.shift_date, sa.note,
+                       st.name as shift_name, st.start_time, st.end_time, st.color
+                FROM shift_assignments sa
+                JOIN shift_types st ON st.id=sa.shift_type_id
+                WHERE sa.staff_id=%s
+                  AND sa.shift_date >= %s::date AND sa.shift_date < %s::date
+                ORDER BY sa.shift_date
+            """, (sid, _msa_s, _msa_e)).fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT sa.shift_date, sa.note,
+                       st.name as shift_name, st.start_time, st.end_time, st.color
+                FROM shift_assignments sa
+                JOIN shift_types st ON st.id=sa.shift_type_id
+                WHERE sa.staff_id=%s
+                ORDER BY sa.shift_date
+            """, (sid,)).fetchall()
     result = {}
     for r in rows:
         ds = r['shift_date'].isoformat()
@@ -4370,9 +4450,16 @@ def api_leave_types_list():
 
 @app.route('/api/leave/types/public', methods=['GET'])
 def api_leave_types_public():
+    cached = _cache_get('leave:types:public')
+    if cached is not None:
+        resp = jsonify(cached)
+        resp.headers['Cache-Control'] = 'private, max-age=600'
+        return resp
     with get_db() as conn:
         rows = conn.execute("SELECT * FROM leave_types WHERE active=TRUE ORDER BY sort_order, id").fetchall()
-    resp = jsonify([leave_type_row(r) for r in rows])
+    data = [leave_type_row(r) for r in rows]
+    _cache_set('leave:types:public', data, ttl=600)
+    resp = jsonify(data)
     resp.headers['Cache-Control'] = 'private, max-age=600'
     return resp
 
@@ -4387,6 +4474,7 @@ def api_leave_type_create():
         """, (b['name'], b['code'], float(b.get('pay_rate',1.0)),
               b.get('max_days') or None, b.get('description',''),
               b.get('color','#4a7bda'), int(b.get('sort_order',0)))).fetchone()
+    _cache_del('leave:types:public')
     return jsonify(leave_type_row(row)), 201
 
 @app.route('/api/leave/types/<int:tid>', methods=['PUT'])
@@ -4402,6 +4490,7 @@ def api_leave_type_update(tid):
               b.get('max_days') or None, b.get('description',''),
               b.get('color','#4a7bda'), int(b.get('sort_order',0)),
               bool(b.get('active',True)), tid)).fetchone()
+    _cache_del('leave:types:public')
     return jsonify(leave_type_row(row)) if row else ('', 404)
 
 @app.route('/api/leave/types/<int:tid>', methods=['DELETE'])
@@ -4409,6 +4498,7 @@ def api_leave_type_update(tid):
 def api_leave_type_delete(tid):
     with get_db() as conn:
         conn.execute("DELETE FROM leave_types WHERE id=%s", (tid,))
+    _cache_del('leave:types:public')
     return jsonify({'deleted': tid})
 
 # ── Leave Requests ────────────────────────────────────────────────
@@ -5149,18 +5239,17 @@ def _calc_punch_hours(conn, staff_id, month):
 
     _yh, _mh   = int(month[:4]), int(month[5:])
     _last_h    = _calh.monthrange(_yh, _mh)[1]
-    _next_date_h = (_dateh(_yh, _mh, _last_h) + _tdh(days=1)).isoformat()
+    _next_date_h  = (_dateh(_yh, _mh, _last_h) + _tdh(days=1)).isoformat()
+    _range_end_h  = (_dateh.fromisoformat(_next_date_h) + _tdh(days=1)).isoformat()
 
     rows = conn.execute("""
         SELECT punch_type, punched_at
         FROM punch_records
         WHERE staff_id=%s
-          AND (
-            to_char(punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
-            OR (punched_at AT TIME ZONE 'Asia/Taipei')::date = %s
-          )
+          AND punched_at AT TIME ZONE 'Asia/Taipei' >= %s::date
+          AND punched_at AT TIME ZONE 'Asia/Taipei' < %s::date
         ORDER BY punched_at ASC
-    """, (staff_id, month, _next_date_h)).fetchall()
+    """, (staff_id, f"{month}-01", _range_end_h)).fetchall()
 
     # Group by work session: non-'in' records within 24h of the last 'in'
     # are assigned to that 'in' record's date (handles cross-day shifts)
@@ -5263,11 +5352,12 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
                 total_work_days = len(scheduled_dates)
         else:
             # 1. 優先從排班取工作日
+            _sal_s, _sal_e = _month_range(month)
             shift_date_rows = conn.execute("""
                 SELECT DISTINCT date FROM shift_assignments
-                WHERE staff_id=%s AND TO_CHAR(date,'YYYY-MM')=%s
+                WHERE staff_id=%s AND date >= %s::date AND date < %s::date
                 ORDER BY date
-            """, (staff['id'], month)).fetchall()
+            """, (staff['id'], _sal_s, _sal_e)).fetchall()
             if shift_date_rows:
                 scheduled_dates = {r['date'].isoformat() if hasattr(r['date'], 'isoformat') else str(r['date']) for r in shift_date_rows}
                 total_work_days = len(scheduled_dates)
@@ -5275,8 +5365,8 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
                 # 2. 備援：日曆扣除週日 + 國定假日
                 holiday_rows = conn.execute("""
                     SELECT date FROM public_holidays
-                    WHERE TO_CHAR(date,'YYYY-MM')=%s
-                """, (month,)).fetchall()
+                    WHERE date >= %s::date AND date < %s::date
+                """, (_sal_s, _sal_e)).fetchall()
                 holiday_dates = {r['date'].isoformat() if hasattr(r['date'], 'isoformat') else str(r['date']) for r in holiday_rows}
                 days_in_month = _cal2.monthrange(y, m)[1]
                 for _d in range(1, days_in_month + 1):
@@ -5310,25 +5400,27 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
     if batch_ctx is not None:
         ot_pay = batch_ctx['ot_totals'].get(staff['id'], 0.0)
     else:
+        _sal_s2, _sal_e2 = _month_range(month)
         ot_rows = conn.execute("""
             SELECT COALESCE(SUM(ot_pay), 0) as total
             FROM overtime_requests
             WHERE staff_id=%s AND status='approved'
-              AND to_char(request_date,'YYYY-MM')=%s
-        """, (staff['id'], month)).fetchone()
+              AND request_date >= %s::date AND request_date < %s::date
+        """, (staff['id'], _sal_s2, _sal_e2)).fetchone()
         ot_pay = float(ot_rows['total']) if ot_rows else 0.0
 
     # ── 請假資訊 ────────────────────────────────────────────
     if batch_ctx is not None:
         leave_rows = batch_ctx['leave_rows'].get(staff['id'], [])
     else:
+        _sal_s3, _sal_e3 = _month_range(month)
         leave_rows = conn.execute("""
             SELECT lr.total_days, lt.pay_rate, lt.code, lt.name as leave_name
             FROM leave_requests lr
             JOIN leave_types lt ON lt.id = lr.leave_type_id
             WHERE lr.staff_id=%s AND lr.status='approved'
-              AND to_char(lr.start_date,'YYYY-MM')=%s
-        """, (staff['id'], month)).fetchall()
+              AND lr.start_date >= %s::date AND lr.start_date < %s::date
+        """, (staff['id'], _sal_s3, _sal_e3)).fetchall()
     leave_days    = sum(float(r['total_days']) for r in leave_rows)
     unpaid_days   = sum(float(r['total_days']) for r in leave_rows if float(r['pay_rate']) == 0)
     half_pay_days = sum(float(r['total_days']) for r in leave_rows if 0 < float(r['pay_rate']) < 1)
@@ -5512,18 +5604,20 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
             punched_dates = batch_ctx['punch_dates'].get(staff['id'], set())
             leave_date_set = batch_ctx['leave_date_sets'].get(staff['id'], set())
         else:
+            _ps, _pe = _month_range(month)
             punch_rows = conn.execute("""
                 SELECT DISTINCT (punched_at AT TIME ZONE 'Asia/Taipei')::date as work_date
                 FROM punch_records WHERE staff_id=%s
-                  AND TO_CHAR(punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
-            """, (staff['id'], month)).fetchall()
+                  AND punched_at AT TIME ZONE 'Asia/Taipei' >= %s::date
+                  AND punched_at AT TIME ZONE 'Asia/Taipei' < %s::date
+            """, (staff['id'], _ps, _pe)).fetchall()
             punched_dates = {r['work_date'].isoformat() if hasattr(r['work_date'], 'isoformat') else str(r['work_date']) for r in punch_rows}
             # 已核准請假日期集合
             leave_date_rows = conn.execute("""
                 SELECT start_date, end_date FROM leave_requests
                 WHERE staff_id=%s AND status='approved'
-                  AND TO_CHAR(start_date,'YYYY-MM')=%s
-            """, (staff['id'], month)).fetchall()
+                  AND start_date >= %s::date AND start_date < %s::date
+            """, (staff['id'], _ps, _pe)).fetchall()
             leave_date_set = set()
             for _lr in leave_date_rows:
                 _ld = _lr['start_date']
@@ -5703,19 +5797,21 @@ def api_salary_generate():
             _y_b, _m_b = int(month[:4]), int(month[5:])
             _days_b = _cal_batch.monthrange(_y_b, _m_b)[1]
             _next_month_b = (_d_batch(_y_b, _m_b, _days_b) + _td_batch(days=1)).isoformat()
+            _batch_ms, _batch_me = _month_range(month)
 
             # 1. 全員排班日期
             _shift_rows_b = conn.execute("""
                 SELECT staff_id, date FROM shift_assignments
-                WHERE staff_id = ANY(%s) AND TO_CHAR(date,'YYYY-MM')=%s
-            """, (staff_ids, month)).fetchall()
+                WHERE staff_id = ANY(%s) AND date >= %s::date AND date < %s::date
+            """, (staff_ids, _batch_ms, _batch_me)).fetchall()
             _shift_dates_b: dict = {}
             for _r in _shift_rows_b:
                 _shift_dates_b.setdefault(_r['staff_id'], []).append(_r['date'])
 
             # 2. 國定假日（全員共用）
             _hol_rows_b = conn.execute(
-                "SELECT date FROM public_holidays WHERE TO_CHAR(date,'YYYY-MM')=%s", (month,)
+                "SELECT date FROM public_holidays WHERE date >= %s::date AND date < %s::date",
+                (_batch_ms, _batch_me)
             ).fetchall()
             _holiday_dates_b = {
                 r['date'].isoformat() if hasattr(r['date'], 'isoformat') else str(r['date'])
@@ -5727,9 +5823,9 @@ def api_salary_generate():
                 SELECT staff_id, COALESCE(SUM(ot_pay),0) as total
                 FROM overtime_requests
                 WHERE staff_id = ANY(%s) AND status='approved'
-                  AND to_char(request_date,'YYYY-MM')=%s
+                  AND request_date >= %s::date AND request_date < %s::date
                 GROUP BY staff_id
-            """, (staff_ids, month)).fetchall()
+            """, (staff_ids, _batch_ms, _batch_me)).fetchall()
             _ot_totals_b = {r['staff_id']: float(r['total']) for r in _ot_rows_b}
 
             # 4. 全員請假記錄（含假別）
@@ -5738,8 +5834,8 @@ def api_salary_generate():
                 FROM leave_requests lr
                 JOIN leave_types lt ON lt.id = lr.leave_type_id
                 WHERE lr.staff_id = ANY(%s) AND lr.status='approved'
-                  AND to_char(lr.start_date,'YYYY-MM')=%s
-            """, (staff_ids, month)).fetchall()
+                  AND lr.start_date >= %s::date AND lr.start_date < %s::date
+            """, (staff_ids, _batch_ms, _batch_me)).fetchall()
             _leave_map_b: dict = {}
             for _r in _leave_rows_b:
                 _leave_map_b.setdefault(_r['staff_id'], []).append(dict(_r))
@@ -5750,9 +5846,10 @@ def api_salary_generate():
                        (punched_at AT TIME ZONE 'Asia/Taipei')::date as work_date
                 FROM punch_records
                 WHERE staff_id = ANY(%s)
-                  AND TO_CHAR(punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s
+                  AND punched_at AT TIME ZONE 'Asia/Taipei' >= %s::date
+                  AND punched_at AT TIME ZONE 'Asia/Taipei' < %s::date
                   AND deleted_at IS NULL
-            """, (staff_ids, month)).fetchall()
+            """, (staff_ids, _batch_ms, _batch_me)).fetchall()
             _punch_dates_b: dict = {}
             for _r in _punch_rows_b:
                 _ds = _r['work_date'].isoformat() if hasattr(_r['work_date'], 'isoformat') else str(_r['work_date'])
@@ -5762,8 +5859,8 @@ def api_salary_generate():
             _leave_date_rows_b = conn.execute("""
                 SELECT staff_id, start_date, end_date FROM leave_requests
                 WHERE staff_id = ANY(%s) AND status='approved'
-                  AND TO_CHAR(start_date,'YYYY-MM')=%s
-            """, (staff_ids, month)).fetchall()
+                  AND start_date >= %s::date AND start_date < %s::date
+            """, (staff_ids, _batch_ms, _batch_me)).fetchall()
             _leave_date_sets_b: dict = {}
             for _lr in _leave_date_rows_b:
                 _sid = _lr['staff_id']
@@ -6032,6 +6129,7 @@ def api_ann_create():
               bool(b.get('is_pinned', False)), b.get('visible_to','all'),
               expires, b.get('author','管理員').strip(),
               bool(b.get('active', True)))).fetchone()
+    _cache_del('ann:public')
     if row and row['active']:
         _broadcast_announcement_line(row['title'], row['content'])
     return jsonify(ann_row(row)), 201
@@ -6055,6 +6153,7 @@ def api_ann_update(aid):
               bool(b.get('is_pinned', False)), b.get('visible_to','all'),
               expires, b.get('author','管理員').strip(),
               bool(b.get('active', True)), aid)).fetchone()
+    _cache_del('ann:public')
     return jsonify(ann_row(row)) if row else ('', 404)
 
 @app.route('/api/announcements/<int:aid>', methods=['DELETE'])
@@ -6062,6 +6161,7 @@ def api_ann_update(aid):
 def api_ann_delete(aid):
     with get_db() as conn:
         conn.execute("DELETE FROM announcements WHERE id=%s", (aid,))
+    _cache_del('ann:public')
     return jsonify({'deleted': aid})
 
 @app.route('/api/announcements/<int:aid>/pin', methods=['POST'])
@@ -6072,6 +6172,7 @@ def api_ann_toggle_pin(aid):
             "UPDATE announcements SET is_pinned=NOT is_pinned, updated_at=NOW() WHERE id=%s RETURNING *",
             (aid,)
         ).fetchone()
+    _cache_del('ann:public')
     return jsonify(ann_row(row)) if row else ('', 404)
 
 # ── Public: employee reads ────────────────────────────────────────
@@ -6079,7 +6180,9 @@ def api_ann_toggle_pin(aid):
 @app.route('/api/announcements/public', methods=['GET'])
 def api_ann_public():
     """員工端讀取有效公告"""
-    from datetime import datetime as _dta
+    cached = _cache_get('ann:public')
+    if cached is not None:
+        return jsonify(cached)
     with get_db() as conn:
         rows = conn.execute("""
             SELECT * FROM announcements
@@ -6088,8 +6191,9 @@ def api_ann_public():
             ORDER BY is_pinned DESC, published_at DESC
             LIMIT 50
         """).fetchall()
-        # 增加閱讀計數（批次）
-    return jsonify([ann_row(r) for r in rows])
+    data = [ann_row(r) for r in rows]
+    _cache_set('ann:public', data, ttl=120)
+    return jsonify(data)
 
 @app.route('/api/announcements/<int:aid>/view', methods=['POST'])
 def api_ann_view(aid):
@@ -6213,17 +6317,27 @@ def api_holidays_public():
     """Public endpoint for staff page"""
     year = request.args.get('year', '')
     month = request.args.get('month', '')
+    cache_key = f'holidays:public:{year}:{month}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        resp = jsonify(cached)
+        resp.headers['Cache-Control'] = 'private, max-age=3600'
+        return resp
     conds, params = ['TRUE'], []
     if year:
         conds.append("EXTRACT(YEAR FROM date)=%s"); params.append(int(year))
     if month:
-        conds.append("to_char(date,'YYYY-MM')=%s"); params.append(month)
+        _mh_s, _mh_e = _month_range(month)
+        conds.append("date >= %s::date"); params.append(_mh_s)
+        conds.append("date < %s::date");  params.append(_mh_e)
     with get_db() as conn:
         rows = conn.execute(
             f"SELECT date, name FROM public_holidays WHERE {' AND '.join(conds)} ORDER BY date",
             params
         ).fetchall()
-    resp = jsonify({r['date'].isoformat(): r['name'] for r in rows})
+    data = {r['date'].isoformat(): r['name'] for r in rows}
+    _cache_set(cache_key, data, ttl=3600)
+    resp = jsonify(data)
     resp.headers['Cache-Control'] = 'private, max-age=3600'
     return resp
 
@@ -6242,6 +6356,7 @@ def api_holiday_create():
             RETURNING *
         """, (b['date'], b['name'].strip(),
               b.get('holiday_type','national'), b.get('note',''))).fetchone()
+    _cache_del_prefix('holidays:public:')
     return jsonify(holiday_row(row)), 201
 
 @app.route('/api/holidays/<int:hid>', methods=['DELETE'])
@@ -6249,6 +6364,7 @@ def api_holiday_create():
 def api_holiday_delete(hid):
     with get_db() as conn:
         conn.execute("DELETE FROM public_holidays WHERE id=%s", (hid,))
+    _cache_del_prefix('holidays:public:')
     return jsonify({'deleted': hid})
 
 @app.route('/api/holidays/batch', methods=['POST'])
@@ -6270,6 +6386,7 @@ def api_holiday_batch():
                 count += 1
             except Exception:
                 pass
+    _cache_del_prefix('holidays:public:')
     return jsonify({'imported': count})
 
 
@@ -6335,7 +6452,10 @@ def api_export_attendance():
         from datetime import date as _de
         month = _de.today().strftime('%Y-%m')
 
-    conds, params = ["TO_CHAR(pr.punched_at AT TIME ZONE 'Asia/Taipei','YYYY-MM')=%s"], [month]
+    _exp_s, _exp_e = _month_range(month)
+    conds = ["pr.punched_at AT TIME ZONE 'Asia/Taipei' >= %s::date",
+             "pr.punched_at AT TIME ZONE 'Asia/Taipei' < %s::date"]
+    params = [_exp_s, _exp_e]
     if staff_id:
         conds.append("pr.staff_id=%s"); params.append(int(staff_id))
 

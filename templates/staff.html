@@ -663,9 +663,12 @@ function tick(){
 setInterval(tick,1000);tick();
 
 (async()=>{
-  gpsSettings=await fetch('/api/punch/settings').then(r=>r.json()).catch(()=>({}));
-  const r=await fetch('/api/punch/me');
-  if(r.ok){me=await r.json();showMain();}
+  const [settingsData, meRes] = await Promise.all([
+    fetch('/api/punch/settings').then(r=>r.json()).catch(()=>({})),
+    fetch('/api/punch/me')
+  ]);
+  gpsSettings = settingsData;
+  if(meRes.ok){me=await meRes.json();showMain();}
   else showLogin();
 })();
 
