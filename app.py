@@ -22,7 +22,7 @@ from linebot.models import (
 # shared modules (extracted for blueprint reuse)
 from db import get_db, _hash_pw, DATABASE_URL
 from auth import login_required, require_module, require_super
-from i18n import register_translate_hook
+from i18n import register_translate_hook, translate_message as _i18n_translate
 
 app = Flask(__name__)
 
@@ -425,6 +425,7 @@ def init_db():
         "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS reviewed_by  TEXT DEFAULT ''",
         "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS review_note  TEXT DEFAULT ''",
         "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS reviewed_at  TIMESTAMPTZ",
+        "ALTER TABLE punch_staff ADD COLUMN IF NOT EXISTS preferred_lang TEXT DEFAULT 'zh-TW'",
         # ── 效能索引 ──────────────────────────────────────────────────────────
         "CREATE INDEX IF NOT EXISTS idx_punch_records_staff_at       ON punch_records(staff_id, punched_at)",
         "CREATE INDEX IF NOT EXISTS idx_punch_records_punched_at     ON punch_records(punched_at)",
@@ -1787,6 +1788,8 @@ def get_line_punch_config():
 
 
 def _send_line_punch(user_id, text):
+    lang = getattr(_line_ctx, 'lang', 'zh-TW')
+    text = _i18n_translate(text, lang)
     cfg = get_line_punch_config()
     if not cfg or not cfg.get('enabled') or not cfg.get('channel_access_token'):
         return
@@ -2361,6 +2364,7 @@ def _handle_line_punch_event(event, cfg):
             ).fetchone()
         if not staff:
             return
+        _line_ctx.lang = staff.get('preferred_lang') or 'zh-TW'
         state = _line_conv_state.get(user_id)
         if state:
             if state['flow'] == 'leave':
@@ -2375,6 +2379,9 @@ def _handle_line_punch_event(event, cfg):
         staff = conn.execute(
             "SELECT * FROM punch_staff WHERE line_user_id=%s AND active=TRUE", (user_id,)
         ).fetchone()
+
+    if staff:
+        _line_ctx.lang = staff.get('preferred_lang') or 'zh-TW'
 
     # ── Not bound yet ─────────────────────────────────────────
     if not staff:

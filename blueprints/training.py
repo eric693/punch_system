@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify
 from auth import login_required
 from db import get_db
 from export_helpers import xl_response, xl_write_header, xl_write_rows
+from i18n import get_lang, translate_message
 
 training_bp = Blueprint('training', __name__)
 
@@ -180,6 +181,9 @@ def api_export_training_excel():
     import openpyxl
     from openpyxl.styles import PatternFill
 
+    lang = get_lang()
+    def _t(s): return translate_message(s, lang)
+
     staff_id = request.args.get('staff_id', '')
     category = request.args.get('category', '')
     conds, params = ['TRUE'], []
@@ -200,8 +204,8 @@ def api_export_training_excel():
     today = date.today()
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = '訓練記錄'
-    headers = ['員工代碼', '姓名', '部門', '課程名稱', '類別', '完成日期', '到期日期', '剩餘天數', '證書號碼', '狀態', '備註']
+    ws.title = _t('訓練記錄')
+    headers = [_t(h) for h in ['員工代碼', '姓名', '部門', '課程名稱', '類別', '完成日期', '到期日期', '剩餘天數', '證書號碼', '狀態', '備註']]
     xl_write_header(ws, headers, [10, 10, 10, 24, 12, 12, 12, 10, 16, 10, 24])
 
     exp_fill  = PatternFill('solid', fgColor='FFEBEE')
@@ -209,29 +213,32 @@ def api_export_training_excel():
     data = []
     for r in rows:
         remain = ''
-        status = '有效'
+        status = _t('有效')
         if r.get('expiry_date'):
             try:
                 ed = date.fromisoformat(str(r['expiry_date']))
                 delta = (ed - today).days
                 remain = delta
-                if delta < 0:   status = '已過期'
-                elif delta < 30: status = '即將到期'
+                if delta < 0:    status = _t('已過期')
+                elif delta < 30: status = _t('即將到期')
             except Exception:
                 pass
+        cat_zh = TRAINING_CATEGORIES.get(r['category'] or 'other', r['category'] or '')
         data.append([
             r['employee_code'] or '', r['staff_name'], r['department'] or '',
             r['course_name'] or '',
-            TRAINING_CATEGORIES.get(r['category'] or 'other', r['category'] or ''),
+            _t(cat_zh),
             str(r['completed_date']) if r.get('completed_date') else '',
             str(r['expiry_date'])    if r.get('expiry_date')    else '',
             remain, r['certificate_no'] or '', status, r['note'] or '',
         ])
     xl_write_rows(ws, data)
 
-    ws2 = wb.create_sheet('到期摘要')
-    xl_write_header(ws2, ['員工', '課程', '類別', '到期日', '剩餘天數', '狀態'], [12, 24, 12, 12, 10, 10])
-    exp_data = [r for r in data if r[9] in ('已過期', '即將到期')]
+    ws2 = wb.create_sheet(_t('到期摘要'))
+    xl_write_header(ws2, [_t(h) for h in ['員工', '課程', '類別', '到期日', '剩餘天數', '狀態']], [12, 24, 12, 12, 10, 10])
+    expired_label   = _t('已過期')
+    expiring_label  = _t('即將到期')
+    exp_data = [r for r in data if r[9] in (expired_label, expiring_label)]
     xl_write_rows(ws2, [[r[1], r[3], r[4], r[6], r[7], r[9]] for r in exp_data])
 
     return xl_response(wb, 'training_records.xlsx')

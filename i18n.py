@@ -709,6 +709,215 @@ _EXACT = {
         'vi': 'Chỉ có thể trả lại thiết bị đang được mượn',
         'th': 'สามารถคืนได้เฉพาะอุปกรณ์ที่กำลังถูกยืมอยู่',
     },
+    # LINE messages
+    '目前無可用假別，請聯絡管理員。': {
+        'en': 'No leave types available. Please contact admin.',
+        'ja': '利用可能な休暇種別がありません。管理者にお問い合わせください。',
+        'vi': 'Hiện không có loại nghỉ phép. Vui lòng liên hệ quản trị viên.',
+        'th': 'ไม่มีประเภทการลาที่ใช้ได้ กรุณาติดต่อผู้ดูแลระบบ',
+    },
+    '已取消請假申請。': {
+        'en': 'Leave request cancelled.',
+        'ja': '休暇申請をキャンセルしました。',
+        'vi': 'Đã hủy đơn xin nghỉ.',
+        'th': 'ยกเลิกคำขอลาแล้ว',
+    },
+    '已取消加班申請。': {
+        'en': 'Overtime request cancelled.',
+        'ja': '残業申請をキャンセルしました。',
+        'vi': 'Đã hủy đơn xin làm thêm giờ.',
+        'th': 'ยกเลิกคำขอล่วงเวลาแล้ว',
+    },
+    '⚠️ 結束日期不能早於開始日期': {
+        'en': '⚠️ End date cannot be earlier than start date',
+        'ja': '⚠️ 終了日は開始日より前にできません',
+        'vi': '⚠️ Ngày kết thúc không được sớm hơn ngày bắt đầu',
+        'th': '⚠️ วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น',
+    },
+    '此帳號已綁定其他 LINE 帳號，請聯絡管理員。': {
+        'en': 'This account is already linked to another LINE account. Please contact admin.',
+        'ja': 'このアカウントはすでに別のLINEアカウントと連携されています。管理者にお問い合わせください。',
+        'vi': 'Tài khoản này đã được liên kết với LINE khác. Vui lòng liên hệ quản trị viên.',
+        'th': 'บัญชีนี้เชื่อมโยงกับ LINE อื่นแล้ว กรุณาติดต่อผู้ดูแลระบบ',
+    },
+    '已解除 LINE 帳號綁定。': {
+        'en': 'LINE account unlinked.',
+        'ja': 'LINEアカウントの連携を解除しました。',
+        'vi': 'Đã hủy liên kết tài khoản LINE.',
+        'th': 'ยกเลิกการเชื่อมโยงบัญชี LINE แล้ว',
+    },
+    '日期格式錯誤。': {
+        'en': 'Invalid date format.',
+        'ja': '日付の形式が正しくありません。',
+        'vi': 'Định dạng ngày không hợp lệ.',
+        'th': 'รูปแบบวันที่ไม่ถูกต้อง',
+    },
+    # Training export — column headers
+    '員工代碼': {
+        'en': 'Employee Code',
+        'ja': '社員コード',
+        'vi': 'Mã nhân viên',
+        'th': 'รหัสพนักงาน',
+    },
+    '姓名': {
+        'en': 'Name',
+        'ja': '氏名',
+        'vi': 'Họ tên',
+        'th': 'ชื่อ',
+    },
+    '部門': {
+        'en': 'Department',
+        'ja': '部門',
+        'vi': 'Phòng ban',
+        'th': 'แผนก',
+    },
+    '課程名稱': {
+        'en': 'Course Name',
+        'ja': 'コース名',
+        'vi': 'Tên khóa học',
+        'th': 'ชื่อหลักสูตร',
+    },
+    '類別': {
+        'en': 'Category',
+        'ja': 'カテゴリ',
+        'vi': 'Danh mục',
+        'th': 'หมวดหมู่',
+    },
+    '完成日期': {
+        'en': 'Completion Date',
+        'ja': '修了日',
+        'vi': 'Ngày hoàn thành',
+        'th': 'วันที่เสร็จสิ้น',
+    },
+    '到期日期': {
+        'en': 'Expiry Date',
+        'ja': '有効期限',
+        'vi': 'Ngày hết hạn',
+        'th': 'วันที่หมดอายุ',
+    },
+    '剩餘天數': {
+        'en': 'Days Remaining',
+        'ja': '残り日数',
+        'vi': 'Số ngày còn lại',
+        'th': 'วันที่เหลือ',
+    },
+    '證書號碼': {
+        'en': 'Certificate No.',
+        'ja': '証明書番号',
+        'vi': 'Số chứng chỉ',
+        'th': 'หมายเลขใบรับรอง',
+    },
+    '狀態': {
+        'en': 'Status',
+        'ja': 'ステータス',
+        'vi': 'Trạng thái',
+        'th': 'สถานะ',
+    },
+    '備註': {
+        'en': 'Notes',
+        'ja': 'メモ',
+        'vi': 'Ghi chú',
+        'th': 'หมายเหตุ',
+    },
+    '員工': {
+        'en': 'Employee',
+        'ja': '従業員',
+        'vi': 'Nhân viên',
+        'th': 'พนักงาน',
+    },
+    '課程': {
+        'en': 'Course',
+        'ja': 'コース',
+        'vi': 'Khóa học',
+        'th': 'หลักสูตร',
+    },
+    '到期日': {
+        'en': 'Expiry Date',
+        'ja': '有効期限',
+        'vi': 'Ngày hết hạn',
+        'th': 'วันที่หมดอายุ',
+    },
+    # Training export — status labels
+    '有效': {
+        'en': 'Valid',
+        'ja': '有効',
+        'vi': 'Còn hiệu lực',
+        'th': 'ใช้งานได้',
+    },
+    '已過期': {
+        'en': 'Expired',
+        'ja': '期限切れ',
+        'vi': 'Đã hết hạn',
+        'th': 'หมดอายุแล้ว',
+    },
+    '即將到期': {
+        'en': 'Expiring Soon',
+        'ja': 'もうすぐ期限切れ',
+        'vi': 'Sắp hết hạn',
+        'th': 'ใกล้หมดอายุ',
+    },
+    # Training export — sheet titles
+    '訓練記錄': {
+        'en': 'Training Records',
+        'ja': '訓練記録',
+        'vi': 'Hồ sơ đào tạo',
+        'th': 'บันทึกการฝึกอบรม',
+    },
+    '到期摘要': {
+        'en': 'Expiry Summary',
+        'ja': '有効期限サマリー',
+        'vi': 'Tóm tắt hết hạn',
+        'th': 'สรุปการหมดอายุ',
+    },
+    # Training categories
+    '食品安全': {
+        'en': 'Food Safety',
+        'ja': '食品安全',
+        'vi': 'An toàn thực phẩm',
+        'th': 'ความปลอดภัยด้านอาหาร',
+    },
+    '消防安全': {
+        'en': 'Fire Safety',
+        'ja': '消防安全',
+        'vi': 'An toàn phòng cháy',
+        'th': 'ความปลอดภัยด้านอัคคีภัย',
+    },
+    '急救訓練': {
+        'en': 'First Aid',
+        'ja': '救急訓練',
+        'vi': 'Sơ cứu',
+        'th': 'การปฐมพยาบาล',
+    },
+    '衛生管理': {
+        'en': 'Hygiene Management',
+        'ja': '衛生管理',
+        'vi': 'Quản lý vệ sinh',
+        'th': 'การจัดการสุขอนามัย',
+    },
+    '服務禮儀': {
+        'en': 'Service Etiquette',
+        'ja': 'サービスマナー',
+        'vi': 'Lễ nghi phục vụ',
+        'th': 'มารยาทการให้บริการ',
+    },
+    '設備操作': {
+        'en': 'Equipment Operation',
+        'ja': '機器操作',
+        'vi': 'Vận hành thiết bị',
+        'th': 'การใช้งานอุปกรณ์',
+    },
+    '一般訓練': {
+        'en': 'General Training',
+        'ja': '一般訓練',
+        'vi': 'Đào tạo chung',
+        'th': 'การฝึกอบรมทั่วไป',
+    },
+    '其他': {
+        'en': 'Other',
+        'ja': 'その他',
+        'vi': 'Khác',
+        'th': 'อื่นๆ',
+    },
     # WebAuthn
     '找不到已綁定的裝置，請先綁定': {
         'en': 'No registered device found, please register first',
@@ -740,6 +949,43 @@ _REGEX = [
             'ja': '「{0}」モジュールへのアクセス権限がありません',
             'vi': 'Không có quyền truy cập module "{0}"',
             'th': 'ไม่มีสิทธิ์เข้าถึงโมดูล "{0}"',
+        },
+    ),
+    # LINE dynamic messages
+    (
+        _re.compile(r'^找不到假別「(.+?)」，請點選按鈕選擇。$'),
+        {
+            'en': 'Leave type "{0}" not found. Please select from the buttons.',
+            'ja': '休暇種別「{0}」が見つかりません。ボタンから選択してください。',
+            'vi': 'Không tìm thấy loại nghỉ phép "{0}". Vui lòng chọn từ các nút.',
+            'th': 'ไม่พบประเภทการลา "{0}" กรุณาเลือกจากปุ่ม',
+        },
+    ),
+    (
+        _re.compile(r'^⚠️ 結束時間須晚於開始時間（(.+?)），請重新選擇。$'),
+        {
+            'en': '⚠️ End time must be after start time ({0}). Please reselect.',
+            'ja': '⚠️ 終了時間は開始時間（{0}）より後でなければなりません。再度選択してください。',
+            'vi': '⚠️ Thời gian kết thúc phải sau thời gian bắt đầu ({0}). Vui lòng chọn lại.',
+            'th': '⚠️ เวลาสิ้นสุดต้องหลังเวลาเริ่มต้น ({0}) กรุณาเลือกใหม่',
+        },
+    ),
+    (
+        _re.compile(r'^⚠️ 加班時數異常（(.+?)h），請重新確認時間。$'),
+        {
+            'en': '⚠️ Overtime hours unusual ({0}h). Please recheck the times.',
+            'ja': '⚠️ 残業時間が異常です（{0}h）。時間を再確認してください。',
+            'vi': '⚠️ Số giờ làm thêm bất thường ({0}h). Vui lòng kiểm tra lại thời gian.',
+            'th': '⚠️ ชั่วโมงล่วงเวลาผิดปกติ ({0}h) กรุณาตรวจสอบเวลาอีกครั้ง',
+        },
+    ),
+    (
+        _re.compile(r'^⚠️ 1 分鐘內已打過(.+?)，請勿重複打卡。$'),
+        {
+            'en': '⚠️ Already punched {0} within 1 minute. Please avoid duplicate punches.',
+            'ja': '⚠️ 1分以内に{0}を打刻済みです。重複打刻はしないでください。',
+            'vi': '⚠️ Đã chấm công {0} trong vòng 1 phút. Vui lòng không chấm công trùng lặp.',
+            'th': '⚠️ ตอกบัตร {0} ไปแล้วภายใน 1 นาที กรุณาอย่าตอกบัตรซ้ำ',
         },
     ),
 ]
@@ -818,6 +1064,25 @@ _PREFIX = list({
         'ja': '日付 ',
         'vi': 'Ngày ',
         'th': 'วันที่ ',
+    },
+    # LINE date/time error prefixes
+    '日期格式錯誤，請輸入 YYYY-MM-DD，例：': {
+        'en': 'Invalid date format. Please enter YYYY-MM-DD, e.g.: ',
+        'ja': '日付の形式が正しくありません。YYYY-MM-DD形式で入力してください。例：',
+        'vi': 'Định dạng ngày không hợp lệ. Vui lòng nhập YYYY-MM-DD, ví dụ: ',
+        'th': 'รูปแบบวันที่ไม่ถูกต้อง กรุณาใส่ YYYY-MM-DD เช่น: ',
+    },
+    '⚠️ 時間格式錯誤，請輸入 HH:MM，例：': {
+        'en': '⚠️ Invalid time format. Please enter HH:MM, e.g.: ',
+        'ja': '⚠️ 時刻の形式が正しくありません。HH:MM形式で入力してください。例：',
+        'vi': '⚠️ Định dạng giờ không hợp lệ. Vui lòng nhập HH:MM, ví dụ: ',
+        'th': '⚠️ รูปแบบเวลาไม่ถูกต้อง กรุณาใส่ HH:MM เช่น: ',
+    },
+    '請輸入有效時間，格式：HH:MM，例：': {
+        'en': 'Please enter a valid time. Format: HH:MM, e.g.: ',
+        'ja': '有効な時刻を入力してください。形式：HH:MM。例：',
+        'vi': 'Vui lòng nhập thời gian hợp lệ. Định dạng: HH:MM, ví dụ: ',
+        'th': 'กรุณาใส่เวลาที่ถูกต้อง รูปแบบ: HH:MM เช่น: ',
     },
 }.items())
 
