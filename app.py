@@ -5109,6 +5109,19 @@ def init_salary_db():
             updated_at      TIMESTAMPTZ   DEFAULT NOW(),
             UNIQUE(staff_id, month)
         )""",
+        """CREATE TABLE IF NOT EXISTS salary_advances (
+            id           SERIAL PRIMARY KEY,
+            staff_id     INT REFERENCES punch_staff(id) ON DELETE CASCADE,
+            amount       NUMERIC(12,2) NOT NULL,
+            advance_date DATE NOT NULL,
+            deduct_month TEXT NOT NULL,
+            status       TEXT DEFAULT 'pending',
+            note         TEXT DEFAULT '',
+            created_at   TIMESTAMPTZ DEFAULT NOW(),
+            updated_at   TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_salary_advances_staff ON salary_advances(staff_id)",
+        "CREATE INDEX IF NOT EXISTS idx_salary_advances_month ON salary_advances(deduct_month, status)",
     ]
     for sql in migrations:
         try:
@@ -5645,6 +5658,29 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
             })
             deduction_total += deduct
 
+    # ── 預支薪資扣款 ────────────────────────────────────────────
+    if batch_ctx is not None:
+        adv_rows = batch_ctx.get('advances', {}).get(staff['id'], [])
+    else:
+        adv_rows = conn.execute("""
+            SELECT id, amount, advance_date, note FROM salary_advances
+            WHERE staff_id=%s AND deduct_month=%s AND status='pending'
+        """, (staff['id'], month)).fetchall()
+        adv_rows = [dict(r) for r in adv_rows]
+    for adv in adv_rows:
+        adv_amt = float(adv['amount'])
+        adv_date = adv['advance_date'].isoformat() if hasattr(adv['advance_date'], 'isoformat') else str(adv['advance_date'])
+        items.append({
+            'id': f'advance_{adv["id"]}',
+            'name': f'預支薪資扣款（{adv_date}）',
+            'type': 'deduction',
+            'amount': adv_amt,
+            'formula': '',
+            'calc_note': adv.get('note') or '',
+            'advance_id': adv['id'],
+        })
+        deduction_total += adv_amt
+
     net_pay = round(allowance_total - deduction_total, 2)
 
     return {
@@ -5879,6 +5915,16 @@ def api_salary_generate():
                 "SELECT * FROM salary_items WHERE active=TRUE ORDER BY sort_order, id"
             ).fetchall()]
 
+            # 8. 全員本月待扣預支薪資
+            _adv_rows_b = conn.execute("""
+                SELECT id, staff_id, amount, advance_date, note
+                FROM salary_advances
+                WHERE staff_id = ANY(%s) AND deduct_month=%s AND status='pending'
+            """, (staff_ids, month)).fetchall()
+            _advances_b: dict = {}
+            for _ar in _adv_rows_b:
+                _advances_b.setdefault(_ar['staff_id'], []).append(dict(_ar))
+
             batch_ctx = {
                 'shift_dates':     _shift_dates_b,
                 'holiday_dates':   _holiday_dates_b,
@@ -5887,6 +5933,7 @@ def api_salary_generate():
                 'punch_dates':     _punch_dates_b,
                 'leave_date_sets': _leave_date_sets_b,
                 'salary_items':    _salary_items_b,
+                'advances':        _advances_b,
             }
 
             generated = 0
@@ -5967,8 +6014,21 @@ def api_salary_confirm_all():
             UPDATE salary_records SET status='confirmed', confirmed_by=%s,
               confirmed_at=NOW(), updated_at=NOW()
             WHERE month=%s AND status='draft'
-            RETURNING id, staff_id, month, net_pay
+            RETURNING id, staff_id, month, net_pay, items
         """, (by, month)).fetchall()
+        # 標記所有被確認薪資中的預支為已扣帳
+        all_adv_ids = []
+        for row in rows:
+            try:
+                items = row['items'] if isinstance(row['items'], list) else _json.loads(row['items'] or '[]')
+                all_adv_ids.extend(it['advance_id'] for it in items if it.get('advance_id'))
+            except Exception:
+                pass
+        if all_adv_ids:
+            conn.execute("""
+                UPDATE salary_advances SET status='deducted', updated_at=NOW()
+                WHERE id = ANY(%s)
+            """, (all_adv_ids,))
     confirmed = len(rows)
     for row in rows:
         extra = f"{row['month']} 薪資已確認\n實領金額：${float(row['net_pay'] or 0):,.0f}"
@@ -5985,6 +6045,18 @@ def api_salary_confirm(rid):
               confirmed_at=NOW(), updated_at=NOW()
             WHERE id=%s RETURNING *
         """, (b.get('confirmed_by','管理員'), rid)).fetchone()
+        if row:
+            # 標記本月預支為已扣帳
+            try:
+                items = row['items'] if isinstance(row['items'], list) else _json.loads(row['items'] or '[]')
+                adv_ids = [it['advance_id'] for it in items if it.get('advance_id')]
+                if adv_ids:
+                    conn.execute("""
+                        UPDATE salary_advances SET status='deducted', updated_at=NOW()
+                        WHERE id = ANY(%s)
+                    """, (adv_ids,))
+            except Exception as _e:
+                print(f"[confirm advance] {_e}")
     if row:
         extra = f"{row['month']} 薪資已確認\n實領金額：${float(row['net_pay'] or 0):,.0f}"
         _notify_review_result(row['staff_id'], '薪資', 'confirmed', extra)
@@ -5996,6 +6068,88 @@ def api_salary_record_delete(rid):
     with get_db() as conn:
         conn.execute("DELETE FROM salary_records WHERE id=%s", (rid,))
     return jsonify({'deleted': rid})
+
+# ── Salary Advances CRUD ──────────────────────────────────────────
+
+def _advance_row(row):
+    if not row: return None
+    d = dict(row)
+    d['amount'] = float(d['amount']) if d.get('amount') is not None else 0
+    if d.get('advance_date'):
+        d['advance_date'] = d['advance_date'].isoformat() if hasattr(d['advance_date'], 'isoformat') else str(d['advance_date'])
+    if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+    if d.get('updated_at'): d['updated_at'] = d['updated_at'].isoformat()
+    return d
+
+@app.route('/api/salary/advances', methods=['GET'])
+@require_module('salary')
+def api_salary_advances_list():
+    staff_id = request.args.get('staff_id', type=int)
+    month    = request.args.get('month', '')
+    status   = request.args.get('status', '')
+    with get_db() as conn:
+        conds = []
+        params = []
+        if staff_id:
+            conds.append("sa.staff_id=%s"); params.append(staff_id)
+        if month:
+            conds.append("sa.deduct_month=%s"); params.append(month)
+        if status:
+            conds.append("sa.status=%s"); params.append(status)
+        where = ('WHERE ' + ' AND '.join(conds)) if conds else ''
+        rows = conn.execute(f"""
+            SELECT sa.*, ps.name as staff_name, ps.employee_code, ps.department
+            FROM salary_advances sa
+            JOIN punch_staff ps ON ps.id=sa.staff_id
+            {where}
+            ORDER BY sa.deduct_month DESC, sa.advance_date DESC
+        """, params).fetchall()
+    return jsonify([_advance_row(r) for r in rows])
+
+@app.route('/api/salary/advances', methods=['POST'])
+@require_module('salary')
+def api_salary_advance_create():
+    b = request.get_json(force=True)
+    staff_id     = b.get('staff_id')
+    amount       = b.get('amount')
+    advance_date = b.get('advance_date', '')
+    deduct_month = b.get('deduct_month', '')
+    note         = b.get('note', '')
+    if not staff_id or not amount or not advance_date or not deduct_month:
+        return jsonify({'error': '員工、金額、預支日期、扣款月份為必填'}), 400
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO salary_advances (staff_id, amount, advance_date, deduct_month, note)
+            VALUES (%s,%s,%s::date,%s,%s) RETURNING *
+        """, (staff_id, float(amount), advance_date, deduct_month, note)).fetchone()
+    return jsonify(_advance_row(row)), 201
+
+@app.route('/api/salary/advances/<int:aid>', methods=['PUT'])
+@require_module('salary')
+def api_salary_advance_update(aid):
+    b = request.get_json(force=True)
+    with get_db() as conn:
+        row = conn.execute("""
+            UPDATE salary_advances
+               SET amount=%s, advance_date=%s::date, deduct_month=%s,
+                   note=%s, status=%s, updated_at=NOW()
+             WHERE id=%s RETURNING *
+        """, (
+            float(b.get('amount', 0)),
+            b.get('advance_date',''),
+            b.get('deduct_month',''),
+            b.get('note',''),
+            b.get('status','pending'),
+            aid
+        )).fetchone()
+    return jsonify(_advance_row(row)) if row else ('', 404)
+
+@app.route('/api/salary/advances/<int:aid>', methods=['DELETE'])
+@require_module('salary')
+def api_salary_advance_delete(aid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM salary_advances WHERE id=%s", (aid,))
+    return jsonify({'deleted': aid})
 
 # ── Salary Staff Settings ─────────────────────────────────────────
 
