@@ -212,36 +212,36 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
           <button class="punch-btn p-bin"  id="btn-bin"  onclick="doPunch('break_in')">休息結束<div class="p-sub">Break In</div></button>
         </div>
         <div class="log-section" id="today-log-wrap" style="display:none">
-          <div class="section-label">今日打卡記錄</div>
+          <div class="section-label" data-i18n-staff="punch.today_log">今日打卡記錄</div>
           <div id="today-log"></div>
         </div>
         <!-- 補打卡申請 -->
         <div style="padding:10px 20px;border-top:1px solid var(--border)">
-          <button class="btn btn-outline" style="width:100%;font-size:13px" onclick="showReqPanel()">申請補打卡</button>
+          <button class="btn btn-outline" style="width:100%;font-size:13px" onclick="showReqPanel()" data-i18n-staff="btn.apply_makeup">申請補打卡</button>
         </div>
         <div id="req-panel" style="display:none;padding:16px 20px;border-top:1px solid var(--border)">
-          <div class="section-label" style="margin-bottom:12px">補打卡申請</div>
+          <div class="section-label" style="margin-bottom:12px" data-i18n-staff="form.makeup_punch">補打卡申請</div>
           <div style="margin-bottom:10px">
-            <div class="fl">打卡類型</div>
+            <div class="fl" data-i18n-staff="field.punch_type">打卡類型</div>
             <select class="fi" id="req-type" style="margin-bottom:8px">
-              <option value="in">上班打卡</option><option value="out">下班打卡</option>
-              <option value="break_out">休息開始</option><option value="break_in">休息結束</option>
+              <option value="in" data-i18n-staff="pt.in">上班打卡</option><option value="out" data-i18n-staff="pt.out">下班打卡</option>
+              <option value="break_out" data-i18n-staff="pt.break_out">休息開始</option><option value="break_in" data-i18n-staff="pt.break_in">休息結束</option>
             </select>
           </div>
           <div style="margin-bottom:10px">
-            <div class="fl">補打時間</div>
+            <div class="fl" data-i18n-staff="field.makeup_time">補打時間</div>
             <input class="fi" type="datetime-local" id="req-time" style="margin-bottom:8px">
           </div>
           <div style="margin-bottom:14px">
-            <div class="fl">原因 *</div>
-            <input class="fi" id="req-reason" placeholder="例：忘記打卡、手機沒電" style="margin-bottom:0">
+            <div class="fl" data-i18n-staff="field.reason_required">原因 *</div>
+            <input class="fi" id="req-reason" data-i18n-ph="ph.example_punch" placeholder="例：忘記打卡、手機沒電" style="margin-bottom:0">
           </div>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-outline" style="flex:1" onclick="hideReqPanel()">取消</button>
-            <button class="btn btn-primary" style="flex:2" onclick="submitPunchReq()">送出申請</button>
+            <button class="btn btn-outline" style="flex:1" onclick="hideReqPanel()" data-i18n-staff="btn.cancel">取消</button>
+            <button class="btn btn-primary" style="flex:2" onclick="submitPunchReq()" data-i18n-staff="btn.submit">送出申請</button>
           </div>
           <div id="my-reqs" style="margin-top:16px;display:none">
-            <div class="section-label" style="margin-bottom:8px">我的申請記錄</div>
+            <div class="section-label" style="margin-bottom:8px" data-i18n-staff="lbl.my_requests">我的申請記錄</div>
             <div id="my-reqs-list"></div>
           </div>
         </div>
@@ -250,39 +250,39 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
       <!-- 排休申請 tab -->
       <div id="panel-sched" class="tab-body" style="display:none">
         <div class="month-row">
-          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">月份</span>
+          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase" data-i18n-staff="lbl.month">月份</span>
           <input type="month" class="month-inp" id="month-picker" onchange="loadSchedMonth()">
         </div>
         <div class="quota-bar">
           <div>
-            <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.08em;text-transform:uppercase">已選 / 配額</div>
+            <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.08em;text-transform:uppercase" data-i18n-staff="lbl.selected_quota">已選 / 配額</div>
             <div style="margin-top:2px">
               <span class="quota-num q-ok" id="q-sel">0</span>
               <span style="font-size:13px;color:var(--muted);margin:0 3px">/</span>
               <span class="quota-num" style="color:var(--muted)" id="q-quota">8</span>
             </div>
           </div>
-          <div style="flex:1;font-size:11px;color:var(--muted);text-align:right" id="q-hint">點擊日期選取休假日</div>
+          <div style="flex:1;font-size:11px;color:var(--muted);text-align:right" id="q-hint" data-i18n-staff="sched.click_hint">點擊日期選取休假日</div>
         </div>
         <div id="status-area"></div>
         <div id="cal-wrap" style="display:none">
           <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px" id="cal-title"></div>
           <div class="cal-head-row">
-            <div class="cal-hd" style="color:var(--red)">日</div>
-            <div class="cal-hd" style="color:var(--muted)">一</div>
-            <div class="cal-hd" style="color:var(--muted)">二</div>
-            <div class="cal-hd" style="color:var(--muted)">三</div>
-            <div class="cal-hd" style="color:var(--muted)">四</div>
-            <div class="cal-hd" style="color:var(--muted)">五</div>
-            <div class="cal-hd" style="color:var(--accent)">六</div>
+            <div class="cal-hd" style="color:var(--red)" data-i18n-staff="day.0">日</div>
+            <div class="cal-hd" style="color:var(--muted)" data-i18n-staff="day.1">一</div>
+            <div class="cal-hd" style="color:var(--muted)" data-i18n-staff="day.2">二</div>
+            <div class="cal-hd" style="color:var(--muted)" data-i18n-staff="day.3">三</div>
+            <div class="cal-hd" style="color:var(--muted)" data-i18n-staff="day.4">四</div>
+            <div class="cal-hd" style="color:var(--muted)" data-i18n-staff="day.5">五</div>
+            <div class="cal-hd" style="color:var(--accent)" data-i18n-staff="day.6">六</div>
           </div>
           <div class="cal-grid" id="cal-grid"></div>
           <div class="sel-summary" id="sel-summary"></div>
-          <div class="fl">備註（選填）</div>
-          <input class="note-inp" id="submit-note" placeholder="例：5號家庭活動">
+          <div class="fl" data-i18n-staff="field.notes_optional">備註（選填）</div>
+          <input class="note-inp" id="submit-note" data-i18n-ph="ph.example_note" placeholder="例：5號家庭活動">
           <div class="btn-row">
-            <button class="btn btn-outline" onclick="clearSchedSel()">清除</button>
-            <button class="btn btn-primary" id="submit-btn" style="flex:1" onclick="showSchedConfirm()">送出申請</button>
+            <button class="btn btn-outline" onclick="clearSchedSel()" data-i18n-staff="btn.clear">清除</button>
+            <button class="btn btn-primary" id="submit-btn" style="flex:1" onclick="showSchedConfirm()" data-i18n-staff="btn.submit">送出申請</button>
           </div>
         </div>
       </div>
@@ -290,38 +290,38 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
       <!-- 我的排班 tab -->
       <div id="panel-schedule-view" class="tab-body" style="display:none">
         <div class="month-row">
-          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">月份</span>
+          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase" data-i18n-staff="lbl.month">月份</span>
           <input type="month" class="month-inp" id="view-month-picker" onchange="loadScheduleView()">
         </div>
-        <div id="schedule-view-content"><div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">請選擇月份</div></div>
+        <div id="schedule-view-content"><div style="text-align:center;color:var(--muted);font-size:13px;padding:20px" data-i18n-staff="hint.select_month">請選擇月份</div></div>
       </div>
 
       <!-- 加班申請 tab -->
       <div id="panel-overtime" class="tab-body" style="display:none">
         <div style="margin-bottom:14px;padding:10px 14px;background:var(--orange-light);border-radius:8px;border:1px solid #f5c0a0;font-size:12px;color:var(--text)">
-          <strong>勞基法加班費</strong>：前 2 小時 × 1.33、第 3 小時起 × 1.67
+          <strong data-i18n-staff="hint.labor_law_ot_title">勞基法加班費</strong><span data-i18n-staff="hint.labor_law_ot_detail">：前 2 小時 × 1.33、第 3 小時起 × 1.67</span>
         </div>
         <div style="background:#fff;border-radius:10px;border:1.5px solid var(--border);padding:16px;margin-bottom:16px">
-          <div class="section-label" style="margin-bottom:12px">新增加班申請</div>
-          <div style="margin-bottom:10px"><div class="fl">加班日期</div><input class="fi" type="date" id="ot-date" style="margin-bottom:8px"></div>
+          <div class="section-label" style="margin-bottom:12px" data-i18n-staff="form.ot_new">新增加班申請</div>
+          <div style="margin-bottom:10px"><div class="fl" data-i18n-staff="field.ot_date">加班日期</div><input class="fi" type="date" id="ot-date" style="margin-bottom:8px"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-            <div><div class="fl">開始時間</div><input class="fi" type="time" id="ot-start" style="margin-bottom:0"></div>
-            <div><div class="fl">結束時間</div><input class="fi" type="time" id="ot-end" style="margin-bottom:0"></div>
+            <div><div class="fl" data-i18n-staff="field.ot_start">開始時間</div><input class="fi" type="time" id="ot-start" style="margin-bottom:0"></div>
+            <div><div class="fl" data-i18n-staff="field.ot_end">結束時間</div><input class="fi" type="time" id="ot-end" style="margin-bottom:0"></div>
           </div>
           <div id="ot-hours-preview" style="font-size:12px;color:var(--accent);margin-bottom:10px;min-height:16px"></div>
           <div style="margin-bottom:10px">
-            <div class="fl">加班日別</div>
+            <div class="fl" data-i18n-staff="field.ot_day_type">加班日別</div>
             <select class="fi" id="ot-day-type" onchange="updateOTHoursPreview()" style="margin-bottom:0">
-              <option value="weekday">平日（前2h×1.33，後續×1.67）</option>
-              <option value="rest_day">休息日（最少4h）</option>
-              <option value="holiday">國定假日（全程×2倍）</option>
-              <option value="special">例假日（全程×2倍）</option>
+              <option value="weekday" data-i18n-staff="opt.ot_weekday">平日（前2h×1.33，後續×1.67）</option>
+              <option value="rest_day" data-i18n-staff="opt.ot_rest_day">休息日（最少4h）</option>
+              <option value="holiday" data-i18n-staff="opt.ot_holiday">國定假日（全程×2倍）</option>
+              <option value="special" data-i18n-staff="opt.ot_special">例假日（全程×2倍）</option>
             </select>
           </div>
-          <div style="margin-bottom:14px"><div class="fl">加班原因 *</div><input class="fi" id="ot-reason" placeholder="例：客戶急件、備料作業" style="margin-bottom:0"></div>
-          <button class="btn btn-primary" style="width:100%" onclick="submitOTRequest()">送出加班申請</button>
+          <div style="margin-bottom:14px"><div class="fl" data-i18n-staff="field.ot_reason">加班原因 *</div><input class="fi" id="ot-reason" data-i18n-ph="ph.example_ot" placeholder="例：客戶急件、備料作業" style="margin-bottom:0"></div>
+          <button class="btn btn-primary" style="width:100%" onclick="submitOTRequest()" data-i18n-staff="btn.submit_ot">送出加班申請</button>
         </div>
-        <div class="section-label" style="margin-bottom:10px">我的申請記錄</div>
+        <div class="section-label" style="margin-bottom:10px" data-i18n-staff="lbl.my_requests">我的申請記錄</div>
         <div id="my-ot-list"><div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">載入中...</div></div>
       </div>
 
@@ -341,33 +341,33 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
         <div id="leave-balance-overview" style="margin-bottom:14px"></div>
 
         <div class="month-row" style="margin-bottom:14px">
-          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">月份</span>
+          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase" data-i18n-staff="lbl.month">月份</span>
           <input type="month" class="month-inp" id="leave-month-picker" onchange="loadMyLeaveHistory()">
         </div>
 
         <!-- 新增請假申請 -->
         <div style="background:#fff;border-radius:10px;border:1.5px solid var(--border);padding:16px;margin-bottom:16px">
-          <div class="section-label" style="margin-bottom:12px">新增請假申請</div>
+          <div class="section-label" style="margin-bottom:12px" data-i18n-staff="form.leave_new">新增請假申請</div>
           <div style="margin-bottom:10px">
-            <div class="fl">假別 *</div>
+            <div class="fl" data-i18n-staff="field.leave_type_required">假別 *</div>
             <select class="fi" id="leave-type-sel" style="width:100%;margin-bottom:0"></select>
           </div>
           <div id="leave-type-info" style="font-size:12px;color:var(--muted);margin-bottom:10px;min-height:16px"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-            <div><div class="fl">開始日期 *</div><input class="fi" type="date" id="leave-start" style="margin-bottom:0" onchange="previewLeaveStaff()"></div>
-            <div><div class="fl">結束日期 *</div><input class="fi" type="date" id="leave-end"   style="margin-bottom:0" onchange="previewLeaveStaff()"></div>
+            <div><div class="fl" data-i18n-staff="field.start_date_required">開始日期 *</div><input class="fi" type="date" id="leave-start" style="margin-bottom:0" onchange="previewLeaveStaff()"></div>
+            <div><div class="fl" data-i18n-staff="field.end_date_required">結束日期 *</div><input class="fi" type="date" id="leave-end"   style="margin-bottom:0" onchange="previewLeaveStaff()"></div>
           </div>
           <div style="display:flex;gap:16px;margin-bottom:10px">
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="leave-start-half" onchange="previewLeaveStaff()"> 開始日下午請假</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="leave-end-half"   onchange="previewLeaveStaff()"> 結束日上午請假</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="leave-start-half" onchange="previewLeaveStaff()"> <span data-i18n-staff="lbl.start_afternoon">開始日下午請假</span></label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="leave-end-half"   onchange="previewLeaveStaff()"> <span data-i18n-staff="lbl.end_morning">結束日上午請假</span></label>
           </div>
           <div id="leave-days-preview" style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px;min-height:18px"></div>
           <div id="leave-balance-info" style="font-size:12px;color:var(--muted);padding:8px 10px;background:var(--bg);border-radius:6px;margin-bottom:6px;min-height:32px"></div>
-          <button class="btn btn-outline" style="width:100%;font-size:12px;margin-bottom:10px" onclick="showMyAnnualSchedule()">查看我的特休排程</button>
-          <div style="margin-bottom:10px"><div class="fl">請假原因 *</div><input class="fi" id="leave-reason" placeholder="例：身體不適、家庭事務" style="margin-bottom:0"></div>
-          <div style="margin-bottom:10px"><div class="fl">代理人（選填）</div><input class="fi" id="leave-sub" placeholder="例：王小明" style="margin-bottom:0"></div>
+          <button class="btn btn-outline" style="width:100%;font-size:12px;margin-bottom:10px" onclick="showMyAnnualSchedule()" data-i18n-staff="btn.view_annual_schedule">查看我的特休排程</button>
+          <div style="margin-bottom:10px"><div class="fl" data-i18n-staff="field.leave_reason_required">請假原因 *</div><input class="fi" id="leave-reason" data-i18n-ph="ph.example_leave" placeholder="例：身體不適、家庭事務" style="margin-bottom:0"></div>
+          <div style="margin-bottom:10px"><div class="fl" data-i18n-staff="field.substitute">代理人（選填）</div><input class="fi" id="leave-sub" data-i18n-ph="ph.example_name" placeholder="例：王小明" style="margin-bottom:0"></div>
           <div id="leave-attachment-wrap" style="margin-bottom:14px;display:none">
-            <div class="fl">病假證明文件</div>
+            <div class="fl" data-i18n-staff="field.sick_doc">病假證明文件</div>
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 12px;border:1.5px dashed var(--border);border-radius:8px;background:var(--bg)" onclick="document.getElementById('leave-file-input').click()">
               <span style="font-size:18px;color:var(--muted)">+</span>
               <div>
@@ -377,11 +377,11 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
             </label>
             <input type="file" id="leave-file-input" accept="image/*,application/pdf" style="display:none" onchange="leaveFileSelected(this)">
           </div>
-          <button class="btn btn-primary" style="width:100%" onclick="submitLeaveRequest()">送出請假申請</button>
+          <button class="btn btn-primary" style="width:100%" onclick="submitLeaveRequest()" data-i18n-staff="btn.submit_leave">送出請假申請</button>
         </div>
 
         <!-- 我的請假記錄 -->
-        <div class="section-label" style="margin-bottom:10px">我的請假記錄</div>
+        <div class="section-label" style="margin-bottom:10px" data-i18n-staff="lbl.my_leave_records">我的請假記錄</div>
         <div id="my-leave-list"><div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">載入中...</div></div>
       </div>
 
@@ -390,17 +390,17 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
         <!-- 匯款帳號資訊 -->
         <div id="payslip-bank-info" style="margin-bottom:14px"></div>
         <div class="month-row" style="margin-bottom:16px">
-          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">月份</span>
+          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase" data-i18n-staff="lbl.month">月份</span>
           <input type="month" class="month-inp" id="payslip-month" onchange="loadMyPayslip()">
         </div>
         <div id="payslip-wrap">
-          <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">請選擇月份查看薪資單</div>
+          <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px" data-i18n-staff="hint.select_month_payslip">請選擇月份查看薪資單</div>
         </div>
       </div>
       <!-- 出勤月曆 tab -->
       <div id="panel-attendance" class="tab-body" style="display:none">
         <div class="month-row" style="margin-bottom:14px">
-          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">月份</span>
+          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase" data-i18n-staff="lbl.month">月份</span>
           <input type="month" class="month-inp" id="att-month-picker" onchange="loadAttendance()">
         </div>
         <div id="att-summary" style="display:flex;border-radius:12px;overflow:hidden;margin-bottom:14px;border:1.5px solid var(--border);background:#fff"></div>
@@ -410,8 +410,8 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
       <!-- 異常查詢 tab -->
       <div id="panel-myanomalies" class="tab-body" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">近 30 天出勤異常</span>
-          <button onclick="loadMyAnomalies()" style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer">重新整理</button>
+          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase" data-i18n-staff="lbl.anomaly_30d">近 30 天出勤異常</span>
+          <button onclick="loadMyAnomalies()" style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer" data-i18n-staff="btn.refresh">重新整理</button>
         </div>
         <div id="my-anomaly-list">
           <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入中...</div>
@@ -421,7 +421,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
       <!-- 假別年報 tab -->
       <div id="panel-leavereport" class="tab-body" style="display:none">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase">年度</span>
+          <span style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase" data-i18n-staff="lbl.year">年度</span>
           <select class="month-inp" id="leavereport-year" onchange="loadLeaveReport()" style="width:auto;padding:8px 12px"></select>
         </div>
         <div id="leave-report-balances" style="margin-bottom:16px"></div>
@@ -443,12 +443,12 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
           <input type="month" id="myt-month" class="fi" style="width:auto;flex:none"
                  onchange="loadMyTravel()">
           <select id="myt-status" class="fi" style="width:auto;flex:none" onchange="loadMyTravel()">
-            <option value="">全部狀態</option>
-            <option value="pending">待審</option>
-            <option value="approved">已核准</option>
-            <option value="rejected">已拒絕</option>
+            <option value="" data-i18n-staff="opt.all_status">全部狀態</option>
+            <option value="pending" data-i18n-staff="opt.pending">待審</option>
+            <option value="approved" data-i18n-staff="opt.approved">已核准</option>
+            <option value="rejected" data-i18n-staff="opt.rejected">已拒絕</option>
           </select>
-          <button onclick="openMyTravelModal()" class="btn btn-primary" style="flex:none;font-size:13px;padding:7px 14px">＋ 新增申請</button>
+          <button onclick="openMyTravelModal()" class="btn btn-primary" style="flex:none;font-size:13px;padding:7px 14px" data-i18n-staff="btn.add_request">＋ 新增申請</button>
         </div>
 
         <!-- 申請列表 -->
@@ -458,51 +458,51 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
 
         <!-- 新增/編輯 申請表 -->
         <div id="mytravel-form" style="display:none;background:#fff;border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid var(--border)">
-          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:14px" id="myt-form-title">新增差旅申請</div>
+          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:14px" id="myt-form-title" data-i18n-staff="form.travel_new">新增差旅申請</div>
           <input type="hidden" id="myt-edit-id">
-          <div class="fl">標題 *</div>
-          <input class="fi" id="myt-title" placeholder="例：台北客戶拜訪" style="margin-bottom:10px">
-          <div class="fl">目的地 *</div>
-          <input class="fi" id="myt-dest" placeholder="例：台北市" style="margin-bottom:10px">
+          <div class="fl" data-i18n-staff="field.travel_title_required">標題 *</div>
+          <input class="fi" id="myt-title" data-i18n-ph="ph.example_travel" placeholder="例：台北客戶拜訪" style="margin-bottom:10px">
+          <div class="fl" data-i18n-staff="field.destination_required">目的地 *</div>
+          <input class="fi" id="myt-dest" data-i18n-ph="ph.example_dest" placeholder="例：台北市" style="margin-bottom:10px">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-            <div><div class="fl">出發日期 *</div><input type="date" class="fi" id="myt-start"></div>
-            <div><div class="fl">返回日期 *</div><input type="date" class="fi" id="myt-end"></div>
+            <div><div class="fl" data-i18n-staff="field.depart_date_required">出發日期 *</div><input type="date" class="fi" id="myt-start"></div>
+            <div><div class="fl" data-i18n-staff="field.return_date_required">返回日期 *</div><input type="date" class="fi" id="myt-end"></div>
           </div>
-          <div class="fl">出差目的</div>
-          <textarea class="fi" id="myt-purpose" rows="2" style="resize:vertical;margin-bottom:10px" placeholder="說明目的（選填）"></textarea>
-          <div class="fl">預支金額 (NT$)</div>
+          <div class="fl" data-i18n-staff="field.travel_purpose">出差目的</div>
+          <textarea class="fi" id="myt-purpose" rows="2" style="resize:vertical;margin-bottom:10px" data-i18n-ph="ph.purpose_optional" placeholder="說明目的（選填）"></textarea>
+          <div class="fl" data-i18n-staff="field.advance_amount">預支金額 (NT$)</div>
           <input type="number" class="fi" id="myt-advance" min="0" step="100" placeholder="0" style="margin-bottom:14px">
           <div style="display:flex;gap:8px">
-            <button class="btn btn-primary" style="flex:1" onclick="saveMyTravel()">儲存</button>
-            <button class="btn btn-outline" style="flex:1" onclick="closeMyTravelForm()">取消</button>
+            <button class="btn btn-primary" style="flex:1" onclick="saveMyTravel()" data-i18n-staff="btn.save">儲存</button>
+            <button class="btn btn-outline" style="flex:1" onclick="closeMyTravelForm()" data-i18n-staff="btn.cancel">取消</button>
           </div>
         </div>
 
         <!-- 費用核銷區 -->
         <div id="mytravel-exp-wrap" style="display:none;background:#fff;border-radius:14px;padding:18px;border:1.5px solid var(--border)">
-          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px">費用核銷</div>
+          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px" data-i18n-staff="lbl.expense_claim">費用核銷</div>
           <div id="myt-exp-sub" style="font-size:12px;color:var(--muted);margin-bottom:14px"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-            <div><div class="fl">類別</div>
+            <div><div class="fl" data-i18n-staff="field.category">類別</div>
               <select class="fi" id="myt-exp-cat">
-                <option value="transport">交通費</option>
-                <option value="hotel">住宿費</option>
-                <option value="meal">餐費</option>
-                <option value="other">其他</option>
+                <option value="transport" data-i18n-staff="opt.cat_transport">交通費</option>
+                <option value="hotel" data-i18n-staff="opt.cat_hotel">住宿費</option>
+                <option value="meal" data-i18n-staff="opt.cat_meal">餐費</option>
+                <option value="other" data-i18n-staff="opt.cat_other">其他</option>
               </select>
             </div>
-            <div><div class="fl">日期</div><input type="date" class="fi" id="myt-exp-date"></div>
+            <div><div class="fl" data-i18n-staff="field.date">日期</div><input type="date" class="fi" id="myt-exp-date"></div>
           </div>
-          <div class="fl">金額 (NT$)</div>
+          <div class="fl" data-i18n-staff="field.amount">金額 (NT$)</div>
           <input type="number" class="fi" id="myt-exp-amount" placeholder="0" min="0" style="margin-bottom:8px">
-          <div class="fl">備註</div>
-          <input class="fi" id="myt-exp-note" placeholder="選填" style="margin-bottom:8px">
-          <div class="fl" style="margin-bottom:4px">憑證附件（發票/收據）</div>
+          <div class="fl" data-i18n-staff="field.notes">備註</div>
+          <input class="fi" id="myt-exp-note" data-i18n-ph="ph.optional" placeholder="選填" style="margin-bottom:8px">
+          <div class="fl" style="margin-bottom:4px" data-i18n-staff="field.receipt_attachment">憑證附件（發票/收據）</div>
           <input type="file" id="myt-exp-file" accept="image/*,application/pdf"
                  style="display:block;width:100%;padding:7px;border:1.5px solid var(--border);border-radius:9px;font-size:12px;margin-bottom:12px;cursor:pointer">
-          <button class="btn btn-primary" style="width:100%;margin-bottom:14px" onclick="addMyExpense()">新增費用</button>
+          <button class="btn btn-primary" style="width:100%;margin-bottom:14px" onclick="addMyExpense()" data-i18n-staff="btn.add_expense">新增費用</button>
           <div id="myt-exp-list"></div>
-          <button onclick="closeMyTravelExp()" style="margin-top:10px;width:100%;padding:9px;border-radius:9px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:13px;cursor:pointer">關閉</button>
+          <button onclick="closeMyTravelExp()" style="margin-top:10px;width:100%;padding:9px;border-radius:9px;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:13px;cursor:pointer" data-i18n-staff="btn.close">關閉</button>
         </div>
       </div>
 
@@ -510,32 +510,32 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
       <div id="panel-myloans" class="tab-body" style="display:none">
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
           <select id="myl-status" class="fi" style="width:auto;flex:none" onchange="loadMyLoans()">
-            <option value="">全部</option>
-            <option value="pending">待審中</option>
-            <option value="active">借用中</option>
-            <option value="returned">已歸還</option>
-            <option value="rejected">已拒絕</option>
+            <option value="" data-i18n-staff="opt.all">全部</option>
+            <option value="pending" data-i18n-staff="opt.loan_pending">待審中</option>
+            <option value="active" data-i18n-staff="opt.loan_active">借用中</option>
+            <option value="returned" data-i18n-staff="opt.loan_returned">已歸還</option>
+            <option value="rejected" data-i18n-staff="opt.rejected">已拒絕</option>
           </select>
-          <button onclick="loadMyLoans()" style="padding:7px 14px;border-radius:9px;border:1.5px solid var(--border);background:#fff;color:var(--navy);font-size:13px;font-weight:600;cursor:pointer">重新整理</button>
-          <button onclick="openMyLoanRequestForm()" class="btn btn-primary" style="flex:none;font-size:13px;padding:7px 14px">＋ 申請借用</button>
+          <button onclick="loadMyLoans()" style="padding:7px 14px;border-radius:9px;border:1.5px solid var(--border);background:#fff;color:var(--navy);font-size:13px;font-weight:600;cursor:pointer" data-i18n-staff="btn.refresh">重新整理</button>
+          <button onclick="openMyLoanRequestForm()" class="btn btn-primary" style="flex:none;font-size:13px;padding:7px 14px" data-i18n-staff="btn.apply_loan">＋ 申請借用</button>
         </div>
 
         <!-- 申請借用表單 -->
         <div id="myloan-request-form" style="display:none;background:#fff;border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid var(--border)">
-          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:14px">申請借用設備</div>
-          <div class="fl">選擇設備 *</div>
+          <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:14px" data-i18n-staff="form.loan_new">申請借用設備</div>
+          <div class="fl" data-i18n-staff="field.select_asset_required">選擇設備 *</div>
           <select class="fi" id="mlr-asset" style="margin-bottom:10px">
             <option value="">載入中…</option>
           </select>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-            <div><div class="fl">借用日期 *</div><input type="date" class="fi" id="mlr-loan-date"></div>
-            <div><div class="fl">預計歸還日期</div><input type="date" class="fi" id="mlr-return-date"></div>
+            <div><div class="fl" data-i18n-staff="field.loan_date_required">借用日期 *</div><input type="date" class="fi" id="mlr-loan-date"></div>
+            <div><div class="fl" data-i18n-staff="field.expected_return">預計歸還日期</div><input type="date" class="fi" id="mlr-return-date"></div>
           </div>
-          <div class="fl">用途說明</div>
-          <textarea class="fi" id="mlr-purpose" rows="2" style="resize:vertical;margin-bottom:14px" placeholder="說明借用用途（選填）"></textarea>
+          <div class="fl" data-i18n-staff="field.purpose">用途說明</div>
+          <textarea class="fi" id="mlr-purpose" rows="2" style="resize:vertical;margin-bottom:14px" data-i18n-ph="ph.purpose_optional" placeholder="說明借用用途（選填）"></textarea>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-primary" style="flex:1" onclick="submitMyLoanRequest()">送出申請</button>
-            <button class="btn btn-outline" style="flex:1" onclick="closeMyLoanRequestForm()">取消</button>
+            <button class="btn btn-primary" style="flex:1" onclick="submitMyLoanRequest()" data-i18n-staff="btn.submit">送出申請</button>
+            <button class="btn btn-outline" style="flex:1" onclick="closeMyLoanRequestForm()" data-i18n-staff="btn.cancel">取消</button>
           </div>
         </div>
 
@@ -548,17 +548,17 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
       <div id="panel-biodev" class="tab-body" style="display:none">
         <div style="margin-bottom:16px">
           <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">
-            綁定裝置後，下次可直接使用 Face ID 或指紋登入，無需輸入密碼。生物資料僅存於您的裝置中，伺服器不儲存任何生物特徵。
+            <span data-i18n-staff="bio.hint">綁定裝置後，下次可直接使用 Face ID 或指紋登入，無需輸入密碼。生物資料僅存於您的裝置中，伺服器不儲存任何生物特徵。</span>
           </div>
           <div id="bio-supported-msg" style="display:none;background:var(--red-light);color:var(--red);border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:12px">
-            此裝置不支援 WebAuthn 生物辨識
+            <span data-i18n-staff="bio.not_supported">此裝置不支援 WebAuthn 生物辨識</span>
           </div>
           <button onclick="doRegisterBio()" id="bio-reg-btn"
             style="width:100%;padding:12px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:700;cursor:pointer">
-            ＋ 綁定此裝置
+            <span data-i18n-staff="btn.bind_device">＋ 綁定此裝置</span>
           </button>
         </div>
-        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">已綁定裝置</div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px" data-i18n-staff="bio.bound_devices">已綁定裝置</div>
         <div id="bio-cred-list">
           <div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">載入中...</div>
         </div>
@@ -568,52 +568,52 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
       <div id="panel-expense" class="tab-body" style="display:none">
         <!-- 新增費用申請 -->
         <div class="card" style="margin-bottom:14px">
-          <div class="card-header"><span class="card-title">新增費用申請</span></div>
+          <div class="card-header"><span class="card-title" data-i18n-staff="form.expense_new">新增費用申請</span></div>
           <div style="padding:12px 16px">
             <div style="margin-bottom:10px">
-              <div class="fl">費用日期</div>
+              <div class="fl" data-i18n-staff="field.expense_date">費用日期</div>
               <input class="fi" type="date" id="exp-date" style="margin-bottom:8px">
             </div>
             <div style="margin-bottom:10px">
-              <div class="fl">費用類型</div>
+              <div class="fl" data-i18n-staff="field.expense_type">費用類型</div>
               <select class="fi" id="exp-category" style="margin-bottom:8px">
-                <option value="餐費">餐費</option>
-                <option value="交通費">交通費</option>
-                <option value="住宿費">住宿費</option>
-                <option value="辦公用品">辦公用品</option>
-                <option value="其他">其他</option>
+                <option value="餐費" data-i18n-staff="opt.cat_meal">餐費</option>
+                <option value="交通費" data-i18n-staff="opt.cat_transport">交通費</option>
+                <option value="住宿費" data-i18n-staff="opt.cat_hotel">住宿費</option>
+                <option value="辦公用品" data-i18n-staff="opt.cat_office">辦公用品</option>
+                <option value="其他" data-i18n-staff="opt.cat_other">其他</option>
               </select>
             </div>
             <div style="margin-bottom:10px">
-              <div class="fl">金額（元）</div>
+              <div class="fl" data-i18n-staff="field.amount_twd">金額（元）</div>
               <input class="fi" type="number" id="exp-amount" placeholder="0" min="0" style="margin-bottom:8px">
             </div>
             <div style="margin-bottom:10px">
-              <div class="fl">說明</div>
-              <input class="fi" type="text" id="exp-note" placeholder="費用說明（選填）" style="margin-bottom:8px">
+              <div class="fl" data-i18n-staff="field.description">說明</div>
+              <input class="fi" type="text" id="exp-note" data-i18n-ph="ph.expense_note" placeholder="費用說明（選填）" style="margin-bottom:8px">
             </div>
             <!-- 發票/收據上傳 -->
             <div style="margin-bottom:14px">
-              <div class="fl" style="margin-bottom:6px">發票 / 收據</div>
+              <div class="fl" style="margin-bottom:6px" data-i18n-staff="field.receipt">發票 / 收據</div>
               <div id="exp-photo-wrap" style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;position:relative;background:var(--bg)" onclick="document.getElementById('exp-photo-input').click()">
                 <input type="file" id="exp-photo-input" accept="image/*" capture="environment" style="display:none" onchange="expPhotoSelected(event)">
                 <div id="exp-photo-hint" style="color:var(--muted);font-size:13px">
                   <div style="font-size:24px;margin-bottom:6px">📷</div>
-                  點擊上傳或拍照
+                  <span data-i18n-staff="hint.upload_photo">點擊上傳或拍照</span>
                 </div>
                 <img id="exp-photo-preview" style="display:none;max-width:100%;max-height:180px;border-radius:8px;object-fit:contain">
                 <div id="exp-ocr-loading" style="display:none;margin-top:8px;font-size:12px;color:var(--accent)">OCR 辨識中...</div>
               </div>
             </div>
-            <button class="btn btn-primary" style="width:100%" onclick="submitExpense()">送出申請</button>
+            <button class="btn btn-primary" style="width:100%" onclick="submitExpense()" data-i18n-staff="btn.submit">送出申請</button>
           </div>
         </div>
 
         <!-- 我的申請記錄 -->
         <div class="card">
           <div class="card-header">
-            <span class="card-title">我的申請記錄</span>
-            <button class="btn btn-sm" onclick="loadMyExpenses()">重新整理</button>
+            <span class="card-title" data-i18n-staff="lbl.my_requests">我的申請記錄</span>
+            <button class="btn btn-sm" onclick="loadMyExpenses()" data-i18n-staff="btn.refresh">重新整理</button>
           </div>
           <div id="exp-list" style="padding:0 16px 12px">
             <div style="text-align:center;color:var(--muted);font-size:13px;padding:24px">載入中...</div>
@@ -627,12 +627,12 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
 <!-- Confirm sheet -->
 <div class="overlay" id="confirm-overlay" style="display:none" onclick="if(event.target===this)closeConfirm()">
   <div class="confirm-sheet">
-    <div class="cs-title">確認排休申請</div>
+    <div class="cs-title" data-i18n-staff="form.confirm_sched">確認排休申請</div>
     <div class="cs-dates" id="cs-dates"></div>
     <div class="cs-warn" id="cs-warn"></div>
     <div class="cs-btns">
-      <button class="btn btn-outline" style="flex:1" onclick="closeConfirm()">返回修改</button>
-      <button class="btn btn-primary" style="flex:2" onclick="submitSchedRequest()">確認送出</button>
+      <button class="btn btn-outline" style="flex:1" onclick="closeConfirm()" data-i18n-staff="btn.back_edit">返回修改</button>
+      <button class="btn btn-primary" style="flex:2" onclick="submitSchedRequest()" data-i18n-staff="btn.confirm_submit">確認送出</button>
     </div>
   </div>
 </div>
@@ -3021,6 +3021,111 @@ const STAFF_I18N = {
     'loading':'載入中...','load_fail':'載入失敗','no_records':'尚無記錄',
     'net_err':'網路錯誤','submit_fail':'送出失敗','session_exp':'登入已過期，請重新登入',
     'day.0':'日','day.1':'一','day.2':'二','day.3':'三','day.4':'四','day.5':'五','day.6':'六',
+
+    'punch.today_log':'今日打卡記錄',
+    'btn.apply_makeup':'申請補打卡',
+    'form.makeup_punch':'補打卡申請',
+    'field.punch_type':'打卡類型',
+    'field.makeup_time':'補打時間',
+    'field.reason_required':'原因 *',
+    'ph.example_punch':'例：忘記打卡、手機沒電',
+    'btn.cancel':'取消',
+    'btn.submit':'送出申請',
+    'lbl.my_requests':'我的申請記錄',
+    'lbl.month':'月份',
+    'lbl.selected_quota':'已選 / 配額',
+    'sched.click_hint':'點擊日期選取休假日',
+    'field.notes_optional':'備註（選填）',
+    'ph.example_note':'例：5號家庭活動',
+    'btn.clear':'清除',
+    'form.ot_new':'新增加班申請',
+    'field.ot_date':'加班日期',
+    'field.ot_start':'開始時間',
+    'field.ot_end':'結束時間',
+    'field.ot_day_type':'加班日別',
+    'opt.ot_weekday':'平日（前2h×1.33，後續×1.67）',
+    'opt.ot_rest_day':'休息日（最少4h）',
+    'opt.ot_holiday':'國定假日（全程×2倍）',
+    'opt.ot_special':'例假日（全程×2倍）',
+    'field.ot_reason':'加班原因 *',
+    'ph.example_ot':'例：客戶急件、備料作業',
+    'btn.submit_ot':'送出加班申請',
+    'hint.labor_law_ot_title':'勞基法加班費',
+    'hint.labor_law_ot_detail':'：前 2 小時 × 1.33、第 3 小時起 × 1.67',
+    'form.leave_new':'新增請假申請',
+    'field.leave_type_required':'假別 *',
+    'field.start_date_required':'開始日期 *',
+    'field.end_date_required':'結束日期 *',
+    'lbl.start_afternoon':'開始日下午請假',
+    'lbl.end_morning':'結束日上午請假',
+    'btn.view_annual_schedule':'查看我的特休排程',
+    'field.leave_reason_required':'請假原因 *',
+    'ph.example_leave':'例：身體不適、家庭事務',
+    'field.substitute':'代理人（選填）',
+    'ph.example_name':'例：王小明',
+    'field.sick_doc':'病假證明文件',
+    'btn.submit_leave':'送出請假申請',
+    'lbl.my_leave_records':'我的請假記錄',
+    'hint.select_month':'請選擇月份',
+    'hint.select_month_payslip':'請選擇月份查看薪資單',
+    'lbl.anomaly_30d':'近 30 天出勤異常',
+    'btn.refresh':'重新整理',
+    'lbl.year':'年度',
+    'opt.all_status':'全部狀態',
+    'opt.pending':'待審',
+    'opt.approved':'已核准',
+    'opt.rejected':'已拒絕',
+    'btn.add_request':'＋ 新增申請',
+    'form.travel_new':'新增差旅申請',
+    'field.travel_title_required':'標題 *',
+    'ph.example_travel':'例：台北客戶拜訪',
+    'field.destination_required':'目的地 *',
+    'ph.example_dest':'例：台北市',
+    'field.depart_date_required':'出發日期 *',
+    'field.return_date_required':'返回日期 *',
+    'field.travel_purpose':'出差目的',
+    'ph.purpose_optional':'說明目的（選填）',
+    'field.advance_amount':'預支金額 (NT$)',
+    'btn.save':'儲存',
+    'lbl.expense_claim':'費用核銷',
+    'field.category':'類別',
+    'opt.cat_transport':'交通費',
+    'opt.cat_hotel':'住宿費',
+    'opt.cat_meal':'餐費',
+    'opt.cat_other':'其他',
+    'opt.cat_office':'辦公用品',
+    'field.date':'日期',
+    'field.amount':'金額 (NT$)',
+    'field.notes':'備註',
+    'ph.optional':'選填',
+    'field.receipt_attachment':'憑證附件（發票/收據）',
+    'btn.add_expense':'新增費用',
+    'btn.close':'關閉',
+    'opt.all':'全部',
+    'opt.loan_pending':'待審中',
+    'opt.loan_active':'借用中',
+    'opt.loan_returned':'已歸還',
+    'btn.apply_loan':'＋ 申請借用',
+    'form.loan_new':'申請借用設備',
+    'field.select_asset_required':'選擇設備 *',
+    'field.loan_date_required':'借用日期 *',
+    'field.expected_return':'預計歸還日期',
+    'field.purpose':'用途說明',
+    'bio.hint':'綁定裝置後，下次可直接使用 Face ID 或指紋登入，無需輸入密碼。生物資料僅存於您的裝置中，伺服器不儲存任何生物特徵。',
+    'bio.not_supported':'此裝置不支援 WebAuthn 生物辨識',
+    'btn.bind_device':'＋ 綁定此裝置',
+    'bio.bound_devices':'已綁定裝置',
+    'form.expense_new':'新增費用申請',
+    'field.expense_date':'費用日期',
+    'field.expense_type':'費用類型',
+    'field.amount_twd':'金額（元）',
+    'field.description':'說明',
+    'ph.expense_note':'費用說明（選填）',
+    'field.receipt':'發票 / 收據',
+    'hint.upload_photo':'點擊上傳或拍照',
+    'form.confirm_sched':'確認排休申請',
+    'btn.back_edit':'返回修改',
+    'btn.confirm_submit':'確認送出',
     toggle:'EN',
   },
   'en': {
@@ -3079,6 +3184,111 @@ const STAFF_I18N = {
     'loading':'Loading...','load_fail':'Load failed','no_records':'No records',
     'net_err':'Network error','submit_fail':'Submission failed','session_exp':'Session expired, please log in again',
     'day.0':'Sun','day.1':'Mon','day.2':'Tue','day.3':'Wed','day.4':'Thu','day.5':'Fri','day.6':'Sat',
+
+    'punch.today_log':"Today's Records",
+    'btn.apply_makeup':'Apply Makeup Punch',
+    'form.makeup_punch':'Makeup Punch Request',
+    'field.punch_type':'Punch Type',
+    'field.makeup_time':'Makeup Time',
+    'field.reason_required':'Reason *',
+    'ph.example_punch':'e.g. Forgot to punch, phone dead',
+    'btn.cancel':'Cancel',
+    'btn.submit':'Submit',
+    'lbl.my_requests':'My Requests',
+    'lbl.month':'Month',
+    'lbl.selected_quota':'Selected / Quota',
+    'sched.click_hint':'Click a date to select day off',
+    'field.notes_optional':'Notes (optional)',
+    'ph.example_note':'e.g. Family event on the 5th',
+    'btn.clear':'Clear',
+    'form.ot_new':'New Overtime Request',
+    'field.ot_date':'OT Date',
+    'field.ot_start':'Start Time',
+    'field.ot_end':'End Time',
+    'field.ot_day_type':'OT Type',
+    'opt.ot_weekday':'Weekday (first 2h×1.33, rest×1.67)',
+    'opt.ot_rest_day':'Rest Day (min 4h)',
+    'opt.ot_holiday':'Public Holiday (all×2)',
+    'opt.ot_special':'Special Holiday (all×2)',
+    'field.ot_reason':'OT Reason *',
+    'ph.example_ot':'e.g. Urgent client order, stock prep',
+    'btn.submit_ot':'Submit OT Request',
+    'hint.labor_law_ot_title':'Labor Law OT Pay',
+    'hint.labor_law_ot_detail':': first 2h × 1.33, from 3h × 1.67',
+    'form.leave_new':'New Leave Request',
+    'field.leave_type_required':'Leave Type *',
+    'field.start_date_required':'Start Date *',
+    'field.end_date_required':'End Date *',
+    'lbl.start_afternoon':'PM off on start day',
+    'lbl.end_morning':'AM off on end day',
+    'btn.view_annual_schedule':'View My Annual Leave Schedule',
+    'field.leave_reason_required':'Reason *',
+    'ph.example_leave':'e.g. Feeling unwell, family matters',
+    'field.substitute':'Substitute (optional)',
+    'ph.example_name':'e.g. John Wang',
+    'field.sick_doc':'Medical Document',
+    'btn.submit_leave':'Submit Leave Request',
+    'lbl.my_leave_records':'My Leave Records',
+    'hint.select_month':'Please select a month',
+    'hint.select_month_payslip':'Select a month to view payslip',
+    'lbl.anomaly_30d':'Last 30 Days Anomalies',
+    'btn.refresh':'Refresh',
+    'lbl.year':'Year',
+    'opt.all_status':'All Statuses',
+    'opt.pending':'Pending',
+    'opt.approved':'Approved',
+    'opt.rejected':'Rejected',
+    'btn.add_request':'＋ New Request',
+    'form.travel_new':'New Travel Request',
+    'field.travel_title_required':'Title *',
+    'ph.example_travel':'e.g. Taipei client visit',
+    'field.destination_required':'Destination *',
+    'ph.example_dest':'e.g. Taipei',
+    'field.depart_date_required':'Departure Date *',
+    'field.return_date_required':'Return Date *',
+    'field.travel_purpose':'Purpose',
+    'ph.purpose_optional':'Describe purpose (optional)',
+    'field.advance_amount':'Advance Amount (NT$)',
+    'btn.save':'Save',
+    'lbl.expense_claim':'Expense Claim',
+    'field.category':'Category',
+    'opt.cat_transport':'Transport',
+    'opt.cat_hotel':'Accommodation',
+    'opt.cat_meal':'Meals',
+    'opt.cat_other':'Other',
+    'opt.cat_office':'Office Supplies',
+    'field.date':'Date',
+    'field.amount':'Amount (NT$)',
+    'field.notes':'Notes',
+    'ph.optional':'Optional',
+    'field.receipt_attachment':'Receipt / Invoice',
+    'btn.add_expense':'Add Expense',
+    'btn.close':'Close',
+    'opt.all':'All',
+    'opt.loan_pending':'Pending Review',
+    'opt.loan_active':'On Loan',
+    'opt.loan_returned':'Returned',
+    'btn.apply_loan':'＋ Apply Loan',
+    'form.loan_new':'Apply Equipment Loan',
+    'field.select_asset_required':'Select Asset *',
+    'field.loan_date_required':'Loan Date *',
+    'field.expected_return':'Expected Return Date',
+    'field.purpose':'Purpose',
+    'bio.hint':'After binding, you can log in using Face ID or fingerprint without entering a password. Biometric data is stored on your device only.',
+    'bio.not_supported':'This device does not support WebAuthn biometrics',
+    'btn.bind_device':'＋ Bind This Device',
+    'bio.bound_devices':'Bound Devices',
+    'form.expense_new':'New Expense Request',
+    'field.expense_date':'Expense Date',
+    'field.expense_type':'Expense Type',
+    'field.amount_twd':'Amount (NT$)',
+    'field.description':'Description',
+    'ph.expense_note':'Expense description (optional)',
+    'field.receipt':'Invoice / Receipt',
+    'hint.upload_photo':'Click to upload or take photo',
+    'form.confirm_sched':'Confirm Schedule Request',
+    'btn.back_edit':'Back to Edit',
+    'btn.confirm_submit':'Confirm & Submit',
     toggle:'日本語',
   },
   'ja': {
@@ -3137,6 +3347,111 @@ const STAFF_I18N = {
     'loading':'読み込み中...','load_fail':'読み込み失敗','no_records':'記録なし',
     'net_err':'通信エラー','submit_fail':'送信失敗','session_exp':'セッション期限切れ、再ログインしてください',
     'day.0':'日','day.1':'月','day.2':'火','day.3':'水','day.4':'木','day.5':'金','day.6':'土',
+
+    'punch.today_log':'本日の打刻記録',
+    'btn.apply_makeup':'補正打刻申請',
+    'form.makeup_punch':'補正打刻申請',
+    'field.punch_type':'打刻種別',
+    'field.makeup_time':'補正時刻',
+    'field.reason_required':'理由 *',
+    'ph.example_punch':'例：打刻忘れ、電池切れ',
+    'btn.cancel':'キャンセル',
+    'btn.submit':'送信',
+    'lbl.my_requests':'申請記録',
+    'lbl.month':'月',
+    'lbl.selected_quota':'選択済 / 配分',
+    'sched.click_hint':'日付をクリックして休暇日を選択',
+    'field.notes_optional':'備考（任意）',
+    'ph.example_note':'例：5日は家族イベント',
+    'btn.clear':'クリア',
+    'form.ot_new':'新規残業申請',
+    'field.ot_date':'残業日',
+    'field.ot_start':'開始時刻',
+    'field.ot_end':'終了時刻',
+    'field.ot_day_type':'残業日種別',
+    'opt.ot_weekday':'平日（最初2h×1.33、以降×1.67）',
+    'opt.ot_rest_day':'休日（最低4h）',
+    'opt.ot_holiday':'祝日（全程×2）',
+    'opt.ot_special':'法定休日（全程×2）',
+    'field.ot_reason':'残業理由 *',
+    'ph.example_ot':'例：緊急案件、資材準備',
+    'btn.submit_ot':'残業申請を送信',
+    'hint.labor_law_ot_title':'労働基準法残業代',
+    'hint.labor_law_ot_detail':'：最初2h×1.33、3h目以降×1.67',
+    'form.leave_new':'新規休暇申請',
+    'field.leave_type_required':'休暇種別 *',
+    'field.start_date_required':'開始日 *',
+    'field.end_date_required':'終了日 *',
+    'lbl.start_afternoon':'開始日午後休暇',
+    'lbl.end_morning':'終了日午前休暇',
+    'btn.view_annual_schedule':'年次休暇スケジュールを見る',
+    'field.leave_reason_required':'理由 *',
+    'ph.example_leave':'例：体調不良、家族の用事',
+    'field.substitute':'代理人（任意）',
+    'ph.example_name':'例：田中太郎',
+    'field.sick_doc':'診断書',
+    'btn.submit_leave':'休暇申請を送信',
+    'lbl.my_leave_records':'休暇記録',
+    'hint.select_month':'月を選択してください',
+    'hint.select_month_payslip':'月を選択して給与明細を確認',
+    'lbl.anomaly_30d':'直近30日の出勤異常',
+    'btn.refresh':'更新',
+    'lbl.year':'年度',
+    'opt.all_status':'すべての状態',
+    'opt.pending':'審査中',
+    'opt.approved':'承認済',
+    'opt.rejected':'却下',
+    'btn.add_request':'＋ 新規申請',
+    'form.travel_new':'新規出張申請',
+    'field.travel_title_required':'タイトル *',
+    'ph.example_travel':'例：東京クライアント訪問',
+    'field.destination_required':'目的地 *',
+    'ph.example_dest':'例：東京',
+    'field.depart_date_required':'出発日 *',
+    'field.return_date_required':'帰着日 *',
+    'field.travel_purpose':'出張目的',
+    'ph.purpose_optional':'目的を入力（任意）',
+    'field.advance_amount':'前払い金額 (NT$)',
+    'btn.save':'保存',
+    'lbl.expense_claim':'経費精算',
+    'field.category':'カテゴリ',
+    'opt.cat_transport':'交通費',
+    'opt.cat_hotel':'宿泊費',
+    'opt.cat_meal':'食費',
+    'opt.cat_other':'その他',
+    'opt.cat_office':'事務用品',
+    'field.date':'日付',
+    'field.amount':'金額 (NT$)',
+    'field.notes':'備考',
+    'ph.optional':'任意',
+    'field.receipt_attachment':'領収書（インボイス/レシート）',
+    'btn.add_expense':'経費追加',
+    'btn.close':'閉じる',
+    'opt.all':'すべて',
+    'opt.loan_pending':'審査中',
+    'opt.loan_active':'貸出中',
+    'opt.loan_returned':'返却済',
+    'btn.apply_loan':'＋ 借用申請',
+    'form.loan_new':'設備借用申請',
+    'field.select_asset_required':'設備を選択 *',
+    'field.loan_date_required':'借用日 *',
+    'field.expected_return':'返却予定日',
+    'field.purpose':'用途',
+    'bio.hint':'端末を登録すると、次回からパスワードなしでFace IDまたは指紋でログインできます。生体情報はデバイスにのみ保存されます。',
+    'bio.not_supported':'このデバイスはWebAuthn生体認証に対応していません',
+    'btn.bind_device':'＋ この端末を登録',
+    'bio.bound_devices':'登録済み端末',
+    'form.expense_new':'経費申請',
+    'field.expense_date':'経費日',
+    'field.expense_type':'経費種別',
+    'field.amount_twd':'金額（円）',
+    'field.description':'説明',
+    'ph.expense_note':'経費の説明（任意）',
+    'field.receipt':'インボイス / 領収書',
+    'hint.upload_photo':'クリックしてアップロードまたは撮影',
+    'form.confirm_sched':'シフト申請を確認',
+    'btn.back_edit':'編集に戻る',
+    'btn.confirm_submit':'確認して送信',
     toggle:'Tiếng Việt',
   },
   'vi': {
@@ -3195,6 +3510,111 @@ const STAFF_I18N = {
     'loading':'Đang tải...','load_fail':'Tải thất bại','no_records':'Chưa có hồ sơ',
     'net_err':'Lỗi mạng','submit_fail':'Gửi thất bại','session_exp':'Phiên hết hạn, vui lòng đăng nhập lại',
     'day.0':'CN','day.1':'T2','day.2':'T3','day.3':'T4','day.4':'T5','day.5':'T6','day.6':'T7',
+
+    'punch.today_log':'Hôm nay',
+    'btn.apply_makeup':'Yêu cầu chấm bù',
+    'form.makeup_punch':'Yêu cầu chấm bù',
+    'field.punch_type':'Loại chấm công',
+    'field.makeup_time':'Thời gian bù',
+    'field.reason_required':'Lý do *',
+    'ph.example_punch':'VD: Quên chấm, hết pin',
+    'btn.cancel':'Hủy',
+    'btn.submit':'Gửi',
+    'lbl.my_requests':'Hồ sơ của tôi',
+    'lbl.month':'Tháng',
+    'lbl.selected_quota':'Đã chọn / Hạn mức',
+    'sched.click_hint':'Nhấn ngày để chọn ngày nghỉ',
+    'field.notes_optional':'Ghi chú (tùy chọn)',
+    'ph.example_note':'VD: Gia đình ngày 5',
+    'btn.clear':'Xóa',
+    'form.ot_new':'Yêu cầu tăng ca mới',
+    'field.ot_date':'Ngày tăng ca',
+    'field.ot_start':'Giờ bắt đầu',
+    'field.ot_end':'Giờ kết thúc',
+    'field.ot_day_type':'Loại ngày tăng ca',
+    'opt.ot_weekday':'Ngày thường (2h đầu×1.33, sau×1.67)',
+    'opt.ot_rest_day':'Ngày nghỉ (tối thiểu 4h)',
+    'opt.ot_holiday':'Ngày lễ (tất cả×2)',
+    'opt.ot_special':'Nghỉ bù (tất cả×2)',
+    'field.ot_reason':'Lý do tăng ca *',
+    'ph.example_ot':'VD: Đơn hàng gấp, chuẩn bị nguyên liệu',
+    'btn.submit_ot':'Gửi yêu cầu tăng ca',
+    'hint.labor_law_ot_title':'Phụ cấp tăng ca (Luật LĐ)',
+    'hint.labor_law_ot_detail':': 2h đầu × 1.33, từ 3h × 1.67',
+    'form.leave_new':'Yêu cầu nghỉ phép mới',
+    'field.leave_type_required':'Loại phép *',
+    'field.start_date_required':'Ngày bắt đầu *',
+    'field.end_date_required':'Ngày kết thúc *',
+    'lbl.start_afternoon':'Chiều ngày bắt đầu',
+    'lbl.end_morning':'Sáng ngày kết thúc',
+    'btn.view_annual_schedule':'Xem lịch phép năm',
+    'field.leave_reason_required':'Lý do *',
+    'ph.example_leave':'VD: Không khỏe, việc gia đình',
+    'field.substitute':'Người thay (tùy chọn)',
+    'ph.example_name':'VD: Nguyễn Văn A',
+    'field.sick_doc':'Giấy y tế',
+    'btn.submit_leave':'Gửi yêu cầu nghỉ phép',
+    'lbl.my_leave_records':'Hồ sơ nghỉ phép',
+    'hint.select_month':'Vui lòng chọn tháng',
+    'hint.select_month_payslip':'Chọn tháng để xem phiếu lương',
+    'lbl.anomaly_30d':'Bất thường 30 ngày qua',
+    'btn.refresh':'Làm mới',
+    'lbl.year':'Năm',
+    'opt.all_status':'Tất cả trạng thái',
+    'opt.pending':'Chờ duyệt',
+    'opt.approved':'Đã duyệt',
+    'opt.rejected':'Đã từ chối',
+    'btn.add_request':'＋ Thêm mới',
+    'form.travel_new':'Yêu cầu công tác mới',
+    'field.travel_title_required':'Tiêu đề *',
+    'ph.example_travel':'VD: Thăm khách hàng Hà Nội',
+    'field.destination_required':'Điểm đến *',
+    'ph.example_dest':'VD: Hà Nội',
+    'field.depart_date_required':'Ngày đi *',
+    'field.return_date_required':'Ngày về *',
+    'field.travel_purpose':'Mục đích',
+    'ph.purpose_optional':'Mô tả mục đích (tùy chọn)',
+    'field.advance_amount':'Tạm ứng (NT$)',
+    'btn.save':'Lưu',
+    'lbl.expense_claim':'Thanh toán chi phí',
+    'field.category':'Loại',
+    'opt.cat_transport':'Đi lại',
+    'opt.cat_hotel':'Lưu trú',
+    'opt.cat_meal':'Ăn uống',
+    'opt.cat_other':'Khác',
+    'opt.cat_office':'Văn phòng phẩm',
+    'field.date':'Ngày',
+    'field.amount':'Số tiền (NT$)',
+    'field.notes':'Ghi chú',
+    'ph.optional':'Tùy chọn',
+    'field.receipt_attachment':'Hóa đơn / Biên lai',
+    'btn.add_expense':'Thêm chi phí',
+    'btn.close':'Đóng',
+    'opt.all':'Tất cả',
+    'opt.loan_pending':'Đang chờ duyệt',
+    'opt.loan_active':'Đang mượn',
+    'opt.loan_returned':'Đã trả',
+    'btn.apply_loan':'＋ Xin mượn',
+    'form.loan_new':'Đơn mượn thiết bị',
+    'field.select_asset_required':'Chọn thiết bị *',
+    'field.loan_date_required':'Ngày mượn *',
+    'field.expected_return':'Ngày trả dự kiến',
+    'field.purpose':'Mục đích sử dụng',
+    'bio.hint':'Sau khi đăng ký, bạn có thể đăng nhập bằng Face ID hoặc vân tay mà không cần mật khẩu. Dữ liệu sinh trắc chỉ lưu trên thiết bị của bạn.',
+    'bio.not_supported':'Thiết bị này không hỗ trợ WebAuthn sinh trắc học',
+    'btn.bind_device':'＋ Đăng ký thiết bị này',
+    'bio.bound_devices':'Thiết bị đã đăng ký',
+    'form.expense_new':'Yêu cầu chi phí mới',
+    'field.expense_date':'Ngày chi',
+    'field.expense_type':'Loại chi phí',
+    'field.amount_twd':'Số tiền (NT$)',
+    'field.description':'Mô tả',
+    'ph.expense_note':'Mô tả chi phí (tùy chọn)',
+    'field.receipt':'Hóa đơn / Biên lai',
+    'hint.upload_photo':'Nhấn để tải lên hoặc chụp ảnh',
+    'form.confirm_sched':'Xác nhận yêu cầu lịch',
+    'btn.back_edit':'Quay lại sửa',
+    'btn.confirm_submit':'Xác nhận gửi',
     toggle:'ภาษาไทย',
   },
   'th': {
@@ -3253,6 +3673,111 @@ const STAFF_I18N = {
     'loading':'กำลังโหลด...','load_fail':'โหลดล้มเหลว','no_records':'ยังไม่มีรายการ',
     'net_err':'เครือข่ายผิดพลาด','submit_fail':'ส่งล้มเหลว','session_exp':'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
     'day.0':'อา.','day.1':'จ.','day.2':'อ.','day.3':'พ.','day.4':'พฤ.','day.5':'ศ.','day.6':'ส.',
+
+    'punch.today_log':'บันทึกวันนี้',
+    'btn.apply_makeup':'ขอบันทึกชดเชย',
+    'form.makeup_punch':'คำขอบันทึกชดเชย',
+    'field.punch_type':'ประเภทบันทึกเวลา',
+    'field.makeup_time':'เวลาชดเชย',
+    'field.reason_required':'เหตุผล *',
+    'ph.example_punch':'เช่น ลืมบันทึก, แบตหมด',
+    'btn.cancel':'ยกเลิก',
+    'btn.submit':'ส่ง',
+    'lbl.my_requests':'คำขอของฉัน',
+    'lbl.month':'เดือน',
+    'lbl.selected_quota':'เลือกแล้ว / โควตา',
+    'sched.click_hint':'คลิกวันที่เพื่อเลือกวันหยุด',
+    'field.notes_optional':'หมายเหตุ (ไม่บังคับ)',
+    'ph.example_note':'เช่น กิจกรรมครอบครัววันที่ 5',
+    'btn.clear':'ล้าง',
+    'form.ot_new':'คำขอล่วงเวลาใหม่',
+    'field.ot_date':'วันที่ล่วงเวลา',
+    'field.ot_start':'เวลาเริ่ม',
+    'field.ot_end':'เวลาสิ้นสุด',
+    'field.ot_day_type':'ประเภทวันล่วงเวลา',
+    'opt.ot_weekday':'วันทำงาน (2ชม.แรก×1.33, ต่อไป×1.67)',
+    'opt.ot_rest_day':'วันหยุด (อย่างน้อย 4ชม.)',
+    'opt.ot_holiday':'วันหยุดนักขัตฤกษ์ (ทั้งหมด×2)',
+    'opt.ot_special':'วันหยุดพิเศษ (ทั้งหมด×2)',
+    'field.ot_reason':'เหตุผลล่วงเวลา *',
+    'ph.example_ot':'เช่น งานด่วนลูกค้า, เตรียมสต็อก',
+    'btn.submit_ot':'ส่งคำขอล่วงเวลา',
+    'hint.labor_law_ot_title':'ค่าล่วงเวลาตามกฎหมายแรงงาน',
+    'hint.labor_law_ot_detail':': 2ชม.แรก × 1.33, ตั้งแต่ 3ชม. × 1.67',
+    'form.leave_new':'คำขอลาใหม่',
+    'field.leave_type_required':'ประเภทการลา *',
+    'field.start_date_required':'วันเริ่ม *',
+    'field.end_date_required':'วันสิ้นสุด *',
+    'lbl.start_afternoon':'ช่วงบ่ายของวันเริ่ม',
+    'lbl.end_morning':'ช่วงเช้าของวันสิ้นสุด',
+    'btn.view_annual_schedule':'ดูตารางลาประจำปี',
+    'field.leave_reason_required':'เหตุผล *',
+    'ph.example_leave':'เช่น ไม่สบาย, ธุระครอบครัว',
+    'field.substitute':'ผู้แทน (ไม่บังคับ)',
+    'ph.example_name':'เช่น สมชาย ใจดี',
+    'field.sick_doc':'ใบรับรองแพทย์',
+    'btn.submit_leave':'ส่งคำขอลา',
+    'lbl.my_leave_records':'ประวัติการลา',
+    'hint.select_month':'กรุณาเลือกเดือน',
+    'hint.select_month_payslip':'เลือกเดือนเพื่อดูสลิปเงินเดือน',
+    'lbl.anomaly_30d':'ความผิดปกติ 30 วันล่าสุด',
+    'btn.refresh':'รีเฟรช',
+    'lbl.year':'ปี',
+    'opt.all_status':'ทุกสถานะ',
+    'opt.pending':'รออนุมัติ',
+    'opt.approved':'อนุมัติแล้ว',
+    'opt.rejected':'ปฏิเสธแล้ว',
+    'btn.add_request':'＋ เพิ่มคำขอ',
+    'form.travel_new':'คำขอเดินทางใหม่',
+    'field.travel_title_required':'หัวข้อ *',
+    'ph.example_travel':'เช่น เยี่ยมลูกค้ากรุงเทพ',
+    'field.destination_required':'ปลายทาง *',
+    'ph.example_dest':'เช่น กรุงเทพมหานคร',
+    'field.depart_date_required':'วันออกเดินทาง *',
+    'field.return_date_required':'วันกลับ *',
+    'field.travel_purpose':'วัตถุประสงค์',
+    'ph.purpose_optional':'อธิบายวัตถุประสงค์ (ไม่บังคับ)',
+    'field.advance_amount':'เงินทดรองจ่าย (NT$)',
+    'btn.save':'บันทึก',
+    'lbl.expense_claim':'เบิกค่าใช้จ่าย',
+    'field.category':'หมวดหมู่',
+    'opt.cat_transport':'ค่าเดินทาง',
+    'opt.cat_hotel':'ค่าที่พัก',
+    'opt.cat_meal':'ค่าอาหาร',
+    'opt.cat_other':'อื่นๆ',
+    'opt.cat_office':'เครื่องเขียน',
+    'field.date':'วันที่',
+    'field.amount':'จำนวนเงิน (NT$)',
+    'field.notes':'หมายเหตุ',
+    'ph.optional':'ไม่บังคับ',
+    'field.receipt_attachment':'ใบเสร็จ / ใบกำกับภาษี',
+    'btn.add_expense':'เพิ่มค่าใช้จ่าย',
+    'btn.close':'ปิด',
+    'opt.all':'ทั้งหมด',
+    'opt.loan_pending':'รออนุมัติ',
+    'opt.loan_active':'กำลังยืม',
+    'opt.loan_returned':'คืนแล้ว',
+    'btn.apply_loan':'＋ ขอยืม',
+    'form.loan_new':'แบบฟอร์มขอยืมอุปกรณ์',
+    'field.select_asset_required':'เลือกอุปกรณ์ *',
+    'field.loan_date_required':'วันที่ยืม *',
+    'field.expected_return':'วันคืนโดยประมาณ',
+    'field.purpose':'วัตถุประสงค์การใช้งาน',
+    'bio.hint':'หลังจากผูกอุปกรณ์แล้ว ครั้งถัดไปสามารถเข้าสู่ระบบด้วย Face ID หรือลายนิ้วมือโดยไม่ต้องใส่รหัสผ่าน ข้อมูลชีวมิติจะเก็บไว้ในอุปกรณ์เท่านั้น',
+    'bio.not_supported':'อุปกรณ์นี้ไม่รองรับ WebAuthn',
+    'btn.bind_device':'＋ ผูกอุปกรณ์นี้',
+    'bio.bound_devices':'อุปกรณ์ที่ผูกแล้ว',
+    'form.expense_new':'คำขอค่าใช้จ่ายใหม่',
+    'field.expense_date':'วันที่ใช้จ่าย',
+    'field.expense_type':'ประเภทค่าใช้จ่าย',
+    'field.amount_twd':'จำนวนเงิน (บาท/NT$)',
+    'field.description':'คำอธิบาย',
+    'ph.expense_note':'คำอธิบายค่าใช้จ่าย (ไม่บังคับ)',
+    'field.receipt':'ใบกำกับ / ใบเสร็จ',
+    'hint.upload_photo':'คลิกเพื่ออัปโหลดหรือถ่ายภาพ',
+    'form.confirm_sched':'ยืนยันคำขอวันหยุด',
+    'btn.back_edit':'กลับไปแก้ไข',
+    'btn.confirm_submit':'ยืนยันและส่ง',
     toggle:'中文',
   }
 };
@@ -3304,6 +3829,9 @@ function staffApplyI18n() {
     if (el.children.length > 0) {
       for (const n of el.childNodes) { if (n.nodeType === Node.TEXT_NODE && n.textContent.trim()) { n.textContent = val; break; } }
     } else { el.textContent = val; }
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+    el.placeholder = staffT(el.dataset.i18nPh);
   });
   const sel = document.getElementById('staff-lang-btn');
   if (sel && sel.tagName === 'SELECT') sel.value = _staffLang;
