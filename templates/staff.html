@@ -1662,10 +1662,10 @@ async function loadAnnualLeaveCard() {
       const diffDays= Math.ceil(diffMs / 86400000);
       if (diffDays > 0) {
         nextHtml = `<div style="margin-top:8px;padding:8px 12px;background:rgba(74,123,218,0.08);border-radius:8px;border-left:3px solid var(--accent)">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:2px">下一里程碑</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:2px">${staffT('annual.next_milestone')}</div>
           <div style="font-size:13px;font-weight:600;color:var(--navy)">
-            ${esc(next.label)} → <span style="color:var(--accent)">${next.days} 天/年</span>
-            <span style="font-size:11px;color:var(--muted);margin-left:6px">（還有 ${diffDays} 天，${next.date_reached}）</span>
+            ${esc(next.label)} → <span style="color:var(--accent)">${next.days} ${staffT('annual.days_per_year')}</span>
+            <span style="font-size:11px;color:var(--muted);margin-left:6px">${staffT('annual.days_left').replace('{0}',diffDays).replace('{1}',next.date_reached)}</span>
           </div>
         </div>`;
       }
@@ -1679,8 +1679,8 @@ async function loadAnnualLeaveCard() {
     const years  = Math.floor(totalMonths / 12);
     const months = totalMonths % 12;
     const svcLabel = totalMonths < 12
-      ? `${totalMonths} 個月`
-      : (months > 0 ? `${years} 年 ${months} 個月` : `${years} 年`);
+      ? staffT('annual.months_only').replace('{0}', totalMonths)
+      : (months > 0 ? staffT('annual.years_months').replace('{0}', years).replace('{1}', months) : staffT('annual.years_only').replace('{0}', years));
 
     // Next quota progress bar (months to next milestone)
     let progressHtml = '';
@@ -1691,8 +1691,8 @@ async function loadAnnualLeaveCard() {
       progressHtml = `
         <div style="margin-top:6px">
           <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px">
-            <span>${esc(curr.label)} (${curr.days}天)</span>
-            <span>${esc(next.label)} (${next.days}天)</span>
+            <span>${esc(curr.label)} (${curr.days}${staffT('payslip.days_unit')})</span>
+            <span>${esc(next.label)} (${next.days}${staffT('payslip.days_unit')})</span>
           </div>
           <div style="height:6px;background:#f0f2f8;border-radius:3px;overflow:hidden">
             <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent),#6b9de8);border-radius:3px;transition:width .4s"></div>
@@ -1704,25 +1704,25 @@ async function loadAnnualLeaveCard() {
     card.innerHTML = `
     <div style="background:#fff;border-radius:12px;border:1.5px solid var(--border);overflow:hidden">
       <div style="padding:10px 14px;background:var(--navy);display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:13px;font-weight:700;color:#fff">特休假年資</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.55)">到職 ${esc(data.hire_date)}</div>
+        <div style="font-size:13px;font-weight:700;color:#fff">${staffT('annual.title')}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.55)">${staffT('annual.hired')} ${esc(data.hire_date)}</div>
       </div>
       <div style="padding:12px 14px">
         <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
           <div>
-            <span style="font-size:11px;color:var(--muted)">年資</span>
+            <span style="font-size:11px;color:var(--muted)">${staffT('annual.seniority')}</span>
             <span style="font-size:16px;font-weight:700;color:var(--navy);margin-left:6px">${esc(svcLabel)}</span>
           </div>
           <div style="margin-left:auto;text-align:right">
-            <span style="font-size:11px;color:var(--muted)">目前特休</span>
+            <span style="font-size:11px;color:var(--muted)">${staffT('annual.current_leave')}</span>
             <span style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:var(--green);margin-left:6px">${currentDays}</span>
-            <span style="font-size:11px;color:var(--muted)">天/年</span>
+            <span style="font-size:11px;color:var(--muted)">${staffT('annual.days_per_year')}</span>
           </div>
         </div>
         ${progressHtml}
         ${nextHtml}
         <div style="margin-top:10px;text-align:right">
-          <button class="btn btn-sm btn-outline" style="font-size:11px" onclick="showMyAnnualSchedule()">查看完整排程</button>
+          <button class="btn btn-sm btn-outline" style="font-size:11px" onclick="showMyAnnualSchedule()">${staffT('annual.view_schedule')}</button>
         </div>
       </div>
     </div>`;
@@ -1865,11 +1865,11 @@ async function showMyAnnualSchedule() {
     const rows = schedule.map(s => {
       const bg     = s.is_current ? 'background:var(--navy);color:#fff;' : '';
       const fw     = s.is_current ? 'font-weight:700;' : '';
-      const status = s.is_current ? '▶ 目前' : s.is_past ? '已達成' : '未達成';
+      const status = s.is_current ? staffT('annual.status_current') : s.is_past ? staffT('annual.status_past') : staffT('annual.status_future');
       const sc     = s.is_current ? '' : s.is_past ? 'color:var(--muted)' : 'color:var(--text)';
       return `<tr style="${bg}${fw}">
         <td style="padding:9px 14px;${sc}">${s.label}</td>
-        <td style="padding:9px 14px;font-family:'DM Mono',monospace;font-weight:700;text-align:center;${sc}">${s.days} 天</td>
+        <td style="padding:9px 14px;font-family:'DM Mono',monospace;font-weight:700;text-align:center;${sc}">${s.days} ${staffT('payslip.days_unit')}</td>
         <td style="padding:9px 14px;font-family:'DM Mono',monospace;font-size:12px;${sc}">${s.date_reached}</td>
         <td style="padding:9px 14px;font-size:12px;${sc}">${status}</td>
       </tr>`;
@@ -1879,9 +1879,9 @@ async function showMyAnnualSchedule() {
       <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:1">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <div>
-            <div style="font-size:15px;font-weight:700;color:var(--navy)">我的特休排程</div>
+            <div style="font-size:15px;font-weight:700;color:var(--navy)">${staffT('annual.schedule_title')}</div>
             <div style="font-size:12px;color:var(--muted);margin-top:2px">
-              到職日：${data.hire_date}　|　目前：<strong style="color:var(--green)">${data.current_days} 天/年</strong>
+              ${staffT('annual.hired_label')}${data.hire_date}　|　${staffT('annual.current_label')}<strong style="color:var(--green)">${data.current_days} ${staffT('annual.days_per_year')}</strong>
             </div>
           </div>
           <button onclick="document.getElementById('annual-sched-popup-staff').remove()"
@@ -1890,15 +1890,15 @@ async function showMyAnnualSchedule() {
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="background:var(--bg)">
-          <th style="padding:8px 14px;text-align:left;border-bottom:1px solid var(--border)">里程碑</th>
-          <th style="padding:8px 14px;text-align:center;border-bottom:1px solid var(--border)">天數</th>
-          <th style="padding:8px 14px;text-align:left;border-bottom:1px solid var(--border)">達成日期</th>
-          <th style="padding:8px 14px;text-align:left;border-bottom:1px solid var(--border)">狀態</th>
+          <th style="padding:8px 14px;text-align:left;border-bottom:1px solid var(--border)">${staffT('annual.th_milestone')}</th>
+          <th style="padding:8px 14px;text-align:center;border-bottom:1px solid var(--border)">${staffT('annual.th_days')}</th>
+          <th style="padding:8px 14px;text-align:left;border-bottom:1px solid var(--border)">${staffT('annual.th_reached')}</th>
+          <th style="padding:8px 14px;text-align:left;border-bottom:1px solid var(--border)">${staffT('annual.th_status')}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div style="padding:10px 20px;font-size:11px;color:var(--muted);background:var(--bg);margin-top:8px">
-        依勞基法第38條：滿6個月3天 → 滿1年7天 → 滿2年10天 → 滿3年14天 → 滿5年15天 → 滿10年起每年+1天（上限30天）
+        ${staffT('annual.labor_law')}
       </div>
     </div>`;
     document.body.appendChild(overlay);
@@ -3194,6 +3194,16 @@ const STAFF_I18N = {
     'leave.no_start_date':'尚未設定到職日，請聯絡管理員',
     'exp.ocr_loading':'OCR 辨識中...','server_err':'伺服器回應格式錯誤',
     toggle:'EN',
+    'annual.title':'特休假年資','annual.hired':'到職','annual.seniority':'年資',
+    'annual.current_leave':'目前特休','annual.days_per_year':'天/年',
+    'annual.view_schedule':'查看完整排程','annual.schedule_title':'我的特休排程',
+    'annual.hired_label':'到職日：','annual.current_label':'目前：',
+    'annual.next_milestone':'下一里程碑','annual.days_left':'（還有 {0} 天，{1}）',
+    'annual.months_only':'{0} 個月','annual.years_only':'{0} 年',
+    'annual.years_months':'{0} 年 {1} 個月',
+    'annual.status_current':'▶ 目前','annual.status_past':'已達成','annual.status_future':'未達成',
+    'annual.th_milestone':'里程碑','annual.th_days':'天數','annual.th_reached':'達成日期','annual.th_status':'狀態',
+    'annual.labor_law':'依勞基法第38條：滿6個月3天 → 滿1年7天 → 滿2年10天 → 滿3年14天 → 滿5年15天 → 滿10年起每年+1天（上限30天）',
   },
   'en': {
     brand:'Attendance System', loginTitle:'Employee Login', labelUser:'Username', labelPw:'Password',
@@ -3428,6 +3438,16 @@ const STAFF_I18N = {
     'leave.no_start_date':'Start date not set, please contact admin',
     'exp.ocr_loading':'OCR recognizing...','server_err':'Server response format error',
     toggle:'日本語',
+    'annual.title':'Annual Leave Seniority','annual.hired':'Hired','annual.seniority':'Seniority',
+    'annual.current_leave':'Current Annual Leave','annual.days_per_year':'days/yr',
+    'annual.view_schedule':'View Full Schedule','annual.schedule_title':'My Annual Leave Schedule',
+    'annual.hired_label':'Hire Date: ','annual.current_label':'Current: ',
+    'annual.next_milestone':'Next Milestone','annual.days_left':'({0} days left, {1})',
+    'annual.months_only':'{0} mo','annual.years_only':'{0} yr',
+    'annual.years_months':'{0} yr {1} mo',
+    'annual.status_current':'▶ Current','annual.status_past':'Reached','annual.status_future':'Upcoming',
+    'annual.th_milestone':'Milestone','annual.th_days':'Days','annual.th_reached':'Date Reached','annual.th_status':'Status',
+    'annual.labor_law':'Labor Standards Act Art. 38: 6 mo→3d, 1yr→7d, 2yr→10d, 3yr→14d, 5yr→15d, 10yr+→+1d/yr (max 30d)',
   },
   'ja': {
     brand:'勤怠管理システム', loginTitle:'従業員ログイン', labelUser:'ユーザー名', labelPw:'パスワード',
@@ -3662,6 +3682,16 @@ const STAFF_I18N = {
     'leave.no_start_date':'入社日が未設定です。管理者に連絡してください',
     'exp.ocr_loading':'OCR認識中...','server_err':'サーバー応答形式エラー',
     toggle:'Tiếng Việt',
+    'annual.title':'有給休暇年数','annual.hired':'入社','annual.seniority':'勤続年数',
+    'annual.current_leave':'現在の有給','annual.days_per_year':'日/年',
+    'annual.view_schedule':'全スケジュールを見る','annual.schedule_title':'私の有給休暇スケジュール',
+    'annual.hired_label':'入社日：','annual.current_label':'現在：',
+    'annual.next_milestone':'次のマイルストーン','annual.days_left':'（あと{0}日、{1}）',
+    'annual.months_only':'{0}ヶ月','annual.years_only':'{0}年',
+    'annual.years_months':'{0}年{1}ヶ月',
+    'annual.status_current':'▶ 現在','annual.status_past':'達成','annual.status_future':'未達成',
+    'annual.th_milestone':'マイルストーン','annual.th_days':'日数','annual.th_reached':'達成日','annual.th_status':'状態',
+    'annual.labor_law':'労働基準法第39条：6ヶ月→3日、1年→7日、2年→10日、3年→14日、5年→15日、10年以降は毎年+1日（上限30日）',
   },
   'vi': {
     brand:'Hệ thống Chấm công', loginTitle:'Đăng nhập', labelUser:'Tài khoản', labelPw:'Mật khẩu',
@@ -3896,6 +3926,16 @@ const STAFF_I18N = {
     'leave.no_start_date':'Chưa đặt ngày vào làm, vui lòng liên hệ quản trị',
     'exp.ocr_loading':'Đang nhận dạng OCR...','server_err':'Lỗi định dạng phản hồi máy chủ',
     toggle:'ภาษาไทย',
+    'annual.title':'Thâm niên phép năm','annual.hired':'Ngày vào','annual.seniority':'Thâm niên',
+    'annual.current_leave':'Phép hiện tại','annual.days_per_year':'ngày/năm',
+    'annual.view_schedule':'Xem lịch đầy đủ','annual.schedule_title':'Lịch phép năm của tôi',
+    'annual.hired_label':'Ngày vào: ','annual.current_label':'Hiện tại: ',
+    'annual.next_milestone':'Mốc tiếp theo','annual.days_left':'(còn {0} ngày, {1})',
+    'annual.months_only':'{0} tháng','annual.years_only':'{0} năm',
+    'annual.years_months':'{0} năm {1} tháng',
+    'annual.status_current':'▶ Hiện tại','annual.status_past':'Đã đạt','annual.status_future':'Chưa đạt',
+    'annual.th_milestone':'Mốc','annual.th_days':'Số ngày','annual.th_reached':'Ngày đạt','annual.th_status':'Trạng thái',
+    'annual.labor_law':'Luật Lao động Đài Loan Đ.38: 6th→3ng, 1năm→7ng, 2năm→10ng, 3năm→14ng, 5năm→15ng, 10năm+→+1ng/năm (tối đa 30ng)',
   },
   'th': {
     brand:'ระบบบันทึกเวลา', loginTitle:'เข้าสู่ระบบ', labelUser:'ชื่อผู้ใช้', labelPw:'รหัสผ่าน',
@@ -4130,6 +4170,16 @@ const STAFF_I18N = {
     'leave.no_start_date':'ยังไม่ได้ตั้งวันเริ่มงาน กรุณาติดต่อผู้ดูแล',
     'exp.ocr_loading':'กำลังประมวลผล OCR...','server_err':'รูปแบบการตอบกลับของเซิร์ฟเวอร์ผิดพลาด',
     toggle:'中文',
+    'annual.title':'อาวุโสวันลาพักร้อน','annual.hired':'วันเริ่มงาน','annual.seniority':'อาวุโส',
+    'annual.current_leave':'วันลาปัจจุบัน','annual.days_per_year':'วัน/ปี',
+    'annual.view_schedule':'ดูตารางทั้งหมด','annual.schedule_title':'ตารางลาพักร้อนของฉัน',
+    'annual.hired_label':'วันเริ่มงาน: ','annual.current_label':'ปัจจุบัน: ',
+    'annual.next_milestone':'เป้าหมายถัดไป','annual.days_left':'(อีก {0} วัน, {1})',
+    'annual.months_only':'{0} เดือน','annual.years_only':'{0} ปี',
+    'annual.years_months':'{0} ปี {1} เดือน',
+    'annual.status_current':'▶ ปัจจุบัน','annual.status_past':'บรรลุแล้ว','annual.status_future':'ยังไม่ถึง',
+    'annual.th_milestone':'เป้าหมาย','annual.th_days':'จำนวนวัน','annual.th_reached':'วันที่บรรลุ','annual.th_status':'สถานะ',
+    'annual.labor_law':'กฎหมายแรงงานไต้หวัน ม.38: 6ด→3ว, 1ป→7ว, 2ป→10ว, 3ป→14ว, 5ป→15ว, 10ป+→+1ว/ป (สูงสุด 30ว)',
   }
 };
 let _staffLang = localStorage.getItem('adminLang') || 'zh-TW';

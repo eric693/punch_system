@@ -22,7 +22,7 @@ from linebot.models import (
 # shared modules (extracted for blueprint reuse)
 from db import get_db, _hash_pw, DATABASE_URL
 from auth import login_required, require_module, require_super
-from i18n import register_translate_hook, translate_message as _i18n_translate, line_msg as _lmsg, WDAY_ABBR as _WDAY_ABBR
+from i18n import register_translate_hook, translate_message as _i18n_translate, line_msg as _lmsg, WDAY_ABBR as _WDAY_ABBR, get_lang as _get_lang
 
 app = Flask(__name__)
 
@@ -12470,10 +12470,34 @@ def api_export_overtime_excel():
             FROM overtime_requests r JOIN punch_staff ps ON ps.id=r.staff_id
             WHERE {' AND '.join(conds)} ORDER BY r.request_date DESC
         """, params).fetchall()
-    STATUS_LABEL = {'pending':'待審核','approved':'已核准','rejected':'已退回'}
-    DAY_LABEL    = {'weekday':'平日','rest_day':'休息日','holiday':'國定假日','special':'特殊假日'}
-    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{month} 加班申請'
-    headers = ['員工代碼','姓名','部門','申請日期','日別','開始時間','結束時間','加班時數','加班費','原因','狀態','審核人','審核備註']
+    lang = request.args.get('lang', '') or _get_lang()
+    _OT_L10N = {
+        'zh-TW': {'status':{'pending':'待審核','approved':'已核准','rejected':'已退回'},
+                  'day':{'weekday':'平日','rest_day':'休息日','holiday':'國定假日','special':'特殊假日'},
+                  'title':f'{month} 加班申請',
+                  'headers':['員工代碼','姓名','部門','申請日期','日別','開始時間','結束時間','加班時數','加班費','原因','狀態','審核人','審核備註']},
+        'en':    {'status':{'pending':'Pending','approved':'Approved','rejected':'Rejected'},
+                  'day':{'weekday':'Weekday','rest_day':'Rest Day','holiday':'Public Holiday','special':'Special Holiday'},
+                  'title':f'{month} Overtime',
+                  'headers':['Emp Code','Name','Dept','Date','Day Type','Start','End','OT Hours','OT Pay','Reason','Status','Reviewer','Review Note']},
+        'ja':    {'status':{'pending':'審査中','approved':'承認','rejected':'却下'},
+                  'day':{'weekday':'平日','rest_day':'休日','holiday':'祝日','special':'法定休日'},
+                  'title':f'{month} 残業申請',
+                  'headers':['社員コード','氏名','部門','申請日','日別','開始時刻','終了時刻','残業時間','残業代','理由','状態','承認者','承認備考']},
+        'vi':    {'status':{'pending':'Chờ duyệt','approved':'Đã duyệt','rejected':'Từ chối'},
+                  'day':{'weekday':'Ngày thường','rest_day':'Ngày nghỉ','holiday':'Ngày lễ','special':'Ngày nghỉ đặc biệt'},
+                  'title':f'{month} Tăng ca',
+                  'headers':['Mã NV','Tên','Phòng','Ngày','Loại ngày','Bắt đầu','Kết thúc','Giờ tăng ca','Phụ cấp','Lý do','Trạng thái','Người duyệt','Ghi chú']},
+        'th':    {'status':{'pending':'รอดำเนินการ','approved':'อนุมัติ','rejected':'ปฏิเสธ'},
+                  'day':{'weekday':'วันทำงาน','rest_day':'วันหยุด','holiday':'วันหยุดนักขัตฤกษ์','special':'วันหยุดพิเศษ'},
+                  'title':f'{month} ล่วงเวลา',
+                  'headers':['รหัสพนักงาน','ชื่อ','แผนก','วันที่','ประเภทวัน','เริ่ม','สิ้นสุด','ชม.OT','ค่า OT','เหตุผล','สถานะ','ผู้อนุมัติ','หมายเหตุ']},
+    }
+    OTL = _OT_L10N.get(lang, _OT_L10N['zh-TW'])
+    STATUS_LABEL = OTL['status']
+    DAY_LABEL    = OTL['day']
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = OTL['title']
+    headers = OTL['headers']
     col_w   = [10,10,10,12,10,10,10,10,10,24,10,10,20]
     _xl_write_header(ws, headers, col_w)
     data = []
@@ -12742,10 +12766,28 @@ def api_export_holidays_excel():
             FROM holidays WHERE EXTRACT(YEAR FROM holiday_date)=%s
             ORDER BY holiday_date
         """, (int(year),)).fetchall()
-    WEEKDAY_ZH2 = ['一','二','三','四','五','六','日']
-    TYPE_LABEL  = {'national':'國定假日','compensatory':'補假','special':'特殊假日','custom':'自訂'}
-    wb = openpyxl.Workbook(); ws = wb.active; ws.title = f'{year} 國定假日'
-    headers = ['日期','星期','名稱','類型','備註']
+    lang = request.args.get('lang', '') or _get_lang()
+    _HOLIDAY_L10N = {
+        'zh-TW': {'headers':['日期','星期','名稱','類型','備註'],'title':f'{year} 國定假日',
+                  'weekdays':['一','二','三','四','五','六','日'],
+                  'types':{'national':'國定假日','compensatory':'補假','special':'特殊假日','custom':'自訂','makeup':'補班日'}},
+        'en':    {'headers':['Date','Day','Name','Type','Note'],'title':f'{year} Public Holidays',
+                  'weekdays':['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+                  'types':{'national':'Public Holiday','compensatory':'Compensatory','special':'Rest Day','custom':'Custom','makeup':'Make-up Day'}},
+        'ja':    {'headers':['日付','曜日','名称','種別','備考'],'title':f'{year} 祝日一覧',
+                  'weekdays':['月','火','水','木','金','土','日'],
+                  'types':{'national':'祝日','compensatory':'振替休日','special':'法定休日','custom':'カスタム','makeup':'振替出勤日'}},
+        'vi':    {'headers':['Ngày','Thứ','Tên','Loại','Ghi chú'],'title':f'{year} Ngày lễ',
+                  'weekdays':['T2','T3','T4','T5','T6','T7','CN'],
+                  'types':{'national':'Ngày lễ quốc gia','compensatory':'Bù','special':'Ngày nghỉ bắt buộc','custom':'Tùy chỉnh','makeup':'Ngày làm bù'}},
+        'th':    {'headers':['วันที่','วัน','ชื่อ','ประเภท','หมายเหตุ'],'title':f'{year} วันหยุด',
+                  'weekdays':['จ','อ','พ','พฤ','ศ','ส','อา'],
+                  'types':{'national':'วันหยุดนักขัตฤกษ์','compensatory':'วันหยุดชดเชย','special':'วันหยุดบังคับ','custom':'กำหนดเอง','makeup':'วันทำงานชดเชย'}},
+    }
+    L = _HOLIDAY_L10N.get(lang, _HOLIDAY_L10N['zh-TW'])
+    TYPE_LABEL = L['types']
+    wb = openpyxl.Workbook(); ws = wb.active; ws.title = L['title']
+    headers = L['headers']
     col_w   = [12, 6, 20, 12, 30]
     _xl_write_header(ws, headers, col_w)
     data = []
@@ -12753,7 +12795,7 @@ def api_export_holidays_excel():
     for r in rows:
         try:
             d = _da4.fromisoformat(str(r['holiday_date']))
-            wd = WEEKDAY_ZH2[d.weekday()]
+            wd = L['weekdays'][d.weekday()]
         except: wd = ''
         data.append([
             str(r['holiday_date']), wd, r['name'],

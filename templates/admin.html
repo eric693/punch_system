@@ -1192,32 +1192,32 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <button class="btn btn-outline btn-sm" onclick="loadHolidays()">重新整理</button>
       <span style="flex:1"></span>
       <button class="btn btn-outline btn-sm" onclick="exportHolidaysExcel()">匯出 Excel</button>
-      <button class="btn btn-primary" onclick="openHolidayModal()">新增假日</button>
-      <button class="btn btn-outline btn-sm" onclick="importDefaultHolidays()">匯入台灣預設假日</button>
+      <button class="btn btn-primary" onclick="openHolidayModal()" data-i18n="holiday.btn_add">新增假日</button>
+      <button class="btn btn-outline btn-sm" onclick="importDefaultHolidays()" data-i18n="holiday.btn_import_default">匯入台灣預設假日</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
       <div class="card">
         <div class="card-header"><span class="card-title">國定假日清單</span><span id="holiday-count" style="font-size:12px;color:var(--muted)"></span></div>
         <div class="table-wrap" style="max-height:520px;overflow-y:auto">
           <table>
-            <thead><tr><th>日期</th><th>星期</th><th>名稱</th><th>類型</th><th>操作</th></tr></thead>
+            <thead><tr><th data-i18n="label.date">日期</th><th data-i18n="th.week">星期</th><th data-i18n="th.name_col">名稱</th><th data-i18n="label.type">類型</th><th data-i18n="th.action">操作</th></tr></thead>
             <tbody id="holiday-tbody"></tbody>
           </table>
         </div>
       </div>
       <div>
         <div class="card" style="padding:18px 20px;margin-bottom:14px">
-          <div class="card-title" style="padding:0;margin-bottom:12px">假日影響說明</div>
+          <div class="card-title" style="padding:0;margin-bottom:12px" data-i18n="holiday.impact_title">假日影響說明</div>
           <div style="font-size:12px;color:var(--muted);line-height:2.2">
-            <div><strong style="color:var(--navy)">薪資計算</strong><br>國定假日加班費率 × 2.0 倍（全薪）</div>
-            <div style="margin-top:8px"><strong style="color:var(--navy)">排班顯示</strong><br>月曆上國定假日自動標記紅色邊框</div>
-            <div style="margin-top:8px"><strong style="color:var(--navy)">加班申請</strong><br>員工申請時自動偵測日期類型</div>
-            <div style="margin-top:8px"><strong style="color:var(--navy)">出勤報表</strong><br>匯出 CSV 時標記假日欄位</div>
+            <div><strong style="color:var(--navy)" data-i18n="holiday.impact_salary">薪資計算</strong><br><span data-i18n="holiday.impact_salary_desc">國定假日加班費率 × 2.0 倍（全薪）</span></div>
+            <div style="margin-top:8px"><strong style="color:var(--navy)" data-i18n="holiday.impact_sched">排班顯示</strong><br><span data-i18n="holiday.impact_sched_desc">月曆上國定假日自動標記紅色邊框</span></div>
+            <div style="margin-top:8px"><strong style="color:var(--navy)" data-i18n="holiday.impact_ot">加班申請</strong><br><span data-i18n="holiday.impact_ot_desc">員工申請時自動偵測日期類型</span></div>
+            <div style="margin-top:8px"><strong style="color:var(--navy)" data-i18n="holiday.impact_report">出勤報表</strong><br><span data-i18n="holiday.impact_report_desc">匯出 CSV 時標記假日欄位</span></div>
           </div>
         </div>
         <div class="card" style="padding:18px 20px">
           <div class="card-title" style="padding:0;margin-bottom:10px">批次匯入</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">貼上 JSON 格式批次新增假日</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px" data-i18n="holiday.batch_hint">貼上 JSON 格式批次新增假日</div>
           <textarea class="form-input" id="holiday-batch-json" rows="6" style="width:100%;font-family:'DM Mono',monospace;font-size:11px;resize:vertical"
             placeholder='[{"date":"2026-01-01","name":"元旦"},{"date":"2026-02-17","name":"春節"}]'></textarea>
           <button class="btn btn-primary" style="width:100%;margin-top:10px" onclick="importHolidayJSON()">批次匯入</button>
@@ -2598,17 +2598,17 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     </div>
     <div class="modal-body">
       <input type="hidden" id="hm-id">
-      <div style="margin-bottom:12px"><label class="form-label">日期 *</label><input class="form-input" type="date" id="hm-date" style="width:100%"></div>
-      <div style="margin-bottom:12px"><label class="form-label">名稱 *</label><input class="form-input" id="hm-name" placeholder="例：國慶日" style="width:100%"></div>
+      <div style="margin-bottom:12px"><label class="form-label" data-i18n="label.date">日期 *</label><input class="form-input" type="date" id="hm-date" style="width:100%"></div>
+      <div style="margin-bottom:12px"><label class="form-label" data-i18n="th.name_col">名稱 *</label><input class="form-input" id="hm-name" placeholder="例：國慶日" style="width:100%"></div>
       <div style="margin-bottom:12px">
-        <label class="form-label">類型</label>
+        <label class="form-label" data-i18n="label.type">類型</label>
         <select class="form-input" id="hm-type" style="width:100%">
-          <option value="national">國定假日（加班×2）</option>
-          <option value="special">例假日（加班×2）</option>
-          <option value="makeup">補班日</option>
+          <option value="national" data-i18n="holiday.type_national">國定假日（加班×2）</option>
+          <option value="special" data-i18n="holiday.type_special">例假日（加班×2）</option>
+          <option value="makeup" data-i18n="holiday.type_makeup">補班日</option>
         </select>
       </div>
-      <div><label class="form-label">備註</label><input class="form-input" id="hm-note" style="width:100%"></div>
+      <div><label class="form-label" data-i18n="label.remark">備註</label><input class="form-input" id="hm-note" style="width:100%"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeHolidayModal()">取消</button>
@@ -3741,6 +3741,14 @@ const TRANSLATIONS = {
     'holiday.imported':'已有 {0} 筆假日記錄',
     'holiday.json_required':'請貼上 JSON 內容','holiday.json_error':'JSON 格式錯誤：{0}',
     'holiday.json_array':'請提供陣列格式的 JSON','holiday.json_imported':'成功匯入 {0} 筆',
+    'holiday.btn_add':'新增假日','holiday.btn_import_default':'匯入台灣預設假日',
+    'holiday.impact_title':'假日影響說明',
+    'holiday.impact_salary':'薪資計算','holiday.impact_salary_desc':'國定假日加班費率 × 2.0 倍（全薪）',
+    'holiday.impact_sched':'排班顯示','holiday.impact_sched_desc':'月曆上國定假日自動標記紅色邊框',
+    'holiday.impact_ot':'加班申請','holiday.impact_ot_desc':'員工申請時自動偵測日期類型',
+    'holiday.impact_report':'出勤報表','holiday.impact_report_desc':'匯出 CSV 時標記假日欄位',
+    'holiday.batch_hint':'貼上 JSON 格式批次新增假日',
+    'holiday.type_national':'國定假日（加班×2）','holiday.type_special':'例假日（加班×2）','holiday.type_makeup':'補班日',
     'export.need_month':'請先選擇月份',
     'ann.no_ann':'尚無公告，點右上角「新增公告」開始發佈',
     'ann.pinned':'📌 置頂','ann.active':'上架中','ann.expired':'已過期','ann.inactive':'已下架',
@@ -4427,6 +4435,14 @@ const TRANSLATIONS = {
     'holiday.imported':'{0} holiday records',
     'holiday.json_required':'Please paste JSON content','holiday.json_error':'JSON error: {0}',
     'holiday.json_array':'Please provide an array JSON','holiday.json_imported':'{0} records imported',
+    'holiday.btn_add':'Add Holiday','holiday.btn_import_default':'Import Taiwan Default Holidays',
+    'holiday.impact_title':'Holiday Impact',
+    'holiday.impact_salary':'Payroll','holiday.impact_salary_desc':'Public holiday OT rate × 2.0 (full pay)',
+    'holiday.impact_sched':'Schedule','holiday.impact_sched_desc':'Holidays highlighted with red border on calendar',
+    'holiday.impact_ot':'Overtime','holiday.impact_ot_desc':'Date type auto-detected on OT requests',
+    'holiday.impact_report':'Attendance Report','holiday.impact_report_desc':'Holiday column marked on CSV export',
+    'holiday.batch_hint':'Paste JSON to batch-import holidays',
+    'holiday.type_national':'Public Holiday (OT×2)','holiday.type_special':'Rest Day (OT×2)','holiday.type_makeup':'Make-up Day',
     'export.need_month':'Please select a month first',
     'ann.no_ann':'No announcements. Click "Add" to start.',
     'ann.pinned':'📌 Pinned','ann.active':'Active','ann.expired':'Expired','ann.inactive':'Inactive',
@@ -5111,8 +5127,16 @@ const TRANSLATIONS = {
     'holiday.confirm_delete':'「{0}（{1}）」を削除しますか？',
     'holiday.confirm_import':'{0}年の台湾祝日をインポートしますか？既存は名称が更新されます。',
     'holiday.imported':'{0}件の祝日記録',
-    'holiday.json_required':'JSONを貼り付けてくださ��','holiday.json_error':'JSON形式エラー：{0}',
+    'holiday.json_required':'JSONを貼り付けてください','holiday.json_error':'JSON形式エラー：{0}',
     'holiday.json_array':'配列形式のJSONを提供してください','holiday.json_imported':'{0}件をインポートしました',
+    'holiday.btn_add':'祝日を追加','holiday.btn_import_default':'台湾デフォルト祝日をインポート',
+    'holiday.impact_title':'祝日の影響',
+    'holiday.impact_salary':'給与計算','holiday.impact_salary_desc':'祝日の残業代 × 2.0倍（全額）',
+    'holiday.impact_sched':'スケジュール表示','holiday.impact_sched_desc':'カレンダーで祝日に赤枠を表示',
+    'holiday.impact_ot':'残業申請','holiday.impact_ot_desc':'申請時に日付種別を自動判定',
+    'holiday.impact_report':'出勤レポート','holiday.impact_report_desc':'CSV出力時に祝日列をマーク',
+    'holiday.batch_hint':'JSONを貼り付けて一括インポート',
+    'holiday.type_national':'祝日（残業×2）','holiday.type_special':'法定休日（残業×2）','holiday.type_makeup':'振替出勤日',
     'export.need_month':'先に月を選択してくださ��',
     'ann.no_ann':'お知らせなし。「新規追加」から作成できます。',
     'ann.pinned':'📌 固定','ann.active':'公開中','ann.expired':'期限切れ','ann.inactive':'非公開',
@@ -5773,6 +5797,14 @@ const TRANSLATIONS = {
     'holiday.imported':'{0} bản ghi ngày lễ',
     'holiday.json_required':'Vui lòng dán nội dung JSON','holiday.json_error':'Lỗi JSON: {0}',
     'holiday.json_array':'Vui lòng cung cấp JSON dạng mảng','holiday.json_imported':'Đã nhập {0} bản ghi',
+    'holiday.btn_add':'Thêm ngày lễ','holiday.btn_import_default':'Nhập ngày lễ mặc định Đài Loan',
+    'holiday.impact_title':'Ảnh hưởng ngày lễ',
+    'holiday.impact_salary':'Tính lương','holiday.impact_salary_desc':'Ngày lễ: hệ số tăng ca × 2.0 (lương đủ)',
+    'holiday.impact_sched':'Lịch làm việc','holiday.impact_sched_desc':'Ngày lễ đánh dấu viền đỏ trên lịch',
+    'holiday.impact_ot':'Đăng ký tăng ca','holiday.impact_ot_desc':'Loại ngày tự động phát hiện khi đăng ký',
+    'holiday.impact_report':'Báo cáo chấm công','holiday.impact_report_desc':'Cột ngày lễ được đánh dấu khi xuất CSV',
+    'holiday.batch_hint':'Dán JSON để nhập hàng loạt ngày lễ',
+    'holiday.type_national':'Ngày lễ quốc gia (OT×2)','holiday.type_special':'Ngày nghỉ bắt buộc (OT×2)','holiday.type_makeup':'Ngày làm bù',
     'export.need_month':'Vui lòng chọn tháng trước',
     'ann.no_ann':'Không có thông báo. Nhấp "Thêm" để bắt đầu.',
     'ann.pinned':'📌 Ghim','ann.active':'Đang hiển thị','ann.expired':'Hết hạn','ann.inactive':'Đã ẩn',
@@ -6432,6 +6464,14 @@ const TRANSLATIONS = {
     'holiday.imported':'{0} บันทึกวันหยุด',
     'holiday.json_required':'กรุณาวาง JSON','holiday.json_error':'ข้อผิดพลาด JSON: {0}',
     'holiday.json_array':'กรุณาให้ JSON เป็น array','holiday.json_imported':'นำเข้า {0} บันทึกแล้ว',
+    'holiday.btn_add':'เพิ่มวันหยุด','holiday.btn_import_default':'นำเข้าวันหยุดเริ่มต้นไต้หวัน',
+    'holiday.impact_title':'ผลกระทบของวันหยุด',
+    'holiday.impact_salary':'การคำนวณเงินเดือน','holiday.impact_salary_desc':'วันหยุดนักขัตฤกษ์: OT × 2.0 (เต็มจำนวน)',
+    'holiday.impact_sched':'การแสดงตาราง','holiday.impact_sched_desc':'วันหยุดแสดงกรอบสีแดงในปฏิทิน',
+    'holiday.impact_ot':'คำขอทำงานล่วงเวลา','holiday.impact_ot_desc':'ประเภทวันตรวจจับอัตโนมัติเมื่อยื่นคำขอ',
+    'holiday.impact_report':'รายงานการเข้างาน','holiday.impact_report_desc':'คอลัมน์วันหยุดถูกทำเครื่องหมายเมื่อส่งออก CSV',
+    'holiday.batch_hint':'วาง JSON เพื่อนำเข้าวันหยุดจำนวนมาก',
+    'holiday.type_national':'วันหยุดนักขัตฤกษ์ (OT×2)','holiday.type_special':'วันหยุดบังคับ (OT×2)','holiday.type_makeup':'วันทำงานชดเชย',
     'export.need_month':'กรุณาเลือกเดือนก่อน',
     'ann.no_ann':'ไม่มีประกาศ คลิก "เพิ่ม" เพื่อเริ่ม',
     'ann.pinned':'📌 ปักหมุด','ann.active':'กำลังแสดง','ann.expired':'หมดอายุ','ann.inactive':'ซ่อนอยู่',
@@ -8565,7 +8605,7 @@ async function openOTReview(id) {
   const r = otReqData.find(x => x.id === id); if (!r) return;
   document.getElementById('otrm-id').value = id; document.getElementById('otrm-by').value = ''; document.getElementById('otrm-note').value = '';
   document.getElementById('otrm-title').textContent = `審核加班申請 — ${r.staff_name}`;
-  const dtLabel = {weekday:'平日',rest_day:'休息日',holiday:'國定假日',special:'例假日'}[r.day_type||'weekday'];
+  const dtLabel = t('ot.day_type.' + (r.day_type || 'weekday'));
   document.getElementById('otrm-info').innerHTML = `<strong>${escHtml(r.staff_name)}</strong>　<span style="background:var(--bg);padding:1px 8px;border-radius:8px;font-size:12px">${dtLabel}</span><br>日期：${r.request_date}　時間：${r.start_time}～${r.end_time}　<strong>${r.ot_hours} 小時</strong><br><span style="color:var(--muted)">原因：${escHtml(r.reason)}</span>`;
   const prevEl = document.getElementById('otrm-pay-preview');
   prevEl.style.display = 'none';
@@ -10323,8 +10363,13 @@ async function deleteSalaryItem(id) {
 // ══════════════════════════════════════════════════════════════
 // 國定假日模組
 // ══════════════════════════════════════════════════════════════
-const WEEKDAY_ZH_H = ['日','一','二','三','四','五','六'];
-const HOLIDAY_TYPE_LABEL = { national:'國定假日', special:'例假日', makeup:'補班日' };
+const _WEEKDAY_LABELS = {
+  'zh-TW': ['日','一','二','三','四','五','六'],
+  'en':    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+  'ja':    ['日','月','火','水','木','金','土'],
+  'vi':    ['CN','T2','T3','T4','T5','T6','T7'],
+  'th':    ['อา','จ','อ','พ','พฤ','ศ','ส'],
+};
 const HOLIDAY_TYPE_COLOR = { national:'var(--red)', special:'var(--orange)', makeup:'var(--green)' };
 let holidayList = [];
 
@@ -10334,7 +10379,7 @@ function initHoliday() {
     const y = new Date().getFullYear();
     for (let i = y + 1; i >= y - 1; i--) {
       const opt = document.createElement('option');
-      opt.value = i; opt.text = i + ' 年';
+      opt.value = i; opt.text = (_currentLang === 'zh-TW' || _currentLang === 'ja') ? i + ' 年' : String(i);
       yr.appendChild(opt);
     }
     yr.value = y;
@@ -10346,23 +10391,24 @@ async function loadHolidays() {
   const year = document.getElementById('holiday-year').value;
   const { ok, data } = await api(`/api/holidays?year=${year}`, {}, true);
   holidayList = ok ? data : [];
-  document.getElementById('holiday-count').textContent = `共 ${holidayList.length} 天`;
+  document.getElementById('holiday-count').textContent = t('holiday.count').replace('{0}', holidayList.length);
   const tb = document.getElementById('holiday-tbody');
   if (!holidayList.length) {
-    tb.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="empty-state-text">尚無假日，請點「匯入台灣預設假日」</div></td></tr>';
+    tb.innerHTML = `<tr><td colspan="5" class="empty-state"><div class="empty-state-text">${t('holiday.no_holidays')}</div></td></tr>`;
     return;
   }
+  const wdArr = _WEEKDAY_LABELS[_currentLang] || _WEEKDAY_LABELS['zh-TW'];
   tb.innerHTML = holidayList.map(h => {
     const dt  = new Date(h.date + 'T00:00:00');
-    const wd  = WEEKDAY_ZH_H[dt.getDay()];
+    const wd  = wdArr[dt.getDay()];
     const tc  = HOLIDAY_TYPE_COLOR[h.holiday_type] || 'var(--muted)';
-    const tl  = HOLIDAY_TYPE_LABEL[h.holiday_type] || h.holiday_type;
+    const tl  = t('holiday.type_' + h.holiday_type) || h.holiday_type;
     return `<tr>
       <td style="font-family:'DM Mono',monospace;font-weight:600">${h.date}</td>
       <td style="color:${dt.getDay()===0?'var(--red)':dt.getDay()===6?'var(--accent)':'var(--muted)'}">${wd}</td>
       <td style="font-weight:600">${escHtml(h.name)}</td>
       <td><span style="font-size:11px;font-weight:700;color:${tc}">${tl}</span></td>
-      <td><button class="btn btn-danger btn-sm" onclick="deleteHoliday(${h.id})">刪除</button></td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteHoliday(${h.id})">${t('btn.delete')}</button></td>
     </tr>`;
   }).join('');
 }
@@ -10371,7 +10417,7 @@ function openHolidayModal(id = null) {
   document.getElementById('hm-id').value    = id || '';
   document.getElementById('hm-note').value  = '';
   document.getElementById('hm-type').value  = 'national';
-  document.getElementById('hm-title').textContent = id ? '編輯假日' : '新增國定假日';
+  document.getElementById('hm-title').textContent = id ? t('holiday.modal_edit') : t('holiday.modal_add');
   if (id) {
     const h = holidayList.find(x => x.id === id); if (!h) return;
     document.getElementById('hm-date').value  = h.date;
@@ -10390,7 +10436,7 @@ async function saveHoliday() {
   const id   = document.getElementById('hm-id').value;
   const date = document.getElementById('hm-date').value;
   const name = document.getElementById('hm-name').value.trim();
-  if (!date || !name) { showToast('請填寫日期和名稱', 'error'); return; }
+  if (!date || !name) { showToast(t('holiday.fill_all'), 'error'); return; }
   const body = {
     date, name,
     holiday_type: document.getElementById('hm-type').value,
@@ -10398,36 +10444,36 @@ async function saveHoliday() {
   };
   const { ok } = await api('/api/holidays', apiJSON(body));
   if (!ok) return;
-  closeHolidayModal(); showToast('假日已儲存', 'success'); await loadHolidays();
+  closeHolidayModal(); showToast(t('holiday.saved'), 'success'); await loadHolidays();
 }
 
 async function deleteHoliday(id) {
   const h = holidayList.find(x => x.id === id);
-  if (!confirm(`確定刪除「${h ? h.name : id}（${h?.date}）」？`)) return;
+  if (!confirm(t('holiday.confirm_delete').replace('{0}', h ? h.name : id).replace('{1}', h?.date || ''))) return;
   const { ok } = await api(`/api/holidays/${id}`, { method: 'DELETE' });
-  if (ok) { showToast('已刪除', 'success'); await loadHolidays(); }
+  if (ok) { showToast(t('records.deleted'), 'success'); await loadHolidays(); }
 }
 
 async function importDefaultHolidays() {
   const year = document.getElementById('holiday-year').value;
-  if (!confirm(`確定匯入 ${year} 年台灣國定假日？已存在的假日將更新名稱。`)) return;
+  if (!confirm(t('holiday.confirm_import').replace('{0}', year))) return;
   const { ok, data } = await api('/api/holidays/batch', apiJSON({ holidays: [] }));
   // Trigger backend re-seed
   const { ok: ok2, data: d2 } = await api(`/api/holidays?year=${year}`, {}, true);
-  showToast(`已有 ${ok2 ? d2.length : 0} 筆假日記錄`, 'success');
+  showToast(t('holiday.imported').replace('{0}', ok2 ? d2.length : 0), 'success');
   await loadHolidays();
 }
 
 async function importHolidayJSON() {
   const raw = document.getElementById('holiday-batch-json').value.trim();
-  if (!raw) { showToast('請貼上 JSON 內容', 'error'); return; }
+  if (!raw) { showToast(t('holiday.json_required'), 'error'); return; }
   let holidays;
   try { holidays = JSON.parse(raw); }
-  catch(e) { showToast('JSON 格式錯誤：' + e.message, 'error'); return; }
-  if (!Array.isArray(holidays)) { showToast('請提供陣列格式的 JSON', 'error'); return; }
+  catch(e) { showToast(t('holiday.json_error').replace('{0}', e.message), 'error'); return; }
+  if (!Array.isArray(holidays)) { showToast(t('holiday.json_array'), 'error'); return; }
   const { ok, data } = await api('/api/holidays/batch', apiJSON({ holidays }));
   if (!ok) return;
-  showToast(`成功匯入 ${data.imported} 筆`, 'success');
+  showToast(t('holiday.json_imported').replace('{0}', data.imported), 'success');
   document.getElementById('holiday-batch-json').value = '';
   await loadHolidays();
 }
@@ -10497,10 +10543,10 @@ function exportOvertimeExcel() {
   const month  = document.getElementById('ot-filter-month')?.value || '';
   const status = document.getElementById('ot-filter-status')?.value || '';
   let url = '/api/export/overtime-excel';
-  const params = [];
+  const params = [`lang=${_currentLang}`];
   if (month)  params.push(`month=${month}`);
   if (status) params.push(`status=${status}`);
-  if (params.length) url += '?' + params.join('&');
+  url += '?' + params.join('&');
   window.location.href = url;
 }
 
@@ -10559,7 +10605,7 @@ function exportAnnouncementsExcel() {
 
 function exportHolidaysExcel() {
   const year = document.getElementById('holiday-year')?.value || new Date().getFullYear();
-  window.location.href = `/api/export/holidays-excel?year=${year}`;
+  window.location.href = `/api/export/holidays-excel?year=${year}&lang=${_currentLang}`;
 }
 
 function exportFinanceExcel() {
