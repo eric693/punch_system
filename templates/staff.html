@@ -680,14 +680,14 @@ async function doLogin(){
   const btn=document.getElementById('login-btn');
   err.textContent='';
   if(!u||!p){err.textContent='請輸入帳號及密碼';return;}
-  btn.disabled=true;btn.textContent='登入中...';
+  btn.disabled=true;btn.textContent=staffT('login.signing_in');
   try{
     const r=await fetch('/api/punch/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
     const d=await r.json();
     if(!r.ok){err.textContent=d.error||'登入失敗';return;}
     me=d;document.getElementById('inp-pass').value='';showMain();loadAnnStaff();
   }catch(e){err.textContent='網路錯誤，請重試';}
-  finally{btn.disabled=false;btn.textContent='登入';}
+  finally{btn.disabled=false;btn.textContent=staffT('loginBtn');}
 }
 async function doLogout(){
   await fetch('/api/punch/logout',{method:'POST'});
@@ -892,11 +892,11 @@ function toggleSchedDate(ds){
   if(dt<today)return;
   if(schedSelectedDates.has(ds)){schedSelectedDates.delete(ds);}
   else{
-    if(schedSelectedDates.size>=(schedCfg.vacation_quota||8)){showToast('已達本月配額','err');return;}
+    if(schedSelectedDates.size>=(schedCfg.vacation_quota||8)){showToast(staffT('sched.quota_reached'),'err');return;}
     let othersCount=schedOffCounts[ds]||0;
     const iWasIn=schedExistingReq&&(schedExistingReq.dates||[]).includes(ds);
     if(iWasIn)othersCount=Math.max(0,othersCount-1);
-    if(othersCount>=(schedCfg.max_off_per_day||2)){showToast(ds.slice(5)+'休假人數已達上限','err');return;}
+    if(othersCount>=(schedCfg.max_off_per_day||2)){showToast(staffT('sched.day_limit_reached').replace('{0}',ds.slice(5)),'err');return;}
     schedSelectedDates.add(ds);
   }
   renderCalendar();updateQuotaBar();
@@ -911,9 +911,9 @@ function updateQuotaBar(){
 }
 function clearSchedSel(){schedSelectedDates=new Set();renderCalendar();updateQuotaBar();}
 function showSchedConfirm(){
-  if(schedSelectedDates.size===0){showToast('請先選取休假日期','err');return;}
+  if(schedSelectedDates.size===0){showToast(staffT('sched.select_first'),'err');return;}
   const sorted=[...schedSelectedDates].sort();
-  document.getElementById('cs-dates').innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">共 ${sorted.length} 天</div>`+sorted.map(d=>{const dt=new Date(d+'T00:00:00');return `<div>${d.slice(5).replace('-','/')} <strong>（週${DAYS[dt.getDay()]}）</strong></div>`;}).join('');
+  document.getElementById('cs-dates').innerHTML=`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">${staffT('sched.total_days').replace('{0}',sorted.length)}</div>`+sorted.map(d=>{const dt=new Date(d+'T00:00:00');return `<div>${d.slice(5).replace('-','/')} <strong>（${DAYS[dt.getDay()]}）</strong></div>`;}).join('');
   document.getElementById('cs-warn').textContent=schedExistingReq&&schedExistingReq.status==='approved'?'注意：修改後需等待主管重新審核。':'';
   document.getElementById('confirm-overlay').style.display='flex';
 }
@@ -924,9 +924,9 @@ async function submitSchedRequest(){
   try{
     const res=await fetch('/api/schedule/my-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({month:curSchedMonth,dates,submit_note:note})});
     let d;try{d=await res.json();}catch(e){d={error:'伺服器回應格式錯誤'};}
-    if(!res.ok){showToast(d.error||`送出失敗（${res.status}）`,'err');return;}
-    showToast('申請送出成功','ok');schedExistingReq=d;renderStatusArea();renderCalendar();
-  }catch(e){showToast('連線失敗，請檢查網路後重試','err');}
+    if(!res.ok){showToast(d.error||staffT('sched.submit_fail').replace('{0}',res.status),'err');return;}
+    showToast(staffT('sched.submit_ok'),'ok');schedExistingReq=d;renderStatusArea();renderCalendar();
+  }catch(e){showToast(staffT('sched.net_fail'),'err');}
 }
 
 /* 我的排班 */
@@ -941,7 +941,7 @@ async function loadScheduleView(){
   const month = document.getElementById('view-month-picker').value;
   if (!month) return;
   const wrap = document.getElementById('schedule-view-content');
-  wrap.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">載入中...</div>';
+  wrap.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">${staffT('loading')}</div>`;
   await _loadHolidaysForMonth(month);
 
   let cfgData = {vacation_quota:8,max_off_per_day:2,off_counts:{},notes:''};
@@ -969,25 +969,24 @@ async function loadScheduleView(){
   const myDates   = new Set((req && req.dates) || []);
   const myStatus  = (req && req.status) || 'not_submitted';
 
-  const statusLabel = {pending:'審核中',approved:'已核准',rejected:'已退回',modified_pending:'修改待審',not_submitted:'尚未申請'};
+  const statusLabel = {pending:staffT('status.pending'),approved:staffT('status.approved'),rejected:staffT('status.rejected'),modified_pending:staffT('status.modified_pending'),not_submitted:staffT('sched.status.not_submitted')};
   const statusColor = {pending:'var(--orange)',approved:'var(--green)',rejected:'var(--red)',modified_pending:'var(--accent)',not_submitted:'var(--muted)'};
 
-  // ── 統計 ──────────────────────────────────────────────────
   const totalShiftDays = Object.keys(shiftData).filter(ds => ds.startsWith(month)).length;
 
   let html = `
   <div style="padding:12px 14px;background:var(--bg);border-bottom:1px solid var(--border)">
-    <div style="font-size:13px;font-weight:700;color:var(--navy)">${y}年 ${m}月</div>
+    <div style="font-size:13px;font-weight:700;color:var(--navy)">${y} ${m}</div>
     <div style="font-size:12px;margin-top:3px">
-      排休狀態：<span style="font-weight:700;color:${statusColor[myStatus]}">${statusLabel[myStatus]}</span>
-      ${req ? `（${myDates.size} 天）` : ''}
-      ${totalShiftDays > 0 ? `　|　本月排班 <strong>${totalShiftDays} 天</strong>` : ''}
+      ${staffT('sched.status_pfx')}<span style="font-weight:700;color:${statusColor[myStatus]}">${statusLabel[myStatus]}</span>
+      ${req ? `（${myDates.size}${staffT('sched.days_sfx')}）` : ''}
+      ${totalShiftDays > 0 ? `　|　${staffT('sched.this_month_shifts')} <strong>${totalShiftDays}${staffT('sched.days_sfx')}</strong>` : ''}
     </div>
     ${cfg.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">📢 ${esc(cfg.notes)}</div>` : ''}
   </div>
   <div style="padding:12px 14px">
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px">
-      ${['日','一','二','三','四','五','六'].map((d,i) =>
+      ${DAYS.map((d,i) =>
         `<div style="text-align:center;font-size:10px;font-weight:700;
           color:${i===0?'var(--red)':i===6?'var(--accent)':'var(--muted)'};padding:4px 0">${d}</div>`
       ).join('')}
@@ -1014,13 +1013,13 @@ async function loadScheduleView(){
     else if (isOff && myStatus === 'rejected')     { bg = 'var(--red-light)'; border = '#f5c0c0'; dayColor = 'var(--red)'; }
     else if (shift)                                { border = shift.color; bg = shift.color + '18'; }
 
-    const offLabel = {approved:'休假',pending:'申請中',modified_pending:'修改中',rejected:'退回'};
+    const offLabel = {approved:staffT('sched.off.approved'),pending:staffT('sched.off.pending'),modified_pending:staffT('sched.off.modified_pending'),rejected:staffT('sched.off.rejected')};
     const shiftLabel = shift
       ? `<div style="font-size:8px;font-weight:700;color:${shift.color};line-height:1.4;margin-top:1px">${esc(shift.shift_name)}</div>
          <div style="font-size:8px;color:${shift.color};opacity:.8">${shift.start_time}~${shift.end_time}</div>`
       : '';
     const offBadge = isOff
-      ? `<div style="font-size:8px;font-weight:700;color:${dayColor};line-height:1.3;margin-top:1px">${offLabel[myStatus]||'休假'}</div>`
+      ? `<div style="font-size:8px;font-weight:700;color:${dayColor};line-height:1.3;margin-top:1px">${offLabel[myStatus]||staffT('sched.off.approved')}</div>`
       : '';
     const hlBadge = _holidayMap[ds] && !isOff
       ? `<div style="font-size:8px;font-weight:700;color:var(--red);line-height:1.3;margin-top:1px">${esc(_holidayMap[ds])}</div>`
@@ -1036,7 +1035,7 @@ async function loadScheduleView(){
              -webkit-tap-highlight-color:transparent;position:relative">
       <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;
             color:${isToday?'var(--accent)':dayColor};line-height:1.2">
-        ${day}${isToday?'<sup style="font-size:7px;color:var(--accent)">今</sup>':''}
+        ${day}${isToday?`<sup style="font-size:7px;color:var(--accent)">${staffT('sched.today_marker')}</sup>`:''}
       </span>
       ${offBadge}
       ${hlBadge}
@@ -1056,13 +1055,11 @@ function showSchedDayDetail(ds) {
   const isOff    = myDates.has(ds);
 
   const dt   = new Date(ds + 'T00:00:00');
-  const DAYS = ['日','一','二','三','四','五','六'];
-  const title= `${ds}（週${DAYS[dt.getDay()]}）`;
+  const title= `${ds}（${DAYS[dt.getDay()]}）`;
 
   const old = document.getElementById('sched-day-popup');
   if (old) old.remove();
 
-  // No content at all → skip
   if (!shift && !isOff) return;
 
   const overlay = document.createElement('div');
@@ -1070,7 +1067,7 @@ function showSchedDayDetail(ds) {
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,45,.55);z-index:300;display:flex;align-items:flex-end;justify-content:center';
   overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
 
-  const statusLabel = {pending:'審核中',approved:'已核准',rejected:'已退回',modified_pending:'修改待審'};
+  const statusLabel = {pending:staffT('status.pending'),approved:staffT('status.approved'),rejected:staffT('status.rejected'),modified_pending:staffT('status.modified_pending')};
   const statusColor = {pending:'var(--orange)',approved:'var(--green)',rejected:'var(--red)',modified_pending:'var(--accent)'};
 
   let bodyHtml = '';
@@ -1078,7 +1075,7 @@ function showSchedDayDetail(ds) {
   if (shift) {
     bodyHtml += `
     <div style="padding:14px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:.08em">班別</div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:.08em">${staffT('sched.popup.shift_type')}</div>
       <div style="display:flex;align-items:center;gap:10px">
         <div style="width:10px;height:32px;border-radius:4px;background:${shift.color};flex-shrink:0"></div>
         <div>
@@ -1088,14 +1085,14 @@ function showSchedDayDetail(ds) {
           </div>
         </div>
       </div>
-      ${shift.note ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">備註：${esc(shift.note)}</div>` : ''}
+      ${shift.note ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">${staffT('sched.popup.note')}${esc(shift.note)}</div>` : ''}
     </div>`;
   }
 
   if (isOff) {
     bodyHtml += `
     <div style="padding:14px 0">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:.08em">排休申請</div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:.08em">${staffT('sched.popup.sched_req')}</div>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:22px">🌿</span>
         <div>
@@ -1103,10 +1100,10 @@ function showSchedDayDetail(ds) {
             ${statusLabel[myStatus] || myStatus}
           </div>
           ${reqData && reqData.submit_note
-            ? `<div style="font-size:12px;color:var(--muted);margin-top:3px">備註：${esc(reqData.submit_note)}</div>`
+            ? `<div style="font-size:12px;color:var(--muted);margin-top:3px">${staffT('sched.popup.note')}${esc(reqData.submit_note)}</div>`
             : ''}
           ${reqData && reqData.review_note
-            ? `<div style="font-size:12px;color:${statusColor[myStatus]};margin-top:3px">審核意見：${esc(reqData.review_note)}</div>`
+            ? `<div style="font-size:12px;color:${statusColor[myStatus]};margin-top:3px">${staffT('sched.popup.review_note')}${esc(reqData.review_note)}</div>`
             : ''}
         </div>
       </div>
@@ -1294,7 +1291,7 @@ async function loadAttendance(){
         setTimeout(() => { me = null; showLogin(); }, 1500);
         return;
       }
-      throw new Error(data.error || '載入失敗');
+      throw new Error(data.error || staffT('load_fail'));
     }
     records = data.records || {};
   } catch(e) {
@@ -1411,7 +1408,7 @@ async function loadAttendance(){
       ${badge}
       <div style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;
            color:${isToday?'var(--accent)':recs.length?'var(--navy)':dayColor}">
-        ${day}${isToday?'<span style="font-size:8px;color:var(--accent)"> 今</span>':''}
+        ${day}${isToday?`<span style="font-size:8px;color:var(--accent)"> ${staffT('sched.today_marker')}</span>`:''}
       </div>
       ${holidayName ? `<div style="font-size:8px;font-weight:700;color:var(--red);line-height:1.3;margin-top:1px;text-align:center">${esc(holidayName)}</div>` : ''}
       ${timeStr}
@@ -1428,8 +1425,7 @@ async function loadAttendance(){
 function showDayDetail(ds) {
   const recs = _attRecords[ds] || [];
   const dt   = new Date(ds + 'T00:00:00');
-  const DAYS = ['日','一','二','三','四','五','六'];
-  const title= `${ds}（週${DAYS[dt.getDay()]}）`;
+  const title= `${ds}（${DAYS[dt.getDay()]}）`;
 
   // Remove old popup
   const old = document.getElementById('att-day-popup');
@@ -1441,13 +1437,11 @@ function showDayDetail(ds) {
   overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
 
   const PCOLOR = { in:'#16a34a', out:'#dc2626', break_out:'#ea580c', break_in:'#2563eb' };
-  const PLABEL = { in:'上班打卡', out:'下班打卡', break_out:'休息開始', break_in:'休息結束' };
 
   let rowsHtml = '';
   if (!recs.length) {
-    rowsHtml = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">當天無打卡記錄</div>';
+    rowsHtml = `<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px">${staffT('att.no_records_day')}</div>`;
   } else {
-    // Calculate work hours
     const inRec  = recs.find(r => r.type === 'in');
     const outRec = [...recs].reverse().find(r => r.type === 'out');
     let workHoursStr = '';
@@ -1458,7 +1452,7 @@ function showDayDetail(ds) {
       if (mins > 0) {
         const h = Math.floor(mins/60), mn = mins%60;
         workHoursStr = `<div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:12px;padding:8px 12px;background:#f0fdf4;border-radius:8px">
-          ⏱ 工時：${h}小時${mn>0?mn+'分':''}（${inRec.time} ～ ${outRec.time}）</div>`;
+          ${staffT('att.work_hours_pfx')}${h}${staffT('att.h_unit')}${mn>0?mn+staffT('att.m_unit'):''}（${inRec.time} ～ ${outRec.time}）</div>`;
       }
     }
     rowsHtml = workHoursStr + recs.map(r => `
@@ -1816,7 +1810,7 @@ function previewLeaveStaff() {
   const balInfo = document.getElementById('leave-balance-info');
   if (!s || !e) { preview.textContent = ''; balInfo.innerHTML = ''; return; }
   const start = new Date(s), end = new Date(e);
-  if (end < start) { preview.textContent = '結束日不能早於開始日'; return; }
+  if (end < start) { preview.textContent = staffT('leave.end_before_start'); return; }
   let days = 0;
   let cur  = new Date(start);
   while (cur <= end) {
@@ -1829,7 +1823,7 @@ function previewLeaveStaff() {
     }
     cur.setDate(cur.getDate() + 1);
   }
-  preview.textContent = `預計請假：${days} 天（已排除週日）`;
+  preview.textContent = staffT('leave.preview_days').replace('{0}', days);
   // 檢查餘額
   const sel = document.getElementById('leave-type-sel');
   if (!sel.value) return;
@@ -1838,9 +1832,9 @@ function previewLeaveStaff() {
     const bal   = balObj.remain;
     const color = days > bal ? 'var(--red)' : bal <= 3 ? 'var(--orange)' : 'var(--green)';
     const warn  = days > bal
-      ? `　<span style="color:var(--red)">⚠️ 超過剩餘天數 ${bal} 天</span>`
-      : `　<span style="color:var(--green)">✅ 足夠（剩 ${bal} 天）</span>`;
-    balInfo.innerHTML = `本次申請 <strong>${days} 天</strong>，今年此假別剩餘 <strong style="color:${color}">${bal} 天</strong>${warn}`;
+      ? `　<span style="color:var(--red)">⚠️ ${staffT('leave.exceed_balance').replace('{0}',bal)}</span>`
+      : `　<span style="color:var(--green)">✅ ${staffT('leave.sufficient').replace('{0}',bal)}</span>`;
+    balInfo.innerHTML = staffT('leave.balance_info').replace('{0}',`<strong>${days} ${staffT('payslip.days_unit')}</strong>`).replace('{1}',`<strong style="color:${color}">${bal} ${staffT('payslip.days_unit')}</strong>`) + warn;
   } else {
     balInfo.innerHTML = '';
   }
@@ -1849,10 +1843,10 @@ function previewLeaveStaff() {
 async function showMyAnnualSchedule() {
   try {
     const res  = await fetch('/api/leave/annual-schedule/public');
-    if (!res.ok) { showToast('無法載入排程', 'err'); return; }
+    if (!res.ok) { showToast(staffT('leave.schedule_fail'), 'err'); return; }
     const data = await res.json();
     if (!data.hire_date) {
-      showToast('尚未設定到職日，請聯絡管理員', 'err');
+      showToast(staffT('leave.no_start_date'), 'err');
       return;
     }
     const schedule = data.schedule || [];
@@ -1902,7 +1896,7 @@ async function showMyAnnualSchedule() {
       </div>
     </div>`;
     document.body.appendChild(overlay);
-  } catch(e) { showToast('載入失敗', 'err'); }
+  } catch(e) { showToast(staffT('load_fail'), 'err'); }
 }
 
 const SICK_LEAVE_CODES = ['sick','hospitalize','menstrual'];
@@ -2028,12 +2022,12 @@ function renderPayslipBankInfo() {
       <span style="color:#fff;font-size:16px">🏦</span>
     </div>
     <div style="flex:1;min-width:0">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:2px">薪資匯款帳號</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:2px">${staffT('payslip.bank_title')}</div>
       ${bankLabel ? `<div style="font-size:12px;color:var(--muted);margin-bottom:2px">${esc(bankLabel)}</div>` : ''}
-      <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:var(--navy);letter-spacing:.06em">${esc(masked||'尚未設定')}</div>
-      ${me.account_holder ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">戶名：${esc(me.account_holder)}</div>` : ''}
+      <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:var(--navy);letter-spacing:.06em">${esc(masked||staffT('payslip.not_set'))}</div>
+      ${me.account_holder ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${staffT('payslip.holder_pfx')}${esc(me.account_holder)}</div>` : ''}
     </div>
-    <div style="font-size:10px;color:var(--muted);text-align:right">如有錯誤<br>請聯絡管理員</div>
+    <div style="font-size:10px;color:var(--muted);text-align:right">${staffT('payslip.contact_admin')}</div>
   </div>`;
 }
 
@@ -2052,13 +2046,13 @@ async function loadMyPayslip() {
     const res  = await fetch(`/api/salary/my-payslip?month=${month}&_=${Date.now()}`);
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
-      wrap.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">${esc(d.error || '該月尚無薪資記錄')}</div>`;
+      wrap.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">${esc(d.error || staffT('payslip.no_record'))}</div>`;
       return;
     }
     const data = await res.json();
     renderPayslip(data, wrap);
   } catch(e) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--red);font-size:13px;padding:40px">載入失敗，請重試</div>';
+    wrap.innerHTML = `<div style="text-align:center;color:var(--red);font-size:13px;padding:40px">${staffT('payslip.load_fail')}</div>`;
   }
 }
 
@@ -2068,43 +2062,38 @@ function renderPayslip(data, wrap) {
   const deductItems= items.filter(it => it.type === 'deduction');
   const isHourly   = data.salary_type === 'hourly';
 
-  // 工時/出勤說明
   const attendStr = isHourly
-    ? `實際工時 <strong>${data.actual_work_hours}h</strong> × 時薪 $${fmtNum(data.hourly_rate)}`
-    : `出勤 <strong>${data.actual_days} 天</strong> / 工作日 ${data.work_days} 天`;
+    ? `${staffT('payslip.actual_hours_pfx')} <strong>${data.actual_work_hours}h</strong> ${staffT('payslip.hourly_rate_sfx')}${fmtNum(data.hourly_rate)}`
+    : `${staffT('payslip.attendance_pfx')} <strong>${data.actual_days} ${staffT('payslip.days_unit')}</strong> / ${staffT('payslip.work_days_pfx')} ${data.work_days} ${staffT('payslip.days_unit')}`;
 
   let html = `
   <div style="background:#fff;border-radius:12px;border:1.5px solid var(--border);overflow:hidden;margin-bottom:14px">
-    <!-- 標題 -->
     <div style="background:var(--navy);padding:16px 20px;color:#fff">
-      <div style="font-size:16px;font-weight:700">${data.month?.replace('-','/')} 薪資單</div>
-      <div style="font-size:12px;opacity:.7;margin-top:3px">${esc(data.staff_name || '')} ${isHourly?'（時薪制）':'（月薪制）'}</div>
+      <div style="font-size:16px;font-weight:700">${data.month?.replace('-','/')} ${staffT('payslip.title_sfx')}</div>
+      <div style="font-size:12px;opacity:.7;margin-top:3px">${esc(data.staff_name || '')} ${isHourly?`（${staffT('payslip.hourly_type')}）`:`（${staffT('payslip.monthly_type')}）`}</div>
     </div>
-    <!-- 出勤摘要 -->
     <div style="padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)">
       ${attendStr}
-      ${data.leave_days > 0  ? `　|　請假 <strong>${data.leave_days} 天</strong>` : ''}
-      ${data.unpaid_days > 0 ? `　|　無薪假 <strong style="color:var(--red)">${data.unpaid_days} 天</strong>` : ''}
-      ${data.ot_pay > 0      ? `　|　加班費 <strong style="color:var(--green)">$${fmtNum(data.ot_pay)}</strong>` : ''}
+      ${data.leave_days > 0  ? `　|　${staffT('payslip.leave_pfx')} <strong>${data.leave_days} ${staffT('payslip.days_unit')}</strong>` : ''}
+      ${data.unpaid_days > 0 ? `　|　${staffT('payslip.unpaid_pfx')} <strong style="color:var(--red)">${data.unpaid_days} ${staffT('payslip.days_unit')}</strong>` : ''}
+      ${data.ot_pay > 0      ? `　|　${staffT('payslip.ot_pfx')} <strong style="color:var(--green)">$${fmtNum(data.ot_pay)}</strong>` : ''}
     </div>
-    <!-- 金額總覽 -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border)">
       <div style="padding:14px 12px;text-align:center;border-right:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">支付總額</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${staffT('payslip.allowance_total')}</div>
         <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--green)">$${fmtNum(data.allowance_total)}</div>
       </div>
       <div style="padding:14px 12px;text-align:center;border-right:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">扣除總額</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${staffT('payslip.deduction_total')}</div>
         <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--red)">$${fmtNum(data.deduction_total)}</div>
       </div>
       <div style="padding:14px 12px;text-align:center">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">實領金額</div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${staffT('payslip.net_pay')}</div>
         <div style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:var(--navy)">$${fmtNum(data.net_pay)}</div>
       </div>
     </div>
-    <!-- 津貼明細 -->
     <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
-      <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:8px">津貼項目</div>
+      <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:8px">${staffT('payslip.allowance_items')}</div>
       ${allowItems.map(it => `
         <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f2f8;font-size:13px">
           <span>${esc(it.name)}</span>
@@ -2114,13 +2103,12 @@ function renderPayslip(data, wrap) {
           </div>
         </div>`).join('')}
       <div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:700;font-size:13px;border-top:1.5px solid var(--border);margin-top:4px">
-        <span>合計</span>
+        <span>${staffT('payslip.subtotal')}</span>
         <span style="font-family:'DM Mono',monospace;color:var(--green)">$${fmtNum(data.allowance_total)}</span>
       </div>
     </div>
-    <!-- 扣除明細 -->
     <div style="padding:14px 16px">
-      <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:8px">扣除項目</div>
+      <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:8px">${staffT('payslip.deduction_items')}</div>
       ${deductItems.map(it => `
         <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f2f8;font-size:13px">
           <span>${esc(it.name)}</span>
@@ -2130,33 +2118,31 @@ function renderPayslip(data, wrap) {
           </div>
         </div>`).join('')}
       <div style="display:flex;justify-content:space-between;padding:6px 0;font-weight:700;font-size:13px;border-top:1.5px solid var(--border);margin-top:4px">
-        <span>合計</span>
+        <span>${staffT('payslip.subtotal')}</span>
         <span style="font-family:'DM Mono',monospace;color:var(--red)">$${fmtNum(data.deduction_total)}</span>
       </div>
     </div>
-    <!-- 狀態 -->
     <div style="padding:10px 16px;background:var(--bg);border-top:1px solid var(--border);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center">
-      <span>狀態：<strong style="color:${data.status==='confirmed'?'var(--green)':'var(--muted)'}">${data.status==='confirmed'?'✅ 已確認':'草稿（待確認）'}</strong></span>
+      <span>${staffT('payslip.status_label')}<strong style="color:${data.status==='confirmed'?'var(--green)':'var(--muted)'}">${data.status==='confirmed'?staffT('payslip.confirmed'):staffT('payslip.draft')}</strong></span>
       <div style="display:flex;gap:8px;align-items:center">
-        ${data.confirmed_by ? `<span>確認人：${esc(data.confirmed_by)}</span>` : ''}
+        ${data.confirmed_by ? `<span>${staffT('payslip.confirmed_by')}${esc(data.confirmed_by)}</span>` : ''}
         ${data.id ? `<button onclick="window.open('/api/salary/records/'+data.id+'/pdf','_blank')"
-          style="padding:4px 12px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">列印 PDF</button>` : ''}
+          style="padding:4px 12px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">${staffT('payslip.print_pdf')}</button>` : ''}
       </div>
     </div>
   </div>
 
   ${isHourly && data.punch_details && data.punch_details.length ? `
-  <!-- 打卡工時明細（時薪制） -->
   <div style="background:#fff;border-radius:12px;border:1.5px solid var(--border);overflow:hidden;margin-bottom:14px">
-    <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--accent)">⏱ 每日工時明細</div>
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:700;color:var(--accent)">${staffT('payslip.hours_detail')}</div>
     <div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="background:var(--bg)">
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">日期</th>
-          <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">上班</th>
-          <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">下班</th>
-          <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">休息</th>
-          <th style="padding:8px 12px;text-align:right;border-bottom:1px solid var(--border)">工時</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">${staffT('payslip.col_date')}</th>
+          <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">${staffT('payslip.col_in')}</th>
+          <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">${staffT('payslip.col_out')}</th>
+          <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">${staffT('payslip.col_break')}</th>
+          <th style="padding:8px 12px;text-align:right;border-bottom:1px solid var(--border)">${staffT('payslip.col_hours')}</th>
         </tr></thead>
         <tbody>
           ${data.punch_details.map(pd => `<tr style="border-bottom:1px solid #f0f2f8">
@@ -2167,7 +2153,7 @@ function renderPayslip(data, wrap) {
             <td style="padding:6px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:600">${pd.net_hours}h</td>
           </tr>`).join('')}
           <tr style="background:var(--bg);font-weight:700">
-            <td colspan="4" style="padding:8px 12px">月合計</td>
+            <td colspan="4" style="padding:8px 12px">${staffT('payslip.monthly_total')}</td>
             <td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--accent)">${data.actual_work_hours}h</td>
           </tr>
         </tbody>
@@ -2260,7 +2246,7 @@ async function submitExpense() {
     _expDocumentId  = null;
     loadMyExpenses();
   } else {
-    showToast(data.error || '送出失敗', 'err');
+    showToast(data.error || staffT('submit_fail'), 'err');
   }
 }
 
@@ -2300,15 +2286,15 @@ async function loadMyExpenses() {
 // ══════════════════════════════════════════════════════════════
 async function loadMyPerf() {
   const el = document.getElementById('myperf-list');
-  el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入中...</div>';
+  el.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">${staffT('loading')}</div>`;
   const res = await fetch('/api/performance/my-reviews');
   if (!res.ok) {
-    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入失敗</div>';
+    el.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">${staffT('load_fail')}</div>`;
     return;
   }
   const reviews = await res.json();
   if (!reviews.length) {
-    el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">尚無考核記錄</div>';
+    el.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">${staffT('perf.no_records')}</div>`;
     return;
   }
   const gradeColor = {A:'var(--green)',B:'var(--accent)',C:'#e07b2a',D:'var(--red)'};
@@ -2429,30 +2415,30 @@ async function loadBioCredList(){
   const el=document.getElementById('bio-cred-list');
   try{
     const r=await fetch('/api/webauthn/credentials');
-    if(!r.ok){el.innerHTML='<div style="color:var(--red);font-size:13px;padding:10px">載入失敗</div>';return;}
+    if(!r.ok){el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:10px">${staffT('load_fail')}</div>`;return;}
     const list=await r.json();
-    if(!list.length){el.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">尚未綁定任何裝置</div>';return;}
+    if(!list.length){el.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">${staffT('bio.no_devices')}</div>`;return;}
     el.innerHTML=list.map(c=>`
       <div style="display:flex;align-items:center;background:var(--bg);border-radius:9px;padding:12px 14px;margin-bottom:8px">
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:600;color:var(--text)">${escHtml(c.device_name||'未知裝置')}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">綁定時間：${c.created_at?c.created_at.slice(0,16):'-'}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${escHtml(c.device_name||staffT('bio.unknown_device'))}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${staffT('bio.bind_time')}${c.created_at?c.created_at.slice(0,16):'-'}</div>
         </div>
         <button onclick="deleteBioCred('${escHtml(c.id)}')"
           style="padding:6px 12px;border-radius:6px;border:1.5px solid var(--red);background:transparent;color:var(--red);font-size:12px;font-weight:600;cursor:pointer">
-          移除
+          ${staffT('bio.remove_btn')}
         </button>
       </div>`).join('');
-  }catch(e){el.innerHTML='<div style="color:var(--red);font-size:13px;padding:10px">載入失敗</div>';}
+  }catch(e){el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:10px">${staffT('load_fail')}</div>`;}
 }
 
 async function doRegisterBio(){
-  if(!window.PublicKeyCredential){alert('此裝置不支援 WebAuthn');return;}
+  if(!window.PublicKeyCredential){alert(staffT('bio.not_supported'));return;}
   const btn=document.getElementById('bio-reg-btn');
-  btn.disabled=true;btn.textContent='綁定中...';
+  btn.disabled=true;btn.textContent=staffT('bio.binding');
   try{
     const beginRes=await fetch('/api/webauthn/register/begin',{method:'POST'});
-    if(!beginRes.ok){const d=await beginRes.json();alert(d.error||'綁定失敗');return;}
+    if(!beginRes.ok){const d=await beginRes.json();alert(d.error||staffT('bio.bind_fail_short'));return;}
     const opts=await beginRes.json();
     opts.challenge=_b64url2buf(opts.challenge);
     opts.user.id=_b64url2buf(opts.user.id);
@@ -2477,15 +2463,15 @@ async function doRegisterBio(){
       })
     });
     const result=await completeRes.json().catch(()=>({}));
-    if(!completeRes.ok){alert(result.error||'伺服器錯誤（'+completeRes.status+'）');return;}
-    alert('裝置綁定成功！下次可直接使用生物辨識登入。');
+    if(!completeRes.ok){alert(result.error||staffT('net_err')+'('+completeRes.status+')');return;}
+    alert(staffT('bio.bind_success'));
     loadBioCredList();
   }catch(e){
-    if(e.name==='NotAllowedError'){alert('已取消或逾時');}
-    else if(e.name==='InvalidStateError'){alert('此裝置已綁定');}
-    else{alert('綁定失敗：'+e.message);}
+    if(e.name==='NotAllowedError'){alert(staffT('bio.cancelled'));}
+    else if(e.name==='InvalidStateError'){alert(staffT('bio.already_bound'));}
+    else{alert(staffT('bio.bind_fail')+e.message);}
   }finally{
-    btn.disabled=false;btn.textContent='＋ 綁定此裝置';
+    btn.disabled=false;btn.textContent=staffT('btn.bind_device');
   }
 }
 
@@ -2493,7 +2479,7 @@ async function deleteBioCred(credId){
   if(!confirm('確定要移除此裝置？'))return;
   const r=await fetch('/api/webauthn/credentials/'+encodeURIComponent(credId),{method:'DELETE'});
   if(r.ok){loadBioCredList();}
-  else{alert('移除失敗');}
+  else{alert(staffT('bio.remove_fail'));}
 }
 
 function escHtml(s){
@@ -2505,18 +2491,18 @@ function escHtml(s){
 // ══════════════════════════════════════════════════════════════
 async function loadMyAnomalies() {
   const el = document.getElementById('my-anomaly-list');
-  el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入中...</div>';
+  el.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">${staffT('loading')}</div>`;
   try {
     const res = await fetch('/api/attendance/my-anomalies');
-    if (!res.ok) { el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">載入失敗</div>'; return; }
+    if (!res.ok) { el.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:40px">${staffT('load_fail')}</div>`; return; }
     const data = await res.json();
     const list = data.anomalies || [];
     if (!list.length) {
       el.innerHTML = `
         <div style="text-align:center;padding:40px">
           <div style="font-size:32px;margin-bottom:10px">✅</div>
-          <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:4px">近 30 天無出勤異常</div>
-          <div style="font-size:12px;color:var(--muted)">出勤紀錄良好，繼續保持！</div>
+          <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:4px">${staffT('anom.no_anom')}</div>
+          <div style="font-size:12px;color:var(--muted)">${staffT('anom.good_record')}</div>
         </div>`;
       return;
     }
@@ -2532,11 +2518,11 @@ async function loadMyAnomalies() {
           ${a.issues.map(i=>`<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${issueBg(i)};color:${issueColor(i)}">${esc(i)}</span>`).join('')}
         </div>
         <div style="font-size:12px;color:var(--muted)">
-          上班：${a.first_in||'—'} &nbsp;|&nbsp; 下班：${a.last_out||'—'}
+          ${staffT('anom.in')}${a.first_in||'—'} &nbsp;|&nbsp; ${staffT('anom.out')}${a.last_out||'—'}
         </div>
       </div>`).join('');
   } catch(e) {
-    el.innerHTML = '<div style="text-align:center;color:var(--red);font-size:13px;padding:40px">載入失敗，請重試</div>';
+    el.innerHTML = `<div style="text-align:center;color:var(--red);font-size:13px;padding:40px">${staffT('load_fail')}</div>`;
   }
 }
 
@@ -2549,7 +2535,7 @@ function initLeaveReportTab() {
     const now = new Date();
     for (let y = now.getFullYear(); y >= now.getFullYear() - 2; y--) {
       const opt = document.createElement('option');
-      opt.value = y; opt.textContent = y + ' 年';
+      opt.value = y; opt.textContent = y + staffT('leaverpt.year_sfx');
       if (y === now.getFullYear()) opt.selected = true;
       sel.appendChild(opt);
     }
@@ -2562,19 +2548,18 @@ async function loadLeaveReport() {
   const balDiv = document.getElementById('leave-report-balances');
   const moDiv  = document.getElementById('leave-report-monthly');
   const lstDiv = document.getElementById('leave-report-list');
-  balDiv.innerHTML = moDiv.innerHTML = lstDiv.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">載入中...</div>';
+  balDiv.innerHTML = moDiv.innerHTML = lstDiv.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">${staffT('loading')}</div>`;
 
   try {
     const res = await fetch(`/api/leave/my-annual-report?year=${year}`);
-    if (!res.ok) { balDiv.innerHTML = '<div style="color:var(--red);font-size:13px;padding:10px">載入失敗</div>'; moDiv.innerHTML = lstDiv.innerHTML = ''; return; }
+    if (!res.ok) { balDiv.innerHTML = `<div style="color:var(--red);font-size:13px;padding:10px">${staffT('leaverpt.load_fail')}</div>`; moDiv.innerHTML = lstDiv.innerHTML = ''; return; }
     const data = await res.json();
 
-    // 假別餘額卡片
     if (!data.balances.length) {
-      balDiv.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">尚無假別餘額資料</div>';
+      balDiv.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">${staffT('leaverpt.no_balance')}</div>`;
     } else {
       balDiv.innerHTML = `
-        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">假別餘額</div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">${staffT('leaverpt.balance_title')}</div>
         ${data.balances.map(b => {
           const total = b.allocated + b.carry_over + b.adjusted;
           const pct   = total > 0 ? Math.min(100, Math.round(b.used / total * 100)) : 0;
@@ -2587,58 +2572,56 @@ async function loadLeaveReport() {
                 <div style="width:10px;height:10px;border-radius:50%;background:${esc(b.color||'#888')};flex-shrink:0"></div>
                 <span style="font-size:13px;font-weight:700;color:var(--navy)">${esc(b.type_name)}</span>
               </div>
-              <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:${remColor}">${rem >= 0 ? rem : 0} 天</span>
+              <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:${remColor}">${rem >= 0 ? rem : 0}${staffT('leaverpt.days')}</span>
             </div>
             <div style="background:var(--border);border-radius:4px;height:5px;overflow:hidden;margin-bottom:6px">
               <div style="width:${pct}%;height:100%;background:${esc(b.color||'var(--accent)')};border-radius:4px;transition:width .4s"></div>
             </div>
             <div style="font-size:11px;color:var(--muted);display:flex;gap:14px">
-              <span>配額 <strong>${b.allocated}</strong></span>
-              ${b.carry_over ? `<span>結轉 <strong>+${b.carry_over}</strong></span>` : ''}
-              ${b.adjusted   ? `<span>調整 <strong>${b.adjusted >= 0 ? '+' : ''}${b.adjusted}</strong></span>` : ''}
-              <span>已用 <strong>${b.used}</strong></span>
+              <span>${staffT('leaverpt.allocated')} <strong>${b.allocated}</strong></span>
+              ${b.carry_over ? `<span>${staffT('leaverpt.carry_over')} <strong>+${b.carry_over}</strong></span>` : ''}
+              ${b.adjusted   ? `<span>${staffT('leaverpt.adjusted')} <strong>${b.adjusted >= 0 ? '+' : ''}${b.adjusted}</strong></span>` : ''}
+              <span>${staffT('leaverpt.used')} <strong>${b.used}</strong></span>
             </div>
           </div>`;
         }).join('')}`;
     }
 
-    // 月份統計
     const months = Object.entries(data.monthly).sort((a,b)=>a[0].localeCompare(b[0]));
     if (!months.length) {
       moDiv.innerHTML = '';
     } else {
       const maxDays = Math.max(...months.map(([,v])=>v.days), 1);
       moDiv.innerHTML = `
-        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">月份用假統計</div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">${staffT('leaverpt.monthly_title')}</div>
         <div style="background:#fff;border-radius:10px;border:1.5px solid var(--border);padding:12px 14px">
           ${months.map(([mo, v]) => `
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-            <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);width:44px;flex-shrink:0">${mo.slice(5)}月</div>
+            <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);width:44px;flex-shrink:0">${mo.slice(5)}${staffT('leaverpt.month_sfx')}</div>
             <div style="flex:1;background:var(--bg);border-radius:4px;height:14px;overflow:hidden">
               <div style="width:${Math.round(v.days/maxDays*100)}%;height:100%;background:var(--accent);border-radius:4px"></div>
             </div>
-            <div style="font-size:11px;font-family:'DM Mono',monospace;font-weight:600;color:var(--navy);width:36px;text-align:right">${v.days}天</div>
+            <div style="font-size:11px;font-family:'DM Mono',monospace;font-weight:600;color:var(--navy);width:36px;text-align:right">${v.days}${staffT('leaverpt.days')}</div>
           </div>`).join('')}
         </div>`;
     }
 
-    // 請假明細
     if (!data.requests.length) {
-      lstDiv.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">本年度尚無請假記錄</div>';
+      lstDiv.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px">${staffT('leaverpt.no_records')}</div>`;
     } else {
       lstDiv.innerHTML = `
-        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">請假紀錄（${data.requests.length} 筆）</div>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">${staffT('leaverpt.records_title').replace('{0}', data.requests.length)}</div>
         ${data.requests.map(r => `
         <div style="background:#fff;border-radius:10px;border:1.5px solid var(--border);padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px">
           <div style="width:8px;height:8px;border-radius:50%;background:${esc(r.color||'#888')};flex-shrink:0"></div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:700;color:var(--navy)">${esc(r.type_name)} <span style="font-weight:400;color:var(--muted)">· ${r.total_days} 天</span></div>
+            <div style="font-size:12px;font-weight:700;color:var(--navy)">${esc(r.type_name)} <span style="font-weight:400;color:var(--muted)">· ${r.total_days}${staffT('leaverpt.days')}</span></div>
             <div style="font-size:11px;color:var(--muted);margin-top:1px">${esc(r.start_date)} ${r.start_date!==r.end_date ? '~ '+esc(r.end_date) : ''}${r.reason ? '　'+esc(r.reason) : ''}</div>
           </div>
         </div>`).join('')}`;
     }
   } catch(e) {
-    balDiv.innerHTML = '<div style="color:var(--red);font-size:13px;padding:10px">載入失敗，請重試</div>';
+    balDiv.innerHTML = `<div style="color:var(--red);font-size:13px;padding:10px">${staffT('leaverpt.load_fail_retry')}</div>`;
     moDiv.innerHTML = lstDiv.innerHTML = '';
   }
 }
@@ -2646,9 +2629,9 @@ async function loadLeaveReport() {
 // ══════════════════════════════════════════════════════
 // 差旅申請（員工端）
 // ══════════════════════════════════════════════════════
-const MYT_STATUS_LABEL = { pending:'待審', approved:'已核准', rejected:'已拒絕' };
+let MYT_STATUS_LABEL = { pending:'待審', approved:'已核准', rejected:'已拒絕' };
 const MYT_STATUS_COLOR = { pending:'#e07b2a', approved:'#27ae60', rejected:'#c0392b' };
-const MYT_CAT_LABEL    = { transport:'交通費', hotel:'住宿費', meal:'餐費', other:'其他' };
+let MYT_CAT_LABEL    = { transport:'交通費', hotel:'住宿費', meal:'餐費', other:'其他' };
 let _mytExpTravelId = null;
 
 function initMyTravel() {
@@ -2669,7 +2652,7 @@ async function loadMyTravel() {
     const r = await fetch(url);
     const data = await r.json();
     if (!data.length) {
-      wrap.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">本月尚無差旅申請</div>';
+      wrap.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">${staffT('myt.no_records')}</div>`;
       return;
     }
     wrap.innerHTML = data.map(t => {
@@ -2679,29 +2662,29 @@ async function loadMyTravel() {
           <div style="font-size:14px;font-weight:700;color:var(--navy)">${esc(t.title)}</div>
           <span style="font-size:11px;font-weight:700;color:${MYT_STATUS_COLOR[t.status]||'#888'}">${MYT_STATUS_LABEL[t.status]||t.status}</span>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">📍 ${esc(t.destination)}　${t.start_date} ~ ${t.end_date}（${days}天）</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">📍 ${esc(t.destination)}　${t.start_date} ~ ${t.end_date}（${days}${staffT('myt.days_sfx')}）</div>
         ${t.purpose ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">📝 ${esc(t.purpose)}</div>` : ''}
-        ${parseFloat(t.advance_amount||0) > 0 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">預支：NT$ ${Number(t.advance_amount).toLocaleString()}</div>` : ''}
-        ${t.review_note ? `<div style="font-size:12px;color:#c0392b;margin-bottom:6px">審核意見：${esc(t.review_note)}</div>` : ''}
+        ${parseFloat(t.advance_amount||0) > 0 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${staffT('myt.advance_pfx')} ${Number(t.advance_amount).toLocaleString()}</div>` : ''}
+        ${t.review_note ? `<div style="font-size:12px;color:#c0392b;margin-bottom:6px">${staffT('myt.review_note')}${esc(t.review_note)}</div>` : ''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
           <button onclick="openMyTravelExp(${t.id},'${esc(t.title)}')"
-            style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;cursor:pointer">費用核銷</button>
+            style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;cursor:pointer">${staffT('myt.expense_btn')}</button>
           ${t.status==='pending' ? `
             <button onclick="openMyTravelEdit(${t.id})"
-              style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--border);background:transparent;color:var(--navy);font-size:12px;cursor:pointer">編輯</button>
+              style="padding:5px 12px;border-radius:7px;border:1.5px solid var(--border);background:transparent;color:var(--navy);font-size:12px;cursor:pointer">${staffT('myt.edit_btn')}</button>
             <button onclick="deleteMyTravel(${t.id})"
-              style="padding:5px 12px;border-radius:7px;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;font-size:12px;cursor:pointer">刪除</button>
+              style="padding:5px 12px;border-radius:7px;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;font-size:12px;cursor:pointer">${staffT('myt.delete_btn')}</button>
           ` : ''}
         </div>
       </div>`;
     }).join('');
   } catch(e) {
-    wrap.innerHTML = '<div style="color:var(--red);font-size:13px;padding:12px">載入失敗</div>';
+    wrap.innerHTML = `<div style="color:var(--red);font-size:13px;padding:12px">${staffT('myt.load_fail')}</div>`;
   }
 }
 
 function openMyTravelModal() {
-  document.getElementById('myt-form-title').textContent = '新增差旅申請';
+  document.getElementById('myt-form-title').textContent = staffT('myt.form_new');
   document.getElementById('myt-edit-id').value = '';
   document.getElementById('myt-title').value   = '';
   document.getElementById('myt-dest').value    = '';
@@ -2721,7 +2704,7 @@ async function openMyTravelEdit(id) {
     const list = await r.json();
     const t = list.find(x=>x.id===id);
     if (!t) return;
-    document.getElementById('myt-form-title').textContent = '編輯差旅申請';
+    document.getElementById('myt-form-title').textContent = staffT('myt.form_edit');
     document.getElementById('myt-edit-id').value = id;
     document.getElementById('myt-title').value   = t.title||'';
     document.getElementById('myt-dest').value    = t.destination||'';
@@ -2749,20 +2732,20 @@ async function saveMyTravel() {
     advance_amount: parseFloat(document.getElementById('myt-advance').value)||0,
   };
   if (!body.title||!body.destination||!body.start_date||!body.end_date) {
-    alert('請填寫必填欄位（標題、目的地、日期）'); return;
+    alert(staffT('myt.required_fields')); return;
   }
   const url    = id ? `/api/staff/travel/${id}` : '/api/staff/travel';
   const method = id ? 'PUT' : 'POST';
   try {
     const r = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-    if (!r.ok) { const d=await r.json(); alert(d.error||'儲存失敗'); return; }
+    if (!r.ok) { const d=await r.json(); alert(d.error||staffT('myt.save_fail')); return; }
     closeMyTravelForm();
     loadMyTravel();
-  } catch(e) { alert('儲存失敗'); }
+  } catch(e) { alert(staffT('myt.save_fail')); }
 }
 
 async function deleteMyTravel(id) {
-  if (!confirm('確定刪除此差旅申請？')) return;
+  if (!confirm(staffT('myt.confirm_delete'))) return;
   await fetch(`/api/staff/travel/${id}`, { method:'DELETE' });
   loadMyTravel();
 }
@@ -2790,7 +2773,7 @@ async function renderMyExpList() {
   try {
     const r = await fetch(`/api/staff/travel/${_mytExpTravelId}/expenses`);
     const data = await r.json();
-    if (!data.length) { wrap.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px 0">尚無費用記錄</div>'; return; }
+    if (!data.length) { wrap.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:8px 0">${staffT('myt.no_exp')}</div>`; return; }
     const total = data.reduce((a,r)=>a+parseFloat(r.amount||0),0);
     wrap.innerHTML = data.map(r => `
       <div style="padding:10px 0;border-bottom:1px solid var(--border)">
@@ -2816,11 +2799,11 @@ async function renderMyExpList() {
                  <input type="file" accept="image/*,application/pdf" style="display:none"
                    onchange="uploadMyExpAttachment(${r.id},this)">
                </label>`}
-          <button onclick="deleteMyExpense(${r.id})" style="padding:3px 8px;border-radius:6px;border:1px solid #e74c3c;background:transparent;color:#e74c3c;font-size:11px;cursor:pointer">刪除</button>
+          <button onclick="deleteMyExpense(${r.id})" style="padding:3px 8px;border-radius:6px;border:1px solid #e74c3c;background:transparent;color:#e74c3c;font-size:11px;cursor:pointer">${staffT('myt.delete_btn')}</button>
         </div>
       </div>`).join('') +
       `<div style="padding:10px 0;font-size:13px;font-weight:700;color:var(--navy);text-align:right">合計：NT$ ${total.toLocaleString()}</div>`;
-  } catch(e) { wrap.innerHTML='<div style="color:var(--red);font-size:13px">載入失敗</div>'; }
+  } catch(e) { wrap.innerHTML=`<div style="color:var(--red);font-size:13px">${staffT('load_fail')}</div>`; }
 }
 
 async function uploadMyExpAttachment(eid, input) {
@@ -2829,7 +2812,7 @@ async function uploadMyExpAttachment(eid, input) {
   fd.append('file', input.files[0]);
   const r = await fetch(`/api/travel/expenses/${eid}/attachment`, { method:'POST', body:fd });
   if (r.ok) renderMyExpList();
-  else alert('上傳失敗，請重試');
+  else alert(staffT('loan.upload_fail'));
 }
 
 async function addMyExpense() {
@@ -2840,7 +2823,7 @@ async function addMyExpense() {
     amount:       parseFloat(document.getElementById('myt-exp-amount').value)||0,
     note:         document.getElementById('myt-exp-note').value.trim(),
   };
-  if (!body.amount) { alert('請填入金額'); return; }
+  if (!body.amount) { alert(staffT('loan.need_amount')); return; }
   const r = await fetch(`/api/staff/travel/${_mytExpTravelId}/expenses`, {
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
   });
@@ -2867,8 +2850,8 @@ async function deleteMyExpense(eid) {
 // ══════════════════════════════════════════════════════
 // 我的借用（員工端）
 // ══════════════════════════════════════════════════════
-const LOAN_CAT = { computer:'電腦/3C', vehicle:'車輛', furniture:'辦公家具', tool:'工具設備', other:'其他' };
-const LOAN_STATUS_LABEL = { pending:'待審中', active:'借用中', returned:'已歸還', rejected:'已拒絕' };
+let LOAN_CAT = { computer:'電腦/3C', vehicle:'車輛', furniture:'辦公家具', tool:'工具設備', other:'其他' };
+let LOAN_STATUS_LABEL = { pending:'待審中', active:'借用中', returned:'已歸還', rejected:'已拒絕' };
 const LOAN_STATUS_COLOR = { pending:'#9b59b6', active:'#e07b2a', returned:'#27ae60', rejected:'#e74c3c' };
 
 async function loadMyLoans() {
@@ -2878,7 +2861,7 @@ async function loadMyLoans() {
     const r    = await fetch(`/api/staff/assets/loans?status=${status}`);
     const data = await r.json();
     if (!data.length) {
-      wrap.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">無記錄</div>`;
+      wrap.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:32px">${staffT('loan.no_records')}</div>`;
       return;
     }
     const today = new Date().toISOString().slice(0,10);
@@ -2894,18 +2877,18 @@ async function loadMyLoans() {
           </div>
           <span style="font-size:11px;font-weight:700;color:${statusColor}">${statusLabel}</span>
         </div>
-        <div style="font-size:12px;color:var(--muted)">類別：${LOAN_CAT[r.asset_category]||r.asset_category}</div>
-        ${r.asset_location ? `<div style="font-size:12px;color:var(--muted)">位置：${esc(r.asset_location)}</div>` : ''}
-        <div style="font-size:12px;color:var(--muted)">申請日：${r.loan_date}</div>
-        ${r.expected_return ? `<div style="font-size:12px;color:${overdue?'#e74c3c':'var(--muted)'}">預計歸還：${r.expected_return}${overdue?' ⚠️ 已逾期':''}</div>` : ''}
-        ${r.actual_return   ? `<div style="font-size:12px;color:var(--muted)">實際歸還：${r.actual_return}</div>` : ''}
-        ${r.purpose ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">用途：${esc(r.purpose)}</div>` : ''}
-        ${r.status==='rejected'&&r.review_note ? `<div style="font-size:12px;color:#e74c3c;margin-top:4px;background:#fef0f0;border-radius:6px;padding:4px 8px">拒絕原因：${esc(r.review_note)}</div>` : ''}
-        ${r.status==='pending' ? `<div style="margin-top:8px"><button onclick="cancelMyLoanRequest(${r.id})" style="font-size:12px;padding:4px 10px;border-radius:7px;border:1.5px solid #e74c3c;background:#fff;color:#e74c3c;cursor:pointer;font-weight:600">取消申請</button></div>` : ''}
+        <div style="font-size:12px;color:var(--muted)">${staffT('loan.category')}${LOAN_CAT[r.asset_category]||r.asset_category}</div>
+        ${r.asset_location ? `<div style="font-size:12px;color:var(--muted)">${staffT('loan.location')}${esc(r.asset_location)}</div>` : ''}
+        <div style="font-size:12px;color:var(--muted)">${staffT('loan.loan_date')}${r.loan_date}</div>
+        ${r.expected_return ? `<div style="font-size:12px;color:${overdue?'#e74c3c':'var(--muted)'}}">${staffT('loan.expected_return')}${r.expected_return}${overdue?staffT('loan.overdue'):''}</div>` : ''}
+        ${r.actual_return   ? `<div style="font-size:12px;color:var(--muted)">${staffT('loan.actual_return')}${r.actual_return}</div>` : ''}
+        ${r.purpose ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${staffT('loan.purpose')}${esc(r.purpose)}</div>` : ''}
+        ${r.status==='rejected'&&r.review_note ? `<div style="font-size:12px;color:#e74c3c;margin-top:4px;background:#fef0f0;border-radius:6px;padding:4px 8px">${staffT('loan.reject_reason')}${esc(r.review_note)}</div>` : ''}
+        ${r.status==='pending' ? `<div style="margin-top:8px"><button onclick="cancelMyLoanRequest(${r.id})" style="font-size:12px;padding:4px 10px;border-radius:7px;border:1.5px solid #e74c3c;background:#fff;color:#e74c3c;cursor:pointer;font-weight:600">${staffT('loan.cancel_btn')}</button></div>` : ''}
       </div>`;
     }).join('');
   } catch(e) {
-    wrap.innerHTML = '<div style="color:var(--red);font-size:13px;padding:12px">載入失敗</div>';
+    wrap.innerHTML = `<div style="color:var(--red);font-size:13px;padding:12px">${staffT('load_fail')}</div>`;
   }
 }
 
@@ -2913,7 +2896,7 @@ async function openMyLoanRequestForm() {
   const form = document.getElementById('myloan-request-form');
   form.style.display = 'block';
   const sel = document.getElementById('mlr-asset');
-  sel.innerHTML = '<option value="">載入中…</option>';
+  sel.innerHTML = `<option value="">${staffT('loading')}</option>`;
   document.getElementById('mlr-loan-date').value   = new Date().toISOString().slice(0,10);
   document.getElementById('mlr-return-date').value = '';
   document.getElementById('mlr-purpose').value     = '';
@@ -2921,14 +2904,14 @@ async function openMyLoanRequestForm() {
     const r = await fetch('/api/staff/assets');
     const data = await r.json();
     if (!data.length) {
-      sel.innerHTML = '<option value="">目前無可借用設備</option>';
+      sel.innerHTML = `<option value="">${staffT('loan.no_assets')}</option>`;
     } else {
       sel.innerHTML = data.map(a =>
-        `<option value="${a.id}">[${LOAN_CAT[a.category]||a.category}] ${esc(a.name)}${a.code?' ('+esc(a.code)+')':''}${a.my_pending?' ※已申請':''}</option>`
+        `<option value="${a.id}">[${LOAN_CAT[a.category]||a.category}] ${esc(a.name)}${a.code?' ('+esc(a.code)+')':''}${a.my_pending?staffT('loan.already_applied'):''}</option>`
       ).join('');
     }
   } catch(e) {
-    sel.innerHTML = '<option value="">載入失敗</option>';
+    sel.innerHTML = `<option value="">${staffT('load_fail')}</option>`;
   }
 }
 
@@ -2941,8 +2924,8 @@ async function submitMyLoanRequest() {
   const loanDate   = document.getElementById('mlr-loan-date').value;
   const returnDate = document.getElementById('mlr-return-date').value;
   const purpose    = document.getElementById('mlr-purpose').value.trim();
-  if (!assetId)  return showToast('請選擇設備','warning');
-  if (!loanDate) return showToast('請填寫借用日期','warning');
+  if (!assetId)  return showToast(staffT('loan.select_asset'),'warning');
+  if (!loanDate) return showToast(staffT('loan.need_loan_date'),'warning');
   const r = await fetch('/api/staff/assets/loan-request', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -2953,14 +2936,14 @@ async function submitMyLoanRequest() {
   if (!r.ok) { showToast(data.error||'申請失敗','error'); return; }
   closeMyLoanRequestForm();
   loadMyLoans();
-  showToast('申請已送出，等待審核','success');
+  showToast(staffT('loan.submitted'),'success');
 }
 
 async function cancelMyLoanRequest(lid) {
-  if (!confirm('確定取消此借用申請？')) return;
+  if (!confirm(staffT('loan.confirm_cancel'))) return;
   const r = await fetch(`/api/staff/assets/loan-requests/${lid}`, { method:'DELETE' });
-  if (r.ok) { loadMyLoans(); showToast('已取消申請','success'); }
-  else { const d = await r.json(); showToast(d.error||'取消失敗','error'); }
+  if (r.ok) { loadMyLoans(); showToast(staffT('loan.cancelled'),'success'); }
+  else { const d = await r.json(); showToast(d.error||staffT('loan.cancel_fail'),'error'); }
 }
 
 // ── i18n ─────────────────────────────────────────────────────────
@@ -3126,6 +3109,83 @@ const STAFF_I18N = {
     'form.confirm_sched':'確認排休申請',
     'btn.back_edit':'返回修改',
     'btn.confirm_submit':'確認送出',
+    // anomaly
+    'anom.no_anom':'近 30 天無出勤異常','anom.good_record':'出勤紀錄良好，繼續保持！',
+    'anom.in':'上班：','anom.out':'下班：',
+    // payslip
+    'payslip.title_sfx':'薪資單','payslip.hourly_type':'時薪制','payslip.monthly_type':'月薪制',
+    'payslip.actual_hours_pfx':'實際工時','payslip.hourly_rate_sfx':'× 時薪 $',
+    'payslip.attendance_pfx':'出勤','payslip.work_days_pfx':'工作日','payslip.days_unit':'天',
+    'payslip.leave_pfx':'請假','payslip.unpaid_pfx':'無薪假','payslip.ot_pfx':'加班費',
+    'payslip.allowance_total':'支付總額','payslip.deduction_total':'扣除總額','payslip.net_pay':'實領金額',
+    'payslip.allowance_items':'津貼項目','payslip.deduction_items':'扣除項目','payslip.subtotal':'合計',
+    'payslip.status_label':'狀態：','payslip.confirmed':'✅ 已確認','payslip.draft':'草稿（待確認）',
+    'payslip.confirmed_by':'確認人：','payslip.print_pdf':'列印 PDF',
+    'payslip.hours_detail':'每日工時明細','payslip.col_date':'日期','payslip.col_in':'上班',
+    'payslip.col_out':'下班','payslip.col_break':'休息','payslip.col_hours':'工時',
+    'payslip.monthly_total':'月合計',
+    'payslip.no_record':'該月尚無薪資記錄','payslip.load_fail':'載入失敗，請重試',
+    'payslip.work_hours_pfx':'⏱ 工時：','payslip.h_unit':'小時','payslip.m_unit':'分',
+    'payslip.bank_title':'薪資匯款帳號','payslip.not_set':'尚未設定',
+    'payslip.holder_pfx':'戶名：','payslip.contact_admin':'如有錯誤 請聯絡管理員',
+    // leave report
+    'leaverpt.balance_title':'假別餘額','leaverpt.no_balance':'尚無假別餘額資料',
+    'leaverpt.allocated':'配額','leaverpt.carry_over':'結轉','leaverpt.adjusted':'調整','leaverpt.used':'已用',
+    'leaverpt.days':' 天','leaverpt.monthly_title':'月份用假統計','leaverpt.month_sfx':'月',
+    'leaverpt.records_title':'請假紀錄（{0} 筆）','leaverpt.no_records':'本年度尚無請假記錄',
+    'leaverpt.load_fail':'載入失敗','leaverpt.load_fail_retry':'載入失敗，請重試',
+    'leaverpt.year_sfx':' 年',
+    // schedule view
+    'sched.status_pfx':'排休狀態：','sched.days_sfx':' 天','sched.this_month_shifts':'本月排班',
+    'sched.today_marker':'今','sched.off.approved':'休假','sched.off.pending':'申請中',
+    'sched.off.modified_pending':'修改中','sched.off.rejected':'退回',
+    'sched.status.not_submitted':'尚未申請',
+    'sched.popup.shift_type':'班別','sched.popup.note':'備註：','sched.popup.sched_req':'排休申請',
+    'sched.popup.review_note':'審核意見：',
+    // attendance day detail
+    'att.no_records_day':'當天無打卡記錄',
+    'att.work_hours_pfx':'⏱ 工時：','att.h_unit':'小時','att.m_unit':'分',
+    // travel
+    'myt.no_records':'本月尚無差旅申請','myt.advance_pfx':'預支：NT$',
+    'myt.review_note':'審核意見：','myt.expense_btn':'費用核銷',
+    'myt.edit_btn':'編輯','myt.delete_btn':'刪除','myt.days_sfx':'天',
+    'myt.load_fail':'載入失敗','myt.no_exp':'尚無費用記錄',
+    'myt.form_new':'新增差旅申請','myt.form_edit':'編輯差旅申請',
+    'myt.required_fields':'請填寫必填欄位（標題、目的地、日期）',
+    'myt.save_fail':'儲存失敗','myt.confirm_delete':'確定刪除此差旅申請？',
+    // loans
+    'loan.status.pending':'待審中','loan.status.active':'借用中',
+    'loan.status.returned':'已歸還','loan.status.rejected':'已拒絕',
+    'loan.cat.computer':'電腦/3C','loan.cat.vehicle':'車輛',
+    'loan.cat.furniture':'辦公家具','loan.cat.tool':'工具設備','loan.cat.other':'其他',
+    'loan.no_records':'無記錄','loan.category':'類別：','loan.location':'位置：',
+    'loan.loan_date':'申請日：','loan.expected_return':'預計歸還：','loan.overdue':' ⚠️ 已逾期',
+    'loan.actual_return':'實際歸還：','loan.purpose':'用途：','loan.reject_reason':'拒絕原因：',
+    'loan.cancel_btn':'取消申請','loan.confirm_cancel':'確定取消此借用申請？',
+    'loan.cancelled':'已取消申請','loan.cancel_fail':'取消失敗',
+    'loan.upload_fail':'上傳失敗，請重試','loan.need_amount':'請填入金額',
+    'loan.select_asset':'請選擇設備','loan.need_loan_date':'請填寫借用日期',
+    'bio.bind_success':'裝置綁定成功！下次可直接使用生物辨識登入。',
+    'bio.cancelled':'已取消或逾時','bio.already_bound':'此裝置已綁定',
+    'bio.bind_fail':'綁定失敗：','bio.remove_fail':'移除失敗',
+    'bio.unknown_device':'未知裝置','bio.bind_time':'綁定時間：','bio.remove_btn':'移除',
+    'bio.no_devices':'尚未綁定任何裝置',
+    'perf.no_records':'尚無考核記錄',
+    'sched.select_first':'請先選取休假日期',
+    'sched.total_days':'共 {0} 天',
+    'leave.exceed_balance':'超過剩餘天數 {0} 天','leave.sufficient':'足夠（剩 {0} 天）',
+    'leave.balance_info':'本次申請 {0} 天，今年此假別剩餘 {1} 天',
+    'loan.no_assets':'目前無可借用設備','loan.already_applied':' ※已申請',
+    'loan.submitted':'申請已送出，等待審核',
+    'login.signing_in':'登入中...','bio.binding':'綁定中...','bio.bind_fail_short':'綁定失敗',
+    'sched.quota_reached':'已達本月配額',
+    'sched.day_limit_reached':'{0}休假人數已達上限',
+    'sched.submit_fail':'送出失敗（{0}）','sched.submit_ok':'申請送出成功',
+    'sched.net_fail':'連線失敗，請檢查網路後重試',
+    'leave.end_before_start':'結束日不能早於開始日',
+    'leave.preview_days':'預計請假：{0} 天（已排除週日）',
+    'leave.schedule_fail':'無法載入排程',
+    'leave.no_start_date':'尚未設定到職日，請聯絡管理員',
     toggle:'EN',
   },
   'en': {
@@ -3289,6 +3349,76 @@ const STAFF_I18N = {
     'form.confirm_sched':'Confirm Schedule Request',
     'btn.back_edit':'Back to Edit',
     'btn.confirm_submit':'Confirm & Submit',
+    'anom.no_anom':'No anomalies in the last 30 days','anom.good_record':'Great attendance, keep it up!',
+    'anom.in':'In: ','anom.out':'Out: ',
+    'payslip.title_sfx':'Payslip','payslip.hourly_type':'Hourly','payslip.monthly_type':'Monthly',
+    'payslip.actual_hours_pfx':'Actual Hours','payslip.hourly_rate_sfx':'× Rate $',
+    'payslip.attendance_pfx':'Present','payslip.work_days_pfx':'Work Days','payslip.days_unit':'days',
+    'payslip.leave_pfx':'Leave','payslip.unpaid_pfx':'Unpaid Leave','payslip.ot_pfx':'OT Pay',
+    'payslip.allowance_total':'Gross Pay','payslip.deduction_total':'Deductions','payslip.net_pay':'Net Pay',
+    'payslip.allowance_items':'Allowances','payslip.deduction_items':'Deductions','payslip.subtotal':'Total',
+    'payslip.status_label':'Status: ','payslip.confirmed':'✅ Confirmed','payslip.draft':'Draft (Pending)',
+    'payslip.confirmed_by':'Confirmed by: ','payslip.print_pdf':'Print PDF',
+    'payslip.hours_detail':'Daily Hours','payslip.col_date':'Date','payslip.col_in':'In',
+    'payslip.col_out':'Out','payslip.col_break':'Break','payslip.col_hours':'Hours',
+    'payslip.monthly_total':'Monthly Total',
+    'payslip.no_record':'No payslip for this month','payslip.load_fail':'Load failed, please retry',
+    'payslip.work_hours_pfx':'⏱ Hours: ','payslip.h_unit':'h ','payslip.m_unit':'min',
+    'payslip.bank_title':'Bank Account','payslip.not_set':'Not set',
+    'payslip.holder_pfx':'Name: ','payslip.contact_admin':'Contact admin if incorrect',
+    'leaverpt.balance_title':'Leave Balance','leaverpt.no_balance':'No leave balance data',
+    'leaverpt.allocated':'Quota','leaverpt.carry_over':'Carry-over','leaverpt.adjusted':'Adjusted','leaverpt.used':'Used',
+    'leaverpt.days':' days','leaverpt.monthly_title':'Monthly Leave Usage','leaverpt.month_sfx':'',
+    'leaverpt.records_title':'Leave Records ({0})','leaverpt.no_records':'No leave records this year',
+    'leaverpt.load_fail':'Load failed','leaverpt.load_fail_retry':'Load failed, please retry',
+    'leaverpt.year_sfx':'',
+    'sched.status_pfx':'Status: ','sched.days_sfx':' days','sched.this_month_shifts':'Shifts this month',
+    'sched.today_marker':'T','sched.off.approved':'Day Off','sched.off.pending':'Pending',
+    'sched.off.modified_pending':'Editing','sched.off.rejected':'Rejected',
+    'sched.status.not_submitted':'Not submitted',
+    'sched.popup.shift_type':'Shift','sched.popup.note':'Note: ','sched.popup.sched_req':'Day Off Request',
+    'sched.popup.review_note':'Review: ',
+    'att.no_records_day':'No punch records this day',
+    'att.work_hours_pfx':'⏱ Hours: ','att.h_unit':'h ','att.m_unit':'min',
+    'myt.no_records':'No travel requests this month','myt.advance_pfx':'Advance: NT$',
+    'myt.review_note':'Review: ','myt.expense_btn':'Expenses',
+    'myt.edit_btn':'Edit','myt.delete_btn':'Delete','myt.days_sfx':' days',
+    'myt.load_fail':'Load failed','myt.no_exp':'No expense records',
+    'myt.form_new':'New Travel Request','myt.form_edit':'Edit Travel Request',
+    'myt.required_fields':'Please fill in title, destination, and dates',
+    'myt.save_fail':'Save failed','myt.confirm_delete':'Delete this travel request?',
+    'loan.status.pending':'Pending Review','loan.status.active':'On Loan',
+    'loan.status.returned':'Returned','loan.status.rejected':'Rejected',
+    'loan.cat.computer':'Computer/Electronics','loan.cat.vehicle':'Vehicle',
+    'loan.cat.furniture':'Office Furniture','loan.cat.tool':'Tools/Equipment','loan.cat.other':'Other',
+    'loan.no_records':'No records','loan.category':'Category: ','loan.location':'Location: ',
+    'loan.loan_date':'Applied: ','loan.expected_return':'Expected Return: ','loan.overdue':' ⚠️ Overdue',
+    'loan.actual_return':'Returned: ','loan.purpose':'Purpose: ','loan.reject_reason':'Reject Reason: ',
+    'loan.cancel_btn':'Cancel Request','loan.confirm_cancel':'Cancel this loan request?',
+    'loan.cancelled':'Request cancelled','loan.cancel_fail':'Cancel failed',
+    'loan.upload_fail':'Upload failed, please retry','loan.need_amount':'Please enter an amount',
+    'loan.select_asset':'Please select an asset','loan.need_loan_date':'Please enter loan date',
+    'bio.bind_success':'Device bound! You can use biometrics next time.',
+    'bio.cancelled':'Cancelled or timed out','bio.already_bound':'This device is already bound',
+    'bio.bind_fail':'Binding failed: ','bio.remove_fail':'Removal failed',
+    'bio.unknown_device':'Unknown device','bio.bind_time':'Bound at: ','bio.remove_btn':'Remove',
+    'bio.no_devices':'No devices bound yet',
+    'perf.no_records':'No performance reviews yet',
+    'sched.select_first':'Please select day-off dates first',
+    'sched.total_days':'{0} days total',
+    'leave.exceed_balance':'Exceeds remaining balance by {0} days','leave.sufficient':'Sufficient (remaining: {0} days)',
+    'leave.balance_info':'This request: {0} days, remaining this year: {1} days',
+    'loan.no_assets':'No assets available','loan.already_applied':' ※Applied',
+    'loan.submitted':'Request submitted, pending approval',
+    'login.signing_in':'Signing in...','bio.binding':'Binding...','bio.bind_fail_short':'Binding failed',
+    'sched.quota_reached':'Monthly quota reached',
+    'sched.day_limit_reached':'Max off-day limit reached for {0}',
+    'sched.submit_fail':'Submit failed ({0})','sched.submit_ok':'Request submitted successfully',
+    'sched.net_fail':'Connection failed, please check your network',
+    'leave.end_before_start':'End date cannot be before start date',
+    'leave.preview_days':'Estimated leave: {0} days (Sundays excluded)',
+    'leave.schedule_fail':'Cannot load schedule',
+    'leave.no_start_date':'Start date not set, please contact admin',
     toggle:'日本語',
   },
   'ja': {
@@ -3452,6 +3582,76 @@ const STAFF_I18N = {
     'form.confirm_sched':'シフト申請を確認',
     'btn.back_edit':'編集に戻る',
     'btn.confirm_submit':'確認して送信',
+    'anom.no_anom':'直近30日の出勤異常なし','anom.good_record':'出勤状況良好です。引き続き頑張りましょう！',
+    'anom.in':'出勤：','anom.out':'退勤：',
+    'payslip.title_sfx':'給与明細','payslip.hourly_type':'時給制','payslip.monthly_type':'月給制',
+    'payslip.actual_hours_pfx':'実働時間','payslip.hourly_rate_sfx':'× 時給 $',
+    'payslip.attendance_pfx':'出勤','payslip.work_days_pfx':'労働日','payslip.days_unit':'日',
+    'payslip.leave_pfx':'休暇','payslip.unpaid_pfx':'無給休暇','payslip.ot_pfx':'残業代',
+    'payslip.allowance_total':'支給合計','payslip.deduction_total':'控除合計','payslip.net_pay':'手取り額',
+    'payslip.allowance_items':'支給項目','payslip.deduction_items':'控除項目','payslip.subtotal':'合計',
+    'payslip.status_label':'状態：','payslip.confirmed':'✅ 確認済','payslip.draft':'下書き（確認待ち）',
+    'payslip.confirmed_by':'確認者：','payslip.print_pdf':'PDF印刷',
+    'payslip.hours_detail':'日別工時明細','payslip.col_date':'日付','payslip.col_in':'出勤',
+    'payslip.col_out':'退勤','payslip.col_break':'休憩','payslip.col_hours':'時間',
+    'payslip.monthly_total':'月合計',
+    'payslip.no_record':'該当月の給与記録なし','payslip.load_fail':'読み込み失敗、再試行してください',
+    'payslip.work_hours_pfx':'⏱ 労働時間：','payslip.h_unit':'時間','payslip.m_unit':'分',
+    'payslip.bank_title':'給与振込口座','payslip.not_set':'未設定',
+    'payslip.holder_pfx':'口座名義：','payslip.contact_admin':'誤りがあれば管理者に連絡ください',
+    'leaverpt.balance_title':'休暇残高','leaverpt.no_balance':'休暇残高データなし',
+    'leaverpt.allocated':'配分','leaverpt.carry_over':'繰越','leaverpt.adjusted':'調整','leaverpt.used':'取得済',
+    'leaverpt.days':'日','leaverpt.monthly_title':'月別休暇利用状況','leaverpt.month_sfx':'月',
+    'leaverpt.records_title':'休暇記録（{0}件）','leaverpt.no_records':'今年の休暇記録なし',
+    'leaverpt.load_fail':'読み込み失敗','leaverpt.load_fail_retry':'読み込み失敗、再試行してください',
+    'leaverpt.year_sfx':'年',
+    'sched.status_pfx':'休暇申請状態：','sched.days_sfx':'日','sched.this_month_shifts':'今月のシフト',
+    'sched.today_marker':'今','sched.off.approved':'休暇','sched.off.pending':'申請中',
+    'sched.off.modified_pending':'修正中','sched.off.rejected':'却下',
+    'sched.status.not_submitted':'未申請',
+    'sched.popup.shift_type':'シフト','sched.popup.note':'備考：','sched.popup.sched_req':'休暇申請',
+    'sched.popup.review_note':'審査コメント：',
+    'att.no_records_day':'当日の打刻記録なし',
+    'att.work_hours_pfx':'⏱ 労働時間：','att.h_unit':'時間','att.m_unit':'分',
+    'myt.no_records':'今月の出張申請なし','myt.advance_pfx':'前払い：NT$',
+    'myt.review_note':'審査コメント：','myt.expense_btn':'経費精算',
+    'myt.edit_btn':'編集','myt.delete_btn':'削除','myt.days_sfx':'日間',
+    'myt.load_fail':'読み込み失敗','myt.no_exp':'経費記録なし',
+    'myt.form_new':'新規出張申請','myt.form_edit':'出張申請編集',
+    'myt.required_fields':'タイトル・目的地・日付を入力してください',
+    'myt.save_fail':'保存失敗','myt.confirm_delete':'この出張申請を削除しますか？',
+    'loan.status.pending':'審査中','loan.status.active':'貸出中',
+    'loan.status.returned':'返却済','loan.status.rejected':'却下',
+    'loan.cat.computer':'PC/電子機器','loan.cat.vehicle':'車両',
+    'loan.cat.furniture':'オフィス家具','loan.cat.tool':'工具・設備','loan.cat.other':'その他',
+    'loan.no_records':'記録なし','loan.category':'カテゴリ：','loan.location':'場所：',
+    'loan.loan_date':'申請日：','loan.expected_return':'返却予定：','loan.overdue':' ⚠️ 延滞',
+    'loan.actual_return':'返却日：','loan.purpose':'用途：','loan.reject_reason':'却下理由：',
+    'loan.cancel_btn':'申請取消','loan.confirm_cancel':'この借用申請を取り消しますか？',
+    'loan.cancelled':'申請を取り消しました','loan.cancel_fail':'取消失敗',
+    'loan.upload_fail':'アップロード失敗、再試行してください','loan.need_amount':'金額を入力してください',
+    'loan.select_asset':'設備を選択してください','loan.need_loan_date':'借用日を入力してください',
+    'bio.bind_success':'端末を登録しました！次回から生体認証でログインできます。',
+    'bio.cancelled':'キャンセルまたはタイムアウト','bio.already_bound':'この端末は既に登録済みです',
+    'bio.bind_fail':'登録失敗：','bio.remove_fail':'削除失敗',
+    'bio.unknown_device':'不明な端末','bio.bind_time':'登録日時：','bio.remove_btn':'削除',
+    'bio.no_devices':'まだ端末が登録されていません',
+    'perf.no_records':'評価記録なし',
+    'sched.select_first':'まず休暇日を選択してください',
+    'sched.total_days':'合計 {0} 日',
+    'leave.exceed_balance':'残日数を {0} 日超えています','leave.sufficient':'足りています（残 {0} 日）',
+    'leave.balance_info':'今回申請: {0}日、今年残 {1}日',
+    'loan.no_assets':'現在借用可能な設備なし','loan.already_applied':' ※申請済',
+    'loan.submitted':'申請を送信しました。承認待ちです',
+    'login.signing_in':'ログイン中...','bio.binding':'登録中...','bio.bind_fail_short':'登録失敗',
+    'sched.quota_reached':'今月の配分に達しました',
+    'sched.day_limit_reached':'{0}の休暇人数が上限に達しました',
+    'sched.submit_fail':'送信失敗（{0}）','sched.submit_ok':'申請を送信しました',
+    'sched.net_fail':'接続失敗、ネットワークをご確認ください',
+    'leave.end_before_start':'終了日は開始日より前にできません',
+    'leave.preview_days':'予定休暇：{0}日（日曜除く）',
+    'leave.schedule_fail':'スケジュールを読み���めません',
+    'leave.no_start_date':'入社日が未設定です。管理者に連絡してください',
     toggle:'Tiếng Việt',
   },
   'vi': {
@@ -3615,6 +3815,76 @@ const STAFF_I18N = {
     'form.confirm_sched':'Xác nhận yêu cầu lịch',
     'btn.back_edit':'Quay lại sửa',
     'btn.confirm_submit':'Xác nhận gửi',
+    'anom.no_anom':'Không có bất thường trong 30 ngày qua','anom.good_record':'Chuyên cần tốt, tiếp tục phát huy!',
+    'anom.in':'Vào: ','anom.out':'Ra: ',
+    'payslip.title_sfx':'Phiếu lương','payslip.hourly_type':'Theo giờ','payslip.monthly_type':'Theo tháng',
+    'payslip.actual_hours_pfx':'Giờ thực tế','payslip.hourly_rate_sfx':'× Lương giờ $',
+    'payslip.attendance_pfx':'Có mặt','payslip.work_days_pfx':'Ngày làm việc','payslip.days_unit':'ngày',
+    'payslip.leave_pfx':'Nghỉ phép','payslip.unpaid_pfx':'Nghỉ không lương','payslip.ot_pfx':'Phụ cấp tăng ca',
+    'payslip.allowance_total':'Tổng thu nhập','payslip.deduction_total':'Tổng khấu trừ','payslip.net_pay':'Thực nhận',
+    'payslip.allowance_items':'Khoản thu nhập','payslip.deduction_items':'Khoản khấu trừ','payslip.subtotal':'Tổng',
+    'payslip.status_label':'Trạng thái: ','payslip.confirmed':'✅ Đã xác nhận','payslip.draft':'Nháp (chờ xác nhận)',
+    'payslip.confirmed_by':'Người xác nhận: ','payslip.print_pdf':'In PDF',
+    'payslip.hours_detail':'Chi tiết giờ làm','payslip.col_date':'Ngày','payslip.col_in':'Vào',
+    'payslip.col_out':'Ra','payslip.col_break':'Nghỉ','payslip.col_hours':'Giờ',
+    'payslip.monthly_total':'Tổng tháng',
+    'payslip.no_record':'Không có phiếu lương tháng này','payslip.load_fail':'Tải thất bại, vui lòng thử lại',
+    'payslip.work_hours_pfx':'⏱ Giờ: ','payslip.h_unit':'h ','payslip.m_unit':'ph',
+    'payslip.bank_title':'Tài khoản ngân hàng','payslip.not_set':'Chưa cài đặt',
+    'payslip.holder_pfx':'Chủ tài khoản: ','payslip.contact_admin':'Liên hệ quản trị nếu sai',
+    'leaverpt.balance_title':'Số dư phép','leaverpt.no_balance':'Chưa có dữ liệu số dư phép',
+    'leaverpt.allocated':'Phân bổ','leaverpt.carry_over':'Chuyển sang','leaverpt.adjusted':'Điều chỉnh','leaverpt.used':'Đã dùng',
+    'leaverpt.days':' ngày','leaverpt.monthly_title':'Thống kê nghỉ theo tháng','leaverpt.month_sfx':'',
+    'leaverpt.records_title':'Hồ sơ nghỉ phép ({0} đơn)','leaverpt.no_records':'Không có hồ sơ nghỉ phép năm nay',
+    'leaverpt.load_fail':'Tải thất bại','leaverpt.load_fail_retry':'Tải thất bại, vui lòng thử lại',
+    'leaverpt.year_sfx':'',
+    'sched.status_pfx':'Trạng thái: ','sched.days_sfx':' ngày','sched.this_month_shifts':'Ca tháng này',
+    'sched.today_marker':'H','sched.off.approved':'Nghỉ','sched.off.pending':'Đang chờ',
+    'sched.off.modified_pending':'Đang sửa','sched.off.rejected':'Từ chối',
+    'sched.status.not_submitted':'Chưa gửi',
+    'sched.popup.shift_type':'Ca làm','sched.popup.note':'Ghi chú: ','sched.popup.sched_req':'Đơn xin nghỉ',
+    'sched.popup.review_note':'Nhận xét: ',
+    'att.no_records_day':'Không có dữ liệu ngày này',
+    'att.work_hours_pfx':'⏱ Giờ: ','att.h_unit':'h ','att.m_unit':'ph',
+    'myt.no_records':'Không có yêu cầu công tác tháng này','myt.advance_pfx':'Tạm ứng: NT$',
+    'myt.review_note':'Nhận xét: ','myt.expense_btn':'Thanh toán',
+    'myt.edit_btn':'Sửa','myt.delete_btn':'Xóa','myt.days_sfx':' ngày',
+    'myt.load_fail':'Tải thất bại','myt.no_exp':'Chưa có chi phí',
+    'myt.form_new':'Yêu cầu công tác mới','myt.form_edit':'Sửa yêu cầu công tác',
+    'myt.required_fields':'Vui lòng điền tiêu đề, điểm đến và ngày',
+    'myt.save_fail':'Lưu thất bại','myt.confirm_delete':'Xóa yêu cầu công tác này?',
+    'loan.status.pending':'Chờ duyệt','loan.status.active':'Đang mượn',
+    'loan.status.returned':'Đã trả','loan.status.rejected':'Từ chối',
+    'loan.cat.computer':'Máy tính/Thiết bị','loan.cat.vehicle':'Xe',
+    'loan.cat.furniture':'Nội thất văn phòng','loan.cat.tool':'Dụng cụ','loan.cat.other':'Khác',
+    'loan.no_records':'Không có hồ sơ','loan.category':'Loại: ','loan.location':'Vị trí: ',
+    'loan.loan_date':'Ngày đăng ký: ','loan.expected_return':'Dự kiến trả: ','loan.overdue':' ⚠️ Quá hạn',
+    'loan.actual_return':'Ngày trả: ','loan.purpose':'Mục đích: ','loan.reject_reason':'Lý do từ chối: ',
+    'loan.cancel_btn':'Hủy đơn','loan.confirm_cancel':'Hủy đơn mượn này?',
+    'loan.cancelled':'Đã hủy đơn','loan.cancel_fail':'Hủy thất bại',
+    'loan.upload_fail':'Tải lên thất bại, vui lòng thử lại','loan.need_amount':'Vui lòng nhập số tiền',
+    'loan.select_asset':'Vui lòng chọn thiết bị','loan.need_loan_date':'Vui lòng nhập ngày mượn',
+    'bio.bind_success':'Đã đăng ký thiết bị! Lần sau có thể đăng nhập bằng sinh trắc học.',
+    'bio.cancelled':'Đã hủy hoặc hết giờ','bio.already_bound':'Thiết bị này đã được đăng ký',
+    'bio.bind_fail':'Đăng ký thất bại: ','bio.remove_fail':'Xóa thất bại',
+    'bio.unknown_device':'Thiết bị không xác định','bio.bind_time':'Đã đăng ký lúc: ','bio.remove_btn':'Xóa',
+    'bio.no_devices':'Chưa đăng ký thiết bị nào',
+    'perf.no_records':'Chưa có đánh giá nào',
+    'sched.select_first':'Vui lòng chọn ngày nghỉ trước',
+    'sched.total_days':'Tổng cộng {0} ngày',
+    'leave.exceed_balance':'Vượt quá số ngày còn lại {0} ngày','leave.sufficient':'Đủ (còn {0} ngày)',
+    'leave.balance_info':'Đơn này: {0} ngày, còn lại năm nay: {1} ngày',
+    'loan.no_assets':'Không có thiết bị khả dụng','loan.already_applied':' ※Đã đăng ký',
+    'loan.submitted':'Đã gửi đơn, chờ duyệt',
+    'login.signing_in':'Đang đăng nhập...','bio.binding':'Đang đăng ký...','bio.bind_fail_short':'Đăng ký thất bại',
+    'sched.quota_reached':'Đã đạt hạn mức tháng này',
+    'sched.day_limit_reached':'Ngày {0} đã đạt giới hạn người nghỉ',
+    'sched.submit_fail':'Gửi thất bại ({0})','sched.submit_ok':'Đã gửi yêu cầu thành công',
+    'sched.net_fail':'Mất kết nối, vui lòng kiểm tra mạng',
+    'leave.end_before_start':'Ngày kết thúc không được trước ngày bắt đầu',
+    'leave.preview_days':'Dự kiến nghỉ: {0} ngày (không tính CN)',
+    'leave.schedule_fail':'Không thể tải lịch',
+    'leave.no_start_date':'Chưa đặt ngày vào làm, vui lòng liên hệ quản trị',
     toggle:'ภาษาไทย',
   },
   'th': {
@@ -3778,6 +4048,76 @@ const STAFF_I18N = {
     'form.confirm_sched':'ยืนยันคำขอวันหยุด',
     'btn.back_edit':'กลับไปแก้ไข',
     'btn.confirm_submit':'ยืนยันและส่ง',
+    'anom.no_anom':'ไม่มีความผิดปกติใน 30 วันล่าสุด','anom.good_record':'การเข้างานดี ขอให้รักษาระดับนี้ต่อไป!',
+    'anom.in':'เข้า: ','anom.out':'ออก: ',
+    'payslip.title_sfx':'สลิปเงินเดือน','payslip.hourly_type':'รายชั่วโมง','payslip.monthly_type':'รายเดือน',
+    'payslip.actual_hours_pfx':'ชั่วโมงจริง','payslip.hourly_rate_sfx':'× อัตราชั่วโมง $',
+    'payslip.attendance_pfx':'เข้างาน','payslip.work_days_pfx':'วันทำงาน','payslip.days_unit':'วัน',
+    'payslip.leave_pfx':'ลา','payslip.unpaid_pfx':'ลาไม่รับเงิน','payslip.ot_pfx':'ค่าล่วงเวลา',
+    'payslip.allowance_total':'รายรับรวม','payslip.deduction_total':'รายหักรวม','payslip.net_pay':'รับสุทธิ',
+    'payslip.allowance_items':'รายการรายรับ','payslip.deduction_items':'รายการหัก','payslip.subtotal':'รวม',
+    'payslip.status_label':'สถานะ: ','payslip.confirmed':'✅ ยืนยันแล้ว','payslip.draft':'ร่าง (รอยืนยัน)',
+    'payslip.confirmed_by':'ยืนยันโดย: ','payslip.print_pdf':'พิมพ์ PDF',
+    'payslip.hours_detail':'รายละเอียดชั่วโมงรายวัน','payslip.col_date':'วันที่','payslip.col_in':'เข้า',
+    'payslip.col_out':'ออก','payslip.col_break':'พัก','payslip.col_hours':'ชั่วโมง',
+    'payslip.monthly_total':'รวมเดือน',
+    'payslip.no_record':'ไม่มีสลิปเงินเดือนเดือนนี้','payslip.load_fail':'โหลดล้มเหลว กรุณาลองใหม่',
+    'payslip.work_hours_pfx':'⏱ ชั่วโมง: ','payslip.h_unit':'ชม. ','payslip.m_unit':'นาที',
+    'payslip.bank_title':'บัญชีธนาคาร','payslip.not_set':'ยังไม่ได้ตั้งค่า',
+    'payslip.holder_pfx':'ชื่อบัญชี: ','payslip.contact_admin':'ติดต่อผู้ดูแลหากมีข้อผิดพลาด',
+    'leaverpt.balance_title':'ยอดวันลา','leaverpt.no_balance':'ยังไม่มีข้อมูลยอดวันลา',
+    'leaverpt.allocated':'โควตา','leaverpt.carry_over':'ยกยอด','leaverpt.adjusted':'ปรับ','leaverpt.used':'ใช้แล้ว',
+    'leaverpt.days':' วัน','leaverpt.monthly_title':'สถิติการลารายเดือน','leaverpt.month_sfx':'',
+    'leaverpt.records_title':'ประวัติการลา ({0} รายการ)','leaverpt.no_records':'ไม่มีประวัติการลาปีนี้',
+    'leaverpt.load_fail':'โหลดล้มเหลว','leaverpt.load_fail_retry':'โหลดล้มเหลว กรุณาลองใหม่',
+    'leaverpt.year_sfx':'',
+    'sched.status_pfx':'สถานะ: ','sched.days_sfx':' วัน','sched.this_month_shifts':'กะเดือนนี้',
+    'sched.today_marker':'ว','sched.off.approved':'หยุด','sched.off.pending':'รอดำเนินการ',
+    'sched.off.modified_pending':'กำลังแก้','sched.off.rejected':'ปฏิเสธ',
+    'sched.status.not_submitted':'ยังไม่ยื่น',
+    'sched.popup.shift_type':'กะ','sched.popup.note':'หมายเหตุ: ','sched.popup.sched_req':'คำขอวันหยุด',
+    'sched.popup.review_note':'ความเห็น: ',
+    'att.no_records_day':'ไม่มีข้อมูลบันทึกเวลาวันนี้',
+    'att.work_hours_pfx':'⏱ ชั่วโมง: ','att.h_unit':'ชม. ','att.m_unit':'นาที',
+    'myt.no_records':'ไม่มีคำขอเดินทางเดือนนี้','myt.advance_pfx':'เงินทดรอง: NT$',
+    'myt.review_note':'ความเห็น: ','myt.expense_btn':'เบิกค่าใช้จ่าย',
+    'myt.edit_btn':'แก้ไข','myt.delete_btn':'ลบ','myt.days_sfx':' วัน',
+    'myt.load_fail':'โหลดล้มเหลว','myt.no_exp':'ยังไม่มีรายการค่าใช้จ่าย',
+    'myt.form_new':'คำขอเดินทางใหม่','myt.form_edit':'แก้ไขคำขอเดินทาง',
+    'myt.required_fields':'กรุณากรอกหัวข้อ ปลายทาง และวันที่',
+    'myt.save_fail':'บันทึกล้มเหลว','myt.confirm_delete':'ลบคำขอเดินทางนี้?',
+    'loan.status.pending':'รออนุมัติ','loan.status.active':'กำลังยืม',
+    'loan.status.returned':'คืนแล้ว','loan.status.rejected':'ปฏิเสธ',
+    'loan.cat.computer':'คอมพิวเตอร์/อิเล็กทรอนิกส์','loan.cat.vehicle':'ยานพาหนะ',
+    'loan.cat.furniture':'เฟอร์นิเจอร์','loan.cat.tool':'เครื่องมือ','loan.cat.other':'อื่นๆ',
+    'loan.no_records':'ไม่มีรายการ','loan.category':'หมวด: ','loan.location':'ที่ตั้ง: ',
+    'loan.loan_date':'วันที่ขอ: ','loan.expected_return':'คืนโดยประมาณ: ','loan.overdue':' ⚠️ เกินกำหนด',
+    'loan.actual_return':'วันคืนจริง: ','loan.purpose':'วัตถุประสงค์: ','loan.reject_reason':'เหตุผลปฏิเสธ: ',
+    'loan.cancel_btn':'ยกเลิกคำขอ','loan.confirm_cancel':'ยกเลิกคำขอยืมนี้?',
+    'loan.cancelled':'ยกเลิกคำขอแล้ว','loan.cancel_fail':'ยกเลิกล้มเหลว',
+    'loan.upload_fail':'อัปโหลดล้มเหลว กรุณาลองใหม่','loan.need_amount':'กรุณากรอกจำนวนเงิน',
+    'loan.select_asset':'กรุณาเลือกอุปกรณ์','loan.need_loan_date':'กรุณากรอกวันที่ยืม',
+    'bio.bind_success':'ผูกอุปกรณ์สำเร็จ! ครั้งถัดไปสามารถเข้าสู่ระบบด้วยชีวมิติได้',
+    'bio.cancelled':'ยกเลิกหรือหมดเวลา','bio.already_bound':'อุปกรณ์นี้ถูกผูกแล้ว',
+    'bio.bind_fail':'ผูกล้มเหลว: ','bio.remove_fail':'ลบล้มเหลว',
+    'bio.unknown_device':'อุปกรณ์ไม่ทราบชื่อ','bio.bind_time':'เวลาผูก: ','bio.remove_btn':'ลบ',
+    'bio.no_devices':'ยังไม่ได้ผูกอุปกรณ์ใดๆ',
+    'perf.no_records':'ยังไม่มีการประเมิน',
+    'sched.select_first':'กรุณาเลือกวันหยุดก่อน',
+    'sched.total_days':'รวม {0} วัน',
+    'leave.exceed_balance':'เกินยอดคงเหลือ {0} วัน','leave.sufficient':'เพียงพอ (เหลือ {0} วัน)',
+    'leave.balance_info':'คำขอนี้: {0} วัน, คงเหลือปีนี้: {1} วัน',
+    'loan.no_assets':'ไม่มีอุปกรณ์ที่สามารถยืมได้','loan.already_applied':' ※ยื่นแล้ว',
+    'loan.submitted':'ส่งคำขอแล้ว รอการอนุมัติ',
+    'login.signing_in':'กำลังเข้าสู่ระบบ...','bio.binding':'กำลังผูก...','bio.bind_fail_short':'ผูกล้มเหลว',
+    'sched.quota_reached':'ถึงโควตาเดือนนี้แล้ว',
+    'sched.day_limit_reached':'วันที่ {0} ถึงจำนวนสูงสุดแล้ว',
+    'sched.submit_fail':'ส่งล้มเหลว ({0})','sched.submit_ok':'ส่งคำขอสำเร็จ',
+    'sched.net_fail':'เชื่อมต่อล้มเหลว กรุณาตรวจสอบเครือข่าย',
+    'leave.end_before_start':'วันสิ้นสุดต้องไม่ก่อนวันเริ่ม',
+    'leave.preview_days':'ลาโดยประมาณ: {0} วัน (ไม่นับวันอาทิตย์)',
+    'leave.schedule_fail':'ไม่สามารถโหลดตาราง',
+    'leave.no_start_date':'ยังไม่ได้ตั้งวันเริ่มงาน กรุณาติดต่อผู้ดูแล',
     toggle:'中文',
   }
 };
@@ -3799,6 +4139,10 @@ function rebuildI18nLabels() {
   SLABEL = {pending:staffT('status.pending'),approved:staffT('status.approved'),rejected:staffT('status.rejected'),modified_pending:staffT('status.modified_pending')};
   REQ_LABEL = {pending:staffT('status.pending'),approved:staffT('status.approved'),rejected:staffT('status.rejected')};
   OT_SL = {pending:staffT('status.pending'),approved:staffT('status.approved'),rejected:staffT('status.rejected')};
+  MYT_STATUS_LABEL = {pending:staffT('status.pending'),approved:staffT('status.approved'),rejected:staffT('status.rejected')};
+  MYT_CAT_LABEL = {transport:staffT('opt.cat_transport'),hotel:staffT('opt.cat_hotel'),meal:staffT('opt.cat_meal'),other:staffT('opt.cat_other')};
+  LOAN_STATUS_LABEL = {pending:staffT('loan.status.pending'),active:staffT('loan.status.active'),returned:staffT('loan.status.returned'),rejected:staffT('loan.status.rejected')};
+  LOAN_CAT = {computer:staffT('loan.cat.computer'),vehicle:staffT('loan.cat.vehicle'),furniture:staffT('loan.cat.furniture'),tool:staffT('loan.cat.tool'),other:staffT('loan.cat.other')};
 }
 function staffApplyI18n() {
   rebuildI18nLabels();
