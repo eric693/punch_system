@@ -766,9 +766,11 @@ function hav(a,b,c,d){
 }
 
 /* Punch */
+const _PUNCH_BTNS=['btn-in','btn-out','btn-bout','btn-bin'];
 async function doPunch(type){
   if(punchLocked)return;
   punchLocked=true;setTimeout(()=>punchLocked=false,2000);
+  _PUNCH_BTNS.forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=true;});
   const body={punch_type:type};
   if(gpsPos){body.lat=gpsPos.lat;body.lng=gpsPos.lng;}
   try{
@@ -780,6 +782,7 @@ async function doPunch(type){
     showSuccess(me.name,PLABEL[type],ts,d.gps_distance!=null?staffT('punch.dist').replace('{0}',d.gps_distance):'');
     await loadTodayLog();
   }catch(e){showToast(staffT('punch.net_err'),'err');punchLocked=false;}
+  finally{_PUNCH_BTNS.forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});}
 }
 async function loadTodayLog(){
   const r=await fetch('/api/punch/today');const list=await r.json();

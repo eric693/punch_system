@@ -3371,19 +3371,22 @@ def api_shift_assignment_create():
         ).fetchall():
             staff_names[r['id']] = r['name']
 
+        batch = []
         for sid in staff_ids:
             leave_dates = leave_lookup.get(sid, set())
             for date_str in dates:
                 if date_str in leave_dates and not force:
                     blocked.append({'staff_name': staff_names.get(sid, str(sid)), 'date': date_str})
                     continue
-                conn.execute("""
-                    INSERT INTO shift_assignments (staff_id, shift_type_id, shift_date, note)
-                    VALUES (%s,%s,%s,%s)
-                    ON CONFLICT (staff_id, shift_date) DO UPDATE
-                      SET shift_type_id=%s, note=%s, created_at=NOW()
-                """, (sid, shift_type_id, date_str, note, shift_type_id, note))
-                created += 1
+                batch.append((sid, shift_type_id, date_str, note))
+        if batch:
+            conn.executemany("""
+                INSERT INTO shift_assignments (staff_id, shift_type_id, shift_date, note)
+                VALUES (%s,%s,%s,%s)
+                ON CONFLICT (staff_id, shift_date) DO UPDATE
+                  SET shift_type_id=EXCLUDED.shift_type_id, note=EXCLUDED.note, created_at=NOW()
+            """, batch)
+            created = len(batch)
 
     if blocked and created == 0:
         return jsonify({
@@ -8243,6 +8246,11 @@ def api_attendance_anomalies():
     from datetime import date as _da, datetime as _dta, timezone as _tz, timedelta as _td
     TW    = _tz(_td(hours=8))
     today = _dta.now(TW).date()
+
+    cache_key = f'anomalies:{today}'
+    cached = _cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
     # Check last 7 days
     date_from = today - _td(days=7)
 
@@ -8385,7 +8393,9 @@ def api_attendance_anomalies():
     # Sort: error > warning > info, then by date desc
     sev_order = {'error': 0, 'warning': 1, 'info': 2}
     anomalies.sort(key=lambda x: (sev_order.get(x['severity'], 9), x['date']))
-    return jsonify({'anomalies': anomalies, 'count': len(anomalies), 'checked_from': str(date_from)})
+    result = {'anomalies': anomalies, 'count': len(anomalies), 'checked_from': str(date_from)}
+    _cache_set(cache_key, result, ttl=300)
+    return jsonify(result)
 
 
 # ═══════════════════════════════════════════════════════════════════

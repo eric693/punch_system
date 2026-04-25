@@ -238,7 +238,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div style="position:relative" id="staff-search-wrap">
         <input class="search-box" id="staff-search-input" placeholder="🔍 搜尋員工..."
                data-i18n-placeholder="search.staff_placeholder"
-               oninput="staffSearchInput(this.value)" onfocus="staffSearchInput(this.value)"
+               oninput="_debStaffSearch(this.value)" onfocus="staffSearchInput(this.value)"
                onblur="setTimeout(closeStaffSearch,200)"
                style="width:180px;padding:7px 12px;font-size:13px">
         <div id="staff-search-dd" style="display:none;position:absolute;right:0;top:calc(100% + 4px);
@@ -1958,7 +1958,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <option value="maintenance">維修中</option>
         <option value="retired">報廢</option>
       </select>
-      <input class="filter-input" id="asset-filter-q" placeholder="搜尋名稱/編號…" oninput="loadAssets()" style="min-width:160px">
+      <input class="filter-input" id="asset-filter-q" placeholder="搜尋名稱/編號…" oninput="_debLoadAssets()" style="min-width:160px">
       <button class="btn btn-outline btn-sm" onclick="loadAssets()">重新整理</button>
     </div>
 
@@ -6954,6 +6954,14 @@ async function cachedApi(url) {
 }
 
 function invalidateCache(url) { _apiCache.delete(url); }
+
+// ── Debounce helper ───────────────────────────────────────────
+function debounce(fn, ms = 300) {
+  let _t;
+  return (...a) => { clearTimeout(_t); _t = setTimeout(() => fn(...a), ms); };
+}
+const _debStaffSearch = debounce(v => staffSearchInput(v));
+const _debLoadAssets  = debounce(() => loadAssets());
 
 // ── Session keep-alive：每 8 分鐘 ping 一次，避免閒置逾時 ────
 setInterval(async () => {
