@@ -4,6 +4,7 @@ import secrets
 import threading
 import time
 import traceback
+import urllib.parse
 import urllib.request
 from datetime import date
 from functools import wraps
@@ -68,6 +69,11 @@ from datetime import datetime as _dt, timedelta as _td, timezone as _tz
 TW_TZ = _tz(_td(hours=8))   # Asia/Taipei (UTC+8)
 
 WEEKDAY_ZH = ['一', '二', '三', '四', '五', '六', '日']
+
+_ALLOWED_ATTACHMENT_TYPES = {
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'image/heic', 'image/heif', 'application/pdf',
+}
 
 # ─── In-process TTL cache ─────────────────────────────────────────────────────
 _cache_store: dict = {}
@@ -1655,12 +1661,12 @@ def api_attendance_monthly_stats():
 
         # 班別指派：使用日期範圍讓索引 idx_shift_assignments_staff_date 生效
         shift_rows = conn.execute("""
-            SELECT sa.staff_id, sa.date, st.start_time, st.end_time
+            SELECT sa.staff_id, sa.shift_date, st.start_time, st.end_time
             FROM shift_assignments sa
             JOIN shift_types st ON st.id = sa.shift_type_id
-            WHERE sa.date >= %s::date AND sa.date < %s::date
+            WHERE sa.shift_date >= %s::date AND sa.shift_date < %s::date
         """, (_month_start3, _shift_end3)).fetchall()
-        shift_map = {(r['staff_id'], str(r['date'])): r for r in shift_rows}
+        shift_map = {(r['staff_id'], str(r['shift_date'])): r for r in shift_rows}
 
     # 建立 (staff_id, date_str) → row_dict，並合併跨日班次
     day_map = {}
@@ -4810,11 +4816,13 @@ def api_leave_attachment_upload(rid):
     if not sid: return jsonify({'error': 'not logged in'}), 401
     file = request.files.get('file')
     if not file: return jsonify({'error': '請選擇檔案'}), 400
+    media_type = file.content_type or 'application/octet-stream'
+    if media_type not in _ALLOWED_ATTACHMENT_TYPES:
+        return jsonify({'error': '僅支援圖片或 PDF 檔案'}), 415
     raw = file.read()
     if len(raw) > 10 * 1024 * 1024:
         return jsonify({'error': '檔案大小不能超過 10MB'}), 413
     filename   = file.filename or 'attachment'
-    media_type = file.content_type or 'application/octet-stream'
     with get_db() as conn:
         req = conn.execute("SELECT id FROM leave_requests WHERE id=%s AND staff_id=%s", (rid, sid)).fetchone()
         if not req: return jsonify({'error': '找不到請假申請'}), 404
@@ -4834,10 +4842,11 @@ def api_leave_attachment_get(rid):
     if not is_admin and row['staff_id'] != sid:
         return jsonify({'error': '無權限'}), 403
     from flask import Response
+    _fn = urllib.parse.quote(row['attachment_name'] or 'attachment', safe='')
     return Response(
         bytes(row['attachment']),
         mimetype=row['attachment_type'] or 'application/octet-stream',
-        headers={'Content-Disposition': f'inline; filename="{row["attachment_name"]}"'}
+        headers={'Content-Disposition': f"inline; filename*=UTF-8''{_fn}"}
     )
 
 # ── Leave Balance ─────────────────────────────────────────────────
@@ -5370,12 +5379,12 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
             # 1. 優先從排班取工作日
             _sal_s, _sal_e = _month_range(month)
             shift_date_rows = conn.execute("""
-                SELECT DISTINCT date FROM shift_assignments
-                WHERE staff_id=%s AND date >= %s::date AND date < %s::date
-                ORDER BY date
+                SELECT DISTINCT shift_date FROM shift_assignments
+                WHERE staff_id=%s AND shift_date >= %s::date AND shift_date < %s::date
+                ORDER BY shift_date
             """, (staff['id'], _sal_s, _sal_e)).fetchall()
             if shift_date_rows:
-                scheduled_dates = {r['date'].isoformat() if hasattr(r['date'], 'isoformat') else str(r['date']) for r in shift_date_rows}
+                scheduled_dates = {r['shift_date'].isoformat() if hasattr(r['shift_date'], 'isoformat') else str(r['shift_date']) for r in shift_date_rows}
                 total_work_days = len(scheduled_dates)
             else:
                 # 2. 備援：日曆扣除週日 + 國定假日
@@ -5840,12 +5849,12 @@ def api_salary_generate():
 
             # 1. 全員排班日期
             _shift_rows_b = conn.execute("""
-                SELECT staff_id, date FROM shift_assignments
-                WHERE staff_id = ANY(%s) AND date >= %s::date AND date < %s::date
+                SELECT staff_id, shift_date FROM shift_assignments
+                WHERE staff_id = ANY(%s) AND shift_date >= %s::date AND shift_date < %s::date
             """, (staff_ids, _batch_ms, _batch_me)).fetchall()
             _shift_dates_b: dict = {}
             for _r in _shift_rows_b:
-                _shift_dates_b.setdefault(_r['staff_id'], []).append(_r['date'])
+                _shift_dates_b.setdefault(_r['staff_id'], []).append(_r['shift_date'])
 
             # 2. 國定假日（全員共用）
             _hol_rows_b = conn.execute(
@@ -6128,6 +6137,11 @@ def api_salary_advance_create():
 @require_module('salary')
 def api_salary_advance_update(aid):
     b = request.get_json(force=True)
+    advance_date = b.get('advance_date', '')
+    deduct_month = b.get('deduct_month', '')
+    amount       = b.get('amount', 0)
+    if not advance_date or not deduct_month or not amount:
+        return jsonify({'error': '預支日期、扣款月份、金額為必填'}), 400
     with get_db() as conn:
         row = conn.execute("""
             UPDATE salary_advances
@@ -6135,9 +6149,9 @@ def api_salary_advance_update(aid):
                    note=%s, status=%s, updated_at=NOW()
              WHERE id=%s RETURNING *
         """, (
-            float(b.get('amount', 0)),
-            b.get('advance_date',''),
-            b.get('deduct_month',''),
+            float(amount),
+            advance_date,
+            deduct_month,
             b.get('note',''),
             b.get('status','pending'),
             aid
@@ -8427,12 +8441,12 @@ def api_attendance_anomalies():
 
         # 取得班別指派（用於遲到／早退判斷）
         shift_rows = conn.execute("""
-            SELECT sa.staff_id, sa.date, st.start_time, st.end_time, st.name as shift_name
+            SELECT sa.staff_id, sa.shift_date, st.start_time, st.end_time, st.name as shift_name
             FROM shift_assignments sa
             JOIN shift_types st ON st.id = sa.shift_type_id
-            WHERE sa.date BETWEEN %s AND %s
+            WHERE sa.shift_date BETWEEN %s AND %s
         """, (date_from, today)).fetchall()
-        shift_map = {(r['staff_id'], str(r['date'])): r for r in shift_rows}
+        shift_map = {(r['staff_id'], str(r['shift_date'])): r for r in shift_rows}
 
         # 今日應出勤但未出勤（排除請假）
         all_staff = conn.execute(
@@ -9224,12 +9238,12 @@ def api_salary_preview():
         _mend_pv = (_d_pv(_y_pv, _m_pv, _last_pv) + _td_pv(days=1)).isoformat()
 
         _shift_rows_pv = conn.execute("""
-            SELECT staff_id, date FROM shift_assignments
-            WHERE staff_id = ANY(%s) AND date >= %s::date AND date < %s::date
+            SELECT staff_id, shift_date FROM shift_assignments
+            WHERE staff_id = ANY(%s) AND shift_date >= %s::date AND shift_date < %s::date
         """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
         _shift_dates_pv: dict = {}
         for _r in _shift_rows_pv:
-            _shift_dates_pv.setdefault(_r['staff_id'], []).append(_r['date'])
+            _shift_dates_pv.setdefault(_r['staff_id'], []).append(_r['shift_date'])
 
         _hol_rows_pv = conn.execute(
             "SELECT date FROM public_holidays WHERE date >= %s::date AND date < %s::date",
@@ -13274,10 +13288,12 @@ def api_travel_expense_upload(eid):
         return jsonify({'error': 'not logged in'}), 401
     file = request.files.get('file')
     if not file: return jsonify({'error': '請選擇檔案'}), 400
+    media_type = file.content_type or 'application/octet-stream'
+    if media_type not in _ALLOWED_ATTACHMENT_TYPES:
+        return jsonify({'error': '僅支援圖片或 PDF 檔案'}), 415
     raw = file.read()
     if len(raw) > 10 * 1024 * 1024:
         return jsonify({'error': '檔案大小不能超過 10MB'}), 413
-    media_type = file.content_type or 'application/octet-stream'
     filename   = file.filename or 'attachment'
     with get_db() as conn:
         if not is_admin:
@@ -13316,10 +13332,11 @@ def api_travel_expense_get_attachment(eid):
     if not is_admin and row['staff_id'] != sid:
         return jsonify({'error': '無權限'}), 403
     from flask import Response
+    _fn = urllib.parse.quote(row['attachment_name'] or 'attachment', safe='')
     return Response(
         bytes(row['attachment']),
         mimetype=row['attachment_type'] or 'application/octet-stream',
-        headers={'Content-Disposition': f'inline; filename="{row["attachment_name"]}"'}
+        headers={'Content-Disposition': f"inline; filename*=UTF-8''{_fn}"}
     )
 
 

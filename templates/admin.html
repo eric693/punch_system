@@ -1030,7 +1030,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <button class="inv-tab"        id="salarytab-items"       data-i18n="salary.tab.items"       onclick="switchSalaryTab('items')">薪資項目</button>
       <button class="inv-tab"        id="salarytab-withholding" data-i18n="salary.tab.withholding" onclick="switchSalaryTab('withholding')">扣繳憑單</button>
       <button class="inv-tab"        id="salarytab-edi"         data-i18n="salary.tab.edi"         onclick="switchSalaryTab('edi')">勞健保 EDI</button>
-      <button class="inv-tab"        id="salarytab-advances"    onclick="switchSalaryTab('advances')">預支管理</button>
+      <button class="inv-tab"        id="salarytab-advances"    data-i18n="salary.tab.advances" onclick="switchSalaryTab('advances')">預支管理</button>
     </div>
 
     <!-- 月薪計算 -->
@@ -3377,7 +3377,7 @@ const TRANSLATIONS = {
     'leave.tab.balance':'假別餘額','leave.tab.types':'假別設定',
     // Salary tabs
     'salary.tab.calc':'月薪計算','salary.tab.settings':'薪資設定','salary.tab.items':'薪資項目',
-    'salary.tab.withholding':'扣繳憑單','salary.tab.edi':'勞健保 EDI',
+    'salary.tab.withholding':'扣繳憑單','salary.tab.edi':'勞健保 EDI','salary.tab.advances':'預支管理',
     // Finance tabs
     'fin.tab.dash':'損益儀表板','fin.tab.records':'收支記錄','fin.tab.cats':'類別設定',
     'fin.tab.ocr':'OCR辨識','fin.tab.docs':'文件庫','fin.tab.recurring':'定期分錄',
@@ -4070,7 +4070,7 @@ const TRANSLATIONS = {
     'leave.tab.balance':'Balances','leave.tab.types':'Leave Types',
     // Salary tabs
     'salary.tab.calc':'Monthly Calc','salary.tab.settings':'Settings','salary.tab.items':'Items',
-    'salary.tab.withholding':'Withholding','salary.tab.edi':'Labor EDI',
+    'salary.tab.withholding':'Withholding','salary.tab.edi':'Labor EDI','salary.tab.advances':'Advances',
     // Finance tabs
     'fin.tab.dash':'P&L Dashboard','fin.tab.records':'Records','fin.tab.cats':'Categories',
     'fin.tab.ocr':'OCR','fin.tab.docs':'Documents','fin.tab.recurring':'Recurring',
@@ -4764,7 +4764,7 @@ const TRANSLATIONS = {
     'leave.tab.balance':'残日数','leave.tab.types':'休暇種別',
     // Salary tabs
     'salary.tab.calc':'給与計算','salary.tab.settings':'給与設定','salary.tab.items':'給与項目',
-    'salary.tab.withholding':'源泉徴収','salary.tab.edi':'社保 EDI',
+    'salary.tab.withholding':'源泉徴収','salary.tab.edi':'社保 EDI','salary.tab.advances':'給与前払管理',
     // Finance tabs
     'fin.tab.dash':'損益ダッシュ','fin.tab.records':'収支記録','fin.tab.cats':'カテゴリ',
     'fin.tab.ocr':'OCR','fin.tab.docs':'文書','fin.tab.recurring':'定期仕訳',
@@ -5450,7 +5450,7 @@ const TRANSLATIONS = {
     'sched.tab.config':'Cấu hình tháng','sched.tab.autogen':'Tự động tạo',
     'leave.tab.requests':'Xin nghỉ','leave.tab.calendar':'Lịch','leave.tab.balance':'Số ngày còn','leave.tab.types':'Loại phép',
     'salary.tab.calc':'Tính lương','salary.tab.settings':'Cài lương','salary.tab.items':'Mục lương',
-    'salary.tab.withholding':'Khấu trừ thuế','salary.tab.edi':'EDI BHXH',
+    'salary.tab.withholding':'Khấu trừ thuế','salary.tab.edi':'EDI BHXH','salary.tab.advances':'Ứng lương',
     'fin.tab.dash':'Doanh thu','fin.tab.records':'Thu chi','fin.tab.cats':'Danh mục',
     'fin.tab.ocr':'OCR','fin.tab.docs':'Tài liệu','fin.tab.recurring':'Định kỳ',
     'fin.tab.bank':'Đối chiếu NH','fin.tab.tax':'Khai thuế','fin.tab.ap':'Công nợ',
@@ -6117,7 +6117,7 @@ const TRANSLATIONS = {
     'sched.tab.config':'ตั้งค่าเดือน','sched.tab.autogen':'สร้างอัตโนมัติ',
     'leave.tab.requests':'ขอลา','leave.tab.calendar':'ปฏิทิน','leave.tab.balance':'วันลาคงเหลือ','leave.tab.types':'ประเภทการลา',
     'salary.tab.calc':'คำนวณเงินเดือน','salary.tab.settings':'ตั้งค่าเงินเดือน','salary.tab.items':'รายการเงินเดือน',
-    'salary.tab.withholding':'หัก ณ ที่จ่าย','salary.tab.edi':'EDI ประกันสังคม',
+    'salary.tab.withholding':'หัก ณ ที่จ่าย','salary.tab.edi':'EDI ประกันสังคม','salary.tab.advances':'เงินเบิกล่วงหน้า',
     'fin.tab.dash':'แดชบอร์ด P&L','fin.tab.records':'บันทึกรายรับรายจ่าย','fin.tab.cats':'หมวดหมู่',
     'fin.tab.ocr':'OCR','fin.tab.docs':'เอกสาร','fin.tab.recurring':'รายการประจำ',
     'fin.tab.bank':'กระทบยอดธนาคาร','fin.tab.tax':'ยื่นภาษี','fin.tab.ap':'ลูกหนี้/เจ้าหนี้',
@@ -6793,7 +6793,7 @@ const TRANSLATIONS = {
     'leave.tab.balance':'假别余额','leave.tab.types':'假别设置',
     // Salary tabs
     'salary.tab.calc':'月薪计算','salary.tab.settings':'薪资设置','salary.tab.items':'薪资项目',
-    'salary.tab.withholding':'扣缴凭单','salary.tab.edi':'劳健保 EDI',
+    'salary.tab.withholding':'扣缴凭单','salary.tab.edi':'劳健保 EDI','salary.tab.advances':'预支管理',
     // Finance tabs
     'fin.tab.dash':'损益仪表盘','fin.tab.records':'收支记录','fin.tab.cats':'类别设置',
     'fin.tab.ocr':'OCR识别','fin.tab.docs':'文件库','fin.tab.recurring':'定期分录',
@@ -10668,34 +10668,38 @@ async function openAdvanceModal(id=null) {
   // 確保員工下拉已初始化
   if (!_advStaffList.length) await initAdvancesTab();
 
+  const staffSel = document.getElementById('adv-staff');
   if (id) {
-    // 從快取尋找
+    // 快取為空時先重新載入
+    if (!_advDataCache.length) await loadAdvances();
     const rec = _advDataCache.find(r => r.id === id) || null;
-    if (rec) {
-      document.getElementById('adv-staff').value  = rec.staff_id;
-      document.getElementById('adv-date').value   = rec.advance_date||'';
-      document.getElementById('adv-month').value  = rec.deduct_month||'';
-      document.getElementById('adv-amount').value = rec.amount||'';
-      document.getElementById('adv-note').value   = rec.note||'';
-      document.getElementById('adv-status').value = rec.status||'pending';
-    }
+    if (!rec) { showToast('找不到記錄，請重新整理頁面', 'error'); return; }
+    staffSel.value  = rec.staff_id;
+    staffSel.disabled = true;
+    document.getElementById('adv-date').value   = rec.advance_date||'';
+    document.getElementById('adv-month').value  = rec.deduct_month||'';
+    document.getElementById('adv-amount').value = rec.amount||'';
+    document.getElementById('adv-note').value   = rec.note||'';
+    document.getElementById('adv-status').value = rec.status||'pending';
   } else {
     // 新增：預設今日 & 當月
     const now = new Date();
     const ym  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    staffSel.disabled = false;
     document.getElementById('adv-date').value   = now.toISOString().slice(0,10);
     document.getElementById('adv-month').value  = ym;
     document.getElementById('adv-amount').value = '';
     document.getElementById('adv-note').value   = '';
     document.getElementById('adv-status').value = 'pending';
-    // 選第一個員工
-    const staffSel = document.getElementById('adv-staff');
     if (staffSel.options.length) staffSel.selectedIndex = 0;
   }
   document.getElementById('advance-modal').style.display = 'flex';
 }
 
-function closeAdvanceModal() { document.getElementById('advance-modal').style.display = 'none'; }
+function closeAdvanceModal() {
+  document.getElementById('advance-modal').style.display = 'none';
+  document.getElementById('adv-staff').disabled = false;
+}
 
 async function saveAdvance() {
   const id      = document.getElementById('adv-edit-id').value;
@@ -10708,8 +10712,9 @@ async function saveAdvance() {
   if (!staffId || !date || !month || !amount || amount <= 0) {
     showToast('員工、預支日期、扣款月份、金額為必填', 'warning'); return;
   }
-  const body = { staff_id: parseInt(staffId), amount, advance_date: date, deduct_month: month, note };
-  if (id) body.status = status;
+  const body = id
+    ? { amount, advance_date: date, deduct_month: month, note, status }
+    : { staff_id: parseInt(staffId), amount, advance_date: date, deduct_month: month, note };
   const url    = id ? `/api/salary/advances/${id}` : '/api/salary/advances';
   const method = id ? 'PUT' : 'POST';
   const { ok } = await api(url, { method, body: JSON.stringify(body) });
