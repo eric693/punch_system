@@ -646,10 +646,10 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
 <div class="toast" id="toast"></div>
 
 <script>
-const DAYS=['日','一','二','三','四','五','六'];
-const PLABEL={in:'上班打卡',out:'下班打卡',break_out:'休息開始',break_in:'休息結束'};
+let DAYS=['日','一','二','三','四','五','六'];
+let PLABEL={in:'上班打卡',out:'下班打卡',break_out:'休息開始',break_in:'休息結束'};
 const PLCLS={in:'lb-in',out:'lb-out',break_out:'lb-bout',break_in:'lb-bin'};
-const SLABEL={pending:'審核中',approved:'已核准',rejected:'已退回',modified_pending:'修改待審'};
+let SLABEL={pending:'審核中',approved:'已核准',rejected:'已退回',modified_pending:'修改待審'};
 const SCLS={pending:'sb-pending',approved:'sb-approved',rejected:'sb-rejected',modified_pending:'sb-modified'};
 
 let me=null,gpsSettings=null,gpsPos=null,gpsWatchId=null,punchLocked=false;
@@ -726,8 +726,8 @@ function switchTab(tab){
 
 /* GPS */
 function startGPS(){
-  setGpsBar('loading','正在取得定位...');
-  if(!navigator.geolocation){setGpsBar('err','裝置不支援 GPS');return;}
+  setGpsBar('loading',staffT('gps.loading'));
+  if(!navigator.geolocation){setGpsBar('err',staffT('gps.no_support'));return;}
   navigator.geolocation.getCurrentPosition(gpsOk,gpsErr,{timeout:12000,enableHighAccuracy:true});
   gpsWatchId=navigator.geolocation.watchPosition(gpsOk,gpsErr,{enableHighAccuracy:true,maximumAge:15000,timeout:15000});
 }
@@ -735,15 +735,15 @@ function gpsOk(pos){
   gpsPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
   const locs=(gpsSettings&&gpsSettings.locations)||[];
   const req=gpsSettings&&gpsSettings.gps_required;
-  if(!locs.length){setGpsBar('ok','定位成功');setBtns(false);return;}
+  if(!locs.length){setGpsBar('ok',staffT('gps.ok'));setBtns(false);return;}
   let minDist=null,minLoc=null;
   locs.forEach(loc=>{const d=hav(gpsPos.lat,gpsPos.lng,loc.lat,loc.lng);if(minDist===null||d<minDist){minDist=d;minLoc=loc;}});
-  if(minDist<=minLoc.radius_m){setGpsBar('ok','「'+minLoc.location_name+'」範圍內（'+minDist+'m）');setBtns(false);}
-  else{setGpsBar('warn','距「'+minLoc.location_name+'」'+minDist+'m，超出範圍');setBtns(req,'超出打卡範圍');}
+  if(minDist<=minLoc.radius_m){setGpsBar('ok',staffT('gps.within').replace('{0}',minLoc.location_name).replace('{1}',minDist));setBtns(false);}
+  else{setGpsBar('warn',staffT('gps.outside').replace('{0}',minLoc.location_name).replace('{1}',minDist));setBtns(req,staffT('gps.out_range'));}
 }
 function gpsErr(){
-  if(gpsSettings&&gpsSettings.gps_required){setGpsBar('err','無法取得定位，請允許位置權限');setBtns(true,'需要定位權限');}
-  else{setGpsBar('warn','未取得定位（非必要）');setBtns(false);}
+  if(gpsSettings&&gpsSettings.gps_required){setGpsBar('err',staffT('gps.err_required'));setBtns(true,staffT('gps.err_required'));}
+  else{setGpsBar('warn',staffT('gps.err_optional'));setBtns(false);}
 }
 function setGpsBar(type,msg){
   const tmap={ok:'gps-ok',warn:'gps-warn',err:'gps-err',loading:'gps-loading'};
@@ -771,27 +771,27 @@ async function doPunch(type){
   try{
     const r=await fetch('/api/punch/clock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
-    if(!r.ok){showToast(d.error||'打卡失敗','err');punchLocked=false;return;}
+    if(!r.ok){showToast(d.error||staffT('punch.fail'),'err');punchLocked=false;return;}
     const n=new Date();
     const ts=[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
-    showSuccess(me.name,PLABEL[type],ts,d.gps_distance!=null?'距離打卡地點 '+d.gps_distance+' 公尺':'');
+    showSuccess(me.name,PLABEL[type],ts,d.gps_distance!=null?staffT('punch.dist').replace('{0}',d.gps_distance):'');
     await loadTodayLog();
-  }catch(e){showToast('網路錯誤，請重試','err');punchLocked=false;}
+  }catch(e){showToast(staffT('punch.net_err'),'err');punchLocked=false;}
 }
 async function loadTodayLog(){
   const r=await fetch('/api/punch/today');const list=await r.json();
   const wrap=document.getElementById('today-log');
   document.getElementById('today-log-wrap').style.display='';
-  if(!list.length){wrap.innerHTML='<div class="log-empty">尚無打卡記錄</div>';return;}
+  if(!list.length){wrap.innerHTML='<div class="log-empty">'+staffT('punch.no_records')+'</div>';return;}
   wrap.innerHTML=list.map(r=>{
     const t=r.punched_at?r.punched_at.slice(11,16):'';
     const dist=r.gps_distance!=null?r.gps_distance+'m':'';
-    return '<div class="log-item"><span class="lb '+(PLCLS[r.punch_type]||'')+'">'+( PLABEL[r.punch_type]||r.punch_type)+'</span><div><div class="log-time">'+t+'</div>'+(dist?'<div class="log-sub">'+dist+'</div>':'')+(r.is_manual?'<div class="log-sub">補打卡</div>':'')+'</div></div>';
+    return '<div class="log-item"><span class="lb '+(PLCLS[r.punch_type]||'')+'">'+( PLABEL[r.punch_type]||r.punch_type)+'</span><div><div class="log-time">'+t+'</div>'+(dist?'<div class="log-sub">'+dist+'</div>':'')+(r.is_manual?'<div class="log-sub">'+staffT('punch.manual')+'</div>':'')+'</div></div>';
   }).join('');
 }
 
 /* 補打卡申請 */
-const REQ_LABEL={pending:'審核中',approved:'已核准',rejected:'已退回'};
+let REQ_LABEL={pending:'審核中',approved:'已核准',rejected:'已退回'};
 const REQ_CLS={pending:'background:var(--orange-light);color:var(--orange)',approved:'background:var(--green-light);color:var(--green)',rejected:'background:var(--red-light);color:var(--red)'};
 function showReqPanel(){
   const panel=document.getElementById('req-panel');panel.style.display='';
@@ -804,15 +804,15 @@ async function submitPunchReq(){
   const punch_type=document.getElementById('req-type').value;
   const requested_at=document.getElementById('req-time').value;
   const reason=document.getElementById('req-reason').value.trim();
-  if(!reason){showToast('請填寫補打原因','err');return;}
-  if(!requested_at){showToast('請選擇補打時間','err');return;}
+  if(!reason){showToast(staffT('req.need_reason'),'err');return;}
+  if(!requested_at){showToast(staffT('req.need_time'),'err');return;}
   try{
     const res=await fetch('/api/punch/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({punch_type,requested_at,reason})});
     const d=await res.json();
-    if(!res.ok){showToast(d.error||'送出失敗','err');return;}
-    showToast('補打卡申請已送出，等待主管審核','ok');
+    if(!res.ok){showToast(d.error||staffT('submit_fail'),'err');return;}
+    showToast(staffT('req.sent'),'ok');
     document.getElementById('req-reason').value='';await loadMyReqs();
-  }catch(e){showToast('網路錯誤','err');}
+  }catch(e){showToast(staffT('req.net_err'),'err');}
 }
 async function loadMyReqs(){
   const res=await fetch('/api/punch/request/my');const list=await res.json();
@@ -858,8 +858,8 @@ function renderStatusArea(){
   const s=schedExistingReq.status;const cls=SCLS[s]||'';const label=SLABEL[s]||s;
   const dateStr=(schedExistingReq.dates||[]).map(d=>{const dt=new Date(d+'T00:00:00');return d.slice(5)+'（'+DAYS[dt.getDay()]+'）';}).join('　');
   let html=`<div class="status-box ${cls}"><div class="sb-title">${label}</div><div class="sb-dates">${dateStr||'（無日期）'}</div>`;
-  if(schedExistingReq.review_note)html+=`<div class="sb-note">審核意見：${esc(schedExistingReq.review_note)}</div>`;
-  if(s==='rejected')html+=`<div class="sb-note" style="color:var(--red)">請重新選取日期並送出</div>`;
+  if(schedExistingReq.review_note)html+=`<div class="sb-note">${staffT('sched.review_note')}${esc(schedExistingReq.review_note)}</div>`;
+  if(s==='rejected')html+=`<div class="sb-note" style="color:var(--red)">${staffT('sched.resubmit')}</div>`;
   html+='</div>';area.innerHTML=html;
 }
 function renderCalendar(){
@@ -1133,7 +1133,7 @@ function showSchedDayDetail(ds) {
 }
 
 /* 加班申請 */
-const OT_SL={pending:'審核中',approved:'已核准',rejected:'已退回'};
+let OT_SL={pending:'審核中',approved:'已核准',rejected:'已退回'};
 const OT_SC={pending:'var(--orange)',approved:'var(--green)',rejected:'var(--red)'};
 let _otTabInited = false;
 function initOTTab(){
@@ -1181,7 +1181,7 @@ async function _autoDetectOTDayType(dateStr) {
     }
     if (_holidayMap[dateStr]) {
       sel.value = 'holiday'; updateOTHoursPreview();
-      showToast('已自動偵測為國定假日：' + _holidayMap[dateStr], 'ok');
+      showToast(staffT('ot.auto_holiday') + _holidayMap[dateStr], 'ok');
       return;
     }
   } catch(e) {}
@@ -1198,12 +1198,11 @@ function updateOTHoursPreview(){
   let mins=(eh*60+em)-(sh*60+sm);
   if(mins<=0)mins+=24*60;
   const hrs=Math.round(mins/60*100)/100;
-  const DT_LABEL={weekday:'平日',rest_day:'休息日',holiday:'國定假日',special:'例假日'};
   let detail='';
-  if(dt==='rest_day'){const billed=Math.max(hrs,4);detail=`休息日（實際${hrs}h，計費${billed}h）`;}
-  else if(dt==='holiday'||dt==='special'){detail=`${DT_LABEL[dt]}：${hrs}h × 2 倍`;}
-  else{const h1=Math.min(hrs,2).toFixed(1),h2=Math.max(0,hrs-2).toFixed(1);detail=`平日：前${h1}h×1.33 + 後${h2}h×1.67`;}
-  el.innerHTML=`<strong>加班時數：${hrs} 小時</strong>　<span style="color:var(--muted)">${detail}</span>`;
+  if(dt==='rest_day'){const billed=Math.max(hrs,4);detail=staffT('ot.detail_rest').replace('{0}',hrs).replace('{1}',billed);}
+  else if(dt==='holiday'||dt==='special'){detail=staffT('ot.detail_hol').replace('{0}',staffT('ot.'+dt+'_short')).replace('{1}',hrs);}
+  else{const h1=Math.min(hrs,2).toFixed(1),h2=Math.max(0,hrs-2).toFixed(1);detail=staffT('ot.detail_weekday').replace('{0}',h1).replace('{1}',h2);}
+  el.innerHTML=`<strong>${staffT('ot.hours_title').replace('{0}',hrs)}</strong>　<span style="color:var(--muted)">${detail}</span>`;
 }
 async function submitOTRequest(){
   const request_date = document.getElementById('ot-date').value;
@@ -1213,15 +1212,15 @@ async function submitOTRequest(){
   const day_type     = document.getElementById('ot-day-type')?.value || 'weekday';
 
   // 逐一檢查，給明確提示
-  if(!request_date){ showToast('請填寫加班日期','err'); return; }
-  if(!start_time)  { showToast('請填寫開始時間','err'); return; }
-  if(!end_time)    { showToast('請填寫結束時間','err'); return; }
-  if(!reason)      { showToast('請填寫加班原因','err'); return; }
+  if(!request_date){ showToast(staffT('ot.need_date'),'err'); return; }
+  if(!start_time)  { showToast(staffT('ot.need_start'),'err'); return; }
+  if(!end_time)    { showToast(staffT('ot.need_end'),'err'); return; }
+  if(!reason)      { showToast(staffT('ot.need_reason'),'err'); return; }
 
   // 確認時間格式 HH:MM
   const timeRe = /^\d{2}:\d{2}$/;
   if(!timeRe.test(start_time)||!timeRe.test(end_time)){
-    showToast('時間格式錯誤，請重新選擇','err'); return;
+    showToast(staffT('ot.time_fmt_err'),'err'); return;
   }
 
   try{
@@ -1231,24 +1230,24 @@ async function submitOTRequest(){
       body: JSON.stringify({request_date, start_time, end_time, reason, day_type})
     });
     const d = await res.json();
-    if(!res.ok){ showToast(d.error || `送出失敗（${res.status}）`,'err'); return; }
-    showToast('加班申請已送出，等待主管審核','ok');
+    if(!res.ok){ showToast(d.error || staffT('submit_fail'),'err'); return; }
+    showToast(staffT('ot.sent'),'ok');
     document.getElementById('ot-reason').value = '';
     await loadMyOTRequests();
   }catch(e){
-    showToast('網路錯誤，請重試','err');
+    showToast(staffT('ot.net_err'),'err');
   }
 }
 async function loadMyOTRequests(){
   const wrap=document.getElementById('my-ot-list');
   wrap.innerHTML=Array(2).fill(0).map(()=>'<div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;padding:12px 14px"><div class="skel-block" style="height:14px;width:60%;margin-bottom:8px"></div><div class="skel-block" style="height:12px;width:40%"></div></div>').join('');
   const res=await fetch('/api/overtime/my-requests');const list=await res.json();
-  if(!list.length){wrap.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">尚無申請記錄</div>';return;}
-  const DAY_LABEL={weekday:'平日',rest_day:'休息日',holiday:'國定假日',special:'例假日'};
+  if(!list.length){wrap.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">'+staffT('ot.no_records')+'</div>';return;}
   wrap.innerHTML=list.map(r=>{
     const sc=OT_SC[r.status]||'var(--muted)';const sl=OT_SL[r.status]||r.status;
-    const payStr=r.ot_pay>0?`<div style="font-size:13px;font-weight:700;color:var(--green);margin-top:4px">加班費：$${Number(r.ot_pay).toLocaleString()}</div>`:'';
-    return `<div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px"><div style="padding:10px 14px;background:var(--bg);display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:700">${r.request_date}　${r.start_time}～${r.end_time}<span style="font-size:11px;font-weight:400;background:var(--bg);padding:1px 6px;border-radius:8px;margin-left:6px">${DAY_LABEL[r.day_type||'weekday']||''}</span></div><div style="font-size:12px;color:var(--muted);margin-top:2px">加班 <strong>${r.ot_hours}</strong> 小時</div></div><span style="font-size:12px;font-weight:700;color:${sc};padding:3px 10px;border-radius:10px;background:${sc}22">${sl}</span></div><div style="padding:10px 14px;font-size:12px;color:var(--text)">${esc(r.reason)}${payStr}${r.review_note?`<div style="color:${sc};margin-top:4px">意見：${esc(r.review_note)}</div>`:''}</div></div>`;
+    const dayLabel=staffT('ot.'+(r.day_type||'weekday')+'_short');
+    const payStr=r.ot_pay>0?`<div style="font-size:13px;font-weight:700;color:var(--green);margin-top:4px">${staffT('ot.pay_label')}$${Number(r.ot_pay).toLocaleString()}</div>`:'';
+    return `<div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px"><div style="padding:10px 14px;background:var(--bg);display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:700">${r.request_date}　${r.start_time}～${r.end_time}<span style="font-size:11px;font-weight:400;background:var(--bg);padding:1px 6px;border-radius:8px;margin-left:6px">${dayLabel}</span></div><div style="font-size:12px;color:var(--muted);margin-top:2px">${staffT('ot.hours_label').replace('{0}',r.ot_hours)}</div></div><span style="font-size:12px;font-weight:700;color:${sc};padding:3px 10px;border-radius:10px;background:${sc}22">${sl}</span></div><div style="padding:10px 14px;font-size:12px;color:var(--text)">${esc(r.reason)}${payStr}${r.review_note?`<div style="color:${sc};margin-top:4px">${staffT('ot.review_note')}${esc(r.review_note)}</div>`:''}</div></div>`;
   }).join('');
 }
 
@@ -1289,7 +1288,7 @@ async function loadAttendance(){
     if (!res.ok) {
       // Session 過期 → 重新登入
       if (res.status === 401) {
-        cal.innerHTML = '<div style="text-align:center;color:var(--red);font-size:13px;padding:24px">登入已過期，請重新登入</div>';
+        cal.innerHTML = `<div style="text-align:center;color:var(--red);font-size:13px;padding:24px">${staffT('session_exp')}</div>`;
         sum.innerHTML = '';
         // 自動跳回登入
         setTimeout(() => { me = null; showLogin(); }, 1500);
@@ -1329,28 +1328,28 @@ async function loadAttendance(){
 
   sum.innerHTML = `
     <div style="flex:1;padding:12px 10px;text-align:center;border-right:1px solid var(--border)">
-      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">出勤天數</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${staffT('att.days')}</div>
       <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:var(--navy)">${totalIn}</div>
     </div>
     <div style="flex:1;padding:12px 10px;text-align:center;border-right:1px solid var(--border)">
-      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">總工時（估）</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${staffT('att.total_hours')}</div>
       <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:var(--green)">${totalHours.toFixed(1)}h</div>
     </div>
     <div style="flex:1;padding:12px 10px;text-align:center">
-      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">日均工時</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${staffT('att.avg_hours')}</div>
       <div style="font-family:'DM Mono',monospace;font-size:24px;font-weight:700;color:var(--accent)">${avgHours}h</div>
     </div>`;
 
   // ── 月曆 ──────────────────────────────────────────────────
   const firstWd = new Date(y, m-1, 1).getDay();
-  const DAYS_LABEL = ['日','一','二','三','四','五','六'];
+  const DAYS_LABEL = [staffT('day.0'),staffT('day.1'),staffT('day.2'),staffT('day.3'),staffT('day.4'),staffT('day.5'),staffT('day.6')];
   const PUNCH_TYPE_COLOR = {
     in:        {bg:'#dcfce7', text:'#16a34a'},
     out:       {bg:'#fee2e2', text:'#dc2626'},
     break_out: {bg:'#ffedd5', text:'#ea580c'},
     break_in:  {bg:'#dbeafe', text:'#2563eb'},
   };
-  const PUNCH_TYPE_LABEL = {in:'上班', out:'下班', break_out:'休息', break_in:'回來'};
+  const PUNCH_TYPE_LABEL = {in:staffT('att.punch_types.in'), out:staffT('att.punch_types.out'), break_out:staffT('att.punch_types.break_out'), break_in:staffT('att.punch_types.break_in')};
 
   let html = `
   <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">
@@ -1468,7 +1467,7 @@ function showDayDetail(ds) {
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:${PCOLOR[r.type]||'var(--text)'}">${PLABEL[r.type]||r.type}</div>
           ${r.gps_distance!=null?`<div style="font-size:11px;color:var(--muted)">📍 ${r.location_name||''} ${r.gps_distance}m</div>`:''}
-          ${r.is_manual?'<div style="font-size:11px;color:var(--accent)">✏️ 補打卡</div>':''}
+          ${r.is_manual?`<div style="font-size:11px;color:var(--accent)">${staffT('att.manual')}</div>`:''}
         </div>
         <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--navy)">${r.time}</div>
       </div>`).join('');
@@ -1481,7 +1480,7 @@ function showDayDetail(ds) {
            border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;z-index:1">
         <div>
           <div style="font-size:16px;font-weight:700;color:var(--navy)">${title}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">打卡明細</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${staffT('att.detail')}</div>
         </div>
         <button onclick="document.getElementById('att-day-popup').remove()"
           style="width:28px;height:28px;border:none;background:var(--bg);border-radius:50%;
@@ -1495,7 +1494,7 @@ function showDayDetail(ds) {
 
 /* Utils */
 function showSuccess(name,type,time,dist){
-  ['so-name','so-type','so-time','so-dist'].forEach((id,i)=>{document.getElementById(id).textContent=[name,type+' 成功',time,dist][i];});
+  ['so-name','so-type','so-time','so-dist'].forEach((id,i)=>{document.getElementById(id).textContent=[name,type+staffT('punch.success'),time,dist][i];});
   const el=document.getElementById('sov');el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400);
 }
 
@@ -1511,6 +1510,7 @@ const ANN_CAT_LABEL_S = {
   general:'一般公告', hr:'人事公告', event:'活動通知',
   urgent:'緊急公告', policy:'制度政策'
 };
+function annCatLabel(cat) { return staffT('ann.cat.'+cat) || ANN_CAT_LABEL_S[cat] || cat; }
 const ANN_PRI_ICON = { normal:'', important:'⚠️ ', urgent:'🚨 ' };
 
 let readAnnIds = new Set(
@@ -1525,17 +1525,17 @@ async function loadAnnStaff() {
   const wrap = document.getElementById('ann-staff-list');
   try {
     const res  = await fetch('/api/announcements/public');
-    if (!res.ok) { wrap.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px">無法載入公告</div>'; return; }
+    if (!res.ok) { wrap.innerHTML=`<div style="text-align:center;color:var(--muted);padding:20px">${staffT('ann.load_fail')}</div>`; return; }
     const list = await res.json();
     const unread = list.filter(a => !readAnnIds.has(String(a.id))).length;
     const dot = document.getElementById('ann-unread-dot');
     if (dot) dot.style.display = unread > 0 ? '' : 'none';
     if (!list.length) {
-      wrap.innerHTML='<div style="text-align:center;color:var(--muted);padding:32px">目前無公告</div>'; return;
+      wrap.innerHTML=`<div style="text-align:center;color:var(--muted);padding:32px">${staffT('ann.empty')}</div>`; return;
     }
     wrap.innerHTML = list.map(a => {
       const catColor = ANN_CAT_COLOR_S[a.category] || '#4a7bda';
-      const catLabel = ANN_CAT_LABEL_S[a.category] || a.category;
+      const catLabel = annCatLabel(a.category);
       const isUnread = !readAnnIds.has(String(a.id));
       const priIcon  = ANN_PRI_ICON[a.priority] || '';
       const pubDate  = a.published_at ? a.published_at.slice(0, 10) : '';
@@ -1556,7 +1556,7 @@ async function loadAnnStaff() {
       </div>`;
     }).join('');
   } catch(e) {
-    wrap.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">載入失敗</div>';
+    wrap.innerHTML=`<div style="text-align:center;color:var(--red);padding:20px">${staffT('ann.err')}</div>`;
   }
 }
 
@@ -1930,16 +1930,16 @@ async function submitLeaveRequest() {
   const end_half      = document.getElementById('leave-end-half').checked;
   const reason        = document.getElementById('leave-reason').value.trim();
   const substitute    = document.getElementById('leave-sub').value.trim();
-  if (!leave_type_id) { showToast('請選擇假別', 'err'); return; }
-  if (!start_date || !end_date) { showToast('請選擇請假日期', 'err'); return; }
-  if (!reason) { showToast('請填寫請假原因', 'err'); return; }
+  if (!leave_type_id) { showToast(staffT('leave.need_type'), 'err'); return; }
+  if (!start_date || !end_date) { showToast(staffT('leave.need_date'), 'err'); return; }
+  if (!reason) { showToast(staffT('leave.need_reason'), 'err'); return; }
   try {
     const res  = await fetch('/api/leave/my-requests', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ leave_type_id: parseInt(leave_type_id), start_date, end_date, start_half, end_half, reason, substitute_name: substitute })
     });
     const data = await res.json();
-    if (!res.ok) { showToast(data.error || '送出失敗', 'err'); return; }
+    if (!res.ok) { showToast(data.error || staffT('submit_fail'), 'err'); return; }
     // Upload attachment if provided
     const fileInput = document.getElementById('leave-file-input');
     if (fileInput && fileInput.files[0]) {
@@ -1947,13 +1947,13 @@ async function submitLeaveRequest() {
       fd.append('file', fileInput.files[0]);
       await fetch(`/api/leave/my-requests/${data.id}/attachment`, { method: 'POST', body: fd });
     }
-    showToast('請假申請已送出，等待主管審核', 'ok');
+    showToast(staffT('leave.sent'), 'ok');
     document.getElementById('leave-reason').value = '';
     document.getElementById('leave-sub').value    = '';
-    if (fileInput) { fileInput.value = ''; document.getElementById('leave-file-label').textContent = '點擊上傳病單（圖片或 PDF）'; }
+    if (fileInput) { fileInput.value = ''; document.getElementById('leave-file-label').textContent = staffT('leave.doc_ph'); }
     await loadMyLeaveBalance();
     await loadMyLeaveHistory();
-  } catch(e) { showToast('網路錯誤', 'err'); }
+  } catch(e) { showToast(staffT('leave.net_err'), 'err'); }
 }
 
 async function loadMyLeaveHistory() {
@@ -1968,17 +1968,17 @@ async function loadMyLeaveHistory() {
 function renderMyLeaveList() {
   const wrap = document.getElementById('my-leave-list');
   if (!myLeaveList.length) {
-    wrap.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">尚無請假記錄</div>';
+    wrap.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:16px">${staffT('leave.no_records')}</div>`;
     return;
   }
-  const SL = { pending:'待審核', approved:'已核准', rejected:'已退回' };
+  const SL = { pending:staffT('status.waiting'), approved:staffT('status.approved'), rejected:staffT('status.rejected') };
   const SC = { pending:'var(--orange)', approved:'var(--green)', rejected:'var(--red)' };
   wrap.innerHTML = myLeaveList.map(r => {
     const sc = SC[r.status] || 'var(--muted)';
     const sl = SL[r.status] || r.status;
     const sh = r.start_half ? '（下午）' : '';
     const eh = r.end_half   ? '（上午）' : '';
-    const payLabel = r.pay_rate === 1 ? '全薪' : r.pay_rate === 0 ? '無薪' : '半薪';
+    const payLabel = r.pay_rate === 1 ? staffT('leave.pay_full') : r.pay_rate === 0 ? staffT('leave.pay_zero') : staffT('leave.pay_half');
     return `<div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px">
       <div style="padding:10px 14px;background:var(--bg);display:flex;justify-content:space-between;align-items:center;gap:8px">
         <div>
@@ -1992,10 +1992,10 @@ function renderMyLeaveList() {
         <span style="font-size:12px;font-weight:700;color:${sc};white-space:nowrap">${sl}</span>
       </div>
       <div style="padding:8px 14px;font-size:12px;color:var(--muted)">
-        原因：${esc(r.reason || '')}
-        ${r.substitute_name ? `　代理人：${esc(r.substitute_name)}` : ''}
-        ${r.has_attachment ? `<div style="margin-top:4px"><a href="/api/leave/attachment/${r.id}" target="_blank" style="color:var(--accent);font-size:12px">查看病假證明文件</a></div>` : ''}
-        ${r.review_note ? `<div style="color:${sc};margin-top:4px">審核意見：${esc(r.review_note)}</div>` : ''}
+        ${staffT('leave.reason_prefix')}${esc(r.reason || '')}
+        ${r.substitute_name ? `　${staffT('leave.sub_prefix')}${esc(r.substitute_name)}` : ''}
+        ${r.has_attachment ? `<div style="margin-top:4px"><a href="/api/leave/attachment/${r.id}" target="_blank" style="color:var(--accent);font-size:12px">${staffT('leave.attachment')}</a></div>` : ''}
+        ${r.review_note ? `<div style="color:${sc};margin-top:4px">${staffT('leave.review_note')}${esc(r.review_note)}</div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -2227,7 +2227,7 @@ async function expPhotoSelected(event) {
       if (r.date)         document.getElementById('exp-date').value   = r.date;
       if (r.title)        document.getElementById('exp-note').value   = r.title;
       if (r.document_id)  _expDocumentId = r.document_id;
-      showToast('OCR 自動填入完成', 'ok');
+      showToast(staffT('exp.ocr_done'), 'ok');
     }
   } catch(e) {
     document.getElementById('exp-ocr-loading').style.display = 'none';
@@ -2240,7 +2240,7 @@ async function submitExpense() {
   const amount   = parseFloat(document.getElementById('exp-amount').value);
   const note     = document.getElementById('exp-note').value.trim();
   if (!date || !category || !amount || amount <= 0) {
-    showToast('請填寫日期、類型及金額', 'err'); return;
+    showToast(staffT('exp.need_fields'), 'err'); return;
   }
   const body = { title: category, expense_date: date, category, amount, note,
                  document_id: _expDocumentId };
@@ -2249,7 +2249,7 @@ async function submitExpense() {
   });
   const data = await res.json();
   if (!data.error) {
-    showToast('申請已送出', 'ok');
+    showToast(staffT('exp.sent'), 'ok');
     // Reset form
     document.getElementById('exp-amount').value = '';
     document.getElementById('exp-note').value   = '';
@@ -2266,26 +2266,26 @@ async function submitExpense() {
 
 async function loadMyExpenses() {
   const list = document.getElementById('exp-list');
-  list.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:24px">載入中...</div>';
+  list.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:24px">${staffT('exp.loading')}</div>`;
   const res = await fetch('/api/expense/my-claims');
   const claims = await res.json();
   if (!Array.isArray(claims) || !claims.length) {
-    list.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:24px">尚無申請記錄</div>';
+    list.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:13px;padding:24px">${staffT('exp.no_records')}</div>`;
     return;
   }
-  const statusMap = { pending:'審核中', approved:'已核准', rejected:'已拒絕' };
+  const statusMap = { pending:staffT('exp.status.pending'), approved:staffT('exp.status.approved'), rejected:staffT('exp.status.rejected') };
   const statusColor = { pending:'var(--accent)', approved:'var(--green)', rejected:'var(--red)' };
   list.innerHTML = claims.map(c => `
     <div style="border-bottom:1px solid var(--border);padding:12px 0;display:flex;align-items:center;gap:10px">
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:14px;margin-bottom:2px">${esc(c.category)} — NT$ ${fmtNum(c.amount)}</div>
         <div style="font-size:12px;color:var(--muted)">${c.expense_date} ${c.note ? '・'+esc(c.note) : ''}</div>
-        ${c.reviewer_note ? `<div style="font-size:11px;color:var(--red);margin-top:2px">備注：${esc(c.reviewer_note)}</div>` : ''}
+        ${c.reviewer_note ? `<div style="font-size:11px;color:var(--red);margin-top:2px">${staffT('exp.review_note')}${esc(c.reviewer_note)}</div>` : ''}
       </div>
       <div style="font-size:12px;font-weight:600;color:${statusColor[c.status]||'var(--muted)'}">
         ${statusMap[c.status]||c.status}
       </div>
-      ${c.document_id ? `<span style="font-size:11px;color:var(--accent)">有附件</span>` : ''}
+      ${c.document_id ? `<span style="font-size:11px;color:var(--accent)">${staffT('exp.attachment')}</span>` : ''}
     </div>
   `).join('');
   // Update badge
@@ -2974,6 +2974,53 @@ const STAFF_I18N = {
     'tab.myanomalies':'異常查詢','tab.leavereport':'假別年報','tab.payslip':'薪資單',
     'tab.expense':'費用報帳','tab.myperf':'我的考核','tab.mytravel':'差旅申請',
     'tab.myloans':'我的借用','tab.biodev':'安全裝置',
+    'gps.loading':'正在取得定位...','gps.no_support':'裝置不支援 GPS',
+    'gps.ok':'定位成功','gps.out_range':'超出打卡範圍','gps.in_range':'範圍內',
+    'gps.err_required':'無法取得定位，請允許位置權限','gps.err_optional':'未取得定位（非必要）',
+    'gps.within':'「{0}」範圍內（{1}m）','gps.outside':'距「{0}」{1}m，超出範圍',
+    'punch.success':' 成功','punch.fail':'打卡失敗','punch.net_err':'網路錯誤，請重試',
+    'punch.dist':'距離打卡地點 {0} 公尺',
+    'punch.no_records':'尚無打卡記錄','punch.manual':'補打卡',
+    'pt.in':'上班打卡','pt.out':'下班打卡','pt.break_out':'休息開始','pt.break_in':'休息結束',
+    'req.need_reason':'請填寫補打原因','req.need_time':'請選擇補打時間',
+    'req.sent':'補打卡申請已送出，等待主管審核','req.net_err':'網路錯誤',
+    'status.pending':'審核中','status.approved':'已核准','status.rejected':'已退回',
+    'status.modified_pending':'修改待審','status.waiting':'待審核',
+    'sched.review_note':'審核意見：','sched.resubmit':'請重新選取日期並送出',
+    'leave.need_type':'請選擇假別','leave.need_date':'請選擇請假日期','leave.need_reason':'請填寫請假原因',
+    'leave.sent':'請假申請已送出，等待主管審核','leave.net_err':'網路錯誤',
+    'leave.no_records':'尚無請假記錄',
+    'leave.pay_full':'全薪','leave.pay_zero':'無薪','leave.pay_half':'半薪',
+    'leave.reason_prefix':'原因：','leave.sub_prefix':'代理人：',
+    'leave.review_note':'審核意見：','leave.attachment':'查看病假證明文件',
+    'leave.doc_ph':'點擊上傳病單（圖片或 PDF）',
+    'att.days':'出勤天數','att.total_hours':'總工時（估）','att.avg_hours':'日均工時',
+    'att.detail':'打卡明細',
+    'att.punch_types.in':'上班','att.punch_types.out':'下班','att.punch_types.break_out':'休息','att.punch_types.break_in':'回來',
+    'att.manual':'✏️ 補打卡',
+    'ot.weekday_short':'平日','ot.rest_day_short':'休息日','ot.holiday_short':'國定假日','ot.special_short':'例假日',
+    'ot.need_date':'請填寫加班日期','ot.need_start':'請填寫開始時間',
+    'ot.need_end':'請填寫結束時間','ot.need_reason':'請填寫加班原因',
+    'ot.time_fmt_err':'時間格式錯誤，請重新選擇',
+    'ot.sent':'加班申請已送出，等待主管審核','ot.net_err':'網路錯誤，請重試',
+    'ot.no_records':'尚無申請記錄',
+    'ot.hours_label':'加班 {0} 小時','ot.pay_label':'加班費：','ot.review_note':'意見：',
+    'ot.auto_holiday':'已自動偵測為國定假日：',
+    'ot.detail_weekday':'平日：前{0}h×1.33 + 後{1}h×1.67',
+    'ot.detail_rest':'休息日（實際{0}h，計費{1}h）',
+    'ot.detail_hol':'{0}：{1}h × 2 倍',
+    'ot.hours_title':'加班時數：{0} 小時',
+    'exp.loading':'載入中...','exp.no_records':'尚無申請記錄',
+    'exp.need_fields':'請填寫日期、類型及金額',
+    'exp.sent':'申請已送出','exp.fail':'送出失敗','exp.ocr_done':'OCR 自動填入完成',
+    'exp.review_note':'備注：','exp.attachment':'有附件',
+    'exp.status.pending':'審核中','exp.status.approved':'已核准','exp.status.rejected':'已拒絕',
+    'ann.load_fail':'無法載入公告','ann.empty':'目前無公告','ann.err':'載入失敗',
+    'ann.cat.general':'一般公告','ann.cat.hr':'人事公告','ann.cat.event':'活動通知',
+    'ann.cat.urgent':'緊急公告','ann.cat.policy':'制度政策',
+    'loading':'載入中...','load_fail':'載入失敗','no_records':'尚無記錄',
+    'net_err':'網路錯誤','submit_fail':'送出失敗','session_exp':'登入已過期，請重新登入',
+    'day.0':'日','day.1':'一','day.2':'二','day.3':'三','day.4':'四','day.5':'五','day.6':'六',
     toggle:'EN',
   },
   'en': {
@@ -2985,6 +3032,53 @@ const STAFF_I18N = {
     'tab.myanomalies':'Anomalies','tab.leavereport':'Leave Report','tab.payslip':'Payslip',
     'tab.expense':'Expenses','tab.myperf':'Performance','tab.mytravel':'Travel',
     'tab.myloans':'My Loans','tab.biodev':'Security',
+    'gps.loading':'Getting location...','gps.no_support':'GPS not supported',
+    'gps.ok':'Location acquired','gps.out_range':'Outside punch zone','gps.in_range':'In range',
+    'gps.err_required':'Cannot get location, please allow GPS','gps.err_optional':'Location unavailable (not required)',
+    'gps.within':'In range of "{0}" ({1}m)','gps.outside':'{1}m from "{0}", out of range',
+    'punch.success':' success','punch.fail':'Punch failed','punch.net_err':'Network error, please retry',
+    'punch.dist':'Distance from punch location: {0}m',
+    'punch.no_records':'No punch records today','punch.manual':'Makeup punch',
+    'pt.in':'Clock In','pt.out':'Clock Out','pt.break_out':'Break Start','pt.break_in':'Break End',
+    'req.need_reason':'Please enter a reason','req.need_time':'Please select punch time',
+    'req.sent':'Makeup punch request submitted, pending approval','req.net_err':'Network error',
+    'status.pending':'Pending','status.approved':'Approved','status.rejected':'Rejected',
+    'status.modified_pending':'Modified Pending','status.waiting':'Waiting',
+    'sched.review_note':'Review Note: ','sched.resubmit':'Please reselect dates and resubmit',
+    'leave.need_type':'Please select leave type','leave.need_date':'Please select dates','leave.need_reason':'Please enter reason',
+    'leave.sent':'Leave request submitted, pending approval','leave.net_err':'Network error',
+    'leave.no_records':'No leave records',
+    'leave.pay_full':'Full pay','leave.pay_zero':'No pay','leave.pay_half':'Half pay',
+    'leave.reason_prefix':'Reason: ','leave.sub_prefix':'Substitute: ',
+    'leave.review_note':'Review Note: ','leave.attachment':'View Medical Document',
+    'leave.doc_ph':'Click to upload (image or PDF)',
+    'att.days':'Days Present','att.total_hours':'Total Hours (est.)','att.avg_hours':'Avg Hours/Day',
+    'att.detail':'Punch Details',
+    'att.punch_types.in':'In','att.punch_types.out':'Out','att.punch_types.break_out':'Break','att.punch_types.break_in':'Back',
+    'att.manual':'✏️ Makeup',
+    'ot.weekday_short':'Weekday','ot.rest_day_short':'Rest Day','ot.holiday_short':'Public Holiday','ot.special_short':'Holiday',
+    'ot.need_date':'Please enter overtime date','ot.need_start':'Please enter start time',
+    'ot.need_end':'Please enter end time','ot.need_reason':'Please enter reason',
+    'ot.time_fmt_err':'Invalid time format, please reselect',
+    'ot.sent':'Overtime request submitted, pending approval','ot.net_err':'Network error, please retry',
+    'ot.no_records':'No requests yet',
+    'ot.hours_label':'OT: {0} hrs','ot.pay_label':'OT Pay: ','ot.review_note':'Note: ',
+    'ot.auto_holiday':'Auto-detected as public holiday: ',
+    'ot.detail_weekday':'Weekday: first {0}h×1.33 + next {1}h×1.67',
+    'ot.detail_rest':'Rest Day (actual {0}h, billed {1}h)',
+    'ot.detail_hol':'{0}: {1}h × 2',
+    'ot.hours_title':'OT Hours: {0}h',
+    'exp.loading':'Loading...','exp.no_records':'No records',
+    'exp.need_fields':'Please fill in date, type, and amount',
+    'exp.sent':'Request submitted','exp.fail':'Submission failed','exp.ocr_done':'OCR auto-fill complete',
+    'exp.review_note':'Note: ','exp.attachment':'Attachment',
+    'exp.status.pending':'Pending','exp.status.approved':'Approved','exp.status.rejected':'Rejected',
+    'ann.load_fail':'Cannot load announcements','ann.empty':'No announcements','ann.err':'Load failed',
+    'ann.cat.general':'General','ann.cat.hr':'HR','ann.cat.event':'Event',
+    'ann.cat.urgent':'Urgent','ann.cat.policy':'Policy',
+    'loading':'Loading...','load_fail':'Load failed','no_records':'No records',
+    'net_err':'Network error','submit_fail':'Submission failed','session_exp':'Session expired, please log in again',
+    'day.0':'Sun','day.1':'Mon','day.2':'Tue','day.3':'Wed','day.4':'Thu','day.5':'Fri','day.6':'Sat',
     toggle:'日本語',
   },
   'ja': {
@@ -2996,6 +3090,53 @@ const STAFF_I18N = {
     'tab.myanomalies':'異常照会','tab.leavereport':'休暇年報','tab.payslip':'給与明細',
     'tab.expense':'経費精算','tab.myperf':'マイ評価','tab.mytravel':'出張申請',
     'tab.myloans':'借用品','tab.biodev':'セキュリティ',
+    'gps.loading':'位置情報取得中...','gps.no_support':'GPS非対応',
+    'gps.ok':'位置情報取得済','gps.out_range':'打刻範囲外','gps.in_range':'範囲内',
+    'gps.err_required':'位置情報を取得できません、GPS許可してください','gps.err_optional':'位置情報未取得（任意）',
+    'gps.within':'「{0}」範囲内（{1}m）','gps.outside':'「{0}」から{1}m、範囲外',
+    'punch.success':'成功','punch.fail':'打刻失敗','punch.net_err':'通信エラー、再試行してください',
+    'punch.dist':'打刻地点から{0}m',
+    'punch.no_records':'本日の打刻記録なし','punch.manual':'補正打刻',
+    'pt.in':'出勤','pt.out':'退勤','pt.break_out':'休憩開始','pt.break_in':'休憩終了',
+    'req.need_reason':'理由を入力してください','req.need_time':'打刻時刻を選択してください',
+    'req.sent':'補正打刻申請を送信しました。承認待ちです','req.net_err':'通信エラー',
+    'status.pending':'審査中','status.approved':'承認済','status.rejected':'却下',
+    'status.modified_pending':'修正待ち','status.waiting':'承認待ち',
+    'sched.review_note':'審査コメント：','sched.resubmit':'日付を再選択して再申請してください',
+    'leave.need_type':'休暇種別を選択してください','leave.need_date':'日付を選択してください','leave.need_reason':'理由を入力してください',
+    'leave.sent':'休暇申請を送信しました。承認待ちです','leave.net_err':'通信エラー',
+    'leave.no_records':'休暇記録なし',
+    'leave.pay_full':'全額支給','leave.pay_zero':'無給','leave.pay_half':'半額支給',
+    'leave.reason_prefix':'理由：','leave.sub_prefix':'代理人：',
+    'leave.review_note':'審査コメント：','leave.attachment':'診断書を確認',
+    'leave.doc_ph':'クリックしてアップロード（画像またはPDF）',
+    'att.days':'出勤日数','att.total_hours':'総労働時間（推定）','att.avg_hours':'平均時間/日',
+    'att.detail':'打刻詳細',
+    'att.punch_types.in':'出勤','att.punch_types.out':'退勤','att.punch_types.break_out':'休憩','att.punch_types.break_in':'復帰',
+    'att.manual':'✏️ 補正打刻',
+    'ot.weekday_short':'平日','ot.rest_day_short':'休日','ot.holiday_short':'祝日','ot.special_short':'法定休日',
+    'ot.need_date':'残業日を入力してください','ot.need_start':'開始時刻を入力してください',
+    'ot.need_end':'終了時刻を入力してください','ot.need_reason':'理由を入力してください',
+    'ot.time_fmt_err':'時刻の形式が無効です、再選択してください',
+    'ot.sent':'残業申請を送信しました。承認待ちです','ot.net_err':'通信エラー、再試行してください',
+    'ot.no_records':'申請記録なし',
+    'ot.hours_label':'残業 {0} 時間','ot.pay_label':'残業代：','ot.review_note':'コメント：',
+    'ot.auto_holiday':'祝日として自動検出：',
+    'ot.detail_weekday':'平日：最初{0}h×1.33 + 残り{1}h×1.67',
+    'ot.detail_rest':'休日（実績{0}h、計算{1}h）',
+    'ot.detail_hol':'{0}：{1}h × 2',
+    'ot.hours_title':'残業時間：{0}h',
+    'exp.loading':'読み込み中...','exp.no_records':'記録なし',
+    'exp.need_fields':'日付・種別・金額を入力してください',
+    'exp.sent':'申請を送信しました','exp.fail':'送信失敗','exp.ocr_done':'OCR自動入力完了',
+    'exp.review_note':'備考：','exp.attachment':'添付あり',
+    'exp.status.pending':'審査中','exp.status.approved':'承認済','exp.status.rejected':'却下',
+    'ann.load_fail':'お知らせを読み込めません','ann.empty':'お知らせなし','ann.err':'読み込み失敗',
+    'ann.cat.general':'一般','ann.cat.hr':'人事','ann.cat.event':'イベント',
+    'ann.cat.urgent':'緊急','ann.cat.policy':'規程',
+    'loading':'読み込み中...','load_fail':'読み込み失敗','no_records':'記録なし',
+    'net_err':'通信エラー','submit_fail':'送信失敗','session_exp':'セッション期限切れ、再ログインしてください',
+    'day.0':'日','day.1':'月','day.2':'火','day.3':'水','day.4':'木','day.5':'金','day.6':'土',
     toggle:'Tiếng Việt',
   },
   'vi': {
@@ -3007,6 +3148,53 @@ const STAFF_I18N = {
     'tab.myanomalies':'Bất thường','tab.leavereport':'Báo cáo phép','tab.payslip':'Phiếu lương',
     'tab.expense':'Chi phí','tab.myperf':'Đánh giá','tab.mytravel':'Công tác',
     'tab.myloans':'Đồ mượn','tab.biodev':'Bảo mật',
+    'gps.loading':'Đang lấy vị trí...','gps.no_support':'Thiết bị không hỗ trợ GPS',
+    'gps.ok':'Lấy vị trí thành công','gps.out_range':'Ngoài vùng chấm công','gps.in_range':'Trong vùng',
+    'gps.err_required':'Không thể lấy vị trí, vui lòng cấp quyền GPS','gps.err_optional':'Chưa lấy vị trí (không bắt buộc)',
+    'gps.within':'Trong vùng "{0}" ({1}m)','gps.outside':'Cách "{0}" {1}m, ngoài vùng',
+    'punch.success':' thành công','punch.fail':'Chấm công thất bại','punch.net_err':'Lỗi mạng, vui lòng thử lại',
+    'punch.dist':'Cách điểm chấm công {0}m',
+    'punch.no_records':'Chưa có dữ liệu hôm nay','punch.manual':'Chấm bù',
+    'pt.in':'Vào ca','pt.out':'Ra ca','pt.break_out':'Bắt đầu nghỉ','pt.break_in':'Kết thúc nghỉ',
+    'req.need_reason':'Vui lòng nhập lý do','req.need_time':'Vui lòng chọn thời gian',
+    'req.sent':'Đã gửi yêu cầu chấm bù, chờ duyệt','req.net_err':'Lỗi mạng',
+    'status.pending':'Chờ duyệt','status.approved':'Đã duyệt','status.rejected':'Đã từ chối',
+    'status.modified_pending':'Chờ xem lại','status.waiting':'Đang chờ',
+    'sched.review_note':'Nhận xét: ','sched.resubmit':'Vui lòng chọn lại ngày và gửi lại',
+    'leave.need_type':'Vui lòng chọn loại phép','leave.need_date':'Vui lòng chọn ngày','leave.need_reason':'Vui lòng nhập lý do',
+    'leave.sent':'Đã gửi yêu cầu nghỉ phép, chờ duyệt','leave.net_err':'Lỗi mạng',
+    'leave.no_records':'Chưa có hồ sơ nghỉ phép',
+    'leave.pay_full':'Đủ lương','leave.pay_zero':'Không lương','leave.pay_half':'Nửa lương',
+    'leave.reason_prefix':'Lý do: ','leave.sub_prefix':'Người thay: ',
+    'leave.review_note':'Nhận xét: ','leave.attachment':'Xem giấy y tế',
+    'leave.doc_ph':'Nhấn để tải lên (ảnh hoặc PDF)',
+    'att.days':'Ngày có mặt','att.total_hours':'Tổng giờ (ước)','att.avg_hours':'Giờ TB/ngày',
+    'att.detail':'Chi tiết chấm công',
+    'att.punch_types.in':'Vào','att.punch_types.out':'Ra','att.punch_types.break_out':'Nghỉ','att.punch_types.break_in':'Quay lại',
+    'att.manual':'✏️ Chấm bù',
+    'ot.weekday_short':'Ngày thường','ot.rest_day_short':'Ngày nghỉ','ot.holiday_short':'Ngày lễ','ot.special_short':'Nghỉ bù',
+    'ot.need_date':'Vui lòng nhập ngày tăng ca','ot.need_start':'Vui lòng nhập giờ bắt đầu',
+    'ot.need_end':'Vui lòng nhập giờ kết thúc','ot.need_reason':'Vui lòng nhập lý do',
+    'ot.time_fmt_err':'Định dạng giờ không hợp lệ, vui lòng chọn lại',
+    'ot.sent':'Đã gửi yêu cầu tăng ca, chờ duyệt','ot.net_err':'Lỗi mạng, vui lòng thử lại',
+    'ot.no_records':'Chưa có yêu cầu',
+    'ot.hours_label':'Tăng ca: {0} giờ','ot.pay_label':'Phụ cấp: ','ot.review_note':'Nhận xét: ',
+    'ot.auto_holiday':'Tự động nhận diện ngày lễ: ',
+    'ot.detail_weekday':'Ngày thường: {0}h đầu×1.33 + {1}h sau×1.67',
+    'ot.detail_rest':'Ngày nghỉ (thực {0}h, tính {1}h)',
+    'ot.detail_hol':'{0}: {1}h × 2',
+    'ot.hours_title':'Số giờ tăng ca: {0}h',
+    'exp.loading':'Đang tải...','exp.no_records':'Chưa có hồ sơ',
+    'exp.need_fields':'Vui lòng điền ngày, loại và số tiền',
+    'exp.sent':'Đã gửi yêu cầu','exp.fail':'Gửi thất bại','exp.ocr_done':'OCR điền tự động hoàn tất',
+    'exp.review_note':'Ghi chú: ','exp.attachment':'Có đính kèm',
+    'exp.status.pending':'Chờ duyệt','exp.status.approved':'Đã duyệt','exp.status.rejected':'Đã từ chối',
+    'ann.load_fail':'Không thể tải thông báo','ann.empty':'Không có thông báo','ann.err':'Tải thất bại',
+    'ann.cat.general':'Chung','ann.cat.hr':'Nhân sự','ann.cat.event':'Sự kiện',
+    'ann.cat.urgent':'Khẩn','ann.cat.policy':'Chính sách',
+    'loading':'Đang tải...','load_fail':'Tải thất bại','no_records':'Chưa có hồ sơ',
+    'net_err':'Lỗi mạng','submit_fail':'Gửi thất bại','session_exp':'Phiên hết hạn, vui lòng đăng nhập lại',
+    'day.0':'CN','day.1':'T2','day.2':'T3','day.3':'T4','day.4':'T5','day.5':'T6','day.6':'T7',
     toggle:'ภาษาไทย',
   },
   'th': {
@@ -3018,6 +3206,53 @@ const STAFF_I18N = {
     'tab.myanomalies':'ผิดปกติ','tab.leavereport':'รายงานการลา','tab.payslip':'สลิปเงินเดือน',
     'tab.expense':'ค่าใช้จ่าย','tab.myperf':'การประเมิน','tab.mytravel':'เดินทาง',
     'tab.myloans':'ของที่ยืม','tab.biodev':'ความปลอดภัย',
+    'gps.loading':'กำลังรับตำแหน่ง...','gps.no_support':'อุปกรณ์ไม่รองรับ GPS',
+    'gps.ok':'รับตำแหน่งสำเร็จ','gps.out_range':'นอกพื้นที่บันทึกเวลา','gps.in_range':'อยู่ในพื้นที่',
+    'gps.err_required':'ไม่สามารถรับตำแหน่ง กรุณาอนุญาต GPS','gps.err_optional':'ไม่ได้รับตำแหน่ง (ไม่บังคับ)',
+    'gps.within':'อยู่ในพื้นที่ "{0}" ({1}ม.)','gps.outside':'ห่างจาก "{0}" {1}ม. นอกพื้นที่',
+    'punch.success':' สำเร็จ','punch.fail':'บันทึกเวลาล้มเหลว','punch.net_err':'เครือข่ายผิดพลาด โปรดลองใหม่',
+    'punch.dist':'ห่างจากจุดบันทึกเวลา {0}ม.',
+    'punch.no_records':'ยังไม่มีข้อมูลวันนี้','punch.manual':'บันทึกชดเชย',
+    'pt.in':'เข้างาน','pt.out':'ออกงาน','pt.break_out':'เริ่มพัก','pt.break_in':'กลับจากพัก',
+    'req.need_reason':'กรุณากรอกเหตุผล','req.need_time':'กรุณาเลือกเวลา',
+    'req.sent':'ส่งคำขอบันทึกชดเชยแล้ว รอการอนุมัติ','req.net_err':'เครือข่ายผิดพลาด',
+    'status.pending':'รออนุมัติ','status.approved':'อนุมัติแล้ว','status.rejected':'ปฏิเสธแล้ว',
+    'status.modified_pending':'รอตรวจสอบ','status.waiting':'กำลังรอ',
+    'sched.review_note':'หมายเหตุ: ','sched.resubmit':'กรุณาเลือกวันใหม่และส่งอีกครั้ง',
+    'leave.need_type':'กรุณาเลือกประเภทการลา','leave.need_date':'กรุณาเลือกวันที่','leave.need_reason':'กรุณากรอกเหตุผล',
+    'leave.sent':'ส่งคำขอลาแล้ว รอการอนุมัติ','leave.net_err':'เครือข่ายผิดพลาด',
+    'leave.no_records':'ยังไม่มีประวัติการลา',
+    'leave.pay_full':'เงินเต็ม','leave.pay_zero':'ไม่มีเงิน','leave.pay_half':'ครึ่งเงิน',
+    'leave.reason_prefix':'เหตุผล: ','leave.sub_prefix':'ผู้แทน: ',
+    'leave.review_note':'หมายเหตุ: ','leave.attachment':'ดูใบรับรองแพทย์',
+    'leave.doc_ph':'คลิกเพื่ออัปโหลด (รูปภาพหรือ PDF)',
+    'att.days':'วันที่มา','att.total_hours':'ชั่วโมงรวม (ประมาณ)','att.avg_hours':'ชั่วโมงเฉลี่ย/วัน',
+    'att.detail':'รายละเอียดการบันทึก',
+    'att.punch_types.in':'เข้า','att.punch_types.out':'ออก','att.punch_types.break_out':'พัก','att.punch_types.break_in':'กลับ',
+    'att.manual':'✏️ บันทึกชดเชย',
+    'ot.weekday_short':'วันทำงาน','ot.rest_day_short':'วันหยุด','ot.holiday_short':'วันหยุดนักขัตฤกษ์','ot.special_short':'วันหยุดพิเศษ',
+    'ot.need_date':'กรุณากรอกวันที่ล่วงเวลา','ot.need_start':'กรุณากรอกเวลาเริ่ม',
+    'ot.need_end':'กรุณากรอกเวลาสิ้นสุด','ot.need_reason':'กรุณากรอกเหตุผล',
+    'ot.time_fmt_err':'รูปแบบเวลาไม่ถูกต้อง กรุณาเลือกใหม่',
+    'ot.sent':'ส่งคำขอล่วงเวลาแล้ว รอการอนุมัติ','ot.net_err':'เครือข่ายผิดพลาด โปรดลองใหม่',
+    'ot.no_records':'ยังไม่มีคำขอ',
+    'ot.hours_label':'ล่วงเวลา: {0} ชม.','ot.pay_label':'ค่าล่วงเวลา: ','ot.review_note':'หมายเหตุ: ',
+    'ot.auto_holiday':'ตรวจพบวันหยุดนักขัตฤกษ์อัตโนมัติ: ',
+    'ot.detail_weekday':'วันทำงาน: {0}ชม.แรก×1.33 + {1}ชม.ถัดไป×1.67',
+    'ot.detail_rest':'วันหยุด (จริง {0}ชม., คิด {1}ชม.)',
+    'ot.detail_hol':'{0}: {1}ชม. × 2',
+    'ot.hours_title':'ชั่วโมงล่วงเวลา: {0}ชม.',
+    'exp.loading':'กำลังโหลด...','exp.no_records':'ยังไม่มีรายการ',
+    'exp.need_fields':'กรุณากรอกวันที่ ประเภท และจำนวนเงิน',
+    'exp.sent':'ส่งคำขอแล้ว','exp.fail':'ส่งล้มเหลว','exp.ocr_done':'OCR กรอกอัตโนมัติเสร็จสิ้น',
+    'exp.review_note':'หมายเหตุ: ','exp.attachment':'มีเอกสารแนบ',
+    'exp.status.pending':'รออนุมัติ','exp.status.approved':'อนุมัติแล้ว','exp.status.rejected':'ปฏิเสธแล้ว',
+    'ann.load_fail':'ไม่สามารถโหลดประกาศ','ann.empty':'ไม่มีประกาศ','ann.err':'โหลดล้มเหลว',
+    'ann.cat.general':'ทั่วไป','ann.cat.hr':'ทรัพยากรบุคคล','ann.cat.event':'กิจกรรม',
+    'ann.cat.urgent':'ด่วน','ann.cat.policy':'นโยบาย',
+    'loading':'กำลังโหลด...','load_fail':'โหลดล้มเหลว','no_records':'ยังไม่มีรายการ',
+    'net_err':'เครือข่ายผิดพลาด','submit_fail':'ส่งล้มเหลว','session_exp':'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
+    'day.0':'อา.','day.1':'จ.','day.2':'อ.','day.3':'พ.','day.4':'พฤ.','day.5':'ศ.','day.6':'ส.',
     toggle:'中文',
   }
 };
@@ -3033,7 +3268,15 @@ function staffT(k) { return (STAFF_I18N[_staffLang]||STAFF_I18N['zh-TW'])[k] || 
     return _orig(url, Object.assign({}, opts, {headers}));
   };
 })();
+function rebuildI18nLabels() {
+  DAYS = [staffT('day.0'),staffT('day.1'),staffT('day.2'),staffT('day.3'),staffT('day.4'),staffT('day.5'),staffT('day.6')];
+  PLABEL = {in:staffT('pt.in'),out:staffT('pt.out'),break_out:staffT('pt.break_out'),break_in:staffT('pt.break_in')};
+  SLABEL = {pending:staffT('status.pending'),approved:staffT('status.approved'),rejected:staffT('status.rejected'),modified_pending:staffT('status.modified_pending')};
+  REQ_LABEL = {pending:staffT('status.pending'),approved:staffT('status.approved'),rejected:staffT('status.rejected')};
+  OT_SL = {pending:staffT('status.pending'),approved:staffT('status.approved'),rejected:staffT('status.rejected')};
+}
 function staffApplyI18n() {
+  rebuildI18nLabels();
   const s = (id, txt) => { const e = document.getElementById(id); if (e) { if (e.children.length > 0) { for (const n of e.childNodes) { if (n.nodeType === Node.TEXT_NODE && n.textContent.trim()) { n.textContent = txt; break; } } } else { e.textContent = txt; } } };
   const p = (id, txt) => { const e = document.getElementById(id); if (e) e.placeholder = txt; };
   s('staff-brand', staffT('brand'));
@@ -3046,6 +3289,16 @@ function staffApplyI18n() {
   s('staff-bio-label', staffT('bio'));
   const logoutEl = document.querySelector('.logout-btn');
   if (logoutEl) logoutEl.textContent = staffT('logout');
+  // Update punch buttons (preserve .p-sub child)
+  [{id:'btn-in',key:'pt.in'},{id:'btn-out',key:'pt.out'},{id:'btn-bout',key:'pt.break_out'},{id:'btn-bin',key:'pt.break_in'}].forEach(({id,key}) => {
+    const btn = document.getElementById(id);
+    if (btn) { for (const n of btn.childNodes) { if (n.nodeType === Node.TEXT_NODE) { n.textContent = staffT(key); break; } } }
+  });
+  // Update GPS text if showing default loading message
+  const gpsEl = document.getElementById('gps-text');
+  if (gpsEl && (gpsEl.textContent === '正在取得定位...' || gpsEl.textContent.startsWith('Getting') || gpsEl.textContent.startsWith('位置情報') || gpsEl.textContent.startsWith('Đang') || gpsEl.textContent.startsWith('กำลัง'))) {
+    gpsEl.textContent = staffT('gps.loading');
+  }
   document.querySelectorAll('[data-i18n-staff]').forEach(el => {
     const val = staffT(el.dataset.i18nStaff);
     if (el.children.length > 0) {

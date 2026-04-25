@@ -269,8 +269,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <input type="month" class="filter-input" id="dash-month-picker"
              style="min-width:150px" onchange="initDash()">
       <button class="btn btn-outline btn-sm" onclick="initDash()">重新整理</button>
-      <button class="btn btn-ghost btn-sm" onclick="resetDashMonth()">回到本月</button>
-      <span id="ds-month-badge"
+      <button class="btn btn-ghost btn-sm" data-i18n="btn.reset_month" onclick="resetDashMonth()">回到本月</button>
+      <span id="ds-month-badge" data-i18n="dash.badge.non_current"
             style="font-size:12px;font-weight:700;color:var(--accent);display:none">
         ＊非當月資料
       </span>
@@ -324,7 +324,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
             <canvas id="chart-today-pie" width="180" height="180"></canvas>
             <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
               <div style="font-family:'DM Mono',monospace;font-size:28px;font-weight:700;color:var(--navy)" id="ds-pie-center">—</div>
-              <div style="font-size:10px;color:var(--muted)">人出勤</div>
+              <div style="font-size:10px;color:var(--muted)" data-i18n="dash.pie.att_count">人出勤</div>
             </div>
           </div>
           <div id="ds-today-legend" style="flex:1;font-size:12px;display:flex;flex-direction:column;gap:8px"></div>
@@ -3290,7 +3290,7 @@ const TRANSLATIONS = {
     'btn.export_detail_excel':'匯出明細 Excel','btn.export_sum_csv':'摘要 CSV','btn.export_detail_csv':'明細 CSV',
     'btn.export_salary_excel':'匯出薪資 Excel','btn.export_leave_excel':'匯出請假 Excel','btn.salary_csv':'薪資 CSV',
     'btn.close':'關閉','btn.submit':'送出','btn.confirm':'確認','btn.generate':'產生',
-    'btn.refresh':'重新整理','btn.import':'匯入','btn.calc':'計算',
+    'btn.refresh':'重新整理','btn.reset_month':'回到本月','btn.import':'匯入','btn.calc':'計算',
     // Status
     'status.pending':'待審核','status.approved':'已核准','status.rejected':'已駁回',
     'status.all':'全部','status.active':'在職','status.resigned':'離職',
@@ -3305,7 +3305,7 @@ const TRANSLATIONS = {
     'dash.sub.pending_detail':'補打{0} 加班{1} 排休{2} 請假{3}',
     'dash.sub.salary_confirmed':'已確認 {0} / 共 {1} 筆',
     'dash.sub.salary_month':'{0} 薪資總額',
-    'dash.pie.today':'今日出勤狀態','dash.pie.month':'月度出勤狀態',
+    'dash.pie.today':'今日出勤狀態','dash.pie.month':'月度出勤狀態','dash.pie.att_count':'人出勤','dash.badge.non_current':'＊非當月資料',
     'dash.table.today':'今日人員狀態','dash.table.month':'該月人員出勤摘要',
     'dash.no_records':'今日尚無出勤記錄',
     'pie.working':'上班中','pie.clocked_out':'已下班','pie.on_leave':'請假中','pie.absent':'未出勤',
@@ -3574,7 +3574,7 @@ const TRANSLATIONS = {
     'btn.export_detail_excel':'Detail Excel','btn.export_sum_csv':'Summary CSV','btn.export_detail_csv':'Detail CSV',
     'btn.export_salary_excel':'Salary Excel','btn.export_leave_excel':'Leave Excel','btn.salary_csv':'Salary CSV',
     'btn.close':'Close','btn.submit':'Submit','btn.confirm':'Confirm','btn.generate':'Generate',
-    'btn.refresh':'Refresh','btn.import':'Import','btn.calc':'Calculate',
+    'btn.refresh':'Refresh','btn.reset_month':'This Month','btn.import':'Import','btn.calc':'Calculate',
     // Status
     'status.pending':'Pending','status.approved':'Approved','status.rejected':'Rejected',
     'status.all':'All','status.active':'Active','status.resigned':'Resigned',
@@ -3590,7 +3590,7 @@ const TRANSLATIONS = {
     'dash.sub.pending_detail':'Punch {0} OT {1} Sched {2} Leave {3}',
     'dash.sub.salary_confirmed':'Confirmed {0} / Total {1}',
     'dash.sub.salary_month':'{0} Salary Total',
-    'dash.pie.today':'Today\'s Status','dash.pie.month':'Monthly Status',
+    'dash.pie.today':'Today\'s Status','dash.pie.month':'Monthly Status','dash.pie.att_count':'Present','dash.badge.non_current':'＊Non-current Month',
     'dash.table.today':'Today\'s Staff Status','dash.table.month':'Monthly Attendance Summary',
     'dash.no_records':'No attendance records today',
     'pie.working':'On Duty','pie.clocked_out':'Clocked Out','pie.on_leave':'On Leave','pie.absent':'Absent',
@@ -3859,7 +3859,7 @@ const TRANSLATIONS = {
     'btn.export_detail_excel':'明細Excel','btn.export_sum_csv':'サマリーCSV','btn.export_detail_csv':'明細CSV',
     'btn.export_salary_excel':'給与Excel','btn.export_leave_excel':'休暇Excel','btn.salary_csv':'給与CSV',
     'btn.close':'閉じる','btn.submit':'送信','btn.confirm':'確認','btn.generate':'生成',
-    'btn.refresh':'更新','btn.import':'インポート','btn.calc':'計算',
+    'btn.refresh':'更新','btn.reset_month':'今月へ','btn.import':'インポート','btn.calc':'計算',
     // Status
     'status.pending':'審査中','status.approved':'承認済','status.rejected':'却下',
     'status.all':'全て','status.active':'在職','status.resigned':'退職',
@@ -3875,7 +3875,7 @@ const TRANSLATIONS = {
     'dash.sub.pending_detail':'補打{0} 残業{1} 休暇{2} 申請{3}',
     'dash.sub.salary_confirmed':'確認済 {0} / 合計 {1}件',
     'dash.sub.salary_month':'{0} 給与総額',
-    'dash.pie.today':'本日の出勤状況','dash.pie.month':'月次出勤状況',
+    'dash.pie.today':'本日の出勤状況','dash.pie.month':'月次出勤状況','dash.pie.att_count':'出勤中','dash.badge.non_current':'＊他月データ',
     'dash.table.today':'本日のスタッフ状況','dash.table.month':'月次出勤サマリー',
     'dash.no_records':'本日の出勤記録はありません',
     'pie.working':'出勤中','pie.clocked_out':'退勤','pie.on_leave':'休暇中','pie.absent':'未出勤',
@@ -4136,7 +4136,7 @@ const TRANSLATIONS = {
     'btn.export_detail_excel':'Excel chi tiết','btn.export_sum_csv':'CSV tổng hợp','btn.export_detail_csv':'CSV chi tiết',
     'btn.export_salary_excel':'Excel lương','btn.export_leave_excel':'Excel phép','btn.salary_csv':'CSV lương',
     'btn.close':'Đóng','btn.submit':'Gửi','btn.confirm':'Xác nhận','btn.generate':'Tạo',
-    'btn.refresh':'Làm mới','btn.import':'Nhập','btn.calc':'Tính',
+    'btn.refresh':'Làm mới','btn.reset_month':'Tháng này','btn.import':'Nhập','btn.calc':'Tính',
     'btn.approve_punch':'Duyệt & Bù chấm','btn.reject_alt':'Từ chối','btn.query':'Tra cứu',
     'status.pending':'Chờ duyệt','status.approved':'Đã duyệt','status.rejected':'Từ chối',
     'status.all':'Tất cả','status.active':'Đang làm','status.resigned':'Đã nghỉ',
@@ -4151,7 +4151,7 @@ const TRANSLATIONS = {
     'dash.sub.pending_detail':'Chấm bù {0} Tăng ca {1} Lịch {2} Nghỉ {3}',
     'dash.sub.salary_confirmed':'Đã xác nhận {0} / Tổng {1}',
     'dash.sub.salary_month':'Tổng lương {0}',
-    'dash.pie.today':'Tình trạng hôm nay','dash.pie.month':'Tình trạng tháng',
+    'dash.pie.today':'Tình trạng hôm nay','dash.pie.month':'Tình trạng tháng','dash.pie.att_count':'Có mặt','dash.badge.non_current':'＊Tháng khác',
     'dash.table.today':'Trạng thái nhân viên hôm nay','dash.table.month':'Tóm tắt chấm công tháng',
     'dash.no_records':'Hôm nay chưa có dữ liệu chấm công',
     'pie.working':'Đang làm','pie.clocked_out':'Đã về','pie.on_leave':'Đang nghỉ','pie.absent':'Vắng',
@@ -4394,7 +4394,7 @@ const TRANSLATIONS = {
     'btn.export_detail_excel':'Excel รายละเอียด','btn.export_sum_csv':'CSV สรุป','btn.export_detail_csv':'CSV รายละเอียด',
     'btn.export_salary_excel':'Excel เงินเดือน','btn.export_leave_excel':'Excel การลา','btn.salary_csv':'CSV เงินเดือน',
     'btn.close':'ปิด','btn.submit':'ส่ง','btn.confirm':'ยืนยัน','btn.generate':'สร้าง',
-    'btn.refresh':'รีเฟรช','btn.import':'นำเข้า','btn.calc':'คำนวณ',
+    'btn.refresh':'รีเฟรช','btn.reset_month':'เดือนนี้','btn.import':'นำเข้า','btn.calc':'คำนวณ',
     'btn.approve_punch':'อนุมัติ & บันทึก','btn.reject_alt':'ปฏิเสธ','btn.query':'ค้นหา',
     'status.pending':'รออนุมัติ','status.approved':'อนุมัติแล้ว','status.rejected':'ปฏิเสธ',
     'status.all':'ทั้งหมด','status.active':'ทำงานอยู่','status.resigned':'ลาออกแล้ว',
@@ -4409,7 +4409,7 @@ const TRANSLATIONS = {
     'dash.sub.pending_detail':'บันทึกย้อนหลัง {0} โอที {1} กะ {2} ลา {3}',
     'dash.sub.salary_confirmed':'ยืนยันแล้ว {0} / รวม {1}',
     'dash.sub.salary_month':'เงินเดือนรวม {0}',
-    'dash.pie.today':'สถานะวันนี้','dash.pie.month':'สถานะรายเดือน',
+    'dash.pie.today':'สถานะวันนี้','dash.pie.month':'สถานะรายเดือน','dash.pie.att_count':'มาทำงาน','dash.badge.non_current':'＊ข้อมูลเดือนอื่น',
     'dash.table.today':'สถานะพนักงานวันนี้','dash.table.month':'สรุปการเข้างานรายเดือน',
     'dash.no_records':'ยังไม่มีบันทึกการเข้างานวันนี้',
     'pie.working':'กำลังทำงาน','pie.clocked_out':'กลับบ้านแล้ว','pie.on_leave':'ลาหยุด','pie.absent':'ขาดงาน',
