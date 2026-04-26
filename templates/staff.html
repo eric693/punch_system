@@ -33,8 +33,9 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
 .login-btn:active{opacity:.85}
 .login-btn:disabled{opacity:.5}
 .login-err{color:var(--red);font-size:12px;text-align:center;margin-top:8px;min-height:16px}
-.tab-bar{display:flex;background:var(--navy-mid);border-bottom:1px solid rgba(255,255,255,.08)}
-.tab{flex:1;padding:13px 8px;text-align:center;font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;font-size:13px;font-weight:600;color:rgba(255,255,255,.45);cursor:pointer;border:none;background:transparent;transition:all .15s;border-bottom:3px solid transparent}
+.tab-bar{display:flex;background:var(--navy-mid);border-bottom:1px solid rgba(255,255,255,.08);overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab{flex:none;white-space:nowrap;padding:13px 12px;text-align:center;font-family:"Noto Sans TC","Noto Sans Thai",sans-serif;font-size:13px;font-weight:600;color:rgba(255,255,255,.45);cursor:pointer;border:none;background:transparent;transition:all .15s;border-bottom:3px solid transparent}
 .tab.active{color:#fff;border-bottom-color:var(--gold)}
 .tab-body{padding:20px}
 .gps-bar{display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:16px}
