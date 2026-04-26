@@ -1998,45 +1998,45 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- ── 資產管理 ── -->
   <div class="page" id="page-assets" style="display:none">
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-      <button class="btn btn-primary btn-sm" onclick="openAssetModal()">＋ 新增資產</button>
+      <button class="btn btn-primary btn-sm" onclick="openAssetModal()" data-i18n="btn.add_asset">＋ 新增資產</button>
       <select class="filter-input" id="asset-filter-cat" onchange="loadAssets()" style="min-width:120px">
-        <option value="">全部類別</option>
-        <option value="computer">電腦/3C</option>
-        <option value="vehicle">車輛</option>
-        <option value="furniture">辦公家具</option>
-        <option value="tool">工具設備</option>
-        <option value="other">其他</option>
+        <option value="" data-i18n="opt.all_categories">全部類別</option>
+        <option value="computer" data-i18n="opt.computer">電腦/3C</option>
+        <option value="vehicle" data-i18n="opt.vehicle">車輛</option>
+        <option value="furniture" data-i18n="opt.furniture">辦公家具</option>
+        <option value="tool" data-i18n="opt.tools">工具設備</option>
+        <option value="other" data-i18n="opt.other">其他</option>
       </select>
       <select class="filter-input" id="asset-filter-status" onchange="loadAssets()" style="min-width:120px">
-        <option value="">全部狀態</option>
-        <option value="available">可借用</option>
-        <option value="loaned">借出中</option>
-        <option value="maintenance">維修中</option>
-        <option value="retired">報廢</option>
+        <option value="" data-i18n="opt.all_status">全部狀態</option>
+        <option value="available" data-i18n="asset.status.available">可借用</option>
+        <option value="loaned" data-i18n="asset.status.loaned">借出中</option>
+        <option value="maintenance" data-i18n="asset.status.maintenance">維修中</option>
+        <option value="retired" data-i18n="asset.status.retired">報廢</option>
       </select>
-      <input class="filter-input" id="asset-filter-q" placeholder="搜尋名稱/編號…" oninput="_debLoadAssets()" style="min-width:160px">
-      <button class="btn btn-outline btn-sm" onclick="loadAssets()">重新整理</button>
+      <input class="filter-input" id="asset-filter-q" placeholder="搜尋名稱/編號…" data-i18n-placeholder="asset.search_placeholder" oninput="_debLoadAssets()" style="min-width:160px">
+      <button class="btn btn-outline btn-sm" onclick="loadAssets()" data-i18n="btn.refresh">重新整理</button>
     </div>
 
     <!-- 資產統計 -->
     <div class="stats-row" style="grid-template-columns:repeat(6,1fr);margin-bottom:16px">
       <div class="stat-card" style="border-left:4px solid var(--green)">
-        <div class="stat-label">可借用</div><div class="stat-value" id="ast-available">—</div>
+        <div class="stat-label" data-i18n="asset.status.available">可借用</div><div class="stat-value" id="ast-available">—</div>
       </div>
       <div class="stat-card" style="border-left:4px solid var(--orange)">
-        <div class="stat-label">借出中</div><div class="stat-value" id="ast-loaned">—</div>
+        <div class="stat-label" data-i18n="asset.status.loaned">借出中</div><div class="stat-value" id="ast-loaned">—</div>
       </div>
       <div class="stat-card" style="border-left:4px solid var(--red)">
-        <div class="stat-label">維修中</div><div class="stat-value" id="ast-maintenance">—</div>
+        <div class="stat-label" data-i18n="asset.status.maintenance">維修中</div><div class="stat-value" id="ast-maintenance">—</div>
       </div>
       <div class="stat-card" style="border-left:4px solid var(--muted)">
-        <div class="stat-label">報廢</div><div class="stat-value" id="ast-retired">—</div>
+        <div class="stat-label" data-i18n="asset.status.retired">報廢</div><div class="stat-value" id="ast-retired">—</div>
       </div>
       <div class="stat-card" style="border-left:4px solid var(--navy)">
-        <div class="stat-label">總計</div><div class="stat-value" id="ast-total">—</div>
+        <div class="stat-label" data-i18n="asset.total">總計</div><div class="stat-value" id="ast-total">—</div>
       </div>
       <div class="stat-card" style="border-left:4px solid #9b59b6;cursor:pointer" onclick="document.getElementById('pending-loan-section').scrollIntoView({behavior:'smooth'})">
-        <div class="stat-label">待審申請</div><div class="stat-value" id="ast-pending-loans" style="color:#9b59b6">—</div>
+        <div class="stat-label" data-i18n="asset.stat.pending">待審申請</div><div class="stat-value" id="ast-pending-loans" style="color:#9b59b6">—</div>
       </div>
     </div>
 
@@ -2044,7 +2044,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 待審借用申請 -->
     <div style="margin-top:24px" id="pending-loan-section">
-      <div style="font-size:13px;font-weight:700;color:#9b59b6;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:#9b59b6;margin-bottom:10px" data-i18n="loan.section.pending">
         待審借用申請
       </div>
       <div id="loan-pending-list"></div>
@@ -2052,7 +2052,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 借用記錄子頁 -->
     <div style="margin-top:24px">
-      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px" data-i18n="loan.section.active">
         目前借出中的設備
       </div>
       <div id="loan-active-list"></div>
@@ -2166,55 +2166,55 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div id="asset-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:12px;width:520px;max-width:95vw;padding:28px 32px;position:relative">
     <button onclick="closeAssetModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
-    <h3 style="margin:0 0 20px;font-size:16px;color:var(--navy)" id="asset-modal-title">新增資產</h3>
+    <h3 style="margin:0 0 20px;font-size:16px;color:var(--navy)" id="asset-modal-title" data-i18n="modal.add_asset">新增資產</h3>
     <input type="hidden" id="am-id">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div style="grid-column:1/-1">
-        <label class="form-label">名稱 *</label>
+        <label class="form-label"><span data-i18n="lbl.name">名稱</span> *</label>
         <input class="form-input" id="am-name" placeholder="例：MacBook Pro 16吋">
       </div>
       <div>
-        <label class="form-label">資產編號</label>
+        <label class="form-label" data-i18n="lbl.asset_no">資產編號</label>
         <input class="form-input" id="am-code" placeholder="例：IT-001">
       </div>
       <div>
-        <label class="form-label">類別</label>
+        <label class="form-label" data-i18n="label.category">類別</label>
         <select class="form-input" id="am-category">
-          <option value="computer">電腦/3C</option>
-          <option value="vehicle">車輛</option>
-          <option value="furniture">辦公家具</option>
-          <option value="tool">工具設備</option>
-          <option value="other">其他</option>
+          <option value="computer" data-i18n="opt.computer">電腦/3C</option>
+          <option value="vehicle" data-i18n="opt.vehicle">車輛</option>
+          <option value="furniture" data-i18n="opt.furniture">辦公家具</option>
+          <option value="tool" data-i18n="opt.tools">工具設備</option>
+          <option value="other" data-i18n="opt.other">其他</option>
         </select>
       </div>
       <div>
-        <label class="form-label">購入日期</label>
+        <label class="form-label" data-i18n="lbl.purchase_date">購入日期</label>
         <input type="date" class="form-input" id="am-purchase-date">
       </div>
       <div>
-        <label class="form-label">購入金額 (NT$)</label>
+        <label class="form-label" data-i18n="lbl.purchase_amount_nt">購入金額 (NT$)</label>
         <input type="number" class="form-input" id="am-price" min="0" step="100" placeholder="0">
       </div>
       <div>
-        <label class="form-label">狀態</label>
+        <label class="form-label" data-i18n="label.status">狀態</label>
         <select class="form-input" id="am-status">
-          <option value="available">可借用</option>
-          <option value="maintenance">維修中</option>
-          <option value="retired">報廢</option>
+          <option value="available" data-i18n="asset.status.available">可借用</option>
+          <option value="maintenance" data-i18n="asset.status.maintenance">維修中</option>
+          <option value="retired" data-i18n="asset.status.retired">報廢</option>
         </select>
       </div>
       <div style="grid-column:1/-1">
-        <label class="form-label">存放位置</label>
+        <label class="form-label" data-i18n="lbl.storage">存放位置</label>
         <input class="form-input" id="am-location" placeholder="例：辦公室 2F 資訊室">
       </div>
       <div style="grid-column:1/-1">
-        <label class="form-label">備註</label>
+        <label class="form-label" data-i18n="th.note_col">備註</label>
         <input class="form-input" id="am-note">
       </div>
     </div>
     <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
-      <button class="btn btn-outline" onclick="closeAssetModal()">取消</button>
-      <button class="btn btn-primary" onclick="saveAssetModal()">儲存</button>
+      <button class="btn btn-outline" onclick="closeAssetModal()" data-i18n="btn.cancel">取消</button>
+      <button class="btn btn-primary" onclick="saveAssetModal()" data-i18n="btn.save">儲存</button>
     </div>
   </div>
 </div>
@@ -2223,30 +2223,30 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div id="loan-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:12px;width:440px;max-width:95vw;padding:28px 32px;position:relative">
     <button onclick="closeLoanModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
-    <h3 style="margin:0 0 4px;font-size:16px;color:var(--navy)">登記借用</h3>
+    <h3 style="margin:0 0 4px;font-size:16px;color:var(--navy)" data-i18n="loan.modal_register">登記借用</h3>
     <p id="loan-modal-sub" style="margin:0 0 20px;font-size:12px;color:var(--muted)"></p>
     <input type="hidden" id="lm-asset-id">
     <div style="display:grid;gap:14px">
       <div>
-        <label class="form-label">借用人 *</label>
+        <label class="form-label"><span data-i18n="lbl.borrower">借用人</span> *</label>
         <select class="form-input" id="lm-staff"></select>
       </div>
       <div>
-        <label class="form-label">借用日期 *</label>
+        <label class="form-label"><span data-i18n="lbl.borrow_date">借用日期</span> *</label>
         <input type="date" class="form-input" id="lm-loan-date">
       </div>
       <div>
-        <label class="form-label">預計歸還日期</label>
+        <label class="form-label" data-i18n="lbl.expected_return">預計歸還日期</label>
         <input type="date" class="form-input" id="lm-return-date">
       </div>
       <div>
-        <label class="form-label">用途</label>
-        <input class="form-input" id="lm-purpose" placeholder="說明用途（選填）">
+        <label class="form-label" data-i18n="lbl.purpose">用途</label>
+        <input class="form-input" id="lm-purpose" placeholder="說明用途（選填）" data-i18n-placeholder="lbl.desc_opt">
       </div>
     </div>
     <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
-      <button class="btn btn-outline" onclick="closeLoanModal()">取消</button>
-      <button class="btn btn-primary" onclick="saveLoanModal()">確認借出</button>
+      <button class="btn btn-outline" onclick="closeLoanModal()" data-i18n="btn.cancel">取消</button>
+      <button class="btn btn-primary" onclick="saveLoanModal()" data-i18n="btn.confirm_loan">確認借出</button>
     </div>
   </div>
 </div>
@@ -2255,17 +2255,17 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div id="loan-review-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:12px;width:440px;max-width:95vw;padding:28px 32px;position:relative">
     <button onclick="closeLoanReviewModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
-    <h3 style="margin:0 0 4px;font-size:16px;color:var(--navy)">審核設備借用申請</h3>
+    <h3 style="margin:0 0 4px;font-size:16px;color:var(--navy)" data-i18n="loan.modal_review_title">審核設備借用申請</h3>
     <p id="lrv-sub" style="margin:0 0 20px;font-size:12px;color:var(--muted)"></p>
     <input type="hidden" id="lrv-id">
     <div style="margin-bottom:12px">
-      <label class="form-label">審核意見</label>
-      <textarea class="form-input" id="lrv-note" rows="3" style="resize:vertical" placeholder="審核說明（選填）"></textarea>
+      <label class="form-label" data-i18n="lbl.review_note">審核意見</label>
+      <textarea class="form-input" id="lrv-note" rows="3" style="resize:vertical" placeholder="審核說明（選填）" data-i18n-placeholder="lbl.review_note_opt"></textarea>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
-      <button class="btn btn-outline" onclick="closeLoanReviewModal()">取消</button>
-      <button class="btn btn-danger" onclick="submitLoanReview('reject')">拒絕</button>
-      <button class="btn btn-primary" onclick="submitLoanReview('approve')">核准</button>
+      <button class="btn btn-outline" onclick="closeLoanReviewModal()" data-i18n="btn.cancel">取消</button>
+      <button class="btn btn-danger" onclick="submitLoanReview('reject')" data-i18n="btn.reject">拒絕</button>
+      <button class="btn btn-primary" onclick="submitLoanReview('approve')" data-i18n="btn.approve">核准</button>
     </div>
   </div>
 </div>
@@ -3432,6 +3432,15 @@ const TRANSLATIONS = {
     // Asset status
     'asset.status.available':'可借用','asset.status.loaned':'借出中',
     'asset.status.maintenance':'維修中','asset.status.retired':'報廢',
+    'asset.total':'總計','asset.stat.pending':'待審申請','asset.search_placeholder':'搜尋名稱/編號…',
+    'asset.deleted':'已刪除',
+    'opt.all_categories':'全部類別','opt.all_status':'全部狀態','opt.other':'其他',
+    'loan.section.pending':'待審借用申請','loan.section.active':'目前借出中的設備',
+    'loan.modal_register':'登記借用','loan.modal_review_title':'審核設備借用申請',
+    'loan.fail':'借出失敗','loan.review_fail':'審核失敗',
+    'btn.add_asset':'＋ 新增資產','btn.confirm_loan':'確認借出',
+    'btn.return_loan':'登記歸還','btn.review_action':'審核',
+    'btn.loan':'借出','btn.return':'歸還','th.asset':'設備',
     // Extra filter labels
     'label.month_query':'查詢月份','label.bi_month':'期別（雙月）','label.yearmonth':'年月',
     'label.advance_warn':'提前預警','label.eval_template':'考核範本','label.eval_period':'考核期間',
@@ -4126,6 +4135,15 @@ const TRANSLATIONS = {
     // Asset status
     'asset.status.available':'Available','asset.status.loaned':'Loaned',
     'asset.status.maintenance':'Maintenance','asset.status.retired':'Retired',
+    'asset.total':'Total','asset.stat.pending':'Pending Reviews','asset.search_placeholder':'Search name/code…',
+    'asset.deleted':'Deleted',
+    'opt.all_categories':'All Categories','opt.all_status':'All Statuses','opt.other':'Other',
+    'loan.section.pending':'Pending Loan Requests','loan.section.active':'Currently Loaned Equipment',
+    'loan.modal_register':'Register Loan','loan.modal_review_title':'Review Loan Request',
+    'loan.fail':'Loan failed','loan.review_fail':'Review failed',
+    'btn.add_asset':'＋ Add Asset','btn.confirm_loan':'Confirm Loan',
+    'btn.return_loan':'Record Return','btn.review_action':'Review',
+    'btn.loan':'Loan','btn.return':'Return','th.asset':'Asset',
     // Extra filter labels
     'label.month_query':'Query Month','label.bi_month':'Bi-Month','label.yearmonth':'Year-Month',
     'label.advance_warn':'Early Alert','label.eval_template':'Template','label.eval_period':'Eval Period',
@@ -4820,6 +4838,15 @@ const TRANSLATIONS = {
     // Asset status
     'asset.status.available':'利用可','asset.status.loaned':'貸出中',
     'asset.status.maintenance':'メンテ中','asset.status.retired':'廃棄',
+    'asset.total':'合計','asset.stat.pending':'審査待ち申請','asset.search_placeholder':'名称/番号を検索…',
+    'asset.deleted':'削除しました',
+    'opt.all_categories':'全カテゴリー','opt.all_status':'全ステータス','opt.other':'その他',
+    'loan.section.pending':'審査待ち借用申請','loan.section.active':'現在貸出中の設備',
+    'loan.modal_register':'貸出登録','loan.modal_review_title':'借用申請の審査',
+    'loan.fail':'貸出に失敗しました','loan.review_fail':'審査に失敗しました',
+    'btn.add_asset':'＋ 資産を追加','btn.confirm_loan':'貸出確認',
+    'btn.return_loan':'返却登録','btn.review_action':'審査',
+    'btn.loan':'貸出','btn.return':'返却','th.asset':'設備',
     // Extra filter labels
     'label.month_query':'照会月','label.bi_month':'双月期別','label.yearmonth':'年月',
     'label.advance_warn':'事前警告','label.eval_template':'テンプレート','label.eval_period':'評価期間',
@@ -5497,6 +5524,15 @@ const TRANSLATIONS = {
     'sched.status.modified_pending':'Sửa đổi chờ','sched.status.not_submitted':'Chưa nộp',
     'travel.status.pending':'Chờ duyệt','travel.status.approved':'Đã duyệt','travel.status.rejected':'Từ chối',
     'asset.status.available':'Sẵn có','asset.status.loaned':'Đang mượn','asset.status.maintenance':'Bảo trì','asset.status.retired':'Thanh lý',
+    'asset.total':'Tổng','asset.stat.pending':'Chờ duyệt','asset.search_placeholder':'Tìm tên/mã…',
+    'asset.deleted':'Đã xóa',
+    'opt.all_categories':'Tất cả danh mục','opt.all_status':'Tất cả trạng thái','opt.other':'Khác',
+    'loan.section.pending':'Yêu cầu mượn chờ duyệt','loan.section.active':'Thiết bị đang được mượn',
+    'loan.modal_register':'Ghi nhận mượn','loan.modal_review_title':'Duyệt yêu cầu mượn',
+    'loan.fail':'Mượn thất bại','loan.review_fail':'Duyệt thất bại',
+    'btn.add_asset':'＋ Thêm tài sản','btn.confirm_loan':'Xác nhận cho mượn',
+    'btn.return_loan':'Ghi nhận trả','btn.review_action':'Duyệt',
+    'btn.loan':'Mượn','btn.return':'Trả','th.asset':'Thiết bị',
     'card.daily_att':'Chấm công hàng ngày','card.today_status':'Tình trạng hôm nay',
     'card.leave_dist':'Phân loại nghỉ phép','card.ot_rank':'Xếp hạng tăng ca',
     'card.anomaly_warn':'Cảnh báo bất thường','card.pending':'Chờ phê duyệt','card.today_table':'Nhân sự hôm nay',
@@ -6164,6 +6200,15 @@ const TRANSLATIONS = {
     'sched.status.modified_pending':'แก้ไขรออนุมัติ','sched.status.not_submitted':'ยังไม่ยื่น',
     'travel.status.pending':'รออนุมัติ','travel.status.approved':'อนุมัติแล้ว','travel.status.rejected':'ปฏิเสธ',
     'asset.status.available':'พร้อมใช้','asset.status.loaned':'ยืมอยู่','asset.status.maintenance':'ซ่อมบำรุง','asset.status.retired':'เลิกใช้',
+    'asset.total':'รวมทั้งหมด','asset.stat.pending':'รอการอนุมัติ','asset.search_placeholder':'ค้นหาชื่อ/รหัส…',
+    'asset.deleted':'ลบแล้ว',
+    'opt.all_categories':'ทุกหมวดหมู่','opt.all_status':'ทุกสถานะ','opt.other':'อื่นๆ',
+    'loan.section.pending':'คำขอยืมที่รอดำเนินการ','loan.section.active':'อุปกรณ์ที่กำลังถูกยืม',
+    'loan.modal_register':'บันทึกการยืม','loan.modal_review_title':'อนุมัติคำขอยืม',
+    'loan.fail':'การยืมล้มเหลว','loan.review_fail':'การอนุมัติล้มเหลว',
+    'btn.add_asset':'＋ เพิ่มสินทรัพย์','btn.confirm_loan':'ยืนยันการยืม',
+    'btn.return_loan':'บันทึกการคืน','btn.review_action':'อนุมัติ',
+    'btn.loan':'ยืม','btn.return':'คืน','th.asset':'อุปกรณ์',
     'card.daily_att':'จำนวนเข้างานรายวัน','card.today_status':'สถานะวันนี้',
     'card.leave_dist':'การกระจายประเภทการลา','card.ot_rank':'อันดับโอที',
     'card.anomaly_warn':'แจ้งเตือนผิดปกติ','card.pending':'รออนุมัติ','card.today_table':'สถานะบุคลากรวันนี้',
@@ -6848,6 +6893,15 @@ const TRANSLATIONS = {
     // Asset status
     'asset.status.available':'可借用','asset.status.loaned':'借出中',
     'asset.status.maintenance':'维修中','asset.status.retired':'报废',
+    'asset.total':'总计','asset.stat.pending':'待审申请','asset.search_placeholder':'搜索名称/编号…',
+    'asset.deleted':'已删除',
+    'opt.all_categories':'全部类别','opt.all_status':'全部状态','opt.other':'其他',
+    'loan.section.pending':'待审借用申请','loan.section.active':'当前借出中的设备',
+    'loan.modal_register':'登记借用','loan.modal_review_title':'审核设备借用申请',
+    'loan.fail':'借出失败','loan.review_fail':'审核失败',
+    'btn.add_asset':'＋ 新增资产','btn.confirm_loan':'确认借出',
+    'btn.return_loan':'登记归还','btn.review_action':'审核',
+    'btn.loan':'借出','btn.return':'归还','th.asset':'设备',
     // Extra filter labels
     'label.month_query':'查询月份','label.bi_month':'期别（双月）','label.yearmonth':'年月',
     'label.advance_warn':'提前预警','label.eval_template':'考核模板','label.eval_period':'考核期间',
@@ -7544,7 +7598,7 @@ const _AUTO_TAG_MAP = {
   '目的地':'th.destination','出發':'th.departure','返回':'th.return_col','預支':'th.advance',
   '編號':'th.asset_no','存放位置':'th.storage','購入金額':'th.purchase_amt',
   '借用人':'th.borrower','借出日':'th.loan_date','預計歸還':'th.expected_return',
-  '借用日':'th.borrow_date','用途':'th.purpose',
+  '借用日':'th.borrow_date','用途':'th.purpose','設備':'th.asset',
   '金額':'th.amount','廠商':'th.vendor','發票/單據':'th.invoice_doc',
   '底薪':'th.base_salary','投保薪資':'th.insured_salary','排休配額':'th.rest_quota',
   '扣除合計':'th.deduct_total','實領金額':'th.net_pay','出勤':'th.attendance',
@@ -15152,19 +15206,19 @@ async function loadAssets() {
   renderAssetList();
 }
 
-const ASSET_CAT_LABEL  = { computer:'電腦/3C', vehicle:'車輛', furniture:'辦公家具', tool:'工具設備', other:'其他' };
+const ASSET_CAT_LABEL  = { get computer(){return t('opt.computer');}, get vehicle(){return t('opt.vehicle');}, get furniture(){return t('opt.furniture');}, get tool(){return t('opt.tools');}, get other(){return t('opt.other');} };
 const ASSET_STATUS_COLOR = { available:'var(--green)', loaned:'var(--orange)', maintenance:'var(--red)', retired:'#aaa' };
 const ASSET_STATUS_LABEL = { get available(){return t('asset.status.available');}, get loaned(){return t('asset.status.loaned');}, get maintenance(){return t('asset.status.maintenance');}, get retired(){return t('asset.status.retired');} };
 
 function renderAssetList() {
   const wrap = document.getElementById('asset-list');
   if (!_assetList.length) {
-    wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無資產記錄</div>';
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">${t('asset.no_records')}</div>`;
     return;
   }
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
-    <th>編號</th><th>名稱</th><th>類別</th><th>存放位置</th>
-    <th style="text-align:right">購入金額</th><th>狀態</th><th>借用人</th><th>操作</th>
+    <th>${t('th.asset_no')}</th><th>${t('th.name_col')}</th><th>${t('label.category')}</th><th>${t('th.storage')}</th>
+    <th style="text-align:right">${t('th.purchase_amt')}</th><th>${t('label.status')}</th><th>${t('th.borrower')}</th><th>${t('th.action')}</th>
   </tr></thead><tbody>${_assetList.map(r => `<tr>
     <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${escHtml(r.code||'—')}</td>
     <td style="font-weight:600">${escHtml(r.name)}</td>
@@ -15172,18 +15226,18 @@ function renderAssetList() {
     <td style="font-size:12px;color:var(--muted)">${escHtml(r.location||'—')}</td>
     <td style="text-align:right;font-family:'DM Mono',monospace;font-size:12px">${r.purchase_price?'$'+Number(r.purchase_price).toLocaleString():'—'}</td>
     <td><span style="font-size:11px;font-weight:700;color:${ASSET_STATUS_COLOR[r.status]||'#888'}">${ASSET_STATUS_LABEL[r.status]||r.status}</span></td>
-    <td style="font-size:12px">${r.loaned_to_name||'—'}${r.expected_return?'<br><span style="color:var(--muted)">預計'+r.expected_return+'歸還</span>':''}</td>
+    <td style="font-size:12px">${r.loaned_to_name||'—'}${r.expected_return?`<br><span style="color:var(--muted)">${t('asset.expected_return').replace('{0}',r.expected_return)}</span>`:''}</td>
     <td style="white-space:nowrap">
-      <button class="btn btn-outline btn-sm" onclick="openAssetModal(${r.id})">編輯</button>
-      ${r.status==='available'?`<button class="btn btn-primary btn-sm" onclick="openLoanModal(${r.id},'${escHtml(r.name)}')" style="margin-left:4px">借出</button>`:''}
-      ${r.status==='loaned'?`<button class="btn btn-outline btn-sm" onclick="returnLoan(${r.id})" style="margin-left:4px">歸還</button>`:''}
-      <button class="btn btn-danger btn-sm" onclick="deleteAsset(${r.id})" style="margin-left:4px">刪除</button>
+      <button class="btn btn-outline btn-sm" onclick="openAssetModal(${r.id})">${t('btn.edit')}</button>
+      ${r.status==='available'?`<button class="btn btn-primary btn-sm" onclick="openLoanModal(${r.id},'${escHtml(r.name)}')" style="margin-left:4px">${t('btn.loan')}</button>`:''}
+      ${r.status==='loaned'?`<button class="btn btn-outline btn-sm" onclick="returnLoan(${r.id})" style="margin-left:4px">${t('btn.return')}</button>`:''}
+      <button class="btn btn-danger btn-sm" onclick="deleteAsset(${r.id})" style="margin-left:4px">${t('btn.delete')}</button>
     </td>
   </tr>`).join('')}</tbody></table>`;
 }
 
 async function openAssetModal(id=null) {
-  document.getElementById('asset-modal-title').textContent = id ? '編輯資產' : '新增資產';
+  document.getElementById('asset-modal-title').textContent = id ? t('asset.modal_edit') : t('asset.modal_add');
   document.getElementById('am-id').value = id||'';
   if (id) {
     const a = _assetList.find(x=>x.id===id);
@@ -15219,23 +15273,23 @@ async function saveAssetModal() {
     location:      document.getElementById('am-location').value.trim(),
     note:          document.getElementById('am-note').value.trim(),
   };
-  if (!body.name) return showToast('名稱必填','warning');
+  if (!body.name) return showToast(t('asset.name_required'),'warning');
   const url    = id ? `/api/assets/${id}` : '/api/assets';
   const method = id ? 'PUT' : 'POST';
   const { ok } = await api(url, { method, body: JSON.stringify(body) });
-  if (ok) { closeAssetModal(); loadAssets(); showToast(id?'已更新':'已新增','success'); }
+  if (ok) { closeAssetModal(); loadAssets(); showToast(id?t('asset.updated'):t('asset.added'),'success'); }
 }
 
 async function deleteAsset(id) {
-  if (!confirm('確定刪除此資產？')) return;
+  if (!confirm(t('asset.confirm_delete'))) return;
   const { ok } = await api(`/api/assets/${id}`, { method:'DELETE' });
-  if (ok) { loadAssets(); showToast('已刪除','success'); }
+  if (ok) { loadAssets(); showToast(t('asset.deleted'),'success'); }
 }
 
 // 借用
 async function openLoanModal(assetId, assetName) {
   document.getElementById('lm-asset-id').value = assetId;
-  document.getElementById('loan-modal-sub').textContent = `設備：${assetName}`;
+  document.getElementById('loan-modal-sub').textContent = t('loan.loan_modal_sub').replace('{0}',assetName);
   document.getElementById('lm-loan-date').value   = new Date().toISOString().slice(0,10);
   document.getElementById('lm-return-date').value = '';
   document.getElementById('lm-purpose').value     = '';
@@ -15256,67 +15310,67 @@ async function saveLoanModal() {
     expected_return: document.getElementById('lm-return-date').value||null,
     purpose:         document.getElementById('lm-purpose').value.trim(),
   };
-  if (!body.loan_date||!body.staff_id) return showToast('請選擇借用人及日期','warning');
+  if (!body.loan_date||!body.staff_id) return showToast(t('loan.fill_required'),'warning');
   const { ok, data } = await api(`/api/assets/${aid}/loans`, { method:'POST', body:JSON.stringify(body) });
-  if (!ok) { showToast(data?.error||'借出失敗','error'); return; }
-  closeLoanModal(); loadAssets(); loadActiveLoanList(); showToast('已登記借出','success');
+  if (!ok) { showToast(data?.error||t('loan.fail'),'error'); return; }
+  closeLoanModal(); loadAssets(); loadActiveLoanList(); showToast(t('loan.loaned'),'success');
 }
 
 async function returnLoan(assetId) {
   const asset = _assetList.find(x=>x.id===assetId);
   if (!asset) return;
-  if (!confirm(`確定登記「${asset.name}」已歸還？`)) return;
+  if (!confirm(t('loan.confirm_return').replace('{0}',asset.name))) return;
   // find active loan
   const { ok, data } = await api(`/api/assets/${assetId}/loans`, {}, true);
   if (!ok) return;
   const active = data.find(l=>l.status==='active');
-  if (!active) return showToast('找不到借出記錄','error');
+  if (!active) return showToast(t('loan.not_found'),'error');
   const { ok: ok2 } = await api(`/api/assets/loans/${active.id}/return`, { method:'POST', body:JSON.stringify({ return_date: new Date().toISOString().slice(0,10) }) });
-  if (ok2) { loadAssets(); loadActiveLoanList(); showToast('已登記歸還','success'); }
+  if (ok2) { loadAssets(); loadActiveLoanList(); showToast(t('loan.returned'),'success'); }
 }
 
 async function loadActiveLoanList() {
   const { ok, data } = await api('/api/assets/loans?status=active', {}, true);
   const wrap = document.getElementById('loan-active-list');
   if (!ok||!data.length) {
-    wrap.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0">目前無設備借出</div>';
+    wrap.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:8px 0">${t('loan.no_active')}</div>`;
     return;
   }
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
-    <th>設備</th><th>類別</th><th>借用人</th><th>借出日</th><th>預計歸還</th><th>操作</th>
+    <th>${t('th.asset')}</th><th>${t('label.category')}</th><th>${t('th.borrower')}</th><th>${t('th.loan_date')}</th><th>${t('th.expected_return')}</th><th>${t('th.action')}</th>
   </tr></thead><tbody>${data.map(r=>`<tr>
     <td style="font-weight:600">${escHtml(r.asset_name)} <span style="font-size:11px;color:var(--muted)">${escHtml(r.asset_code||'')}</span></td>
     <td style="font-size:12px">${ASSET_CAT_LABEL[r.asset_category]||r.asset_category}</td>
     <td>${escHtml(r.staff_name)}</td>
     <td style="font-size:12px">${r.loan_date}</td>
-    <td style="font-size:12px;color:${r.expected_return&&r.expected_return<new Date().toISOString().slice(0,10)?'var(--red)':'inherit'}">${r.expected_return||'未設定'}</td>
-    <td><button class="btn btn-outline btn-sm" onclick="returnLoanById(${r.id})">登記歸還</button></td>
+    <td style="font-size:12px;color:${r.expected_return&&r.expected_return<new Date().toISOString().slice(0,10)?'var(--red)':'inherit'}">${r.expected_return||t('loan.expected_return_not_set')}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="returnLoanById(${r.id})">${t('btn.return_loan')}</button></td>
   </tr>`).join('')}</tbody></table>`;
 }
 
 async function returnLoanById(lid) {
-  if (!confirm('確定登記歸還？')) return;
+  if (!confirm(t('loan.confirm_return2'))) return;
   const { ok } = await api(`/api/assets/loans/${lid}/return`, { method:'POST', body:JSON.stringify({ return_date: new Date().toISOString().slice(0,10) }) });
-  if (ok) { loadAssets(); loadActiveLoanList(); showToast('已登記歸還','success'); }
+  if (ok) { loadAssets(); loadActiveLoanList(); showToast(t('loan.returned'),'success'); }
 }
 
 async function loadPendingLoanList() {
   const { ok, data } = await api('/api/assets/loans?status=pending', {}, true);
   const wrap = document.getElementById('loan-pending-list');
   if (!ok || !data.length) {
-    wrap.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:8px 0">目前無待審借用申請</div>';
+    wrap.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:8px 0">${t('loan.no_pending')}</div>`;
     return;
   }
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
-    <th>申請人</th><th>設備</th><th>類別</th><th>借用日</th><th>預計歸還</th><th>用途</th><th>操作</th>
+    <th>${t('th.applicant')}</th><th>${t('th.asset')}</th><th>${t('label.category')}</th><th>${t('th.borrow_date')}</th><th>${t('th.expected_return')}</th><th>${t('th.purpose')}</th><th>${t('th.action')}</th>
   </tr></thead><tbody>${data.map(r=>`<tr>
     <td style="font-weight:600">${escHtml(r.staff_name||'')}</td>
     <td style="font-weight:600">${escHtml(r.asset_name||'')} <span style="font-size:11px;color:var(--muted)">${escHtml(r.asset_code||'')}</span></td>
     <td style="font-size:12px">${ASSET_CAT_LABEL[r.asset_category]||r.asset_category||''}</td>
     <td style="font-size:12px">${r.loan_date||''}</td>
-    <td style="font-size:12px">${r.expected_return||'未設定'}</td>
+    <td style="font-size:12px">${r.expected_return||t('loan.expected_return_not_set')}</td>
     <td style="font-size:12px;color:var(--muted)">${escHtml(r.purpose||'—')}</td>
-    <td><button class="btn btn-primary btn-sm" onclick="openLoanReviewModal(${r.id},'${escHtml((r.staff_name||'')+'／'+(r.asset_name||''))}')">審核</button></td>
+    <td><button class="btn btn-primary btn-sm" onclick="openLoanReviewModal(${r.id},'${escHtml((r.staff_name||'')+'／'+(r.asset_name||''))}')">${t('btn.review_action')}</button></td>
   </tr>`).join('')}</tbody></table>`;
 }
 
@@ -15334,10 +15388,10 @@ async function submitLoanReview(action) {
   const { ok, data } = await api(`/api/assets/loans/${id}/review`, {
     method:'POST', body: JSON.stringify({ action, review_note: note, reviewed_by: _adminName||'' })
   });
-  if (!ok) { showToast(data?.error||'審核失敗','error'); return; }
+  if (!ok) { showToast(data?.error||t('loan.review_fail'),'error'); return; }
   closeLoanReviewModal();
   loadAssets(); loadActiveLoanList(); loadPendingLoanList();
-  showToast(action==='approve'?'已核准借用':'已拒絕申請','success');
+  showToast(action==='approve'?t('loan.approved_toast'):t('loan.rejected_toast'),'success');
 }
 </script>
 </html>
