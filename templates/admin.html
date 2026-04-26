@@ -453,7 +453,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sum-month" onchange="loadPunchSummary()">
         <span style="flex:1"></span>
-        <a href="/staff" target="_blank" class="btn btn-outline btn-sm">員工系統</a>
+        <a href="/staff" target="_blank" class="btn btn-outline btn-sm" data-i18n="btn.staff_system">員工系統</a>
         <button class="btn btn-primary btn-sm" data-i18n="btn.export_sum_excel" onclick="exportAttSummaryExcel()">匯出摘要 Excel</button>
         <button class="btn btn-ghost btn-sm" data-i18n="btn.export_detail_excel" onclick="exportAttDetailExcel()">匯出明細 Excel</button>
         <button class="btn btn-outline btn-sm" data-i18n="btn.export_sum_csv" onclick="exportAttSummary()">摘要 CSV</button>
@@ -473,7 +473,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div id="punch-panel-records" style="display:none">
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
         <span class="filter-label" data-i18n="label.staff">員工</span>
-        <select class="filter-input" id="rec-filter-staff" onchange="loadPunchRecords()" style="min-width:120px"><option value="">全部</option></select>
+        <select class="filter-input" id="rec-filter-staff" onchange="loadPunchRecords()" style="min-width:120px"><option value="" data-i18n="status.all">全部</option></select>
         <div class="filter-divider"></div>
         <span class="filter-label" data-i18n="label.date">日期</span>
         <input class="filter-input" type="date" id="rec-filter-from" onchange="loadPunchRecords()">
@@ -482,7 +482,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div class="filter-divider"></div>
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="rec-filter-month" onchange="recMonthChange()">
-        <button class="btn btn-ghost btn-sm" onclick="clearRecFilter()">清除</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearRecFilter()" data-i18n="btn.clear">清除</button>
       </div>
       <div class="card">
         <div class="card-header"><span class="card-title">打卡記錄</span><span id="rec-count" style="font-size:12px;color:var(--muted)"></span></div>
@@ -499,19 +499,19 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div id="punch-panel-manual" style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="manual-grid">
         <div class="card" style="padding:24px">
-          <div class="card-title" style="margin-bottom:6px;padding:0">代補打卡（代員工新增打卡記錄）</div><div style="font-size:12px;color:var(--muted);margin-bottom:16px">此功能供管理員直接幫員工補齊漏打的打卡記錄，不需員工申請。</div>
-          <div style="margin-bottom:14px"><label class="form-label">員工</label><select class="form-input" id="man-staff" style="width:100%"></select></div>
+          <div class="card-title" style="margin-bottom:6px;padding:0" data-i18n="card.manual_punch">代補打卡（代員工新增打卡記錄）</div><div style="font-size:12px;color:var(--muted);margin-bottom:16px" data-i18n="card.manual_punch_desc">此功能供管理員直接幫員工補齊漏打的打卡記錄，不需員工申請。</div>
+          <div style="margin-bottom:14px"><label class="form-label" data-i18n="label.staff">員工</label><select class="form-input" id="man-staff" style="width:100%"></select></div>
           <div style="margin-bottom:14px">
-            <label class="form-label">打卡類型</label>
+            <label class="form-label" data-i18n="lbl.punch_type">打卡類型</label>
             <select class="form-input" id="man-type" style="width:100%">
-              <option value="in">上班打卡</option><option value="out">下班打卡</option>
-              <option value="break_out">休息開始</option><option value="break_in">休息結束</option>
+              <option value="in" data-i18n="punch.label.in">上班打卡</option><option value="out" data-i18n="punch.label.out">下班打卡</option>
+              <option value="break_out" data-i18n="punch.label.break_out">休息開始</option><option value="break_in" data-i18n="punch.label.break_in">休息結束</option>
             </select>
           </div>
-          <div style="margin-bottom:14px"><label class="form-label">補打時間</label><input class="form-input" type="datetime-local" id="man-time" style="width:100%"></div>
-          <div style="margin-bottom:14px"><label class="form-label">操作人員</label><input class="form-input" id="man-by" placeholder="管理員姓名" style="width:100%"></div>
-          <div style="margin-bottom:20px"><label class="form-label">補打原因</label><input class="form-input" id="man-note" placeholder="例：忘記打卡" style="width:100%"></div>
-          <button class="btn btn-primary" style="width:100%" onclick="submitManualPunch()">送出補打卡</button>
+          <div style="margin-bottom:14px"><label class="form-label" data-i18n="lbl.corr_time">補打時間</label><input class="form-input" type="datetime-local" id="man-time" style="width:100%"></div>
+          <div style="margin-bottom:14px"><label class="form-label" data-i18n="lbl.operator">操作人員</label><input class="form-input" id="man-by" data-i18n-placeholder="ph.admin_name" placeholder="管理員姓名" style="width:100%"></div>
+          <div style="margin-bottom:20px"><label class="form-label" data-i18n="lbl.corr_reason">補打原因</label><input class="form-input" id="man-note" data-i18n-placeholder="ph.forget_punch" placeholder="例：忘記打卡" style="width:100%"></div>
+          <button class="btn btn-primary" style="width:100%" onclick="submitManualPunch()" data-i18n="btn.submit_manual">送出補打卡</button>
         </div>
         <div class="card">
           <div class="card-header"><span class="card-title">近期補打記錄</span></div>
@@ -530,8 +530,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
         <span id="punch-staff-count" style="font-size:13px;color:var(--muted)"></span>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-outline btn-sm" onclick="exportStaffExcel()">匯出 Excel</button>
-          <button class="btn btn-primary" onclick="openPunchStaffModal()">新增員工</button>
+          <button class="btn btn-outline btn-sm" onclick="exportStaffExcel()" data-i18n="btn.export_excel">匯出 Excel</button>
+          <button class="btn btn-primary" onclick="openPunchStaffModal()" data-i18n="btn.add_staff">新增員工</button>
         </div>
       </div>
       <div class="card">
@@ -638,14 +638,14 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="filter-bar" style="margin-bottom:20px;gap:14px;flex-wrap:wrap">
         <span class="filter-label" data-i18n="label.gps_mode">GPS 驗證模式</span>
         <select class="filter-input" id="gps-required" onchange="saveGpsConfig()" style="min-width:220px">
-          <option value="0">不強制（記錄距離但不阻擋打卡）</option>
-          <option value="1">強制（超出所有地點範圍則禁止打卡）</option>
+          <option value="0" data-i18n="opt.gps_optional">不強制（記錄距離但不阻擋打卡）</option>
+          <option value="1" data-i18n="opt.gps_mandatory">強制（超出所有地點範圍則禁止打卡）</option>
         </select>
-        <span style="font-size:12px;color:var(--muted)">變更後自動儲存</span>
+        <span style="font-size:12px;color:var(--muted)" data-i18n="gps.auto_save">變更後自動儲存</span>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
         <span id="gps-loc-count" style="font-size:13px;color:var(--muted)" data-i18n="loading">載入中...</span>
-        <button class="btn btn-primary" onclick="openLocModal()">新增地點</button>
+        <button class="btn btn-primary" onclick="openLocModal()" data-i18n="modal.add_location">新增地點</button>
       </div>
       <div id="gps-loc-list" style="margin-bottom:20px"></div>
       <div class="card" style="padding:16px 20px;background:var(--bg)">
@@ -661,15 +661,15 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div id="punch-panel-line" style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
         <div class="card" style="padding:24px">
-          <div class="card-title" style="padding:0;margin-bottom:6px">LINE 官方帳號打卡設定</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:20px">員工透過 LINE 傳送位置訊息即可打卡</div>
+          <div class="card-title" style="padding:0;margin-bottom:6px" data-i18n="card.line_config">LINE 官方帳號打卡設定</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:20px" data-i18n="line.punch_desc">員工透過 LINE 傳送位置訊息即可打卡</div>
           <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px">
-            <label class="form-label" style="margin:0">啟用 LINE 打卡</label>
-            <select class="form-input" id="lp-enabled" style="width:auto"><option value="0">停用</option><option value="1">啟用</option></select>
+            <label class="form-label" style="margin:0" data-i18n="lbl.enable_line">啟用 LINE 打卡</label>
+            <select class="form-input" id="lp-enabled" style="width:auto"><option value="0" data-i18n="opt.disable">停用</option><option value="1" data-i18n="opt.enable">啟用</option></select>
           </div>
           <div style="margin-bottom:14px"><label class="form-label">Channel Access Token</label><input class="form-input" id="lp-token" placeholder="長效 Token（Messaging API）" style="width:100%;font-family:'DM Mono',monospace;font-size:12px"></div>
           <div style="margin-bottom:20px"><label class="form-label">Channel Secret</label><input class="form-input" id="lp-secret" placeholder="Channel Secret" style="width:100%;font-family:'DM Mono',monospace;font-size:12px"></div>
-          <button class="btn btn-primary" onclick="saveLinePunchConfig()" style="width:100%">儲存設定</button>
+          <button class="btn btn-primary" onclick="saveLinePunchConfig()" style="width:100%" data-i18n="btn.save_settings">儲存設定</button>
           <div id="lp-save-msg" style="font-size:12px;color:var(--green);margin-top:10px;min-height:16px"></div>
           <div style="margin-top:20px;padding:14px;background:var(--bg);border-radius:8px">
             <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">Webhook URL</div>
@@ -708,9 +708,9 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-              <button class="btn btn-primary btn-sm" onclick="createRichMenu()">建立圖文選單</button>
-              <button class="btn btn-outline btn-sm" onclick="loadRichMenus()">查看現有選單</button>
-              <button class="btn btn-ghost btn-sm" onclick="unsetRichMenu()">取消預設選單</button>
+              <button class="btn btn-primary btn-sm" onclick="createRichMenu()" data-i18n="btn.create_rich_menu">建立圖文選單</button>
+              <button class="btn btn-outline btn-sm" onclick="loadRichMenus()" data-i18n="btn.view_menus">查看現有選單</button>
+              <button class="btn btn-ghost btn-sm" onclick="unsetRichMenu()" data-i18n="btn.unset_default">取消預設選單</button>
             </div>
             <div id="rm-msg" style="font-size:12px;min-height:16px;margin-bottom:10px"></div>
             <div id="rm-list" style="display:none"><div id="rm-list-body"></div></div>
@@ -810,8 +810,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 班別設定 -->
     <div id="sched-panel-shifttypes" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <span style="font-size:12px;color:var(--muted)">設定工作班別與時間</span>
-        <button class="btn btn-primary" onclick="openShiftTypeModal()">新增班別</button>
+        <span style="font-size:12px;color:var(--muted)" data-i18n="sched.shift_types_desc">設定工作班別與時間</span>
+        <button class="btn btn-primary" onclick="openShiftTypeModal()" data-i18n="btn.add_shift">新增班別</button>
       </div>
       <div class="card">
         <div class="table-wrap">
@@ -829,7 +829,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sched-cal-month" onchange="loadSchedCalendar()">
         <span style="flex:1"></span>
-        <a href="/staff" target="_blank" class="btn btn-outline btn-sm">員工系統</a>
+        <a href="/staff" target="_blank" class="btn btn-outline btn-sm" data-i18n="btn.staff_system">員工系統</a>
       </div>
       <div id="sched-cal-wrap"></div>
     </div>
@@ -894,7 +894,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
             <div><label class="form-label">每人每月休假配額（天）</label><input class="form-input" type="number" id="cfg-quota" min="1" max="31" value="8"></div>
           </div>
           <div style="margin-bottom:18px"><label class="form-label">備註</label><input class="form-input" id="cfg-notes" placeholder="選填" style="width:100%"></div>
-          <button class="btn btn-primary" onclick="saveSchedConfig()" style="width:100%">儲存設定</button>
+          <button class="btn btn-primary" onclick="saveSchedConfig()" style="width:100%" data-i18n="btn.save_settings">儲存設定</button>
           <div id="cfg-msg" style="font-size:12px;color:var(--green);margin-top:10px;min-height:16px"></div>
         </div>
       </div>
@@ -959,7 +959,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div class="filter-divider"></div>
         <span class="filter-label" data-i18n="label.staff">員工</span>
         <select class="filter-input" id="leave-req-staff" onchange="loadLeaveRequests()" style="min-width:120px">
-          <option value="">全部</option>
+          <option value="" data-i18n="status.all">全部</option>
         </select>
         <span style="flex:1"></span>
         <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text)" data-i18n="btn.select_all">
@@ -988,7 +988,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
         <span class="filter-label" data-i18n="label.year">年度</span>
         <select class="filter-input" id="leave-bal-year" onchange="loadLeaveBalances()" style="min-width:100px"></select>
-        <button class="btn btn-outline btn-sm" onclick="initAnnualLeave()">自動計算特休（依年資）</button>
+        <button class="btn btn-outline btn-sm" onclick="initAnnualLeave()" data-i18n="btn.calc_annual">自動計算特休</button>
         <span style="flex:1"></span>
         <button class="btn btn-outline btn-sm" onclick="exportLeaveBalancesExcel()">匯出 Excel</button>
         <span id="leave-bal-note" style="font-size:12px;color:var(--muted)"></span>
@@ -999,8 +999,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 假別設定 -->
     <div id="leave-panel-types" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <span style="font-size:12px;color:var(--muted)">設定假別名稱、薪資倍率、天數上限</span>
-        <button class="btn btn-primary" onclick="openLeaveTypeModal()">新增假別</button>
+        <span style="font-size:12px;color:var(--muted)" data-i18n="leave.types_desc">設定假別名稱、薪資倍率、天數上限</span>
+        <button class="btn btn-primary" onclick="openLeaveTypeModal()" data-i18n="btn.add_leave_type">新增假別</button>
       </div>
       <div class="card">
         <div class="table-wrap">
@@ -1039,7 +1039,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sal-month" onchange="loadSalaryRecords()">
         <button class="btn btn-outline btn-sm" onclick="previewSalary()">預覽計算明細</button>
-        <button class="btn btn-primary btn-sm" onclick="generateSalary()">確認產生薪資</button>
+        <button class="btn btn-primary btn-sm" onclick="generateSalary()" data-i18n="btn.gen_salary">自動產生薪資</button>
         <button class="btn btn-outline btn-sm" id="sal-confirm-all-btn" onclick="confirmAllSalary()" style="display:none">全部確認</button>
         <button class="btn btn-outline btn-sm" id="sal-bulk-print-btn" onclick="bulkPrintPayslips()" style="display:none">列印全部薪資單</button>
         <button class="btn btn-primary btn-sm" data-i18n="btn.export_salary_excel" onclick="exportSalaryExcel()">匯出薪資 Excel</button>
@@ -1085,8 +1085,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 薪資項目 -->
     <div id="salary-panel-items" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <span style="font-size:12px;color:var(--muted)">設定每月薪資計算時使用的津貼和扣除項目</span>
-        <button class="btn btn-primary" onclick="openSalaryItemModal()">新增項目</button>
+        <span style="font-size:12px;color:var(--muted)" data-i18n="salary.items_desc">設定每月薪資計算時使用的津貼和扣除項目</span>
+        <button class="btn btn-primary" onclick="openSalaryItemModal()" data-i18n="btn.add_record">新增項目</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="salary-items-grid">
         <div><div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:12px">津貼項目（加項）</div><div id="sal-items-allow"></div></div>
@@ -1218,22 +1218,22 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <select class="filter-input" id="ann-filter-cat" onchange="loadAnnList()" style="min-width:120px">
-          <option value="">全部類別</option>
-          <option value="general">一般公告</option>
-          <option value="hr">人事公告</option>
-          <option value="event">活動通知</option>
-          <option value="urgent">緊急公告</option>
-          <option value="policy">制度政策</option>
+          <option value="" data-i18n="opt.all_categories">全部類別</option>
+          <option value="general" data-i18n="opt.general_ann">一般公告</option>
+          <option value="hr" data-i18n="opt.hr_ann">人事公告</option>
+          <option value="event" data-i18n="opt.event_notice">活動通知</option>
+          <option value="urgent" data-i18n="opt.urgent_ann">緊急公告</option>
+          <option value="policy" data-i18n="opt.policy">制度政策</option>
         </select>
         <select class="filter-input" id="ann-filter-status" onchange="loadAnnList()" style="min-width:110px">
-          <option value="">全部狀態</option>
-          <option value="active">上架中</option>
-          <option value="inactive">已下架</option>
+          <option value="" data-i18n="opt.all_status">全部狀態</option>
+          <option value="active" data-i18n="opt.published">上架中</option>
+          <option value="inactive" data-i18n="opt.unpublished">已下架</option>
         </select>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline btn-sm" onclick="exportAnnouncementsExcel()">匯出 Excel</button>
-        <button class="btn btn-primary" onclick="openAnnModal()">＋ 新增公告</button>
+        <button class="btn btn-outline btn-sm" onclick="exportAnnouncementsExcel()" data-i18n="btn.export_excel">匯出 Excel</button>
+        <button class="btn btn-primary" onclick="openAnnModal()" data-i18n="btn.add_ann">新增公告</button>
       </div>
     </div>
     <div id="ann-list">
@@ -1312,15 +1312,15 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <!-- 三欄 KPI -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
         <div class="card" style="padding:20px;text-align:center">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">本月收入</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px" data-i18n="fin.kpi.income">本月收入</div>
           <div id="fin-kpi-income" style="font-size:26px;font-weight:700;color:var(--green);font-family:'DM Mono',monospace">—</div>
         </div>
         <div class="card" style="padding:20px;text-align:center">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">本月支出</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px" data-i18n="fin.kpi.expense">本月支出</div>
           <div id="fin-kpi-expense" style="font-size:26px;font-weight:700;color:var(--red);font-family:'DM Mono',monospace">—</div>
         </div>
         <div class="card" style="padding:20px;text-align:center">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">淨損益</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px" data-i18n="fin.kpi.net">淨損益</div>
           <div id="fin-kpi-net" style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace">—</div>
         </div>
       </div>
@@ -1358,7 +1358,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         </select>
         <span style="flex:1"></span>
         <button class="btn btn-outline btn-sm" onclick="exportFinanceRecordsExcel()">匯出 Excel</button>
-        <button class="btn btn-primary btn-sm" onclick="openFinRecModal()">新增記錄</button>
+        <button class="btn btn-primary btn-sm" onclick="openFinRecModal()" data-i18n="btn.add_record">新增記錄</button>
       </div>
       <div class="card">
         <div class="table-wrap">
@@ -1375,7 +1375,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div id="fin-panel-cats" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <span style="font-size:12px;color:var(--muted)">管理收支類別</span>
-        <button class="btn btn-primary" onclick="openFinCatModal()">新增類別</button>
+        <button class="btn btn-primary" onclick="openFinCatModal()" data-i18n="btn.add_category">新增類別</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="card">
@@ -1662,8 +1662,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- ── 帳號管理 ── -->
   <div class="page" id="page-adminmgr" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-      <span style="font-size:13px;color:var(--muted)">管理後台登入帳號，可自由勾選各帳號可存取的模組</span>
-      <button class="btn btn-primary" onclick="openAdminAccModal()">新增帳號</button>
+      <span style="font-size:13px;color:var(--muted)" data-i18n="adminmgr.desc">管理後台登入帳號，可自由勾選各帳號可存取的模組</span>
+      <button class="btn btn-primary" onclick="openAdminAccModal()" data-i18n="btn.add_admin">新增員工(管)</button>
     </div>
     <div class="card">
       <div class="table-wrap">
@@ -1678,10 +1678,10 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- ── 門市管理 ── -->
   <div class="page" id="page-stores" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <span style="font-size:13px;color:var(--muted)">管理多個門市，並為員工指派所屬門市</span>
+      <span style="font-size:13px;color:var(--muted)" data-i18n="stores.desc">管理多個門市，並為員工指派所屬門市</span>
       <div style="display:flex;gap:8px">
         <button class="btn btn-outline btn-sm" onclick="exportStoresExcel()">匯出 Excel</button>
-        <button class="btn btn-primary btn-sm" onclick="openStoreModal()">新增門市</button>
+        <button class="btn btn-primary btn-sm" onclick="openStoreModal()" data-i18n="btn.add_store">新增門市</button>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
@@ -1733,7 +1733,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 人員概覽 -->
     <div id="training-panel-overview">
       <div class="filter-bar" style="margin-bottom:16px">
-        <button class="btn btn-primary btn-sm" onclick="openTrainingModal()">新增訓練記錄</button>
+        <button class="btn btn-primary btn-sm" onclick="openTrainingModal()" data-i18n="modal.add_training">新增訓練記錄</button>
         <button class="btn btn-outline btn-sm" onclick="loadTrainingSummary()">重新整理</button>
         <span style="flex:1"></span>
         <button class="btn btn-outline btn-sm" onclick="exportTrainingExcel()">匯出 Excel</button>
@@ -1773,7 +1773,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <option value="general" data-i18n="training.cat.general">一般訓練</option>
           <option value="other" data-i18n="training.cat.other">其他</option>
         </select>
-        <button class="btn btn-primary btn-sm" onclick="openTrainingModal()">新增記錄</button>
+        <button class="btn btn-primary btn-sm" onclick="openTrainingModal()" data-i18n="btn.add_record">新增記錄</button>
         <span style="flex:1"></span>
         <button class="btn btn-outline btn-sm" onclick="exportTrainingExcel()">匯出 Excel</button>
       </div>
@@ -1972,7 +1972,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <select class="filter-input" id="travel-filter-staff" onchange="loadTravel()" style="min-width:120px">
         <option value="">全部員工</option>
       </select>
-      <button class="btn btn-primary btn-sm" onclick="openTravelModal()">＋ 新增差旅申請</button>
+      <button class="btn btn-primary btn-sm" onclick="openTravelModal()" data-i18n="btn.add_travel">新增差旅</button>
       <button class="btn btn-outline btn-sm" onclick="loadTravel()">重新整理</button>
     </div>
 
@@ -3384,6 +3384,8 @@ const TRANSLATIONS = {
     'fin.tab.bank':'銀行對帳','fin.tab.tax':'稅務申報','fin.tab.ap':'應收付款',
     'fin.tab.budget':'預算管理','fin.tab.payroll':'薪資連動','fin.tab.stmts':'財務報表',
     'fin.tab.settings':'財務設定',
+    // Finance KPI
+    'fin.kpi.income':'本月收入','fin.kpi.expense':'本月支出','fin.kpi.net':'淨損益',
     // Filter labels
     'label.month':'月份','label.year':'年度','label.staff':'員工','label.date':'日期',
     'label.status':'狀態','label.gps_mode':'GPS 驗證模式','label.store':'門市','label.dept':'部門',
@@ -3417,6 +3419,23 @@ const TRANSLATIONS = {
     'btn.admin_fill':'管理員代填','btn.select_all':'全選',
     'btn.batch_approve':'批次核准','btn.batch_reject':'批次退回',
     'status.direct_approve':'直接核准',
+    // Extra buttons
+    'btn.staff_system':'員工系統','btn.add_staff':'新增員工','btn.clear':'清除',
+    'btn.submit_manual':'送出補打卡','btn.add_config':'新增設定','btn.save_settings':'儲存設定',
+    'btn.create_rich_menu':'建立圖文選單','btn.view_menus':'查看現有選單','btn.unset_default':'取消預設選單',
+    'btn.add_shift':'新增班別','btn.add_leave_type':'新增假別','btn.add_admin':'新增員工(管)',
+    'btn.calc_annual':'自動計算特休','btn.gen_salary':'自動產生薪資',
+    'btn.add_holiday':'新增假日','btn.add_ann':'新增公告','btn.add_store':'新增門市',
+    'btn.add_record':'新增記錄','btn.add_category':'新增科目',
+    'btn.add_expense':'新增費用','btn.add_travel':'新增差旅',
+    // Extra descriptions
+    'card.manual_punch_desc':'此功能供管理員直接幫員工補齊漏打的打卡記錄，不需員工申請。',
+    'line.punch_desc':'員工透過 LINE 傳送位置訊息即可打卡',
+    'sched.shift_types_desc':'設定工作班別與時間',
+    'leave.types_desc':'設定假別名稱、薪資倍率、天數上限',
+    'salary.items_desc':'設定每月薪資計算時使用的津貼和扣除項目',
+    'adminmgr.desc':'管理後台登入帳號，可自由勾選各帳號可存取的模組',
+    'stores.desc':'管理多個門市，並為員工指派所屬門市',
     // Search
     'search.staff_placeholder':'🔍 搜尋員工...',
     // Punch labels
@@ -3604,7 +3623,14 @@ const TRANSLATIONS = {
     'modal.add_ap':'新增應付帳款','modal.set_budget':'設定月度預算',
     'modal.add_recurring':'新增定期分錄','modal.manual_match':'手動配對收支記錄',
     'modal.ocr_raw':'OCR 辨識原始資料','modal.add_account':'新增帳號',
-    'modal.resign':'辦理離職','modal.formula_editor':'公式編輯器',
+    'modal.resign':'辦理離職',
+    'modal.edit_staff':'編輯員工',
+    'btn.terminate':'離職','btn.reinstate':'復職',
+    'lbl.reason_pfx':'原因：','lbl.date_pfx':'日期：','lbl.time_pfx':'時間：','lbl.hours_sfx':'小時',
+    'preq.apply_punch':'申請補打：',
+    'sched.review_title':'審核 {0} 的排休申請','sched.days_total':'共 {0} 天',
+    'otrm.review_title':'審核加班申請 — {0}',
+    'modal.formula_editor':'公式編輯器',
     'modal.edit_training':'編輯訓練記錄','modal.edit_travel':'編輯差旅申請',
     'modal.expense_voucher':'費用核銷','modal.edit_asset':'編輯資產',
     // Select options
@@ -3690,6 +3716,8 @@ const TRANSLATIONS = {
     'gps.got':'已取得目前位置','gps.failed':'無法取得位置',
     'gps.name_required':'請填入地點名稱','gps.coords_required':'請填入緯度和經度',
     'gps.updated':'地點已更新','gps.added':'地點已新增',
+    'gps.auto_save':'變更後自動儲存',
+    'ph.admin_name':'管理員姓名','ph.forget_punch':'例：忘記打卡',
     'gps.confirm_delete':'確定刪除地點「{0}」？',
     'line.enabled_status':'目前狀態：已啟用','line.disabled_status':'目前狀態：未啟用',
     'line.token_required':'啟用時必須填寫 Token 和 Secret',
@@ -4086,6 +4114,8 @@ const TRANSLATIONS = {
     'fin.tab.bank':'Bank Recon.','fin.tab.tax':'Tax Filing','fin.tab.ap':'AP/AR',
     'fin.tab.budget':'Budget','fin.tab.payroll':'Payroll Link','fin.tab.stmts':'Statements',
     'fin.tab.settings':'Settings',
+    // Finance KPI
+    'fin.kpi.income':'Monthly Income','fin.kpi.expense':'Monthly Expense','fin.kpi.net':'Net P&L',
     // Filter labels
     'label.month':'Month','label.year':'Year','label.staff':'Staff','label.date':'Date',
     'label.status':'Status','label.gps_mode':'GPS Mode','label.store':'Store','label.dept':'Dept.',
@@ -4120,6 +4150,23 @@ const TRANSLATIONS = {
     'btn.admin_fill':'Admin Fill','btn.select_all':'Select All',
     'btn.batch_approve':'Batch Approve','btn.batch_reject':'Batch Reject',
     'status.direct_approve':'Directly Approve',
+    // Extra buttons
+    'btn.staff_system':'Employee Portal','btn.add_staff':'Add Staff','btn.clear':'Clear',
+    'btn.submit_manual':'Submit','btn.add_config':'Add Config','btn.save_settings':'Save Settings',
+    'btn.create_rich_menu':'Create Rich Menu','btn.view_menus':'View Menus','btn.unset_default':'Unset Default Menu',
+    'btn.add_shift':'Add Shift','btn.add_leave_type':'Add Leave Type','btn.add_admin':'Add Admin',
+    'btn.calc_annual':'Calculate Annual Leave','btn.gen_salary':'Generate Salary',
+    'btn.add_holiday':'Add Holiday','btn.add_ann':'Add Announcement','btn.add_store':'Add Store',
+    'btn.add_record':'Add Record','btn.add_category':'Add Category',
+    'btn.add_expense':'Add Expense','btn.add_travel':'Add Travel',
+    // Extra descriptions
+    'card.manual_punch_desc':'This feature allows admins to directly fill in missed punch records on behalf of staff, without requiring a staff request.',
+    'line.punch_desc':'Staff can punch in/out by sending a location message via LINE',
+    'sched.shift_types_desc':'Configure shift names and working hours',
+    'leave.types_desc':'Configure leave type names, pay rates, and annual limits',
+    'salary.items_desc':'Configure allowance and deduction items for monthly salary calculation',
+    'adminmgr.desc':'Manage admin login accounts, configure accessible modules for each account',
+    'stores.desc':'Manage multiple stores and assign staff to their respective stores',
     // Search
     'search.staff_placeholder':'🔍 Search staff...',
     // Punch labels
@@ -4307,7 +4354,14 @@ const TRANSLATIONS = {
     'modal.add_ap':'Add Account Payable','modal.set_budget':'Set Monthly Budget',
     'modal.add_recurring':'Add Recurring Entry','modal.manual_match':'Manual Transaction Match',
     'modal.ocr_raw':'OCR Raw Data','modal.add_account':'Add Account',
-    'modal.resign':'Process Resignation','modal.formula_editor':'Formula Editor',
+    'modal.resign':'Process Resignation',
+    'modal.edit_staff':'Edit Staff',
+    'btn.terminate':'Terminate','btn.reinstate':'Reinstate',
+    'lbl.reason_pfx':'Reason: ','lbl.date_pfx':'Date: ','lbl.time_pfx':'Time: ','lbl.hours_sfx':' hrs',
+    'preq.apply_punch':'Manual punch: ',
+    'sched.review_title':'Review {0}\'s request','sched.days_total':'{0} days',
+    'otrm.review_title':'Review OT — {0}',
+    'modal.formula_editor':'Formula Editor',
     'modal.edit_training':'Edit Training Record','modal.edit_travel':'Edit Travel Request',
     'modal.expense_voucher':'Expense Voucher','modal.edit_asset':'Edit Asset',
     // Select options
@@ -4393,6 +4447,8 @@ const TRANSLATIONS = {
     'gps.got':'Location obtained','gps.failed':'Unable to get location',
     'gps.name_required':'Please enter a location name','gps.coords_required':'Please enter latitude and longitude',
     'gps.updated':'Location updated','gps.added':'Location added',
+    'gps.auto_save':'Auto-saved on change',
+    'ph.admin_name':'Admin name','ph.forget_punch':'e.g. Forgot to punch',
     'gps.confirm_delete':'Delete location "{0}"?',
     'line.enabled_status':'Status: Enabled','line.disabled_status':'Status: Disabled',
     'line.token_required':'Token and Secret are required when enabling',
@@ -4789,6 +4845,8 @@ const TRANSLATIONS = {
     'fin.tab.bank':'銀行照合','fin.tab.tax':'税務申告','fin.tab.ap':'売掛買掛',
     'fin.tab.budget':'予算管理','fin.tab.payroll':'給与連携','fin.tab.stmts':'財務諸表',
     'fin.tab.settings':'財務設定',
+    // Finance KPI
+    'fin.kpi.income':'今月の収入','fin.kpi.expense':'今月の支出','fin.kpi.net':'損益',
     // Filter labels
     'label.month':'月','label.year':'年度','label.staff':'スタッフ','label.date':'日付',
     'label.status':'ステータス','label.gps_mode':'GPS認証モード','label.store':'店舗','label.dept':'部門',
@@ -4823,6 +4881,23 @@ const TRANSLATIONS = {
     'btn.admin_fill':'管理者代入力','btn.select_all':'全て選択',
     'btn.batch_approve':'一括承認','btn.batch_reject':'一括却下',
     'status.direct_approve':'直接承認',
+    // Extra buttons
+    'btn.staff_system':'従業員システム','btn.add_staff':'スタッフ追加','btn.clear':'クリア',
+    'btn.submit_manual':'補打卡送信','btn.add_config':'設定追加','btn.save_settings':'設定保存',
+    'btn.create_rich_menu':'リッチメニュー作成','btn.view_menus':'選単確認','btn.unset_default':'デフォルト解除',
+    'btn.add_shift':'シフト追加','btn.add_leave_type':'休暇種別追加','btn.add_admin':'管理者追加',
+    'btn.calc_annual':'年次有給計算','btn.gen_salary':'給与生成',
+    'btn.add_holiday':'祝日追加','btn.add_ann':'お知らせ追加','btn.add_store':'店舗追加',
+    'btn.add_record':'記録追加','btn.add_category':'カテゴリ追加',
+    'btn.add_expense':'経費追加','btn.add_travel':'出張追加',
+    // Extra descriptions
+    'card.manual_punch_desc':'この機能では、管理者がスタッフの代わりに漏れた打刻記録を直接補完できます。',
+    'line.punch_desc':'スタッフがLINEで位置情報を送ることで打刻できます',
+    'sched.shift_types_desc':'シフト名と勤務時間を設定',
+    'leave.types_desc':'休暇種別名・給与倍率・年間上限を設定',
+    'salary.items_desc':'毎月の給与計算に使用する手当・控除項目を設定',
+    'adminmgr.desc':'管理者ログインアカウントを管理し、各アカウントのアクセス可能モジュールを設定',
+    'stores.desc':'複数の店舗を管理し、スタッフを各店舗に割り当てます',
     // Search
     'search.staff_placeholder':'🔍 スタッフ検索...',
     // Punch labels
@@ -5010,7 +5085,14 @@ const TRANSLATIONS = {
     'modal.add_ap':'買掛金を追加','modal.set_budget':'月次予算を設定',
     'modal.add_recurring':'定期仕訳を追加','modal.manual_match':'取引手動照合',
     'modal.ocr_raw':'OCR生データ','modal.add_account':'アカウントを追加',
-    'modal.resign':'退職手続き','modal.formula_editor':'計算式エディタ',
+    'modal.resign':'退職手続き',
+    'modal.edit_staff':'スタッフ編集',
+    'btn.terminate':'退職','btn.reinstate':'復職',
+    'lbl.reason_pfx':'理由：','lbl.date_pfx':'日付：','lbl.time_pfx':'時間：','lbl.hours_sfx':'時間',
+    'preq.apply_punch':'補打刻：',
+    'sched.review_title':'{0}の休暇申請を審査','sched.days_total':'計 {0} 日',
+    'otrm.review_title':'残業申請を審査 — {0}',
+    'modal.formula_editor':'計算式エディタ',
     'modal.edit_training':'研修記録を編集','modal.edit_travel':'出張申請を編集',
     'modal.expense_voucher':'経費精算','modal.edit_asset':'資産を編集',
     // Select options
@@ -5096,6 +5178,8 @@ const TRANSLATIONS = {
     'gps.got':'現在地を取得しました','gps.failed':'位置情報の取得に失敗',
     'gps.name_required':'地点名を入力してください','gps.coords_required':'緯度と経度を入力してください',
     'gps.updated':'地点を更新しました','gps.added':'地点を追加しました',
+    'gps.auto_save':'変更後自動保存',
+    'ph.admin_name':'管理者名','ph.forget_punch':'例：打刻忘れ',
     'gps.confirm_delete':'地点「{0}」を削除しますか？',
     'line.enabled_status':'現在の状態：有効','line.disabled_status':'現在の状態：無効',
     'line.token_required':'有効化にはTokenとSecretが必要です',
@@ -5482,6 +5566,8 @@ const TRANSLATIONS = {
     'fin.tab.ocr':'OCR','fin.tab.docs':'Tài liệu','fin.tab.recurring':'Định kỳ',
     'fin.tab.bank':'Đối chiếu NH','fin.tab.tax':'Khai thuế','fin.tab.ap':'Công nợ',
     'fin.tab.budget':'Ngân sách','fin.tab.payroll':'Liên kết lương','fin.tab.stmts':'Báo cáo','fin.tab.settings':'Cài tài chính',
+    // Finance KPI
+    'fin.kpi.income':'Thu nhập tháng này','fin.kpi.expense':'Chi phí tháng này','fin.kpi.net':'Lãi/Lỗ',
     'label.month':'Tháng','label.year':'Năm','label.staff':'Nhân viên','label.date':'Ngày',
     'label.status':'Trạng thái','label.gps_mode':'Chế độ GPS','label.store':'Cửa hàng','label.dept':'Phòng ban',
     'label.keyword':'Từ khóa','label.type':'Loại','label.category':'Danh mục','label.range':'Khoảng thời gian',
@@ -5517,6 +5603,23 @@ const TRANSLATIONS = {
     'btn.admin_fill':'Điền thay','btn.select_all':'Chọn tất cả',
     'btn.batch_approve':'Duyệt hàng loạt','btn.batch_reject':'Từ chối hàng loạt',
     'status.direct_approve':'Duyệt trực tiếp',
+    // Extra buttons
+    'btn.staff_system':'Cổng nhân viên','btn.add_staff':'Thêm nhân viên','btn.clear':'Xóa',
+    'btn.submit_manual':'Gửi chấm bù','btn.add_config':'Thêm cấu hình','btn.save_settings':'Lưu cài đặt',
+    'btn.create_rich_menu':'Tạo menu','btn.view_menus':'Xem menu','btn.unset_default':'Bỏ mặc định',
+    'btn.add_shift':'Thêm ca','btn.add_leave_type':'Thêm loại nghỉ','btn.add_admin':'Thêm admin',
+    'btn.calc_annual':'Tính phép năm','btn.gen_salary':'Tạo lương',
+    'btn.add_holiday':'Thêm ngày lễ','btn.add_ann':'Thêm thông báo','btn.add_store':'Thêm cửa hàng',
+    'btn.add_record':'Thêm bản ghi','btn.add_category':'Thêm danh mục',
+    'btn.add_expense':'Thêm chi phí','btn.add_travel':'Thêm công tác',
+    // Extra descriptions
+    'card.manual_punch_desc':'Tính năng này cho phép quản trị viên trực tiếp bổ sung bản ghi chấm công bị bỏ lỡ thay cho nhân viên.',
+    'line.punch_desc':'Nhân viên có thể chấm công bằng cách gửi tin nhắn vị trí qua LINE',
+    'sched.shift_types_desc':'Cấu hình tên ca và giờ làm việc',
+    'leave.types_desc':'Cấu hình tên loại nghỉ, hệ số lương và giới hạn hàng năm',
+    'salary.items_desc':'Cấu hình các khoản phụ cấp và khấu trừ cho tính lương hàng tháng',
+    'adminmgr.desc':'Quản lý tài khoản đăng nhập admin, cấu hình các module có thể truy cập cho từng tài khoản',
+    'stores.desc':'Quản lý nhiều cửa hàng và phân công nhân viên cho các cửa hàng tương ứng',
     'search.staff_placeholder':'🔍 Tìm nhân viên...',
     'punch.label.in':'Vào ca','punch.label.out':'Tan ca','punch.label.break_out':'Bắt đầu nghỉ','punch.label.break_in':'Kết thúc nghỉ',
     'req.status.pending':'Chờ duyệt','req.status.approved':'Đã duyệt','req.status.rejected':'Từ chối',
@@ -5687,7 +5790,14 @@ const TRANSLATIONS = {
     'modal.add_ap':'Thêm khoản phải trả','modal.set_budget':'Đặt ngân sách tháng',
     'modal.add_recurring':'Thêm bút toán định kỳ','modal.manual_match':'Ghép giao dịch thủ công',
     'modal.ocr_raw':'Dữ liệu OCR thô','modal.add_account':'Thêm tài khoản',
-    'modal.resign':'Xử lý nghỉ việc','modal.formula_editor':'Trình soạn công thức',
+    'modal.resign':'Xử lý nghỉ việc',
+    'modal.edit_staff':'Sửa nhân viên',
+    'btn.terminate':'Nghỉ việc','btn.reinstate':'Phục hồi',
+    'lbl.reason_pfx':'Lý do: ','lbl.date_pfx':'Ngày: ','lbl.time_pfx':'Giờ: ','lbl.hours_sfx':' giờ',
+    'preq.apply_punch':'Chấm bù: ',
+    'sched.review_title':'Xem xét yêu cầu của {0}','sched.days_total':'{0} ngày',
+    'otrm.review_title':'Xem xét OT — {0}',
+    'modal.formula_editor':'Trình soạn công thức',
     'modal.edit_training':'Sửa hồ sơ đào tạo','modal.edit_travel':'Sửa yêu cầu công tác',
     'modal.expense_voucher':'Hoàn ứng chi phí','modal.edit_asset':'Sửa tài sản',
     // Select options
@@ -5773,6 +5883,8 @@ const TRANSLATIONS = {
     'gps.got':'Đã lấy được vị trí','gps.failed':'Không thể lấy vị trí',
     'gps.name_required':'Vui lòng nhập tên địa điểm','gps.coords_required':'Vui lòng nhập vĩ độ và kinh độ',
     'gps.updated':'Đã cập nhật địa điểm','gps.added':'Đã thêm địa điểm',
+    'gps.auto_save':'Tự lưu khi thay đổi',
+    'ph.admin_name':'Tên quản trị viên','ph.forget_punch':'VD: Quên chấm công',
     'gps.confirm_delete':'Xóa địa điểm "{0}"?',
     'line.enabled_status':'Trạng thái: Đã bật','line.disabled_status':'Trạng thái: Đã tắt',
     'line.token_required':'Cần Token và Secret khi bật',
@@ -6158,6 +6270,8 @@ const TRANSLATIONS = {
     'fin.tab.ocr':'OCR','fin.tab.docs':'เอกสาร','fin.tab.recurring':'รายการประจำ',
     'fin.tab.bank':'กระทบยอดธนาคาร','fin.tab.tax':'ยื่นภาษี','fin.tab.ap':'ลูกหนี้/เจ้าหนี้',
     'fin.tab.budget':'งบประมาณ','fin.tab.payroll':'เชื่อมเงินเดือน','fin.tab.stmts':'งบการเงิน','fin.tab.settings':'ตั้งค่าการเงิน',
+    // Finance KPI
+    'fin.kpi.income':'รายรับเดือนนี้','fin.kpi.expense':'รายจ่ายเดือนนี้','fin.kpi.net':'กำไร/ขาดทุน',
     'label.month':'เดือน','label.year':'ปี','label.staff':'พนักงาน','label.date':'วันที่',
     'label.status':'สถานะ','label.gps_mode':'โหมด GPS','label.store':'สาขา','label.dept':'แผนก',
     'label.keyword':'คำค้นหา','label.type':'ประเภท','label.category':'หมวดหมู่','label.range':'ช่วงเวลา',
@@ -6193,6 +6307,23 @@ const TRANSLATIONS = {
     'btn.admin_fill':'กรอกแทน','btn.select_all':'เลือกทั้งหมด',
     'btn.batch_approve':'อนุมัติเป็นชุด','btn.batch_reject':'ปฏิเสธเป็นชุด',
     'status.direct_approve':'อนุมัติโดยตรง',
+    // Extra buttons
+    'btn.staff_system':'ระบบพนักงาน','btn.add_staff':'เพิ่มพนักงาน','btn.clear':'ล้าง',
+    'btn.submit_manual':'ส่งการบันทึกย้อนหลัง','btn.add_config':'เพิ่มการตั้งค่า','btn.save_settings':'บันทึกการตั้งค่า',
+    'btn.create_rich_menu':'สร้างเมนู','btn.view_menus':'ดูเมนู','btn.unset_default':'ยกเลิกค่าเริ่มต้น',
+    'btn.add_shift':'เพิ่มกะ','btn.add_leave_type':'เพิ่มประเภทการลา','btn.add_admin':'เพิ่มแอดมิน',
+    'btn.calc_annual':'คำนวณวันหยุดพักร้อน','btn.gen_salary':'สร้างเงินเดือน',
+    'btn.add_holiday':'เพิ่มวันหยุด','btn.add_ann':'เพิ่มประกาศ','btn.add_store':'เพิ่มสาขา',
+    'btn.add_record':'เพิ่มบันทึก','btn.add_category':'เพิ่มหมวดหมู่',
+    'btn.add_expense':'เพิ่มค่าใช้จ่าย','btn.add_travel':'เพิ่มการเดินทาง',
+    // Extra descriptions
+    'card.manual_punch_desc':'ฟีเจอร์นี้ช่วยให้แอดมินเพิ่มบันทึกเวลาที่หายไปแทนพนักงานได้โดยตรง',
+    'line.punch_desc':'พนักงานสามารถบันทึกเวลาได้โดยส่งข้อความตำแหน่งผ่าน LINE',
+    'sched.shift_types_desc':'ตั้งค่าชื่อกะและเวลาทำงาน',
+    'leave.types_desc':'ตั้งค่าชื่อประเภทการลา อัตราเงินเดือน และขีดจำกัดรายปี',
+    'salary.items_desc':'ตั้งค่ารายการเบี้ยเลี้ยงและรายการหักสำหรับการคำนวณเงินเดือนรายเดือน',
+    'adminmgr.desc':'จัดการบัญชีเข้าสู่ระบบแอดมิน ตั้งค่าโมดูลที่เข้าถึงได้สำหรับแต่ละบัญชี',
+    'stores.desc':'จัดการหลายสาขาและมอบหมายพนักงานให้กับสาขาที่เกี่ยวข้อง',
     'search.staff_placeholder':'🔍 ค้นหาพนักงาน...',
     'punch.label.in':'เข้างาน','punch.label.out':'ออกงาน','punch.label.break_out':'เริ่มพัก','punch.label.break_in':'สิ้นสุดพัก',
     'req.status.pending':'รออนุมัติ','req.status.approved':'อนุมัติแล้ว','req.status.rejected':'ปฏิเสธ',
@@ -6363,7 +6494,14 @@ const TRANSLATIONS = {
     'modal.add_ap':'เพิ่มเจ้าหนี้','modal.set_budget':'ตั้งงบประมาณรายเดือน',
     'modal.add_recurring':'เพิ่มรายการประจำ','modal.manual_match':'จับคู่ธุรกรรมด้วยตนเอง',
     'modal.ocr_raw':'ข้อมูล OCR ดิบ','modal.add_account':'เพิ่มบัญชีผู้ใช้',
-    'modal.resign':'ดำเนินการลาออก','modal.formula_editor':'ตัวแก้ไขสูตร',
+    'modal.resign':'ดำเนินการลาออก',
+    'modal.edit_staff':'แก้ไขพนักงาน',
+    'btn.terminate':'ลาออก','btn.reinstate':'รับกลับ',
+    'lbl.reason_pfx':'เหตุผล: ','lbl.date_pfx':'วันที่: ','lbl.time_pfx':'เวลา: ','lbl.hours_sfx':' ชม.',
+    'preq.apply_punch':'แก้ไขการลงเวลา: ',
+    'sched.review_title':'ตรวจสอบคำขอของ {0}','sched.days_total':'{0} วัน',
+    'otrm.review_title':'ตรวจสอบ OT — {0}',
+    'modal.formula_editor':'ตัวแก้ไขสูตร',
     'modal.edit_training':'แก้ไขบันทึกการฝึก','modal.edit_travel':'แก้ไขคำขอเดินทาง',
     'modal.expense_voucher':'เบิกจ่ายค่าใช้จ่าย','modal.edit_asset':'แก้ไขสินทรัพย์',
     // Select options
@@ -6449,6 +6587,8 @@ const TRANSLATIONS = {
     'gps.got':'รับพิกัดปัจจุบันแล้ว','gps.failed':'ไม่สามารถรับพิกัดได้',
     'gps.name_required':'กรุณากรอกชื่อสถานที่','gps.coords_required':'กรุณากรอกละติจูดและลองจิจูด',
     'gps.updated':'อัปเดตสถานที่แล้ว','gps.added':'เพิ่มสถานที่แล้ว',
+    'gps.auto_save':'บันทึกอัตโนมัติเมื่อเปลี่ยน',
+    'ph.admin_name':'ชื่อแอดมิน','ph.forget_punch':'เช่น: ลืมลงเวลา',
     'gps.confirm_delete':'ลบสถานที่ "{0}"?',
     'line.enabled_status':'สถานะ: เปิดใช้งาน','line.disabled_status':'สถานะ: ปิดใช้งาน',
     'line.token_required':'ต้องใส่ Token และ Secret เมื่อเปิดใช้งาน',
@@ -6845,6 +6985,8 @@ const TRANSLATIONS = {
     'fin.tab.bank':'银行对账','fin.tab.tax':'税务申报','fin.tab.ap':'应收付款',
     'fin.tab.budget':'预算管理','fin.tab.payroll':'薪资联动','fin.tab.stmts':'财务报表',
     'fin.tab.settings':'财务设置',
+    // Finance KPI
+    'fin.kpi.income':'本月收入','fin.kpi.expense':'本月支出','fin.kpi.net':'净损益',
     // Filter labels
     'label.month':'月份','label.year':'年度','label.staff':'员工','label.date':'日期',
     'label.status':'状态','label.gps_mode':'GPS 验证模式','label.store':'门店','label.dept':'部门',
@@ -6878,6 +7020,23 @@ const TRANSLATIONS = {
     'btn.admin_fill':'管理员代填','btn.select_all':'全选',
     'btn.batch_approve':'批次核准','btn.batch_reject':'批次退回',
     'status.direct_approve':'直接核准',
+    // Extra buttons
+    'btn.staff_system':'员工系统','btn.add_staff':'新增员工','btn.clear':'清除',
+    'btn.submit_manual':'送出补打卡','btn.add_config':'新增配置','btn.save_settings':'保存设置',
+    'btn.create_rich_menu':'创建图文菜单','btn.view_menus':'查看现有菜单','btn.unset_default':'取消默认菜单',
+    'btn.add_shift':'新增班别','btn.add_leave_type':'新增假别','btn.add_admin':'新增管理员',
+    'btn.calc_annual':'自动计算特休','btn.gen_salary':'自动产生薪资',
+    'btn.add_holiday':'新增假日','btn.add_ann':'新增公告','btn.add_store':'新增门店',
+    'btn.add_record':'新增记录','btn.add_category':'新增科目',
+    'btn.add_expense':'新增费用','btn.add_travel':'新增差旅',
+    // Extra descriptions
+    'card.manual_punch_desc':'此功能供管理员直接帮员工补齐漏打的打卡记录，不需员工申请。',
+    'line.punch_desc':'员工通过 LINE 发送位置消息即可打卡',
+    'sched.shift_types_desc':'设置工作班别与时间',
+    'leave.types_desc':'设置假别名称、薪资倍率、天数上限',
+    'salary.items_desc':'设置每月薪资计算时使用的津贴和扣除项目',
+    'adminmgr.desc':'管理后台登录账号，可自由勾选各账号可存取的模块',
+    'stores.desc':'管理多个门店，并为员工指派所属门店',
     // Search
     'search.staff_placeholder':'🔍 搜索员工...',
     // Punch labels
@@ -7065,7 +7224,14 @@ const TRANSLATIONS = {
     'modal.add_ap':'新增应付账款','modal.set_budget':'设置月度预算',
     'modal.add_recurring':'新增定期分录','modal.manual_match':'手动配对收支记录',
     'modal.ocr_raw':'OCR 识别原始数据','modal.add_account':'新增账号',
-    'modal.resign':'办理离职','modal.formula_editor':'公式编辑器',
+    'modal.resign':'办理离职',
+    'modal.edit_staff':'编辑员工',
+    'btn.terminate':'离职','btn.reinstate':'复职',
+    'lbl.reason_pfx':'原因：','lbl.date_pfx':'日期：','lbl.time_pfx':'时间：','lbl.hours_sfx':'小时',
+    'preq.apply_punch':'申请补打：',
+    'sched.review_title':'审核 {0} 的排休申请','sched.days_total':'共 {0} 天',
+    'otrm.review_title':'审核加班申请 — {0}',
+    'modal.formula_editor':'公式编辑器',
     'modal.edit_training':'编辑培训记录','modal.edit_travel':'编辑差旅申请',
     'modal.expense_voucher':'费用核销','modal.edit_asset':'编辑资产',
     // Select options
@@ -7151,6 +7317,8 @@ const TRANSLATIONS = {
     'gps.got':'已获取当前位置','gps.failed':'无法获取位置',
     'gps.name_required':'请填入地点名称','gps.coords_required':'请填入纬度和经度',
     'gps.updated':'地点已更新','gps.added':'地点已新增',
+    'gps.auto_save':'变更后自动保存',
+    'ph.admin_name':'管理员姓名','ph.forget_punch':'例：忘记打卡',
     'gps.confirm_delete':'确定删除地点「{0}」？',
     'line.enabled_status':'当前状态：已启用','line.disabled_status':'当前状态：未启用',
     'line.token_required':'启用时必须填写 Token 和 Secret',
@@ -7686,6 +7854,7 @@ const _AUTO_TAG_MAP = {
   '新增應付帳款':'modal.add_ap','設定月度預算':'modal.set_budget',
   '新增定期分錄':'modal.add_recurring','手動配對收支記錄':'modal.manual_match',
   'OCR 辨識原始資料':'modal.ocr_raw','新增帳號':'modal.add_account',
+  '離職':'btn.terminate','復職':'btn.reinstate',
   '辦理離職':'modal.resign','公式編輯器':'modal.formula_editor',
   '編輯訓練記錄':'modal.edit_training','編輯差旅申請':'modal.edit_travel',
   '費用核銷':'modal.expense_voucher','編輯資產':'modal.edit_asset',
@@ -7721,6 +7890,17 @@ const _AUTO_TAG_MAP = {
   '不強制（記錄距離但不阻擋打卡）':'opt.gps_optional',
   '強制（超出所有地點範圍則禁止打卡）':'opt.gps_mandatory',
   '在職':'opt.active_staff','月薪':'opt.monthly_salary',
+  // Extra button labels
+  '員工系統':'btn.staff_system','新增員工':'btn.add_staff','清除':'btn.clear',
+  '送出補打卡':'btn.submit_manual','新增設定':'btn.add_config','儲存設定':'btn.save_settings',
+  '建立圖文選單':'btn.create_rich_menu','查看現有選單':'btn.view_menus','取消預設選單':'btn.unset_default',
+  '新增班別':'btn.add_shift','新增假別':'btn.add_leave_type','新增員工(管)':'btn.add_admin',
+  '批次核准':'btn.batch_approve','批次退回':'btn.batch_reject',
+  '匯出薪資 Excel':'btn.export_salary_excel','匯出假別 Excel':'btn.export_leave_excel',
+  '自動計算特休':'btn.calc_annual','自動產生薪資':'btn.gen_salary',
+  '新增假日':'btn.add_holiday','新增公告':'btn.add_ann','新增門市':'btn.add_store',
+  '新增記錄':'btn.add_record','新增科目':'btn.add_category',
+  '新增費用':'btn.add_expense','新增差旅':'btn.add_travel',
 };
 
 let _autoTagDone = false;
@@ -7993,7 +8173,7 @@ async function loadAnomalies() {
       <div style="font-size:12px;color:var(--muted)">${escHtml(a.detail)}</div>
     </div>`).join('');
   if (data.anomalies.length > 20) {
-    list.innerHTML += `<div style="text-align:center;padding:8px;font-size:12px;color:var(--muted)">...還有 ${data.anomalies.length - 20} 筆</div>`;
+    list.innerHTML += `<div style="text-align:center;padding:8px;font-size:12px;color:var(--muted)">${t('anomaly.overflow').replace('{0}', data.anomalies.length - 20)}</div>`;
   }
 }
 
@@ -8004,7 +8184,7 @@ async function loadResignedStaff() {
   const { ok, data } = await api('/api/punch/staff/terminated', {}, true);
   const tb = document.getElementById('resigned-tbody');
   if (!ok || !data.length) {
-    tb.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-state-text">無離職員工記錄</div></td></tr>';
+    tb.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('resign.no_records')}</div></td></tr>`;
     return;
   }
   tb.innerHTML = data.map(s => `<tr>
@@ -8015,7 +8195,7 @@ async function loadResignedStaff() {
     <td style="font-family:'DM Mono',monospace">${s.hire_date||'—'}</td>
     <td style="font-family:'DM Mono',monospace;color:var(--red)">${s.termination_date||'—'}</td>
     <td style="font-size:12px;color:var(--muted)">${escHtml(s.termination_reason||'')}</td>
-    <td><button class="btn btn-outline btn-sm" onclick="reinstateStaff(${s.id},'${escHtml(s.name)}')">復職</button></td>
+    <td><button class="btn btn-outline btn-sm" onclick="reinstateStaff(${s.id},'${escHtml(s.name)}')">${t('btn.reinstate')}</button></td>
   </tr>`).join('');
 }
 
@@ -8153,7 +8333,7 @@ function openFormulaEditor(itemId, currentFormula) {
 
         <div id="fe-preview" style="padding:12px 16px;background:var(--bg);border-radius:8px;
              font-size:14px;font-family:'DM Mono',monospace;margin-bottom:14px;min-height:42px">
-          <span style="color:var(--muted)">輸入公式後即時顯示計算結果</span>
+          <span style="color:var(--muted)">${t('formula.placeholder')}</span>
         </div>
 
         <div style="margin-bottom:8px">
@@ -8191,17 +8371,17 @@ async function previewFormula() {
   const insured_salary= parseFloat(document.getElementById('fe-insured')?.value || 30000);
   const service_years = parseFloat(document.getElementById('fe-years')?.value || 1);
   const el = document.getElementById('fe-preview');
-  if (!formula) { el.innerHTML = '<span style="color:var(--muted)">輸入公式後即時顯示計算結果</span>'; return; }
+  if (!formula) { el.innerHTML = `<span style="color:var(--muted)">${t('formula.placeholder')}</span>`; return; }
   try {
     const { ok, data } = await api('/api/salary/formula/preview',
       apiJSON({ formula, base_salary, insured_salary, service_years }));
     if (ok && data.error === null) {
-      el.innerHTML = `計算結果：<strong style="color:var(--green);font-size:18px">$${Number(data.result).toLocaleString('zh-TW')}</strong>`;
+      el.innerHTML = `${t('formula.result')}<strong style="color:var(--green);font-size:18px">$${Number(data.result).toLocaleString('zh-TW')}</strong>`;
     } else {
-      el.innerHTML = `<span style="color:var(--red)">公式錯誤：${escHtml(data.error||'未知錯誤')}</span>`;
+      el.innerHTML = `<span style="color:var(--red)">${t('formula.error_pfx')}${escHtml(data.error||'?')}</span>`;
     }
   } catch(e) {
-    el.innerHTML = '<span style="color:var(--red)">計算失敗</span>';
+    el.innerHTML = `<span style="color:var(--red)">${t('formula.fail')}</span>`;
   }
 }
 
@@ -8211,7 +8391,7 @@ function applyFormula(itemId) {
   const formulaInput = document.getElementById('si-formula') || document.getElementById('sim-formula') || document.getElementById('sal-item-formula');
   if (formulaInput) formulaInput.value = formula;
   document.getElementById('formula-editor-modal')?.remove();
-  showToast('公式已套用', 'success');
+  showToast(t('formula.applied'), 'success');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -8322,7 +8502,7 @@ function renderDashTodayDetail(detail, isCurrentMonth) {
 
   const tb = document.getElementById('ds-today-table');
   if (!detail.length) {
-    tb.innerHTML = `<tr><td colspan="5" class="empty-state"><div class="empty-state-text">${isCurrentMonth ? '今日無出勤資料' : '該月無出勤資料'}</div></td></tr>`;
+    tb.innerHTML = `<tr><td colspan="5" class="empty-state"><div class="empty-state-text">${isCurrentMonth ? t('dash.no_att_today') : t('dash.no_att_month')}</div></td></tr>`;
     return;
   }
   tb.innerHTML = detail.map(r => `<tr>
@@ -8337,10 +8517,10 @@ function renderDashTodayDetail(detail, isCurrentMonth) {
 // ── 待審申請清單 ──────────────────────────────────────────────
 function renderDashPending(pending) {
   const items = [
-    { label: '補打卡申請', count: pending.punch,  color: 'var(--red)',    page: 'punch',  tab: 'requests' },
-    { label: '加班申請',   count: pending.ot,     color: 'var(--orange)', page: 'punch',  tab: 'overtime' },
-    { label: '排休申請',   count: pending.sched,  color: 'var(--accent)', page: 'sched',  tab: 'requests' },
-    { label: '請假申請',   count: pending.leave,  color: 'var(--green)',  page: 'leave',  tab: 'requests' },
+    { label: t('dash.pending.punch'), count: pending.punch,  color: 'var(--red)',    page: 'punch',  tab: 'requests' },
+    { label: t('dash.pending.ot'),    count: pending.ot,     color: 'var(--orange)', page: 'punch',  tab: 'overtime' },
+    { label: t('dash.pending.sched'), count: pending.sched,  color: 'var(--accent)', page: 'sched',  tab: 'requests' },
+    { label: t('dash.pending.leave'), count: pending.leave,  color: 'var(--green)',  page: 'leave',  tab: 'requests' },
   ];
   const wrap = document.getElementById('ds-pending-list');
   wrap.innerHTML = items.map(it => `
@@ -8478,7 +8658,7 @@ function renderDashLeavePie(dist) {
   const legend = document.getElementById('ds-leave-legend');
 
   if (!dist.length) {
-    legend.innerHTML = '<div style="color:var(--muted);font-size:12px">本月尚無請假記錄</div>';
+    legend.innerHTML = `<div style="color:var(--muted);font-size:12px">${t('dash.leave_no_records')}</div>`;
     // Draw empty state donut
     _dashCharts['leave-pie'] = new Chart(ctx, {
       type: 'doughnut',
@@ -8594,7 +8774,7 @@ async function staffSearchInput(q) {
     (s.role||'').toLowerCase().includes(ql)
   ).slice(0, 8);
   if (!hits.length) {
-    dd.innerHTML = '<div style="padding:14px 16px;font-size:13px;color:var(--muted);text-align:center">無符合員工</div>';
+    dd.innerHTML = `<div style="padding:14px 16px;font-size:13px;color:var(--muted);text-align:center">${t('search.no_staff')}</div>`;
   } else {
     dd.innerHTML = hits.map(s => `
       <div class="staff-search-item" data-sid="${s.id}"
@@ -8780,11 +8960,11 @@ async function loadMonthlyStats() {
   const month = document.getElementById('mstats-month').value;
   const tb = document.getElementById('mstats-tbody');
   const footer = document.getElementById('mstats-footer');
-  if (!month) { tb.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="empty-state-text">請選擇月份</div></td></tr>'; return; }
+  if (!month) { tb.innerHTML = `<tr><td colspan="9" class="empty-state"><div class="empty-state-text">${t('mstats.select_month')}</div></td></tr>`; return; }
   tb.innerHTML = Array(5).fill(0).map(() => `<tr class="skeleton-row">${Array(9).fill(0).map((_,i)=>`<td><span class="skel" style="width:${[80,60,40,60,60,40,40,40,100][i]}px"></span></td>`).join('')}</tr>`).join('');
   const { ok, data } = await api(`/api/attendance/monthly-stats?month=${month}`, {}, true);
   if (!ok || !data.stats || !data.stats.length) {
-    tb.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="empty-state-text">該月無出勤資料</div></td></tr>';
+    tb.innerHTML = `<tr><td colspan="9" class="empty-state"><div class="empty-state-text">${t('mstats.no_data')}</div></td></tr>`;
     footer.style.display = 'none';
     _mstatsData = [];
     return;
@@ -8849,7 +9029,7 @@ async function loadPunchSummary() {
   const { ok, data } = await api(`/api/punch/summary?month=${month}`, {}, true);
   const tb = document.getElementById('sum-tbody');
   if (!ok || !data.length) {
-    tb.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-state-text">該月無打卡記錄</div></td></tr>';
+    tb.innerHTML = `<tr><td colspan="6" class="empty-state"><div class="empty-state-text">${t('sum.no_data')}</div></td></tr>`;
     return;
   }
   tb.innerHTML = data.map(r => {
@@ -8879,7 +9059,7 @@ async function loadPunchStaffOptions(selId='rec-filter-staff') {
   }
   const sel = document.getElementById(selId);
   const cur = sel.value;
-  sel.innerHTML = '<option value="">全部</option>' +
+  sel.innerHTML = `<option value="">${t('status.all')}</option>` +
     punchStaffList.map(s => `<option value="${s.id}" ${s.id==cur?'selected':''}>${escHtml(s.name)}</option>`).join('');
 }
 function recMonthChange() {
@@ -8907,8 +9087,8 @@ function clearRecFilter() {
 }
 function renderPunchRecords() {
   const tb = document.getElementById('rec-tbody');
-  document.getElementById('rec-count').textContent = `共 ${punchRecords.length} 筆`;
-  if (!punchRecords.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-text">無記錄</div></td></tr>'; return; }
+  document.getElementById('rec-count').textContent = t('records.total').replace('{0}', punchRecords.length);
+  if (!punchRecords.length) { tb.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('records.no_records')}</div></td></tr>`; return; }
   tb.innerHTML = punchRecords.map(r => {
     const dt = r.punched_at ? r.punched_at.slice(0,16).replace('T',' ') : '';
     return `<tr>
@@ -8964,7 +9144,7 @@ async function loadManualRecords() {
   const { ok, data } = await api('/api/punch/records?', {}, true);
   const manuals = ok ? data.filter(r => r.is_manual).slice(0, 50) : [];
   const tb = document.getElementById('manual-tbody');
-  if (!manuals.length) { tb.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="empty-state-text">尚無補打記錄</div></td></tr>'; return; }
+  if (!manuals.length) { tb.innerHTML = `<tr><td colspan="5" class="empty-state"><div class="empty-state-text">${t('manual.no_records')}</div></td></tr>`; return; }
   tb.innerHTML = manuals.map(r => {
     const dt = r.punched_at ? r.punched_at.slice(0,16).replace('T',' ') : '';
     return `<tr><td style="font-size:11px;font-family:'DM Mono',monospace;white-space:nowrap">${dt}</td><td style="font-weight:600">${escHtml(r.staff_name||'')}</td><td style="color:${PUNCH_COLOR[r.punch_type]||'var(--text)'};font-size:12px;font-weight:600">${PUNCH_LABEL[r.punch_type]||r.punch_type}</td><td style="color:var(--muted)">${escHtml(r.manual_by||'')}</td><td style="color:var(--muted)">${escHtml(r.note||'')}</td></tr>`;
@@ -8976,10 +9156,10 @@ async function submitManualPunch() {
   const punched_at = document.getElementById('man-time').value;
   const manual_by  = document.getElementById('man-by').value.trim();
   const note       = document.getElementById('man-note').value.trim();
-  if (!staff_id || !punched_at) { showToast('請填寫完整資料', 'error'); return; }
+  if (!staff_id || !punched_at) { showToast(t('manual.fill_all'), 'error'); return; }
   const { ok } = await api('/api/punch/records', apiJSON({ staff_id: parseInt(staff_id), punch_type, punched_at, manual_by, note }));
   if (!ok) return;
-  showToast('補打卡完成', 'success'); document.getElementById('man-note').value = ''; await loadManualRecords();
+  showToast(t('manual.success'), 'success'); document.getElementById('man-note').value = ''; await loadManualRecords();
 }
 
 // ── 員工管理 ──────────────────────────────────────────────────
@@ -8988,28 +9168,28 @@ async function loadPunchStaff() {
   tb.innerHTML = Array(4).fill(0).map(() => `<tr class="skeleton-row">${Array(7).fill(0).map((_,i)=>`<td><span class="skel" style="width:${[80,60,60,80,100,40,80][i]}px"></span></td>`).join('')}</tr>`).join('');
   const { ok, data } = await cachedApi('/api/punch/staff');
   punchStaffList = ok ? data : [];
-  document.getElementById('punch-staff-count').textContent = `共 ${punchStaffList.length} 位員工`;
-  if (!punchStaffList.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-text">尚無員工</div></td></tr>'; return; }
+  document.getElementById('punch-staff-count').textContent = t('staff.count').replace('{0}', punchStaffList.length);
+  if (!punchStaffList.length) { tb.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('staff.no_staff')}</div></td></tr>`; return; }
   tb.innerHTML = punchStaffList.map(s => {
     const bankDisplay = s.bank_account ? (s.bank_name ? `${escHtml(s.bank_name)} ${escHtml(s.bank_account)}` : escHtml(s.bank_account)) : '<span style="color:var(--muted)">—</span>';
     return `<tr>
     <td style="font-weight:600">${escHtml(s.name)}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${escHtml(s.employee_code||'—')}</td>
     <td style="color:var(--muted)">${escHtml(s.role||'')}</td>
-    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(s.username||'—')}${s.has_password ? '' : '<span style="color:var(--red);font-size:10px;margin-left:4px">未設密碼</span>'}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(s.username||'—')}${s.has_password ? '' : `<span style="color:var(--red);font-size:10px;margin-left:4px">${t('staff.no_password')}</span>`}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px">${bankDisplay}</td>
-    <td>${s.active ? '<span class="badge badge-ok">在職</span>' : '<span class="badge badge-warn">停用</span>'}</td>
+    <td>${s.active ? `<span class="badge badge-ok">${t('staff.active_badge')}</span>` : `<span class="badge badge-warn">${t('staff.disabled_badge')}</span>`}</td>
     <td style="white-space:nowrap">
-      <button class="btn btn-outline btn-sm" onclick="openPunchStaffModal(${s.id})">編輯</button>
-      <button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="openTerminateModal(${s.id},'${escHtml(s.name)}')" title="辦理離職">離職</button>
-      <button class="btn btn-danger btn-sm" onclick="deletePunchStaff(${s.id})" style="margin-left:4px">刪除</button>
+      <button class="btn btn-outline btn-sm" onclick="openPunchStaffModal(${s.id})">${t('btn.edit')}</button>
+      <button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="openTerminateModal(${s.id},'${escHtml(s.name)}')" title="${t('modal.resign')}">${t('btn.terminate')}</button>
+      <button class="btn btn-danger btn-sm" onclick="deletePunchStaff(${s.id})" style="margin-left:4px">${t('btn.delete')}</button>
     </td>
   </tr>`;
   }).join('');
 }
 function openPunchStaffModal(id=null) {
   punchEditStaffId = id;
-  document.getElementById('psm-title').textContent = id ? '編輯員工' : '新增員工';
+  document.getElementById('psm-title').textContent = id ? t('modal.edit_staff') : t('modal.add_staff');
   document.getElementById('psm-password').value = id ? (punchStaffList.find(x=>x.id===id)?.password_plain || '') : '';
   document.getElementById('psm-password2').value = id ? (punchStaffList.find(x=>x.id===id)?.password_plain || '') : '';
   const allFields = ['psm-bank-code','psm-bank-name','psm-bank-branch','psm-bank-account','psm-account-holder',
@@ -9029,7 +9209,7 @@ function openPunchStaffModal(id=null) {
     document.getElementById('psm-address').value        = s.address         || '';
     document.getElementById('psm-username').value       = s.username        || '';
     document.getElementById('psm-active').value         = s.active ? '1' : '0';
-    document.getElementById('psm-pw-hint').textContent  = s.has_password ? '已設定密碼（留空表示不修改）' : '尚未設定密碼，請輸入';
+    document.getElementById('psm-pw-hint').textContent  = s.has_password ? t('staff.pw_hint_set') : t('staff.pw_hint_unset');
     document.getElementById('psm-bank-code').value      = s.bank_code       || '';
     document.getElementById('psm-bank-name').value      = s.bank_name       || '';
     document.getElementById('psm-bank-branch').value    = s.bank_branch     || '';
@@ -9108,7 +9288,7 @@ async function saveGpsConfig() {
 function renderLocList() {
   const wrap = document.getElementById('gps-loc-list');
   document.getElementById('gps-loc-count').textContent = `共 ${gpsLocList.length} 個打卡地點`;
-  if (!gpsLocList.length) { wrap.innerHTML = '<div class="card" style="padding:32px;text-align:center;color:var(--muted)">尚無打卡地點</div>'; return; }
+  if (!gpsLocList.length) { wrap.innerHTML = `<div class="card" style="padding:32px;text-align:center;color:var(--muted)">${t('gps.no_locations')}</div>`; return; }
   wrap.innerHTML = gpsLocList.map(loc => `
     <div class="card" style="margin-bottom:12px">
       <div class="card-header" style="flex-wrap:wrap;gap:10px">
@@ -9236,7 +9416,7 @@ async function saveLinePunchConfig() {
 async function loadLinePunchStaff() {
   const { ok, data: list } = await api('/api/line-punch/staff', {}, true);
   const tb = document.getElementById('lp-staff-tbody');
-  if (!ok || !list.length) { tb.innerHTML = '<tr><td colspan="4" class="empty-state"><div class="empty-state-text">尚無員工</div></td></tr>'; return; }
+  if (!ok || !list.length) { tb.innerHTML = `<tr><td colspan="4" class="empty-state"><div class="empty-state-text">${t('line.no_staff')}</div></td></tr>`; return; }
   tb.innerHTML = list.map(s => `<tr>
     <td style="font-weight:600">${escHtml(s.name)}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${escHtml(s.username||'')}</td>
@@ -9265,8 +9445,8 @@ async function loadRichMenus() {
   const wrap = document.getElementById('rm-list');
   const body = document.getElementById('rm-list-body');
   wrap.style.display = '';
-  if (!ok || !data.menus || !data.menus.length) { body.innerHTML = '<div style="font-size:12px;color:var(--muted)">目前沒有圖文選單</div>'; return; }
-  body.innerHTML = data.menus.map(m => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:8px"><div><div style="font-size:12px;font-weight:600">${escHtml(m.richMenu?.name||'未命名')}</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${m.richMenuId}</div></div><button class="btn btn-danger btn-sm" onclick="deleteRichMenu('${m.richMenuId}')">刪除</button></div>`).join('');
+  if (!ok || !data.menus || !data.menus.length) { body.innerHTML = `<div style="font-size:12px;color:var(--muted)">${t('line.no_menus')}</div>`; return; }
+  body.innerHTML = data.menus.map(m => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:8px"><div><div style="font-size:12px;font-weight:600">${escHtml(m.richMenu?.name||t('line.unnamed'))}</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${m.richMenuId}</div></div><button class="btn btn-danger btn-sm" onclick="deleteRichMenu('${m.richMenuId}')">${t('btn.delete')}</button></div>`).join('');
 }
 async function deleteRichMenu(id) {
   if (!confirm('確定刪除此圖文選單？')) return;
@@ -9294,7 +9474,7 @@ async function loadPunchRequests() {
 }
 function renderPunchRequests() {
   const wrap = document.getElementById('preq-list');
-  if (!punchReqList.length) { wrap.innerHTML = '<div class="card" style="padding:40px;text-align:center;color:var(--muted)">無符合申請</div>'; return; }
+  if (!punchReqList.length) { wrap.innerHTML = `<div class="card" style="padding:40px;text-align:center;color:var(--muted)">${t('preq.no_requests')}</div>`; return; }
   wrap.innerHTML = punchReqList.map(r => {
     const dt = r.requested_at ? r.requested_at.slice(0,16).replace('T',' ') : '';
     const created = r.created_at ? r.created_at.slice(0,16).replace('T','  ') : '';
@@ -9329,7 +9509,7 @@ function openPreqModal(id) {
   document.getElementById('preq-id').value = id;
   document.getElementById('preq-by').value = ''; document.getElementById('preq-note').value = '';
   const dt = r.requested_at ? r.requested_at.slice(0,16).replace('T',' ') : '';
-  document.getElementById('preq-info').innerHTML = `<strong>${escHtml(r.staff_name||'')}</strong> 申請補打：<strong>${PUNCH_LABEL[r.punch_type]||r.punch_type}</strong><br><span style="font-family:'DM Mono',monospace">${dt}</span><br><span style="color:var(--muted)">原因：${escHtml(r.reason||'')}</span>`;
+  document.getElementById('preq-info').innerHTML = `<strong>${escHtml(r.staff_name||'')}</strong> ${t('preq.apply_punch')}<strong>${PUNCH_LABEL[r.punch_type]||r.punch_type}</strong><br><span style="font-family:'DM Mono',monospace">${dt}</span><br><span style="color:var(--muted)">${t('lbl.reason_pfx')}${escHtml(r.reason||'')}</span>`;
   document.getElementById('preq-modal').style.display = 'flex';
 }
 function closePreqModal() { document.getElementById('preq-modal').style.display = 'none'; }
@@ -9337,15 +9517,15 @@ async function reviewPunchReq(action) {
   const id   = document.getElementById('preq-id').value;
   const by   = document.getElementById('preq-by').value.trim();
   const note = document.getElementById('preq-note').value.trim();
-  if (!by) { showToast('請填寫審核人員姓名', 'error'); return; }
+  if (!by) { showToast(t('preq.approver_required'), 'error'); return; }
   const { ok } = await api(`/api/punch/requests/${id}`, apiPUT({ action, reviewed_by: by, review_note: note }));
   if (!ok) return;
-  closePreqModal(); showToast(action==='approve' ? '已核准並補打卡' : '已退回', 'success'); await loadPunchRequests();
+  closePreqModal(); showToast(action==='approve' ? t('preq.approved') : t('preq.rejected'), 'success'); await loadPunchRequests();
 }
 async function deletePunchReq(id) {
-  if (!confirm('確定刪除此申請記錄？')) return;
+  if (!confirm(t('preq.confirm_delete'))) return;
   await api(`/api/punch/requests/${id}`, { method: 'DELETE' });
-  showToast('已刪除', 'success'); punchReqList = punchReqList.filter(r=>r.id!==id); renderPunchRequests();
+  showToast(t('records.deleted'), 'success'); punchReqList = punchReqList.filter(r=>r.id!==id); renderPunchRequests();
   document.getElementById('preq-count').textContent = `共 ${punchReqList.length} 筆`;
 }
 
@@ -9395,7 +9575,7 @@ function renderOTMonthlySummary(data) {
   const tbody = document.getElementById('ot-summary-tbody');
   const tfoot = document.getElementById('ot-summary-tfoot');
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-text">本月無加班申請</div></td></tr>';
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('ot.no_requests')}</div></td></tr>`;
     tfoot.innerHTML = '';
     return;
   }
@@ -9437,7 +9617,7 @@ async function loadOTRequests() {
 }
 function renderOTRequests() {
   const wrap = document.getElementById('ot-req-list');
-  if (!otReqData.length) { wrap.innerHTML = '<div class="card" style="padding:40px;text-align:center;color:var(--muted)">無符合申請</div>'; return; }
+  if (!otReqData.length) { wrap.innerHTML = `<div class="card" style="padding:40px;text-align:center;color:var(--muted)">${t('ot.no_requests2')}</div>`; return; }
   const DAY_TYPE = {weekday:'平日',rest_day:'休息日',holiday:'國定假日',special:'例假日'};
   wrap.innerHTML = otReqData.map(r => {
     const sc = OT_STATUS_COLOR[r.status]||'var(--muted)'; const sl = OT_STATUS_LABEL[r.status]||r.status;
@@ -9470,14 +9650,14 @@ function renderOTRequests() {
 async function openOTReview(id) {
   const r = otReqData.find(x => x.id === id); if (!r) return;
   document.getElementById('otrm-id').value = id; document.getElementById('otrm-by').value = ''; document.getElementById('otrm-note').value = '';
-  document.getElementById('otrm-title').textContent = `審核加班申請 — ${r.staff_name}`;
+  document.getElementById('otrm-title').textContent = t('otrm.review_title').replace('{0}', r.staff_name);
   const dtLabel = t('ot.day_type.' + (r.day_type || 'weekday'));
-  document.getElementById('otrm-info').innerHTML = `<strong>${escHtml(r.staff_name)}</strong>　<span style="background:var(--bg);padding:1px 8px;border-radius:8px;font-size:12px">${dtLabel}</span><br>日期：${r.request_date}　時間：${r.start_time}～${r.end_time}　<strong>${r.ot_hours} 小時</strong><br><span style="color:var(--muted)">原因：${escHtml(r.reason)}</span>`;
+  document.getElementById('otrm-info').innerHTML = `<strong>${escHtml(r.staff_name)}</strong>　<span style="background:var(--bg);padding:1px 8px;border-radius:8px;font-size:12px">${dtLabel}</span><br>${t('lbl.date_pfx')}${r.request_date}　${t('lbl.time_pfx')}${r.start_time}～${r.end_time}　<strong>${r.ot_hours}${t('lbl.hours_sfx')}</strong><br><span style="color:var(--muted)">${t('lbl.reason_pfx')}${escHtml(r.reason)}</span>`;
   const prevEl = document.getElementById('otrm-pay-preview');
   prevEl.style.display = 'none';
   const { ok: pok, data: pd } = await api('/api/overtime/calc-preview', apiJSON({ staff_id: r.staff_id, ot_hours: r.ot_hours, day_type: r.day_type||'weekday' }), true);
   if (pok && pd.base_hourly > 0) {
-    const typeLabel = pd.salary_type==='hourly'?'時薪制':'月薪制';
+    const typeLabel = pd.salary_type==='hourly'?t('opt.hourly_wage'):t('opt.monthly_salary');
     let detail = `${typeLabel}　時薪 $${pd.base_hourly}/h<br>`;
     if (pd.h1 > 0) detail += `前 ${pd.h1}h × ${pd.ot_rate1} = $${Math.round(pd.base_hourly*pd.h1*pd.ot_rate1)}<br>`;
     if (pd.h2 > 0) detail += `後 ${pd.h2}h × ${pd.ot_rate2} = $${Math.round(pd.base_hourly*pd.h2*pd.ot_rate2)}`;
@@ -9492,10 +9672,10 @@ async function reviewOTRequest(action) {
   const id   = document.getElementById('otrm-id').value;
   const by   = document.getElementById('otrm-by').value.trim();
   const note = document.getElementById('otrm-note').value.trim();
-  if (!by) { showToast('請填寫審核人員姓名','error'); return; }
+  if (!by) { showToast(t('ot.approver_required'),'error'); return; }
   const { ok, data } = await api(`/api/overtime/requests/${id}`, apiPUT({ action, reviewed_by: by, review_note: note }));
   if (!ok) return;
-  closeOTReview(); showToast(action==='approve' ? `已核准　加班費 $${Number(data.ot_pay||0).toLocaleString()}` : '已退回','success'); await loadOTRequests();
+  closeOTReview(); showToast(action==='approve' ? t('ot.approved').replace('${0}', Number(data.ot_pay||0).toLocaleString()) : t('ot.rejected'),'success'); await loadOTRequests();
 }
 async function deleteOTReq(id) {
   if (!confirm('確定刪除此加班申請？')) return;
@@ -9592,7 +9772,7 @@ async function loadSchedRequests() {
 function renderSchedRequests(list) {
   schedReqData = list;
   const wrap = document.getElementById('sched-req-list');
-  if (!list.length) { wrap.innerHTML = '<div class="card" style="padding:40px;text-align:center;color:var(--muted)">無符合申請</div>'; return; }
+  if (!list.length) { wrap.innerHTML = `<div class="card" style="padding:40px;text-align:center;color:var(--muted)">${t('sched.no_requests')}</div>`; return; }
   wrap.innerHTML = list.map(r => {
     const statusColor = SCHED_STATUS_COLOR[r.status]||'var(--muted)'; const statusLabel = SCHED_STATUS_LABEL[r.status]||r.status;
     const dateChips = (r.dates||[]).map(d => { const dt2=new Date(d+'T00:00:00'); return `<span class="req-date-chip">${d.slice(5)} ${WEEKDAY_ZH[dt2.getDay()]}</span>`; }).join('');
@@ -9627,19 +9807,19 @@ function openSchedReviewById(btn) {
 }
 function openSchedReview(id, name, month, dates) {
   schedReviewId = id;
-  document.getElementById('srm-title').textContent = `審核 ${name} 的排休申請`;
+  document.getElementById('srm-title').textContent = t('sched.review_title').replace('{0}', name);
   document.getElementById('srm-id').value = id; document.getElementById('srm-by').value = ''; document.getElementById('srm-note').value = '';
   const datesStr = dates.map(d => { const dt=new Date(d+'T00:00:00'); return `${d.slice(5)}（週${WEEKDAY_ZH[dt.getDay()]}）`; }).join('、');
-  document.getElementById('srm-info').innerHTML = `<strong>${name}</strong>｜${month}｜共 ${dates.length} 天<br><div style="margin-top:6px;color:var(--muted)">${datesStr}</div>`;
+  document.getElementById('srm-info').innerHTML = `<strong>${name}</strong>｜${month}｜${t('sched.days_total').replace('{0}', dates.length)}<br><div style="margin-top:6px;color:var(--muted)">${datesStr}</div>`;
   document.getElementById('sched-review-modal').style.display = 'flex';
 }
 function closeSchedReview() { document.getElementById('sched-review-modal').style.display = 'none'; }
 async function reviewRequest(action) {
   const id = document.getElementById('srm-id').value; const by = document.getElementById('srm-by').value.trim(); const note = document.getElementById('srm-note').value.trim();
-  if (!by) { showToast('請填寫審核人員姓名', 'error'); return; }
+  if (!by) { showToast(t('sched.approver_required'), 'error'); return; }
   const { ok } = await api(`/api/schedule/admin/requests/${id}`, apiPUT({ action, reviewed_by: by, review_note: note }));
   if (!ok) return;
-  closeSchedReview(); showToast(action==='approve'?'已核准':'已退回','success'); await loadSchedRequests();
+  closeSchedReview(); showToast(action==='approve'?t('sched.approved_toast'):t('sched.rejected_toast'),'success'); await loadSchedRequests();
 }
 async function revokeSchedRequest(id) {
   const note = prompt('請輸入撤銷原因（選填）：',''); if (note === null) return;
@@ -9648,9 +9828,9 @@ async function revokeSchedRequest(id) {
   showToast('已撤銷核准', 'success'); await loadSchedRequests(); setTimeout(refreshBadges, 500);
 }
 async function deleteSchedRequest(id) {
-  if (!confirm('確定刪除此申請記錄？')) return;
+  if (!confirm(t('sched.confirm_delete_req'))) return;
   await api(`/api/schedule/admin/requests/${id}`, { method: 'DELETE' });
-  showToast('已刪除', 'success'); await loadSchedRequests();
+  showToast(t('records.deleted'), 'success'); await loadSchedRequests();
 }
 
 // ── 人員摘要 ─────────────────────────────────────────────────
@@ -9658,7 +9838,7 @@ async function loadSchedSummary() {
   const month = document.getElementById('sched-sum-month').value; if (!month) return;
   const { ok, data } = await api(`/api/schedule/admin/summary/${month}`, {}, true);
   const tb = document.getElementById('sched-sum-tbody');
-  if (!ok || !data.staff || !data.staff.length) { tb.innerHTML='<tr><td colspan="7" class="empty-state"><div class="empty-state-text">無員工資料</div></td></tr>'; return; }
+  if (!ok || !data.staff || !data.staff.length) { tb.innerHTML=`<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('sched.summary_no_data')}</div></td></tr>`; return; }
   const { staff, config } = data;
   tb.innerHTML = staff.map(s => {
     const statusColor=SCHED_STATUS_COLOR[s.status]||'var(--muted)'; const statusLabel=SCHED_STATUS_LABEL[s.status]||s.status;
@@ -9866,7 +10046,7 @@ async function loadShiftTypes() {
   const { ok, data } = await api('/api/shifts/types', {}, true);
   shiftTypes = ok ? data : [];
   const tb   = document.getElementById('shift-types-tbody');
-  if (!shiftTypes.length) { tb.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-text">尚無班別</div></td></tr>'; return; }
+  if (!shiftTypes.length) { tb.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('shift.no_types')}</div></td></tr>`; return; }
   tb.innerHTML = shiftTypes.map(t => `<tr style="opacity:${t.active?1:.5}">
     <td style="font-weight:600"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${t.color};margin-right:6px;vertical-align:middle"></span>${escHtml(t.name)}</td>
     <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--green)">${t.start_time}</td>
@@ -10121,7 +10301,7 @@ async function loadLeaveStaffOptions() {
   }
   const sel = document.getElementById('leave-req-staff');
   const cur = sel.value;
-  sel.innerHTML = '<option value="">全部</option>' +
+  sel.innerHTML = `<option value="">${t('status.all')}</option>` +
     leaveStaffList.map(s=>`<option value="${s.id}" ${s.id==cur?'selected':''}>${escHtml(s.name)}</option>`).join('');
 }
 
@@ -10159,7 +10339,7 @@ async function _refreshLeaveBalCache(year) {
 
 function renderLeaveRequests() {
   const wrap = document.getElementById('leave-req-list');
-  if (!leaveReqData.length) { wrap.innerHTML='<div class="card" style="padding:40px;text-align:center;color:var(--muted)">無符合申請</div>'; return; }
+  if (!leaveReqData.length) { wrap.innerHTML=`<div class="card" style="padding:40px;text-align:center;color:var(--muted)">${t('leave.no_requests')}</div>`; return; }
   wrap.innerHTML = leaveReqData.map(r => {
     const sc = LEAVE_STATUS_COLOR[r.status]||'var(--muted)';
     const sl = LEAVE_STATUS_LABEL[r.status]||r.status;
@@ -10314,7 +10494,7 @@ function previewLeaveDays() {
     else
       balNote = ` ｜ <span style="color:var(--green)">核准後剩 ${afterUse.toFixed(1)} 天</span>`;
   }
-  document.getElementById('lam-days-preview').innerHTML = `預計請假：<strong>${days} 天</strong>（排除週日）${balNote}`;
+  document.getElementById('lam-days-preview').innerHTML = t('leave.preview_days').replace('{0}', `<strong>${days}</strong>`) + balNote;
 }
 
 async function saveLeaveAdmin() {
@@ -10431,7 +10611,7 @@ async function loadLeaveBalances() {
   const year = document.getElementById('leave-bal-year').value;
   const {ok,data} = await api(`/api/leave/balances?year=${year}`,{},true);
   const wrap = document.getElementById('leave-bal-wrap');
-  if (!ok||!data.length) { wrap.innerHTML='<div class="card" style="padding:32px;text-align:center;color:var(--muted)">無資料，請先點選「自動計算特休」</div>'; return; }
+  if (!ok||!data.length) { wrap.innerHTML=`<div class="card" style="padding:32px;text-align:center;color:var(--muted)">${t('leave.no_balance_data')}</div>`; return; }
   // 統計低額度警示
   const warnings = data.filter(it => {
     if (it.max_days === null) return false;
@@ -10563,7 +10743,7 @@ async function loadLeaveTypes() {
   const {ok,data} = await api('/api/leave/types',{},true);
   leaveTypesList = ok?data:[];
   const tb = document.getElementById('leave-types-tbody');
-  if (!leaveTypesList.length) { tb.innerHTML='<tr><td colspan="7" class="empty-state"><div class="empty-state-text">尚無假別</div></td></tr>'; return; }
+  if (!leaveTypesList.length) { tb.innerHTML=`<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('leave.type_no_types')}</div></td></tr>`; return; }
   const PAY_LABEL = {0:'無薪（事假）',0.5:'半薪（病假）',1:'全薪'};
   tb.innerHTML = leaveTypesList.map(t=>`<tr style="opacity:${t.active?1:.5}">
     <td style="font-weight:600"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${t.color};margin-right:6px;vertical-align:middle"></span>${escHtml(t.name)}</td>
@@ -10658,7 +10838,7 @@ async function initAdvancesTab() {
       const filterSel = document.getElementById('adv-filter-staff');
       const modalSel  = document.getElementById('adv-staff');
       const opts = _advStaffList.map(s => `<option value="${s.id}">${escHtml(s.name)}${s.department?' ('+escHtml(s.department)+')':''}</option>`).join('');
-      filterSel.innerHTML = '<option value="">全部員工</option>' + opts;
+      filterSel.innerHTML = `<option value="">${t('training.staff.all')}</option>` + opts;
       modalSel.innerHTML  = opts;
     }
   }
@@ -10679,9 +10859,9 @@ async function loadAdvances() {
   if (month)   url += `month=${month}&`;
   if (status)  url += `status=${status}&`;
   const tb = document.getElementById('adv-tbody');
-  tb.innerHTML = '<tr><td colspan="8" style="padding:20px;text-align:center;color:var(--muted)">載入中...</td></tr>';
+  tb.innerHTML = `<tr><td colspan="8" style="padding:20px;text-align:center;color:var(--muted)">${t('loading')}</td></tr>`;
   const { ok, data } = await api(url, {}, true);
-  if (!ok) { tb.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-state-text">載入失敗</div></td></tr>'; return; }
+  if (!ok) { tb.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('load_fail')}</div></td></tr>`; return; }
   _advDataCache = data || [];
   if (!_advDataCache.length) {
     tb.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="empty-state-text">尚無預支記錄</div></td></tr>';
@@ -10808,7 +10988,7 @@ async function loadSalaryRecords() {
   salaryRecords = ok?data:[];
   document.getElementById('sal-count').textContent=`共 ${salaryRecords.length} 筆 | 已確認 ${salaryRecords.filter(r=>r.status==='confirmed').length} 筆`;
   if (!salaryRecords.length) {
-    tb.innerHTML='<tr><td colspan="8" class="empty-state"><div class="empty-state-text">尚無薪資記錄，請點「自動產生薪資」</div></td></tr>';
+    tb.innerHTML=`<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('salary.no_records')}</div></td></tr>`;
     document.getElementById('sal-total-row').style.display='none'; return;
   }
   let totAllow=0,totDeduct=0,totNet=0;
@@ -11174,8 +11354,8 @@ async function loadSalaryStaff() {
   tb.innerHTML = Array(4).fill(0).map(() => `<tr class="skeleton-row">${Array(10).fill(0).map((_,i)=>`<td><span class="skel" style="width:${[80,70,60,70,70,70,70,50,40,60][i]}px"></span></td>`).join('')}</tr>`).join('');
   const {ok,data} = await api('/api/salary/staff',{},true);
   salaryStaffList = ok?data:[];
-  document.getElementById('sal-staff-count').textContent = `共 ${salaryStaffList.length} 位員工（來自打卡系統）`;
-  if (!salaryStaffList.length) { tb.innerHTML='<tr><td colspan="10" class="empty-state"><div class="empty-state-text">尚無員工</div></td></tr>'; return; }
+  document.getElementById('sal-staff-count').textContent = t('salary.staff_count').replace('{0}', salaryStaffList.length);
+  if (!salaryStaffList.length) { tb.innerHTML=`<tr><td colspan="10" class="empty-state"><div class="empty-state-text">${t('salary.no_staff')}</div></td></tr>`; return; }
   tb.innerHTML = salaryStaffList.map(s=>`<tr>
     <td style="font-weight:600">${escHtml(s.name)}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${escHtml(s.username||'')}</td>
@@ -11226,7 +11406,7 @@ function openSalStaffModal(id) {
     }
     const container = document.getElementById('ssm-items-list');
     if (!salaryItemsList.length) {
-      container.innerHTML='<div style="padding:14px;color:var(--muted);font-size:12px">尚無薪資項目</div>'; return;
+      container.innerHTML=`<div style="padding:14px;color:var(--muted);font-size:12px">${t('salary.no_items')}</div>`; return;
     }
     // Header row
     const hdr = `<div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;
@@ -11345,8 +11525,8 @@ async function loadSalaryItems() {
       </div>
     </div>
   </div>`;
-  allowDiv.innerHTML  = salaryItemsList.filter(i=>i.item_type==='allowance').map(card).join('') || '<div style="color:var(--muted);padding:20px;text-align:center">尚無津貼項目</div>';
-  deductDiv.innerHTML = salaryItemsList.filter(i=>i.item_type==='deduction').map(card).join('') || '<div style="color:var(--muted);padding:20px;text-align:center">尚無扣除項目</div>';
+  allowDiv.innerHTML  = salaryItemsList.filter(i=>i.item_type==='allowance').map(card).join('') || `<div style="color:var(--muted);padding:20px;text-align:center">${t('salary.no_allowance')}</div>`;
+  deductDiv.innerHTML = salaryItemsList.filter(i=>i.item_type==='deduction').map(card).join('') || `<div style="color:var(--muted);padding:20px;text-align:center">${t('salary.no_deduction')}</div>`;
 }
 
 function openSalaryItemModal(id=null) {
@@ -11740,7 +11920,7 @@ async function loadAnnList() {
 function renderAnnList() {
   const wrap = document.getElementById('ann-list');
   if (!annList.length) {
-    wrap.innerHTML = '<div class="card" style="padding:48px;text-align:center;color:var(--muted)">尚無公告，點右上角「新增公告」開始發佈</div>';
+    wrap.innerHTML = `<div class="card" style="padding:48px;text-align:center;color:var(--muted)">${t('ann.no_ann')}</div>`;
     return;
   }
   const now = new Date();
@@ -12015,7 +12195,7 @@ async function loadFinSummary() {
   // 類別明細列表
   const renderCatList = (id, items) => {
     const el = document.getElementById(id);
-    if (!items.length) { el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">本月無記錄</div>'; return; }
+    if (!items.length) { el.innerHTML=`<div style="color:var(--muted);font-size:12px;padding:4px 0">${t('fin.month_no_records')}</div>`; return; }
     el.innerHTML = items.map(c => `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
         <span style="font-size:13px;display:flex;align-items:center;gap:6px">
@@ -12044,7 +12224,7 @@ async function loadFinRecords() {
   const {ok, data} = await api('/api/finance/records?' + params, {}, true);
   const tb = document.getElementById('fin-rec-tbody');
   if (!ok || !data.length) {
-    tb.innerHTML = '<tr><td colspan="9" class="empty-state"><div class="empty-state-text">無記錄</div></td></tr>';
+    tb.innerHTML = `<tr><td colspan="9" class="empty-state"><div class="empty-state-text">${t('fin.no_records')}</div></td></tr>`;
     document.getElementById('fin-rec-footer').style.display = 'none'; return;
   }
   window._finRecords = data;
@@ -12075,7 +12255,11 @@ async function loadFinRecords() {
   }).join('');
   const footer = document.getElementById('fin-rec-footer');
   footer.style.display='';
-  footer.innerHTML=`共 ${data.length} 筆　收入合計：<strong style="color:var(--green)">$${totalIncome.toLocaleString()}</strong>　支出合計：<strong style="color:var(--red)">$${totalExpense.toLocaleString()}</strong>　淨損益：<strong style="color:${totalIncome-totalExpense>=0?'var(--green)':'var(--red)'}">$${(totalIncome-totalExpense).toLocaleString()}</strong>`;
+  footer.innerHTML = t('fin.footer')
+    .replace('{0}', data.length)
+    .replace('${1}', `<strong style="color:var(--green)">$${totalIncome.toLocaleString()}</strong>`)
+    .replace('${2}', `<strong style="color:var(--red)">$${totalExpense.toLocaleString()}</strong>`)
+    .replace('${3}', `<strong style="color:${totalIncome-totalExpense>=0?'var(--green)':'var(--red)'}">$${(totalIncome-totalExpense).toLocaleString()}</strong>`);
 }
 
 function renderFinCatOptions() {

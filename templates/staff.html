@@ -158,7 +158,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
       <div id="bio-sep" style="display:none;margin-top:12px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
           <div style="flex:1;height:1px;background:var(--border)"></div>
-          <span style="font-size:10px;color:var(--muted);letter-spacing:.08em">或</span>
+          <span style="font-size:10px;color:var(--muted);letter-spacing:.08em" data-i18n-staff="login.or">或</span>
           <div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
         <button class="login-btn" id="bio-login-btn" onclick="doBioLogin()" style="background:var(--navy-mid)">
@@ -3204,6 +3204,7 @@ const STAFF_I18N = {
     'annual.status_current':'▶ 目前','annual.status_past':'已達成','annual.status_future':'未達成',
     'annual.th_milestone':'里程碑','annual.th_days':'天數','annual.th_reached':'達成日期','annual.th_status':'狀態',
     'annual.labor_law':'依勞基法第38條：滿6個月3天 → 滿1年7天 → 滿2年10天 → 滿3年14天 → 滿5年15天 → 滿10年起每年+1天（上限30天）',
+    'login.or':'或',
   },
   'en': {
     brand:'Attendance System', loginTitle:'Employee Login', labelUser:'Username', labelPw:'Password',
@@ -3448,6 +3449,7 @@ const STAFF_I18N = {
     'annual.status_current':'▶ Current','annual.status_past':'Reached','annual.status_future':'Upcoming',
     'annual.th_milestone':'Milestone','annual.th_days':'Days','annual.th_reached':'Date Reached','annual.th_status':'Status',
     'annual.labor_law':'Labor Standards Act Art. 38: 6 mo→3d, 1yr→7d, 2yr→10d, 3yr→14d, 5yr→15d, 10yr+→+1d/yr (max 30d)',
+    'login.or':'or',
   },
   'ja': {
     brand:'勤怠管理システム', loginTitle:'従業員ログイン', labelUser:'ユーザー名', labelPw:'パスワード',
@@ -3692,6 +3694,7 @@ const STAFF_I18N = {
     'annual.status_current':'▶ 現在','annual.status_past':'達成','annual.status_future':'未達成',
     'annual.th_milestone':'マイルストーン','annual.th_days':'日数','annual.th_reached':'達成日','annual.th_status':'状態',
     'annual.labor_law':'労働基準法第39条：6ヶ月→3日、1年→7日、2年→10日、3年→14日、5年→15日、10年以降は毎年+1日（上限30日）',
+    'login.or':'または',
   },
   'vi': {
     brand:'Hệ thống Chấm công', loginTitle:'Đăng nhập', labelUser:'Tài khoản', labelPw:'Mật khẩu',
@@ -3936,6 +3939,7 @@ const STAFF_I18N = {
     'annual.status_current':'▶ Hiện tại','annual.status_past':'Đã đạt','annual.status_future':'Chưa đạt',
     'annual.th_milestone':'Mốc','annual.th_days':'Số ngày','annual.th_reached':'Ngày đạt','annual.th_status':'Trạng thái',
     'annual.labor_law':'Luật Lao động Đài Loan Đ.38: 6th→3ng, 1năm→7ng, 2năm→10ng, 3năm→14ng, 5năm→15ng, 10năm+→+1ng/năm (tối đa 30ng)',
+    'login.or':'hoặc',
   },
   'th': {
     brand:'ระบบบันทึกเวลา', loginTitle:'เข้าสู่ระบบ', labelUser:'ชื่อผู้ใช้', labelPw:'รหัสผ่าน',
@@ -4180,6 +4184,7 @@ const STAFF_I18N = {
     'annual.status_current':'▶ ปัจจุบัน','annual.status_past':'บรรลุแล้ว','annual.status_future':'ยังไม่ถึง',
     'annual.th_milestone':'เป้าหมาย','annual.th_days':'จำนวนวัน','annual.th_reached':'วันที่บรรลุ','annual.th_status':'สถานะ',
     'annual.labor_law':'กฎหมายแรงงานไต้หวัน ม.38: 6ด→3ว, 1ป→7ว, 2ป→10ว, 3ป→14ว, 5ป→15ว, 10ป+→+1ว/ป (สูงสุด 30ว)',
+    'login.or':'หรือ',
   },
   'zh-CN': {
     brand:'打卡管理系统', loginTitle:'员工登录', labelUser:'账号', labelPw:'密码',
@@ -4423,6 +4428,7 @@ const STAFF_I18N = {
     'annual.status_current':'▶ 目前','annual.status_past':'已达成','annual.status_future':'未达成',
     'annual.th_milestone':'里程碑','annual.th_days':'天数','annual.th_reached':'达成日期','annual.th_status':'状态',
     'annual.labor_law':'依劳动法：满6个月3天 → 满1年7天 → 满2年10天 → 满3年14天 → 满5年15天 → 满10年起每年+1天（上限30天）',
+    'login.or':'或',
   }
 };
 let _staffLang = localStorage.getItem('adminLang') || 'zh-TW';
