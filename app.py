@@ -6177,6 +6177,18 @@ def api_salary_advance_update(aid):
         )).fetchone()
     return jsonify(_advance_row(row)) if row else ('', 404)
 
+@app.route('/api/salary/advances/<int:aid>/cancel', methods=['POST'])
+@require_module('salary')
+def api_salary_advance_cancel(aid):
+    with get_db() as conn:
+        row = conn.execute("""
+            UPDATE salary_advances SET status='cancelled', updated_at=NOW()
+            WHERE id=%s AND status='pending' RETURNING *
+        """, (aid,)).fetchone()
+    if not row:
+        return jsonify({'error': '記錄不存在或已非待扣款狀態'}), 400
+    return jsonify(_advance_row(row))
+
 @app.route('/api/salary/advances/<int:aid>', methods=['DELETE'])
 @require_module('salary')
 def api_salary_advance_delete(aid):

@@ -11134,17 +11134,11 @@ async function saveAdvance() {
 }
 
 async function cancelAdvance(id) {
-  if (!confirm('確定取消此預支記錄？')) return;
-  const r = _advDataCache.find(x => x.id === id);
-  if (!r) { showToast('找不到記錄', 'error'); return; }
-  const { ok } = await api(`/api/salary/advances/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      amount: r.amount, advance_date: r.advance_date,
-      deduct_month: r.deduct_month, note: r.note, status: 'cancelled'
-    })
-  });
-  if (ok) { showToast('已取消', 'success'); await loadAdvances(); }
+  if (!confirm('確定取消此預支記錄？取消後可透過編輯改回待扣款。')) return;
+  const { ok, data } = await api(`/api/salary/advances/${id}/cancel`, apiJSON({}));
+  if (!ok) return;
+  showToast('預支記錄已取消', 'success');
+  await loadAdvances();
 }
 
 async function deleteAdvance(id) {
