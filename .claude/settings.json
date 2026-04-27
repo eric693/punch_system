@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"\\\\.textContent\\\\s*=\\\\s*['\\\\`][^']*['\\\\`]\" /home/eric/eric_tech/punch/templates/admin.html)",
+      "Bash(grep -n \"\\\\.textContent\\\\s*=\\\\s*['\\\\`]\" /home/eric/eric_tech/punch/templates/admin.html)"
+    ]
+  }
+}

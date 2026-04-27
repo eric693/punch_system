@@ -395,7 +395,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         </div>
         <div class="table-wrap" style="max-height:320px;overflow-y:auto">
           <table>
-            <thead><tr><th>姓名</th><th>職稱</th><th>上班</th><th>下班</th><th>狀態</th></tr></thead>
+            <thead><tr><th data-i18n="th.name">姓名</th><th data-i18n="th.role">職稱</th><th data-i18n="th.check_in">上班</th><th data-i18n="th.check_out">下班</th><th data-i18n="th.status_col">狀態</th></tr></thead>
             <tbody id="ds-today-table"></tbody>
           </table>
         </div>
@@ -462,7 +462,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>日期</th><th>員工</th><th>上班</th><th>下班</th><th>工時</th><th>補打卡</th></tr></thead>
+            <thead><tr><th data-i18n="th.date_col">日期</th><th data-i18n="th.staff_col">員工</th><th data-i18n="th.check_in">上班</th><th data-i18n="th.check_out">下班</th><th data-i18n="th.work_hours">工時</th><th data-i18n="th.punch_corr">補打卡</th></tr></thead>
             <tbody id="sum-tbody"><tr><td colspan="6" class="empty-state"><div class="empty-state-text">請選擇月份</div></td></tr></tbody>
           </table>
         </div>
@@ -488,7 +488,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div class="card-header"><span class="card-title">打卡記錄</span><span id="rec-count" style="font-size:12px;color:var(--muted)"></span></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>時間</th><th>員工</th><th>職稱</th><th>類型</th><th>備註</th><th>補打</th><th>操作</th></tr></thead>
+            <thead><tr><th data-i18n="th.time">時間</th><th data-i18n="th.staff_col">員工</th><th data-i18n="th.role">職稱</th><th data-i18n="th.type_col">類型</th><th data-i18n="th.note_col">備註</th><th data-i18n="th.action">補打</th><th data-i18n="th.action">操作</th></tr></thead>
             <tbody id="rec-tbody"><tr><td colspan="7" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr></tbody>
           </table>
         </div>
@@ -517,7 +517,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <div class="card-header"><span class="card-title">近期補打記錄</span></div>
           <div class="table-wrap" style="max-height:400px;overflow-y:auto">
             <table>
-              <thead><tr><th>時間</th><th>員工</th><th>類型</th><th>操作人</th><th>原因</th></tr></thead>
+              <thead><tr><th data-i18n="th.time">時間</th><th data-i18n="th.staff_col">員工</th><th data-i18n="th.type_col">類型</th><th>操作人</th><th data-i18n="th.reason">原因</th></tr></thead>
               <tbody id="manual-tbody"><tr><td colspan="5" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr></tbody>
             </table>
           </div>
@@ -537,7 +537,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>姓名</th><th>員工代碼</th><th>職稱</th><th>帳號</th><th>匯款帳號</th><th>狀態</th><th>操作</th></tr></thead>
+            <thead><tr><th data-i18n="th.name">姓名</th><th data-i18n="th.emp_code">員工代碼</th><th data-i18n="th.role">職稱</th><th data-i18n="th.account">帳號</th><th data-i18n="th.bank_account">匯款帳號</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th></tr></thead>
             <tbody id="punch-staff-tbody"><tr><td colspan="7" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr></tbody>
           </table>
         </div>
@@ -595,7 +595,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <div class="table-wrap">
             <table id="ot-summary-table">
               <thead><tr>
-                <th>員工姓名</th><th>職稱</th><th style="text-align:center">申請次數</th>
+                <th data-i18n="th.emp_name">員工姓名</th><th data-i18n="th.role">職稱</th><th style="text-align:center" data-i18n="th.app_count">申請次數</th>
                 <th style="text-align:center">申請總時數</th>
                 <th style="text-align:center">已核准</th>
                 <th style="text-align:center">待審核</th>
@@ -622,8 +622,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>姓名</th><th>員工代碼</th><th>部門</th><th>職稱</th>
-              <th>到職日</th><th>離職日</th><th>原因</th><th>操作</th>
+              <th data-i18n="th.name">姓名</th><th data-i18n="th.emp_code">員工代碼</th><th data-i18n="th.dept_col">部門</th><th data-i18n="th.role">職稱</th>
+              <th data-i18n="th.hire_date">到職日</th><th data-i18n="th.resign_date">離職日</th><th data-i18n="th.reason">原因</th><th data-i18n="th.action">操作</th>
             </tr></thead>
             <tbody id="resigned-tbody">
               <tr><td colspan="8" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>
@@ -719,7 +719,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
             <div class="card-header"><span class="card-title">員工 LINE 綁定狀態</span><button class="btn btn-outline btn-sm" onclick="loadLinePunchStaff()">重新整理</button></div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>姓名</th><th>帳號</th><th>LINE 綁定</th><th>操作</th></tr></thead>
+                <thead><tr><th data-i18n="th.name">姓名</th><th data-i18n="th.account">帳號</th><th data-i18n="th.line_binding">LINE 綁定</th><th data-i18n="th.action">操作</th></tr></thead>
                 <tbody id="lp-staff-tbody"><tr><td colspan="4" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr></tbody>
               </table>
             </div>
@@ -740,7 +740,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>嚴重程度</th><th>員工</th><th>部門</th><th>日期</th><th>異常類型</th><th>說明</th></tr></thead>
+            <thead><tr><th data-i18n="th.severity">嚴重程度</th><th data-i18n="th.staff_col">員工</th><th data-i18n="th.dept_col">部門</th><th data-i18n="th.date_col">日期</th><th data-i18n="th.anomaly_type">異常類型</th><th data-i18n="th.desc">說明</th></tr></thead>
             <tbody id="anomaly-tbody"><tr><td colspan="6" class="empty-state"><div class="empty-state-text">請稍候...</div></td></tr></tbody>
           </table>
         </div>
@@ -762,14 +762,14 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <table>
             <thead>
               <tr>
-                <th>姓名</th><th>部門</th>
+                <th data-i18n="th.name">姓名</th><th data-i18n="th.dept_col">部門</th>
                 <th style="text-align:center">出勤天數</th>
                 <th style="text-align:center">總工時</th>
                 <th style="text-align:center">平均時數/天</th>
                 <th style="text-align:center">遲到</th>
                 <th style="text-align:center">早退</th>
                 <th style="text-align:center">缺打卡</th>
-                <th>異常明細</th>
+                <th data-i18n="th.anomaly_detail">異常明細</th>
               </tr>
             </thead>
             <tbody id="mstats-tbody"><tr><td colspan="9" class="empty-state"><div class="empty-state-text">請選擇月份</div></td></tr></tbody>
@@ -816,7 +816,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>班別名稱</th><th>上班時間</th><th>下班時間</th><th>適用部門</th><th>顏色</th><th>狀態</th><th>操作</th></tr></thead>
+            <thead><tr><th data-i18n="th.shift_name">班別名稱</th><th data-i18n="th.start_time">上班時間</th><th data-i18n="th.end_time">下班時間</th><th data-i18n="th.applicable_dept">適用部門</th><th data-i18n="th.color_col">顏色</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th></tr></thead>
             <tbody id="shift-types-tbody"><tr><td colspan="7" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr></tbody>
           </table>
         </div>
@@ -864,7 +864,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>員工</th><th>職稱</th><th>申請天數</th><th>配額</th><th>狀態</th><th>休假日期</th><th>操作</th></tr></thead>
+            <thead><tr><th data-i18n="th.staff_col">員工</th><th data-i18n="th.role">職稱</th><th data-i18n="th.leave_days">申請天數</th><th data-i18n="th.quota">配額</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.leave_date">休假日期</th><th data-i18n="th.action">操作</th></tr></thead>
             <tbody id="sched-sum-tbody"><tr><td colspan="7" class="empty-state"><div class="empty-state-text">請選擇月份</div></td></tr></tbody>
           </table>
         </div>
@@ -1005,7 +1005,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>假別名稱</th><th>代碼</th><th>薪資倍率</th><th>年度上限</th><th>顏色</th><th>狀態</th><th>操作</th></tr></thead>
+            <thead><tr><th data-i18n="th.leave_type_name">假別名稱</th><th data-i18n="th.code_col">代碼</th><th data-i18n="th.pay_rate">薪資倍率</th><th data-i18n="th.annual_limit">年度上限</th><th data-i18n="th.color_col">顏色</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th></tr></thead>
             <tbody id="leave-types-tbody"></tbody>
           </table>
         </div>
@@ -1051,7 +1051,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>代碼</th><th>姓名</th><th>部門</th><th>出勤</th><th>津貼合計</th><th>扣除合計</th><th>實領金額</th><th>狀態</th><th>操作</th></tr></thead>
+            <thead><tr><th data-i18n="th.code_col">代碼</th><th data-i18n="th.name">姓名</th><th data-i18n="th.dept_col">部門</th><th data-i18n="th.attendance">出勤</th><th data-i18n="th.allowance_total">津貼合計</th><th data-i18n="th.deduct_total">扣除合計</th><th data-i18n="th.net_pay">實領金額</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th></tr></thead>
             <tbody id="sal-tbody"></tbody>
           </table>
         </div>
@@ -1075,7 +1075,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>姓名</th><th>帳號</th><th>部門</th><th>職稱</th><th>到職日</th><th>底薪</th><th>投保薪資</th><th>排休配額</th><th>狀態</th><th>操作</th></tr></thead>
+            <thead><tr><th data-i18n="th.name">姓名</th><th data-i18n="th.account">帳號</th><th data-i18n="th.dept_col">部門</th><th data-i18n="th.role">職稱</th><th data-i18n="th.hire_date">到職日</th><th data-i18n="th.base_salary">底薪</th><th data-i18n="th.insured_salary">投保薪資</th><th data-i18n="th.rest_quota">排休配額</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th></tr></thead>
             <tbody id="sal-staff-tbody"></tbody>
           </table>
         </div>
@@ -1190,8 +1190,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <table>
             <thead>
               <tr>
-                <th>員工</th><th>部門</th><th>預支日期</th><th>預支金額</th>
-                <th>扣款月份</th><th>備註</th><th>狀態</th><th>操作</th>
+                <th data-i18n="th.staff_col">員工</th><th data-i18n="th.dept_col">部門</th><th data-i18n="th.date_col">預支日期</th><th data-i18n="th.amount">預支金額</th>
+                <th data-i18n="th.month_col">扣款月份</th><th data-i18n="th.note_col">備註</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th>
               </tr>
             </thead>
             <tbody id="adv-tbody"></tbody>
@@ -1363,7 +1363,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>日期</th><th>類型</th><th>類別</th><th>標題</th><th>廠商</th><th>發票/單據</th><th style="text-align:right">金額</th><th>備註</th><th>操作</th></tr></thead>
+            <thead><tr><th data-i18n="th.date_col">日期</th><th data-i18n="th.type_col">類型</th><th data-i18n="th.cat_col">類別</th><th data-i18n="th.title_col">標題</th><th data-i18n="th.vendor">廠商</th><th data-i18n="th.invoice_doc">發票/單據</th><th style="text-align:right" data-i18n="th.amount">金額</th><th data-i18n="th.note_col">備註</th><th data-i18n="th.action">操作</th></tr></thead>
             <tbody id="fin-rec-tbody"><tr><td colspan="9" class="empty-state"><div class="empty-state-text">請選擇月份</div></td></tr></tbody>
           </table>
         </div>
@@ -1381,14 +1381,14 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div class="card">
           <div class="card-header"><span class="card-title" style="color:var(--green)">收入類別</span></div>
           <div class="table-wrap"><table>
-            <thead><tr><th>名稱</th><th>顏色</th><th>排序</th><th>狀態</th><th>操作</th></tr></thead>
+            <thead><tr><th data-i18n="th.name_col">名稱</th><th data-i18n="th.color_col">顏色</th><th data-i18n="th.sort">排序</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th></tr></thead>
             <tbody id="fin-cat-income-tbody"></tbody>
           </table></div>
         </div>
         <div class="card">
           <div class="card-header"><span class="card-title" style="color:var(--red)">支出類別</span></div>
           <div class="table-wrap"><table>
-            <thead><tr><th>名稱</th><th>顏色</th><th>排序</th><th>狀態</th><th>操作</th></tr></thead>
+            <thead><tr><th data-i18n="th.name_col">名稱</th><th data-i18n="th.color_col">顏色</th><th data-i18n="th.sort">排序</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th></tr></thead>
             <tbody id="fin-cat-expense-tbody"></tbody>
           </table></div>
         </div>
@@ -1644,7 +1644,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
             <thead><tr style="background:var(--bg)">
               <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)">科目代碼</th>
               <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)">報表項目</th>
-              <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)">類型</th>
+              <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)" data-i18n="th.type_col">類型</th>
             </tr></thead>
             <tbody>
               <tr><td style="padding:5px 10px">operating_revenue</td><td style="padding:5px 10px">營業收入</td><td style="padding:5px 10px;color:var(--green)">收入</td></tr>
@@ -1742,11 +1742,11 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr>
-              <th>姓名</th><th>部門</th><th>訓練筆數</th>
+              <th data-i18n="th.name">姓名</th><th data-i18n="th.dept_col">部門</th><th data-i18n="th.training_count">訓練筆數</th>
               <th style="color:var(--green)">有效</th>
               <th style="color:var(--amber,#d97706)">即將到期</th>
               <th style="color:var(--red)">已過期</th>
-              <th>操作</th>
+              <th data-i18n="th.action">操作</th>
             </tr></thead>
             <tbody id="training-summary-tbody">
               <tr><td colspan="7" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>
@@ -1781,8 +1781,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div class="table-wrap">
           <table class="data-table">
             <thead><tr>
-              <th>姓名</th><th>課程名稱</th><th>類別</th>
-              <th>完成日期</th><th>到期日期</th><th>證書號碼</th><th>狀態</th><th>操作</th>
+              <th data-i18n="th.name">姓名</th><th data-i18n="th.course_name">課程名稱</th><th data-i18n="th.cat_col">類別</th>
+              <th data-i18n="th.complete_date">完成日期</th><th data-i18n="th.expire_date">到期日期</th><th data-i18n="th.cert_no">證書號碼</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th>
             </tr></thead>
             <tbody id="training-records-tbody">
               <tr><td colspan="8" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>
@@ -1825,7 +1825,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>申請人</th><th>日期</th><th>類型</th><th>金額</th><th>說明</th><th>收據</th><th>狀態</th><th>操作</th>
+            <th data-i18n="th.applicant">申請人</th><th data-i18n="th.date_col">日期</th><th data-i18n="th.type_col">類型</th><th data-i18n="th.amount">金額</th><th data-i18n="th.desc">說明</th><th data-i18n="th.receipt">收據</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th>
           </tr></thead>
           <tbody id="exp-review-tbody">
             <tr><td colspan="8" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>
@@ -1860,10 +1860,10 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>員工</th><th>考核期間</th><th>範本</th>
-            <th style="text-align:right">分數</th><th>等級</th>
-            <th>備註</th><th>考核人</th><th>考核日期</th>
-            <th>薪資調整</th><th>操作</th>
+            <th data-i18n="th.staff_col">員工</th><th data-i18n="th.eval_period_col">考核期間</th><th data-i18n="th.template">範本</th>
+            <th style="text-align:right" data-i18n="th.score">分數</th><th data-i18n="th.grade">等級</th>
+            <th data-i18n="th.note_col">備註</th><th data-i18n="th.evaluator">考核人</th><th data-i18n="th.eval_date">考核日期</th>
+            <th data-i18n="th.salary_adj">薪資調整</th><th data-i18n="th.action">操作</th>
           </tr></thead>
           <tbody id="perf-reviews-tbody">
             <tr><td colspan="10" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>
@@ -1924,7 +1924,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
-            <th>範本名稱</th><th>說明</th><th>考核週期</th><th>項目數</th><th>狀態</th><th>操作</th>
+            <th data-i18n="th.template_name">範本名稱</th><th data-i18n="th.desc">說明</th><th data-i18n="th.eval_cycle">考核週期</th><th data-i18n="th.item_count">項目數</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th>
           </tr></thead>
           <tbody id="perf-templates-tbody">
             <tr><td colspan="6" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>
@@ -2275,7 +2275,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="bio-panel-modal" style="display:none">
   <div class="modal" style="max-width:480px;width:95vw">
     <div class="modal-header">
-      <span class="modal-title">生物辨識綁定管理</span>
+      <span class="modal-title" data-i18n="modal.biometric">生物辨識綁定管理</span>
       <button class="modal-close" onclick="document.getElementById('bio-panel-modal').style.display='none'">&times;</button>
     </div>
     <div class="modal-body">
@@ -2301,7 +2301,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="advance-modal" style="display:none">
   <div class="modal" style="max-width:480px;width:95vw">
     <div class="modal-header">
-      <span class="modal-title" id="adv-modal-title">新增預支記錄</span>
+      <span class="modal-title" data-i18n="adv.modal_add" id="adv-modal-title">新增預支記錄</span>
       <button class="modal-close" onclick="closeAdvanceModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -2349,7 +2349,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="salary-preview-modal" style="display:none">
   <div class="modal" style="max-width:900px;width:95vw">
     <div class="modal-header">
-      <span class="modal-title" id="salary-preview-title">薪資計算預覽</span>
+      <span class="modal-title" data-i18n="modal.salary_preview" id="salary-preview-title">薪資計算預覽</span>
       <button class="modal-close" onclick="document.getElementById('salary-preview-modal').style.display='none'">&times;</button>
     </div>
     <div class="modal-body" style="padding:0">
@@ -2382,7 +2382,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="training-modal" style="display:none">
   <div class="modal" style="max-width:500px">
     <div class="modal-header">
-      <span class="modal-title" id="training-modal-title">新增訓練記錄</span>
+      <span class="modal-title" data-i18n="modal.add_training" id="training-modal-title">新增訓練記錄</span>
       <button class="modal-close" onclick="document.getElementById('training-modal').style.display='none'">&times;</button>
     </div>
     <div class="modal-body">
@@ -2439,7 +2439,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Store Modal -->
 <div class="modal-overlay" id="store-modal" style="display:none">
   <div class="modal" style="max-width:420px">
-    <div class="modal-header"><span class="modal-title" id="store-modal-title">新增門市</span><button class="modal-close" onclick="document.getElementById('store-modal').style.display='none'">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_store" id="store-modal-title">新增門市</span><button class="modal-close" onclick="document.getElementById('store-modal').style.display='none'">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="store-modal-id">
       <div style="margin-bottom:12px"><label class="form-label">門市名稱 *</label><input class="form-input" id="store-modal-name" placeholder="例：信義店" style="width:100%"></div>
@@ -2457,7 +2457,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Punch Staff Modal -->
 <div class="modal-overlay" id="punch-staff-modal" style="display:none">
   <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="modal-title" id="psm-title">新增員工</span><button class="modal-close" onclick="closePunchStaffModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_staff" id="psm-title">新增員工</span><button class="modal-close" onclick="closePunchStaffModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="psm-id">
       <div class="form-row">
@@ -2511,7 +2511,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Punch Record Edit Modal -->
 <div class="modal-overlay" id="punch-rec-modal" style="display:none">
   <div class="modal" style="max-width:420px">
-    <div class="modal-header"><span class="modal-title">編輯打卡記錄</span><button class="modal-close" onclick="closePunchRecModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.edit_punch">編輯打卡記錄</span><button class="modal-close" onclick="closePunchRecModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="prm-id">
       <div style="margin-bottom:12px"><label class="form-label">打卡類型</label><select class="form-input" id="prm-type" style="width:100%"><option value="in">上班打卡</option><option value="out">下班打卡</option><option value="break_out">休息開始</option><option value="break_in">休息結束</option></select></div>
@@ -2526,7 +2526,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- GPS Location Modal -->
 <div class="modal-overlay" id="gps-loc-modal" style="display:none">
   <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="modal-title" id="glm-title">新增打卡地點</span><button class="modal-close" onclick="closeLocModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_location" id="glm-title">新增打卡地點</span><button class="modal-close" onclick="closeLocModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="glm-id">
       <div style="margin-bottom:14px"><label class="form-label">地點名稱 *</label><input class="form-input" id="glm-name" placeholder="例：公司門口" style="width:100%"></div>
@@ -2552,7 +2552,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Punch Request Review Modal -->
 <div class="modal-overlay" id="preq-modal" style="display:none">
   <div class="modal" style="max-width:440px">
-    <div class="modal-header"><span class="modal-title" id="preq-modal-title">審核補打卡申請</span><button class="modal-close" onclick="closePreqModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.review_punch" id="preq-modal-title">審核補打卡申請</span><button class="modal-close" onclick="closePreqModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="preq-id">
       <div id="preq-info" style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:14px;font-size:13px"></div>
@@ -2566,7 +2566,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Overtime Review Modal -->
 <div class="modal-overlay" id="ot-review-modal" style="display:none">
   <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="modal-title" id="otrm-title">審核加班申請</span><button class="modal-close" onclick="closeOTReview()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.review_ot" id="otrm-title">審核加班申請</span><button class="modal-close" onclick="closeOTReview()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="otrm-id">
       <div id="otrm-info" style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:14px;font-size:13px"></div>
@@ -2585,7 +2585,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Schedule Review Modal -->
 <div class="modal-overlay" id="sched-review-modal" style="display:none">
   <div class="modal" style="max-width:460px">
-    <div class="modal-header"><span class="modal-title" id="srm-title">審核排休申請</span><button class="modal-close" onclick="closeSchedReview()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.review_sched" id="srm-title">審核排休申請</span><button class="modal-close" onclick="closeSchedReview()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="srm-id">
       <div id="srm-info" style="margin-bottom:16px;padding:12px;background:var(--bg);border-radius:8px;font-size:13px"></div>
@@ -2599,7 +2599,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Shift Type Modal -->
 <div class="modal-overlay" id="shift-type-modal" style="display:none">
   <div class="modal" style="max-width:440px">
-    <div class="modal-header"><span class="modal-title" id="stm-title">新增班別</span><button class="modal-close" onclick="closeShiftTypeModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_shift" id="stm-title">新增班別</span><button class="modal-close" onclick="closeShiftTypeModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="stm-id">
       <div class="form-row">
@@ -2623,7 +2623,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Shift Assign Modal -->
 <div class="modal-overlay" id="shift-assign-modal" style="display:none">
   <div class="modal" style="max-width:560px">
-    <div class="modal-header"><span class="modal-title">指派班別</span><button class="modal-close" onclick="closeShiftAssignModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.assign_shift">指派班別</span><button class="modal-close" onclick="closeShiftAssignModal()">&times;</button></div>
     <div class="modal-body">
       <div style="margin-bottom:14px"><label class="form-label">選擇員工（可多選）</label><div id="sam-staff-list" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;border:1.5px solid var(--border);border-radius:8px;min-height:44px"></div></div>
       <div class="form-row">
@@ -2651,7 +2651,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="shift-import-modal" style="display:none">
   <div class="modal" style="max-width:620px">
     <div class="modal-header">
-      <span class="modal-title">匯入班表</span>
+      <span class="modal-title" data-i18n="modal.import_sched">匯入班表</span>
       <button class="modal-close" onclick="closeShiftImportModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -2698,7 +2698,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="holiday-modal" style="display:none">
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
-      <span class="modal-title" id="hm-title">新增國定假日</span>
+      <span class="modal-title" data-i18n="modal.add_holiday" id="hm-title">新增國定假日</span>
       <button class="modal-close" onclick="closeHolidayModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -2726,7 +2726,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="ann-modal" style="display:none">
   <div class="modal" style="max-width:640px">
     <div class="modal-header">
-      <span class="modal-title" id="ann-modal-title">新增公告</span>
+      <span class="modal-title" data-i18n="modal.add_ann" id="ann-modal-title">新增公告</span>
       <button class="modal-close" onclick="closeAnnModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -2790,7 +2790,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Leave Admin Modal -->
 <div class="modal-overlay" id="leave-admin-modal" style="display:none">
   <div class="modal" style="max-width:520px">
-    <div class="modal-header"><span class="modal-title" id="lam-title">管理員代填請假</span><button class="modal-close" onclick="closeLeaveAdminModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.leave_admin" id="lam-title">管理員代填請假</span><button class="modal-close" onclick="closeLeaveAdminModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="lam-id">
       <div class="form-row">
@@ -2820,7 +2820,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Leave Review Modal -->
 <div class="modal-overlay" id="leave-review-modal" style="display:none">
   <div class="modal" style="max-width:440px">
-    <div class="modal-header"><span class="modal-title" id="lrm-title">審核請假申請</span><button class="modal-close" onclick="closeLeaveReview()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.review_leave" id="lrm-title">審核請假申請</span><button class="modal-close" onclick="closeLeaveReview()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="lrm-id">
       <div id="lrm-info" style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:14px;font-size:13px"></div>
@@ -2834,7 +2834,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Leave Type Modal -->
 <div class="modal-overlay" id="leave-type-modal" style="display:none">
   <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="modal-title" id="ltm-title">新增假別</span><button class="modal-close" onclick="closeLeaveTypeModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_leave_type" id="ltm-title">新增假別</span><button class="modal-close" onclick="closeLeaveTypeModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="ltm-id">
       <div class="form-row">
@@ -2858,7 +2858,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Salary Staff Modal -->
 <div class="modal-overlay" id="sal-staff-modal" style="display:none">
   <div class="modal" style="max-width:600px">
-    <div class="modal-header"><span class="modal-title" id="ssm-title">薪資設定</span><button class="modal-close" onclick="closeSalStaffModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.salary_settings" id="ssm-title">薪資設定</span><button class="modal-close" onclick="closeSalStaffModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="ssm-id">
       <div class="form-grid">
@@ -2895,7 +2895,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Salary Item Modal -->
 <div class="modal-overlay" id="sal-item-modal" style="display:none">
   <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="modal-title" id="sim-title">新增薪資項目</span><button class="modal-close" onclick="closeSalaryItemModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_salary_item" id="sim-title">新增薪資項目</span><button class="modal-close" onclick="closeSalaryItemModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="sim-id">
       <div class="form-row">
@@ -2923,7 +2923,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="sal-detail-modal" style="display:none">
   <div class="modal" style="max-width:680px">
     <div class="modal-header">
-      <span class="modal-title" id="sdm-title">薪資明細</span>
+      <span class="modal-title" data-i18n="modal.salary_detail" id="sdm-title">薪資明細</span>
       <div style="display:flex;gap:8px">
         <button class="btn btn-outline btn-sm" onclick="printSalarySlip()">列印薪資單</button>
         <button class="modal-close" onclick="closeSalDetail()">&times;</button>
@@ -2953,7 +2953,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Finance Record Modal -->
 <div class="modal-overlay" id="fin-rec-modal" style="display:none">
   <div class="modal" style="max-width:560px">
-    <div class="modal-header"><span class="modal-title" id="frm-title">新增收支記錄</span><button class="modal-close" onclick="closeFinRecModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_fin_record" id="frm-title">新增收支記錄</span><button class="modal-close" onclick="closeFinRecModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="frm-id">
       <div class="form-row">
@@ -2990,7 +2990,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Finance Category Modal -->
 <div class="modal-overlay" id="fin-cat-modal" style="display:none">
   <div class="modal" style="max-width:400px">
-    <div class="modal-header"><span class="modal-title" id="fcm-title">新增類別</span><button class="modal-close" onclick="closeFinCatModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_fin_cat" id="fcm-title">新增類別</span><button class="modal-close" onclick="closeFinCatModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="fcm-id">
       <div class="form-row">
@@ -3028,7 +3028,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="ocr-edit-modal" style="display:none">
   <div class="modal" style="max-width:560px">
     <div class="modal-header">
-      <span class="modal-title">編輯辨識結果</span>
+      <span class="modal-title" data-i18n="modal.edit_ocr">編輯辨識結果</span>
       <button class="modal-close" onclick="closeOcrEditModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -3090,7 +3090,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="tax-sync-modal" style="display:none">
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
-      <span class="modal-title">整合稅務分錄至財務報表</span>
+      <span class="modal-title" data-i18n="modal.tax_integrate">整合稅務分錄至財務報表</span>
       <button class="modal-close" onclick="closeTaxSyncModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -3114,7 +3114,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="ap-modal" style="display:none">
   <div class="modal" style="max-width:500px">
     <div class="modal-header">
-      <span class="modal-title" id="apm-title">新增應付帳款</span>
+      <span class="modal-title" data-i18n="modal.add_ap" id="apm-title">新增應付帳款</span>
       <button class="modal-close" onclick="closeApModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -3175,7 +3175,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="budget-modal" style="display:none">
   <div class="modal" style="max-width:560px">
     <div class="modal-header">
-      <span class="modal-title" id="bdm-title">設定月度預算</span>
+      <span class="modal-title" data-i18n="modal.set_budget" id="bdm-title">設定月度預算</span>
       <button class="modal-close" onclick="closeBudgetModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -3192,7 +3192,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="recurring-modal" style="display:none">
   <div class="modal" style="max-width:520px">
     <div class="modal-header">
-      <span class="modal-title" id="rm-title">新增定期分錄</span>
+      <span class="modal-title" data-i18n="modal.add_recurring" id="rm-title">新增定期分錄</span>
       <button class="modal-close" onclick="closeRecurringModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -3262,7 +3262,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="bank-match-modal" style="display:none">
   <div class="modal" style="max-width:600px">
     <div class="modal-header">
-      <span class="modal-title">手動配對收支記錄</span>
+      <span class="modal-title" data-i18n="modal.manual_match">手動配對收支記錄</span>
       <button class="modal-close" onclick="closeBankMatchModal()">&times;</button>
     </div>
     <div class="modal-body">
@@ -3280,7 +3280,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <div class="modal-overlay" id="ocr-raw-modal" style="display:none">
   <div class="modal" style="max-width:600px">
     <div class="modal-header">
-      <span class="modal-title" id="orm-title">OCR 辨識原始資料</span>
+      <span class="modal-title" data-i18n="modal.ocr_raw" id="orm-title">OCR 辨識原始資料</span>
       <button class="modal-close" onclick="closeOcrRawModal()">&times;</button>
     </div>
     <div class="modal-body" id="orm-body" style="font-size:13px"></div>
@@ -3293,7 +3293,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Admin Account Modal -->
 <div class="modal-overlay" id="adminacc-modal" style="display:none">
   <div class="modal" style="max-width:520px">
-    <div class="modal-header"><span class="modal-title" id="aam-title">新增帳號</span><button class="modal-close" onclick="closeAdminAccModal()">&times;</button></div>
+    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_account" id="aam-title">新增帳號</span><button class="modal-close" onclick="closeAdminAccModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="aam-id">
       <div class="form-row">
@@ -4082,6 +4082,15 @@ const TRANSLATIONS = {
     'loading':'載入中...','load_fail':'載入失敗','salary_preview.loading':'計算中，請稍候...',
     'anomaly.no_records':'近 7 天無異常記錄',
     'anomaly.sev.error':'嚴重','anomaly.sev.warning':'警告','anomaly.sev.info':'提示',
+    // Advance payment modal titles
+    'adv.modal_add':'新增預支記錄','adv.modal_edit':'編輯預支記錄',
+    // Finance modal edit titles
+    'modal.edit_fin_record':'編輯記錄','modal.edit_fin_cat':'編輯類別',
+    'modal.ocr_result':'OCR 辨識結果','modal.edit_recurring':'編輯定期分錄',
+    'modal.edit_ap':'編輯帳款',
+    // Financial statement titles
+    'fin.stmt.income':'損益表','fin.stmt.balance':'資產負債表','fin.stmt.cashflow':'現金流量表',
+    'fin.stmt.roc_sfx':'中華民國{0}年{1}月份','fin.stmt.bs_roc_sfx':'中華民國{0}年{1}月{2}日',
     // Lang toggle (shows next language)
     'lang.toggle':'EN',
   },
@@ -4819,6 +4828,12 @@ const TRANSLATIONS = {
     'loading':'Loading...','load_fail':'Load failed','salary_preview.loading':'Calculating, please wait...',
     'anomaly.no_records':'No anomalies in the past 7 days',
     'anomaly.sev.error':'Critical','anomaly.sev.warning':'Warning','anomaly.sev.info':'Info',
+    'adv.modal_add':'Add Advance','adv.modal_edit':'Edit Advance',
+    'modal.edit_fin_record':'Edit Record','modal.edit_fin_cat':'Edit Category',
+    'modal.ocr_result':'OCR Result','modal.edit_recurring':'Edit Recurring',
+    'modal.edit_ap':'Edit AP/AR',
+    'fin.stmt.income':'Income Statement','fin.stmt.balance':'Balance Sheet','fin.stmt.cashflow':'Cash Flow',
+    'fin.stmt.roc_sfx':'{0}/{1}','fin.stmt.bs_roc_sfx':'{0}/{1}/{2}',
     // Lang toggle (shows next language)
     'lang.toggle':'日本語',
   },
@@ -5556,6 +5571,12 @@ const TRANSLATIONS = {
     'loading':'読込中...','load_fail':'読込失敗','salary_preview.loading':'計算中、お待ちください...',
     'anomaly.no_records':'過去7日間に異常はありません',
     'anomaly.sev.error':'重大','anomaly.sev.warning':'警告','anomaly.sev.info':'情報',
+    'adv.modal_add':'前払い追加','adv.modal_edit':'前払い編集',
+    'modal.edit_fin_record':'記録編集','modal.edit_fin_cat':'カテゴリ編集',
+    'modal.ocr_result':'OCR結果','modal.edit_recurring':'定期仕訳編集',
+    'modal.edit_ap':'売掛買掛編集',
+    'fin.stmt.income':'損益計算書','fin.stmt.balance':'貸借対照表','fin.stmt.cashflow':'キャッシュフロー計算書',
+    'fin.stmt.roc_sfx':'{0}年{1}月','fin.stmt.bs_roc_sfx':'{0}年{1}月{2}日',
     // Lang toggle (ja → next: vi)
     'lang.toggle':'Tiếng Việt',
   },
@@ -6267,6 +6288,12 @@ const TRANSLATIONS = {
     'loading':'Đang tải...','load_fail':'Tải thất bại','salary_preview.loading':'Đang tính toán, vui lòng chờ...',
     'anomaly.no_records':'Không có bất thường trong 7 ngày qua',
     'anomaly.sev.error':'Nghiêm trọng','anomaly.sev.warning':'Cảnh báo','anomaly.sev.info':'Thông tin',
+    'adv.modal_add':'Thêm tạm ứng','adv.modal_edit':'Sửa tạm ứng',
+    'modal.edit_fin_record':'Sửa bản ghi','modal.edit_fin_cat':'Sửa danh mục',
+    'modal.ocr_result':'Kết quả OCR','modal.edit_recurring':'Sửa định kỳ',
+    'modal.edit_ap':'Sửa công nợ',
+    'fin.stmt.income':'Báo cáo lãi lỗ','fin.stmt.balance':'Bảng cân đối kế toán','fin.stmt.cashflow':'Báo cáo lưu chuyển tiền tệ',
+    'fin.stmt.roc_sfx':'{0}/{1}','fin.stmt.bs_roc_sfx':'{0}/{1}/{2}',
     'lang.toggle':'ภาษาไทย',
   },
   'th': {
@@ -6977,6 +7004,12 @@ const TRANSLATIONS = {
     'loading':'กำลังโหลด...','load_fail':'โหลดล้มเหลว','salary_preview.loading':'กำลังคำนวณ กรุณารอ...',
     'anomaly.no_records':'ไม่มีความผิดปกติใน 7 วันที่ผ่านมา',
     'anomaly.sev.error':'วิกฤต','anomaly.sev.warning':'คำเตือน','anomaly.sev.info':'ข้อมูล',
+    'adv.modal_add':'เพิ่มเงินล่วงหน้า','adv.modal_edit':'แก้ไขเงินล่วงหน้า',
+    'modal.edit_fin_record':'แก้ไขรายการ','modal.edit_fin_cat':'แก้ไขหมวดหมู่',
+    'modal.ocr_result':'ผล OCR','modal.edit_recurring':'แก้ไขรายการประจำ',
+    'modal.edit_ap':'แก้ไขบัญชี',
+    'fin.stmt.income':'งบกำไรขาดทุน','fin.stmt.balance':'งบดุล','fin.stmt.cashflow':'งบกระแสเงินสด',
+    'fin.stmt.roc_sfx':'{0}/{1}','fin.stmt.bs_roc_sfx':'{0}/{1}/{2}',
     // Lang toggle (th → back to zh-TW)
     'lang.toggle':'中文',
   },
@@ -7713,6 +7746,12 @@ const TRANSLATIONS = {
     'loading':'加载中...','load_fail':'加载失败','salary_preview.loading':'计算中，请稍候...',
     'anomaly.no_records':'近 7 天无异常记录',
     'anomaly.sev.error':'严重','anomaly.sev.warning':'警告','anomaly.sev.info':'提示',
+    'adv.modal_add':'新增预支记录','adv.modal_edit':'编辑预支记录',
+    'modal.edit_fin_record':'编辑记录','modal.edit_fin_cat':'编辑类别',
+    'modal.ocr_result':'OCR 识别结果','modal.edit_recurring':'编辑定期分录',
+    'modal.edit_ap':'编辑账款',
+    'fin.stmt.income':'损益表','fin.stmt.balance':'资产负债表','fin.stmt.cashflow':'现金流量表',
+    'fin.stmt.roc_sfx':'{0}年{1}月','fin.stmt.bs_roc_sfx':'{0}年{1}月{2}日',
     // Lang toggle
     'lang.toggle':'繁中',
   }
@@ -7872,6 +7911,7 @@ const _AUTO_TAG_MAP = {
   '薪資倍率':'lbl.pay_rate','調整員工門市':'lbl.adjust_store',
   '顏色':'lbl.color',
   // Modal titles
+  '新增預支記錄':'adv.modal_add','編輯預支記錄':'adv.modal_edit',
   '新增差旅申請':'modal.add_travel','費用核銷明細':'modal.expense_detail',
   '新增資產':'modal.add_asset','生物辨識綁定管理':'modal.biometric',
   '薪資計算預覽':'modal.salary_preview','新增訓練記錄':'modal.add_training',
@@ -8245,7 +8285,7 @@ function openTerminateModal(staffId, staffName) {
   modal.innerHTML = `
     <div class="modal" style="max-width:420px">
       <div class="modal-header">
-        <span class="modal-title">辦理離職 — ${escHtml(staffName)}</span>
+        <span class="modal-title">${t('modal.resign')} — ${escHtml(staffName)}</span>
         <button class="modal-close" onclick="document.getElementById('terminate-modal').remove()">&times;</button>
       </div>
       <div class="modal-body">
@@ -8338,7 +8378,7 @@ function openFormulaEditor(itemId, currentFormula) {
   modal.innerHTML = `
     <div class="modal" style="max-width:540px">
       <div class="modal-header">
-        <span class="modal-title">公式編輯器</span>
+        <span class="modal-title">${t('modal.formula_editor')}</span>
         <button class="modal-close" onclick="document.getElementById('formula-editor-modal').remove()">&times;</button>
       </div>
       <div class="modal-body">
@@ -9342,7 +9382,7 @@ function renderLocList() {
 }
 function openLocModal(id=null) {
   editingLocId = id;
-  document.getElementById('glm-title').textContent = id ? '編輯打卡地點' : '新增打卡地點';
+  document.getElementById('glm-title').textContent = id ? t('gps.modal_edit') : t('gps.modal_add');
   document.getElementById('glm-gps-msg').textContent = '';
   const srch = document.getElementById('glm-search'); if (srch) { srch.value = ''; document.getElementById('glm-search-clear').style.display = 'none'; }
   if (id) {
@@ -9964,7 +10004,7 @@ function renderShiftCalendar(month, staffList, assigns) {
     const ds = `${month}-${String(d).padStart(2,'0')}`; const dt = new Date(y, m-1, d);
     days.push({ d, ds, wd: dt.getDay() });
   }
-  let html = `<div style="overflow-x:auto"><table style="border-collapse:collapse;min-width:max-content;font-size:12px"><thead><tr><th style="position:sticky;left:0;background:var(--navy);color:#fff;padding:8px 14px;min-width:90px;z-index:2">員工</th>`;
+  let html = `<div style="overflow-x:auto"><table style="border-collapse:collapse;min-width:max-content;font-size:12px"><thead><tr><th style="position:sticky;left:0;background:var(--navy);color:#fff;padding:8px 14px;min-width:90px;z-index:2" data-i18n="th.staff_col">員工</th>`;
   days.forEach(({d,wd,ds}) => {
     const dt = new Date(y,m-1,d); const past = dt < today;
     const wc = wd===0?'var(--red)':wd===6?'var(--accent)':'#fff';
@@ -10094,7 +10134,7 @@ async function loadShiftTypes() {
   </tr>`).join('');
 }
 function openShiftTypeModal(id=null) {
-  shiftEditTypeId = id; document.getElementById('stm-title').textContent = id ? '編輯班別' : '新增班別';
+  shiftEditTypeId = id; document.getElementById('stm-title').textContent = id ? t('shift.modal_edit') : t('shift.modal_add');
   if (id) {
     const t = shiftTypes.find(x=>x.id===id); if(!t) return;
     document.getElementById('stm-id').value    = t.id; document.getElementById('stm-name').value  = t.name;
@@ -10276,7 +10316,7 @@ async function loadShiftConflicts() {
 
   list.innerHTML = `<div class="card"><div class="table-wrap"><table>
     <thead><tr>
-      <th>類型</th><th>嚴重度</th><th>日期</th><th>員工</th><th>班別</th><th>說明</th>
+      <th data-i18n="th.type_col">類型</th><th>嚴重度</th><th data-i18n="th.date_col">日期</th><th data-i18n="th.staff_col">員工</th><th>班別</th><th data-i18n="th.desc">說明</th>
     </tr></thead>
     <tbody>
     ${conflicts.map(c => {
@@ -10446,7 +10486,7 @@ async function openLeaveAdminModal(id=null) {
   document.getElementById('lam-days-preview').textContent = '';
   if (id) {
     const r = leaveReqData.find(x=>x.id===id); if(!r) return;
-    document.getElementById('lam-title').textContent = '編輯請假記錄';
+    document.getElementById('lam-title').textContent = t('leave.modal_edit');
     document.getElementById('lam-id').value   = id;
     document.getElementById('lam-staff').value = r.staff_id;
     document.getElementById('lam-type').value  = r.leave_type_id;
@@ -10459,7 +10499,7 @@ async function openLeaveAdminModal(id=null) {
     document.getElementById('lam-reason').value = r.reason||'';
     document.getElementById('lam-status').value = r.status;
   } else {
-    document.getElementById('lam-title').textContent = '管理員代填請假';
+    document.getElementById('lam-title').textContent = t('leave.modal_admin_fill');
     document.getElementById('lam-id').value = '';
     const now = new Date();
     const today = now.toISOString().slice(0,10);
@@ -10561,7 +10601,7 @@ function openLeaveReview(id) {
   document.getElementById('lrm-id').value  = id;
   document.getElementById('lrm-by').value  = '';
   document.getElementById('lrm-note').value= '';
-  document.getElementById('lrm-title').textContent = `審核 ${r.staff_name} 的請假申請`;
+  document.getElementById('lrm-title').textContent = tf('leave.review_modal_title', r.staff_name);
   const sh = r.start_half?' (下午)':''; const eh = r.end_half?' (上午)':'';
   const bal = _leaveBalCache[`${r.staff_id}_${r.leave_type_id}`];
   let balHtml = '';
@@ -10675,7 +10715,7 @@ async function loadLeaveBalances() {
     if (!staffMap[r.staff_id]) staffMap[r.staff_id]={name:r.staff_name,items:[]};
     staffMap[r.staff_id].items.push(r);
   });
-  let html = '<div class="card"><div class="table-wrap"><table><thead><tr><th>員工</th><th>假別</th><th>配額</th><th>已用</th><th>剩餘</th><th>操作</th></tr></thead><tbody>';
+  let html = '<div class="card"><div class="table-wrap"><table><thead><tr><th data-i18n="th.staff_col">員工</th><th>假別</th><th data-i18n="th.quota">配額</th><th>已用</th><th>剩餘</th><th data-i18n="th.action">操作</th></tr></thead><tbody>';
   Object.values(staffMap).forEach(s=>{
     s.items.forEach(it=>{
       const remain = (it.total_days||0)-(it.used_days||0);
@@ -10754,7 +10794,7 @@ async function showAnnualSchedule(staffId, staffName) {
             <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">里程碑</th>
             <th style="padding:8px 12px;text-align:center;border-bottom:1px solid var(--border)">特休天數</th>
             <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">到達日期</th>
-            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">狀態</th>
+            <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)" data-i18n="th.status_col">狀態</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -10792,7 +10832,7 @@ async function loadLeaveTypes() {
   </tr>`).join('');
 }
 function openLeaveTypeModal(id=null) {
-  document.getElementById('ltm-title').textContent = id?'編輯假別':'新增假別';
+  document.getElementById('ltm-title').textContent = id ? t('leave.type_modal_edit') : t('leave.type_modal_add');
   document.getElementById('ltm-id').value = id||'';
   if (id) {
     const t = leaveTypesList.find(x=>x.id===id); if(!t) return;
@@ -10932,7 +10972,7 @@ async function loadAdvances() {
 
 async function openAdvanceModal(id=null) {
   document.getElementById('adv-edit-id').value = id || '';
-  document.getElementById('adv-modal-title').textContent = id ? '編輯預支記錄' : '新增預支記錄';
+  document.getElementById('adv-modal-title').textContent = id ? t('adv.modal_edit') : t('adv.modal_add');
   document.getElementById('adv-status-row').style.display = id ? '' : 'none';
 
   // 確保員工下拉已初始化
@@ -11083,7 +11123,7 @@ async function openSalDetail(id) {
   const {ok,data} = await api(`/api/salary/records/${id}`,{},true);
   if (!ok) return;
   const month = data.month;
-  document.getElementById('sdm-title').textContent = `${month} 薪資明細 — ${data.staff_name}`;
+  document.getElementById('sdm-title').textContent = tf('salary.detail_title', month, data.staff_name);
   document.getElementById('sdm-confirm-btn').style.display = data.status==='confirmed'?'none':'';
   document.getElementById('sdm-confirm-btn').setAttribute('data-id', id);
   const items = data.items||[];
@@ -11097,9 +11137,9 @@ async function openSalDetail(id) {
       <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px">⏱ 打卡工時明細（時薪制）</div>
       <table style="width:100%;font-size:12px;border-collapse:collapse">
         <tr style="background:var(--bg)">
-          <th style="padding:5px 8px;text-align:left;border-bottom:1px solid var(--border)">日期</th>
-          <th style="padding:5px 8px;text-align:center;border-bottom:1px solid var(--border)">上班</th>
-          <th style="padding:5px 8px;text-align:center;border-bottom:1px solid var(--border)">下班</th>
+          <th style="padding:5px 8px;text-align:left;border-bottom:1px solid var(--border)" data-i18n="th.date_col">日期</th>
+          <th style="padding:5px 8px;text-align:center;border-bottom:1px solid var(--border)" data-i18n="th.check_in">上班</th>
+          <th style="padding:5px 8px;text-align:center;border-bottom:1px solid var(--border)" data-i18n="th.check_out">下班</th>
           <th style="padding:5px 8px;text-align:center;border-bottom:1px solid var(--border)">休息</th>
           <th style="padding:5px 8px;text-align:right;border-bottom:1px solid var(--border)">實際工時</th>
         </tr>
@@ -11167,7 +11207,7 @@ async function openSalDetail(id) {
       <div>
         <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px">津貼項目</div>
         <table style="width:100%;font-size:12px;border-collapse:collapse">
-          <tr style="background:var(--bg)"><th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)">項目</th><th style="padding:6px 8px;text-align:right;border-bottom:1px solid var(--border)">金額</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)">說明</th></tr>
+          <tr style="background:var(--bg)"><th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)" data-i18n="th.item">項目</th><th style="padding:6px 8px;text-align:right;border-bottom:1px solid var(--border)" data-i18n="th.amount">金額</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)" data-i18n="th.desc">說明</th></tr>
           ${allowItems.map(it=>`<tr style="border-bottom:1px solid #f0f2f8"><td style="padding:5px 8px">${escHtml(it.name)}</td><td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-weight:600">${fmtNum(it.amount)}</td><td style="padding:5px 8px;color:var(--muted);font-size:11px">${escHtml(_readableFormula(it.calc_note||'',data))}</td></tr>`).join('')}
           <tr style="background:var(--bg)"><td style="padding:7px 8px;font-weight:700" colspan="2">合計</td><td style="padding:7px 8px;text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:var(--green)">${fmtNum(data.allowance_total)}</td></tr>
         </table>
@@ -11175,7 +11215,7 @@ async function openSalDetail(id) {
       <div>
         <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px">扣除項目</div>
         <table style="width:100%;font-size:12px;border-collapse:collapse">
-          <tr style="background:var(--bg)"><th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)">項目</th><th style="padding:6px 8px;text-align:right;border-bottom:1px solid var(--border)">金額</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)">說明</th></tr>
+          <tr style="background:var(--bg)"><th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)" data-i18n="th.item">項目</th><th style="padding:6px 8px;text-align:right;border-bottom:1px solid var(--border)" data-i18n="th.amount">金額</th><th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)" data-i18n="th.desc">說明</th></tr>
           ${deductItems.map(it=>`<tr style="border-bottom:1px solid #f0f2f8"><td style="padding:5px 8px">${escHtml(it.name)}</td><td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;font-weight:600">${fmtNum(it.amount)}</td><td style="padding:5px 8px;color:var(--muted);font-size:11px">${escHtml(_readableFormula(it.calc_note||'',data))}</td></tr>`).join('')}
           <tr style="background:var(--bg)"><td style="padding:7px 8px;font-weight:700" colspan="2">合計</td><td style="padding:7px 8px;text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:var(--red)">${fmtNum(data.deduction_total)}</td></tr>
         </table>
@@ -11270,7 +11310,7 @@ async function bulkPrintPayslips() {
       </div>
       <div class="attend">${attend}</div>
       <table>
-        <thead><tr><th>項目</th><th class="num">金額</th><th>計算說明</th></tr></thead>
+        <thead><tr><th data-i18n="th.item">項目</th><th class="num" data-i18n="th.amount">金額</th><th data-i18n="th.desc">計算說明</th></tr></thead>
         <tbody>${aRows}${dRows}</tbody>
         <tfoot><tr><td colspan="2">實領金額</td><td class="num">$${fmtNum(d.net_pay)}</td></tr></tfoot>
       </table>
@@ -11358,14 +11398,14 @@ function printSalarySlip() {
     <div class="sum-cell"><div class="sum-label">實支付額</div><div class="sum-val net-val">${fmtNum(d.net_pay)}</div></div>
   </div>
   <table>
-    <tr><th colspan="3">津貼項目名稱</th></tr>
-    <tr><th>津貼項目名稱</th><th style="text-align:right">金額</th><th>計算明細</th></tr>
+    <tr><th colspan="3" data-i18n="th.allowance_total">津貼項目名稱</th></tr>
+    <tr><th data-i18n="th.allowance_total">津貼項目名稱</th><th style="text-align:right" data-i18n="th.amount">金額</th><th data-i18n="th.desc">計算明細</th></tr>
     ${allowItems.map(it=>`<tr><td>${escHtml(it.name)}</td><td style="text-align:right">${fmtNum(it.amount)}</td><td style="font-size:12px;color:#888">${escHtml(it.calc_note||'')}</td></tr>`).join('')}
     <tr class="total-row"><td colspan="1">合計</td><td style="text-align:right">${fmtNum(d.allowance_total)}</td><td></td></tr>
   </table>
   <table>
-    <tr><th colspan="3">扣除項目名稱</th></tr>
-    <tr><th>扣除項目名稱</th><th style="text-align:right">金額</th><th>計算明細</th></tr>
+    <tr><th colspan="3" data-i18n="th.deduct_total">扣除項目名稱</th></tr>
+    <tr><th data-i18n="th.deduct_total">扣除項目名稱</th><th style="text-align:right" data-i18n="th.amount">金額</th><th data-i18n="th.desc">計算明細</th></tr>
     ${deductItems.map(it=>`<tr><td>${escHtml(it.name)}</td><td style="text-align:right">${fmtNum(it.amount)}</td><td style="font-size:12px;color:#888">${escHtml(it.calc_note||'')}</td></tr>`).join('')}
     <tr class="total-row"><td colspan="1">合計</td><td style="text-align:right">${fmtNum(d.deduction_total)}</td><td></td></tr>
   </table>
@@ -11408,7 +11448,7 @@ async function loadSalaryStaff() {
 
 function openSalStaffModal(id) {
   const s = salaryStaffList.find(x=>x.id===id); if(!s) return;
-  document.getElementById('ssm-title').textContent=`薪資設定 — ${s.name}`;
+  document.getElementById('ssm-title').textContent = tf('salary.settings_title', s.name);
   document.getElementById('ssm-id').value       = s.id;
   document.getElementById('ssm-code').value     = s.employee_code||'';
   document.getElementById('ssm-dept').value     = s.department||'';
@@ -11566,7 +11606,7 @@ async function loadSalaryItems() {
 }
 
 function openSalaryItemModal(id=null) {
-  document.getElementById('sim-title').textContent = id?'編輯薪資項目':'新增薪資項目';
+  document.getElementById('sim-title').textContent = id ? t('salary.item_modal_edit') : t('salary.item_modal_add');
   document.getElementById('sim-id').value = id||'';
   if (id) {
     const it = salaryItemsList.find(x=>x.id===id); if(!it) return;
@@ -12000,7 +12040,7 @@ function renderAnnList() {
 }
 
 function openAnnModal(id = null) {
-  document.getElementById('ann-modal-title').textContent = id ? '編輯公告' : '新增公告';
+  document.getElementById('ann-modal-title').textContent = id ? t('modal.edit_ann') : t('modal.add_ann');
   document.getElementById('ann-id').value      = id || '';
   document.getElementById('ann-expires').value = '';
   document.getElementById('ann-pinned').checked = false;
@@ -12307,7 +12347,7 @@ function renderFinCatOptions() {
 
 function openFinRecModal(id=null) {
   document.getElementById('frm-id').value = id||'';
-  document.getElementById('frm-title').textContent = id ? '編輯記錄' : '新增收支記錄';
+  document.getElementById('frm-title').textContent = id ? t('modal.edit_fin_record') : t('modal.add_fin_record');
   if (id) {
     // Find from table data via API - simpler: re-fetch
     api(`/api/finance/records?`, {}, true); // preload not strictly needed
@@ -12402,7 +12442,7 @@ async function loadFinCats() {
 }
 function openFinCatModal(id=null) {
   document.getElementById('fcm-id').value = id||'';
-  document.getElementById('fcm-title').textContent = id ? '編輯類別' : '新增類別';
+  document.getElementById('fcm-title').textContent = id ? t('modal.edit_fin_cat') : t('modal.add_fin_cat');
   if (id) {
     const c = finCatList.find(x=>x.id===id); if (!c) return;
     document.getElementById('fcm-name').value    = c.name;
@@ -12472,7 +12512,7 @@ function stmtRow(label, amount, indent=0, bold=false, separator=false) {
 function stmtTable(rows) {
   return `<table style="width:100%;border-collapse:collapse">
     <thead><tr style="background:var(--bg)">
-      <th style="padding:8px 16px;text-align:left;font-size:12px;color:var(--muted);font-weight:500">項目</th>
+      <th style="padding:8px 16px;text-align:left;font-size:12px;color:var(--muted);font-weight:500" data-i18n="th.item">項目</th>
       <th style="padding:8px 16px;text-align:right;font-size:12px;color:var(--muted);font-weight:500">金額（元）</th>
     </tr></thead>
     <tbody>${rows.join('')}</tbody>
@@ -12489,7 +12529,7 @@ async function loadStatements() {
   const IS = data.income_statement, BS = data.balance_sheet, CF = data.cash_flow;
 
   // 損益表
-  document.getElementById('fin-is-title').textContent = `損益表　中華民國${ry}年${mo}月份`;
+  document.getElementById('fin-is-title').textContent = _currentLang === 'zh-TW' || _currentLang === 'zh-CN' ? `${t('fin.stmt.income')}　${tf('fin.stmt.roc_sfx', ry, mo)}` : `${t('fin.stmt.income')} ${tf('fin.stmt.roc_sfx', data.year, mo)}`;
   const isRows = [];
   isRows.push(stmtRow('一、營業收入', null, 0, true));
   IS.operating_revenue_lines.forEach(l => isRows.push(stmtRow(l.name, l.amount, 2)));
@@ -12521,7 +12561,7 @@ async function loadStatements() {
   document.getElementById('fin-is-body').innerHTML = stmtTable(isRows);
 
   // 資產負債表
-  document.getElementById('fin-bs-title').textContent = `資產負債表　中華民國${ry}年${mo}月${ld}日`;
+  document.getElementById('fin-bs-title').textContent = _currentLang === 'zh-TW' || _currentLang === 'zh-CN' ? `${t('fin.stmt.balance')}　${tf('fin.stmt.bs_roc_sfx', ry, mo, ld)}` : `${t('fin.stmt.balance')} ${tf('fin.stmt.bs_roc_sfx', data.year, mo, ld)}`;
   const bsRows = [];
   bsRows.push(stmtRow('【資　產】', null, 0, true));
   bsRows.push(stmtRow('流動資產', null, 1, true));
@@ -12542,7 +12582,7 @@ async function loadStatements() {
   document.getElementById('fin-bs-body').innerHTML = stmtTable(bsRows);
 
   // 現金流量表
-  document.getElementById('fin-cf-title').textContent = `現金流量表　中華民國${ry}年${mo}月份`;
+  document.getElementById('fin-cf-title').textContent = _currentLang === 'zh-TW' || _currentLang === 'zh-CN' ? `${t('fin.stmt.cashflow')}　${tf('fin.stmt.roc_sfx', ry, mo)}` : `${t('fin.stmt.cashflow')} ${tf('fin.stmt.roc_sfx', data.year, mo)}`;
   const cfRows = [];
   cfRows.push(stmtRow('一、營業活動之現金流量', null, 0, true));
   cfRows.push(stmtRow('（一）收現收入', null, 1, true));
@@ -12612,7 +12652,7 @@ function printStatements() {
 
   const isHtml = `<div class="page">
     <h1>${escHtml(co)}</h1><h2>損益表</h2><div class="date-line">中華民國${ry}年${mo}月份</div>
-    <table><thead><tr><th>項目</th><th>金額（元）</th></tr></thead><tbody>
+    <table><thead><tr><th data-i18n="th.item">項目</th><th>金額（元）</th></tr></thead><tbody>
     ${r('一、營業收入','','bold')}
     ${IS.operating_revenue_lines.map(l=>`<td style="padding-left:2em">${escHtml(l.name)}</td><td>${n(l.amount)}</td>`).map(s=>`<tr>${s}</tr>`).join('')}
     ${r('　　營業收入合計',IS.operating_revenue,'bold sep')}
@@ -12640,7 +12680,7 @@ function printStatements() {
 
   const bsHtml = `<div class="page">
     <h1>${escHtml(co)}</h1><h2>資產負債表</h2><div class="date-line">中華民國${ry}年${mo}月${ld}日</div>
-    <table><thead><tr><th>項目</th><th>金額（元）</th></tr></thead><tbody>
+    <table><thead><tr><th data-i18n="th.item">項目</th><th>金額（元）</th></tr></thead><tbody>
     ${r('【資　產】','','bold')}
     ${r('　流動資產','','bold')}
     <tr><td style="padding-left:3em">現金及約當現金</td><td>${n(BS.cash)}</td></tr>
@@ -12661,7 +12701,7 @@ function printStatements() {
 
   const cfHtml = `<div class="page">
     <h1>${escHtml(co)}</h1><h2>現金流量表（直接法）</h2><div class="date-line">中華民國${ry}年${mo}月份</div>
-    <table><thead><tr><th>項目</th><th>金額（元）</th></tr></thead><tbody>
+    <table><thead><tr><th data-i18n="th.item">項目</th><th>金額（元）</th></tr></thead><tbody>
     ${r('一、營業活動之現金流量','','bold')}
     ${r('　（一）收現收入','','bold')}
     ${CF.operating_inflow_lines.map(l=>`<tr><td style="padding-left:4em">${escHtml(l.name)}</td><td>${n(l.amount)}</td></tr>`).join('')}
@@ -12981,8 +13021,8 @@ async function loadFinDocuments() {
   const docTypeLabel = { invoice:'發票', receipt:'收據', expense:'報帳單' };
   wrap.innerHTML = `<table class="data-table" style="margin:0">
     <thead><tr>
-      <th>上傳日期</th><th>檔案名稱</th><th>文件類型</th>
-      <th style="text-align:right">金額</th><th>廠商</th><th>狀態</th><th>操作</th>
+      <th data-i18n="th.upload_date">上傳日期</th><th data-i18n="th.filename">檔案名稱</th><th data-i18n="th.doc_type">文件類型</th>
+      <th style="text-align:right" data-i18n="th.amount">金額</th><th data-i18n="th.vendor">廠商</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th>
     </tr></thead>
     <tbody>${data.map(d => {
       const raw = d.ocr_raw || {};
@@ -13020,7 +13060,7 @@ async function openOcrRawModalById(docId) {
 }
 
 function _renderOcrRawModal(filename, raw) {
-  document.getElementById('orm-title').textContent = `OCR 辨識結果 — ${escHtml(filename)}`;
+  document.getElementById('orm-title').textContent = `${t('modal.ocr_result')} — ${escHtml(filename)}`;
   const fields = [
     ['日期', raw.date], ['廠商', raw.vendor], ['發票號碼', raw.invoice_no],
     ['含稅金額', raw.total_amount != null ? `$${Number(raw.total_amount).toLocaleString()}` : null],
@@ -13038,7 +13078,7 @@ function _renderOcrRawModal(filename, raw) {
     ? `<div style="margin-top:12px">
         <div style="font-weight:600;margin-bottom:6px;font-size:12px;color:var(--muted)">品項明細</div>
         <table class="data-table" style="margin:0;font-size:12px">
-          <thead><tr><th>品項</th><th style="text-align:right">數量</th><th style="text-align:right">單價</th><th style="text-align:right">小計</th></tr></thead>
+          <thead><tr><th data-i18n="th.item">品項</th><th style="text-align:right" data-i18n="th.qty">數量</th><th style="text-align:right" data-i18n="th.unit_price">單價</th><th style="text-align:right" data-i18n="th.subtotal">小計</th></tr></thead>
           <tbody>${raw.items.map(it => `<tr>
             <td>${escHtml(it.name||'')}</td>
             <td style="text-align:right">${it.qty ?? ''}</td>
@@ -13070,9 +13110,9 @@ async function loadRecurring() {
   const freqLabel = { monthly:'每月', quarterly:'每季', yearly:'每年' };
   wrap.innerHTML = `<table class="data-table" style="margin:0">
     <thead><tr>
-      <th>標題</th><th>類型</th><th>類別</th><th>頻率</th>
-      <th style="text-align:right">金額</th><th>廠商</th>
-      <th>開始</th><th>結束</th><th>上次產生</th><th>狀態</th><th>操作</th>
+      <th data-i18n="th.title_col">標題</th><th data-i18n="th.type_col">類型</th><th data-i18n="th.cat_col">類別</th><th data-i18n="th.frequency">頻率</th>
+      <th style="text-align:right" data-i18n="th.amount">金額</th><th data-i18n="th.vendor">廠商</th>
+      <th data-i18n="th.start">開始</th><th data-i18n="th.end">結束</th><th data-i18n="th.last_gen">上次產生</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th>
     </tr></thead>
     <tbody>${_recurringList.map(r => {
       const typeBadge = r.type==='income'
@@ -13122,7 +13162,7 @@ function renderRecurringCatOptions() {
 
 function openRecurringModal(id=null) {
   document.getElementById('rm-id').value    = id || '';
-  document.getElementById('rm-title').textContent = id ? '編輯定期分錄' : '新增定期分錄';
+  document.getElementById('rm-title').textContent = id ? t('modal.edit_recurring') : t('modal.add_recurring');
   if (id) {
     const r = _recurringList.find(x => x.id === id);
     if (r) {
@@ -13217,9 +13257,9 @@ async function loadBankStatements() {
   }
   wrap.innerHTML = `<table class="data-table" style="margin:0">
     <thead><tr>
-      <th>日期</th><th>說明</th><th>類型</th>
-      <th style="text-align:right">金額</th>
-      <th>配對記帳</th><th>狀態</th><th>操作</th>
+      <th data-i18n="th.date_col">日期</th><th data-i18n="th.desc">說明</th><th data-i18n="th.type_col">類型</th>
+      <th style="text-align:right" data-i18n="th.amount">金額</th>
+      <th>配對記帳</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th>
     </tr></thead>
     <tbody>${data.map(s => {
       const typeBadge = s.txn_type === 'credit'
@@ -13382,8 +13422,8 @@ async function loadTaxReport() {
   const renderTaxTable = (rows, totalAmt, totalTax) => {
     if (!rows.length) return '<div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">此期間無資料</div>';
     return `<table class="data-table" style="margin:0">
-      <thead><tr><th>日期</th><th>標題</th><th>廠商</th><th>發票號碼</th>
-        <th style="text-align:right">金額</th><th style="text-align:right">稅額</th>
+      <thead><tr><th data-i18n="th.date_col">日期</th><th data-i18n="th.title_col">標題</th><th data-i18n="th.vendor">廠商</th><th data-i18n="th.invoice_no">發票號碼</th>
+        <th style="text-align:right" data-i18n="th.amount">金額</th><th style="text-align:right">稅額</th>
       </tr></thead>
       <tbody>${rows.map(r => `<tr>
         <td style="font-family:'DM Mono',monospace;font-size:12px">${r.date}</td>
@@ -13509,8 +13549,8 @@ async function loadApList() {
   }[s] || [s, 'var(--muted)']);
   wrap.innerHTML = `<table class="data-table" style="margin:0">
     <thead><tr>
-      <th>類型</th><th>標題</th><th>往來對象</th><th>發票號碼</th>
-      <th style="text-align:right">金額</th><th>到期日</th><th>逾期天數</th><th>狀態</th><th>操作</th>
+      <th data-i18n="th.type_col">類型</th><th data-i18n="th.title_col">標題</th><th data-i18n="th.counterparty">往來對象</th><th data-i18n="th.invoice_no">發票號碼</th>
+      <th style="text-align:right" data-i18n="th.amount">金額</th><th>到期日</th><th data-i18n="th.overdue_days">逾期天數</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th>
     </tr></thead>
     <tbody>${_apList.map(r => {
       const [sLabel, sColor] = statusInfo(r.effective_status);
@@ -13565,7 +13605,7 @@ async function loadApAging() {
 
 function openApModal(id=null) {
   document.getElementById('apm-id').value = id||'';
-  document.getElementById('apm-title').textContent = id ? '編輯帳款' : '新增帳款';
+  document.getElementById('apm-title').textContent = id ? t('modal.edit_ap') : t('modal.add_ap');
   if (id) {
     const r = _apList.find(x => x.id===id);
     if (r) {
@@ -13686,7 +13726,7 @@ async function openBudgetEditModal() {
   const el = document.getElementById('budget-month');
   if (!el.value) el.value = new Date().toISOString().slice(0,7);
   const [yr, mo] = el.value.split('-');
-  document.getElementById('bdm-title').textContent = `設定預算 — ${el.value}`;
+  document.getElementById('bdm-title').textContent = `${t('modal.set_budget')} — ${el.value}`;
   const [catsRes, budgetsRes] = await Promise.all([
     api('/api/finance/categories', {}, true),
     api(`/api/finance/budgets?year=${yr}&month=${parseInt(mo)}`, {}, true),
@@ -13733,9 +13773,9 @@ async function loadPayrollSyncStatus() {
   }
   wrap.innerHTML = `<table class="data-table" style="margin:0">
     <thead><tr>
-      <th>月份</th><th style="text-align:right">薪資人數</th>
+      <th data-i18n="th.month_col">月份</th><th style="text-align:right" data-i18n="th.payroll_count">薪資人數</th>
       <th style="text-align:right">薪資總額</th>
-      <th>同步狀態</th><th>操作</th>
+      <th data-i18n="th.sync_status">同步狀態</th><th data-i18n="th.action">操作</th>
     </tr></thead>
     <tbody>${data.map(r => {
       const statusBadge = r.all_synced
@@ -14957,7 +14997,7 @@ function viewStaffTraining(staffId, name) {
 }
 
 function openTrainingModal(rec, presetStaffId) {
-  document.getElementById('training-modal-title').textContent = rec ? '編輯訓練記錄' : '新增訓練記錄';
+  document.getElementById('training-modal-title').textContent = rec ? t('modal.edit_training') : t('modal.add_training');
   document.getElementById('tm-id').value          = rec?.id || '';
   document.getElementById('tm-course').value      = rec?.course_name || '';
   document.getElementById('tm-category').value    = rec?.category || 'food_safety';
@@ -15015,7 +15055,7 @@ async function previewSalary() {
   const tbody   = document.getElementById('salary-preview-tbody');
   const title   = document.getElementById('salary-preview-title');
 
-  title.textContent = `薪資計算預覽 — ${month}`;
+  title.textContent = `${t('modal.salary_preview')} — ${month}`;
   loading.style.display = '';
   content.style.display = 'none';
   modal.style.display   = 'flex';
@@ -15307,7 +15347,7 @@ async function deleteTravel(id) {
 let _expTravelId = null;
 async function openTravelExpModal(id, title) {
   _expTravelId = id;
-  document.getElementById('exp-modal-title').textContent = `費用核銷：${title}`;
+  document.getElementById('exp-modal-title').textContent = `${t('modal.expense_voucher')}：${title}`;
   document.getElementById('travel-expense-modal').style.display = 'flex';
   const today = new Date().toISOString().slice(0,10);
   document.getElementById('exp-date').value   = today;
@@ -15324,7 +15364,7 @@ async function renderExpList() {
   const catLabel = { transport:'交通費', hotel:'住宿費', meal:'餐費', other:'其他' };
   const total = data.reduce((a,r)=>a+parseFloat(r.amount||0),0);
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
-    <th>類別</th><th>日期</th><th style="text-align:right">金額</th><th>備註</th><th>附件</th><th></th>
+    <th data-i18n="th.cat_col">類別</th><th data-i18n="th.date_col">日期</th><th style="text-align:right" data-i18n="th.amount">金額</th><th data-i18n="th.note_col">備註</th><th>附件</th><th></th>
   </tr></thead><tbody>${data.map(r=>`<tr>
     <td>${catLabel[r.category]||r.category}</td>
     <td style="font-size:12px">${r.expense_date||''}</td>
