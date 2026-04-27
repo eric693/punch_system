@@ -1048,6 +1048,16 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <span style="flex:1"></span>
         <span id="sal-count" style="font-size:12px;color:var(--muted)"></span>
       </div>
+      <!-- 結算日提醒橫幅 -->
+      <div id="sal-payroll-reminder" style="display:none;margin-bottom:16px;padding:14px 18px;background:#fffbe6;border:1px solid #f0c040;border-radius:8px;align-items:center;gap:14px">
+        <span style="font-size:22px;line-height:1">&#128276;</span>
+        <div style="flex:1">
+          <strong id="sal-reminder-title" style="font-size:14px"></strong>
+          <div id="sal-reminder-desc" style="font-size:12px;color:#888;margin-top:3px"></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="generateSalaryForPrevMonth()" data-i18n="salary.settle_now">立即結算上月薪資</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sal-payroll-reminder').style.display='none'" style="color:#aaa">✕</button>
+      </div>
       <div class="card">
         <div class="table-wrap">
           <table>
@@ -1068,6 +1078,17 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 薪資設定 -->
     <div id="salary-panel-settings" style="display:none">
+      <!-- 每月結算日設定 -->
+      <div class="card" style="padding:18px 20px;margin-bottom:18px">
+        <div class="card-title" data-i18n="salary.settle_cfg_title" style="padding:0;margin-bottom:14px">每月結算設定</div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <label class="form-label" data-i18n="salary.payroll_day_label" style="margin:0;white-space:nowrap">每月結算日：第</label>
+          <input type="number" class="form-input" id="sal-payroll-day" min="1" max="28" style="width:80px">
+          <span style="font-size:13px;color:var(--muted)" data-i18n="salary.payroll_day_desc">日（1~28）：當天系統自動提醒結算上月薪資</span>
+          <button class="btn btn-primary btn-sm" onclick="saveSalaryConfig()" data-i18n="salary.save_cfg">儲存設定</button>
+          <span id="sal-cfg-msg" style="font-size:12px;color:var(--green);min-height:14px"></span>
+        </div>
+      </div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
         <span id="sal-staff-count" style="font-size:13px;color:var(--muted)"></span>
         <a href="#" onclick="showPage('punch',event);switchPunchTab('staff')" style="font-size:12px;color:var(--accent)">管理員工 →</a>
@@ -3439,6 +3460,12 @@ const TRANSLATIONS = {
     'sched.shift_types_desc':'設定工作班別與時間',
     'leave.types_desc':'設定假別名稱、薪資倍率、天數上限',
     'salary.items_desc':'設定每月薪資計算時使用的津貼和扣除項目',
+    'salary.settle_cfg_title':'每月結算設定','salary.payroll_day_label':'每月結算日：第',
+    'salary.payroll_day_desc':'日（1~28）：當天系統自動提醒結算上月薪資',
+    'salary.save_cfg':'儲存設定','salary.cfg_saved':'已儲存',
+    'salary.settle_now':'立即結算上月薪資',
+    'salary.reminder_title':'今天是結算日（每月 {0} 日）',
+    'salary.reminder_desc':'{0} 薪資尚未產生，建議立即結算',
     'adminmgr.desc':'管理後台登入帳號，可自由勾選各帳號可存取的模組',
     'stores.desc':'管理多個門市，並為員工指派所屬門市',
     // Search
@@ -4185,6 +4212,12 @@ const TRANSLATIONS = {
     'sched.shift_types_desc':'Configure shift names and working hours',
     'leave.types_desc':'Configure leave type names, pay rates, and annual limits',
     'salary.items_desc':'Configure allowance and deduction items for monthly salary calculation',
+    'salary.settle_cfg_title':'Monthly Settlement Settings','salary.payroll_day_label':'Settlement Day:',
+    'salary.payroll_day_desc':'(1~28): System reminds you to settle last month\'s payroll on this day',
+    'salary.save_cfg':'Save Settings','salary.cfg_saved':'Saved',
+    'salary.settle_now':'Settle Last Month Now',
+    'salary.reminder_title':'Payroll Day (Day {0} of each month)',
+    'salary.reminder_desc':'{0} payroll not yet generated — settle now',
     'adminmgr.desc':'Manage admin login accounts, configure accessible modules for each account',
     'stores.desc':'Manage multiple stores and assign staff to their respective stores',
     // Search
@@ -4928,6 +4961,12 @@ const TRANSLATIONS = {
     'sched.shift_types_desc':'シフト名と勤務時間を設定',
     'leave.types_desc':'休暇種別名・給与倍率・年間上限を設定',
     'salary.items_desc':'毎月の給与計算に使用する手当・控除項目を設定',
+    'salary.settle_cfg_title':'毎月締め設定','salary.payroll_day_label':'毎月締め日：第',
+    'salary.payroll_day_desc':'日（1~28）：当日に前月給与の締めリマインダーを表示',
+    'salary.save_cfg':'設定を保存','salary.cfg_saved':'保存しました',
+    'salary.settle_now':'前月給与を今すぐ締める',
+    'salary.reminder_title':'今日は締め日です（毎月 {0} 日）',
+    'salary.reminder_desc':'{0} の給与がまだ生成されていません。今すぐ締めることをお勧めします',
     'adminmgr.desc':'管理者ログインアカウントを管理し、各アカウントのアクセス可能モジュールを設定',
     'stores.desc':'複数の店舗を管理し、スタッフを各店舗に割り当てます',
     // Search
@@ -5662,6 +5701,12 @@ const TRANSLATIONS = {
     'sched.shift_types_desc':'Cấu hình tên ca và giờ làm việc',
     'leave.types_desc':'Cấu hình tên loại nghỉ, hệ số lương và giới hạn hàng năm',
     'salary.items_desc':'Cấu hình các khoản phụ cấp và khấu trừ cho tính lương hàng tháng',
+    'salary.settle_cfg_title':'Cài đặt chốt lương hàng tháng','salary.payroll_day_label':'Ngày chốt lương:',
+    'salary.payroll_day_desc':'(1~28): Hệ thống nhắc nhở chốt lương tháng trước vào ngày này',
+    'salary.save_cfg':'Lưu cài đặt','salary.cfg_saved':'Đã lưu',
+    'salary.settle_now':'Chốt lương tháng trước ngay',
+    'salary.reminder_title':'Hôm nay là ngày chốt lương (ngày {0} hàng tháng)',
+    'salary.reminder_desc':'Lương {0} chưa được tạo — hãy chốt ngay',
     'adminmgr.desc':'Quản lý tài khoản đăng nhập admin, cấu hình các module có thể truy cập cho từng tài khoản',
     'stores.desc':'Quản lý nhiều cửa hàng và phân công nhân viên cho các cửa hàng tương ứng',
     'search.staff_placeholder':'🔍 Tìm nhân viên...',
@@ -6378,6 +6423,12 @@ const TRANSLATIONS = {
     'sched.shift_types_desc':'ตั้งค่าชื่อกะและเวลาทำงาน',
     'leave.types_desc':'ตั้งค่าชื่อประเภทการลา อัตราเงินเดือน และขีดจำกัดรายปี',
     'salary.items_desc':'ตั้งค่ารายการเบี้ยเลี้ยงและรายการหักสำหรับการคำนวณเงินเดือนรายเดือน',
+    'salary.settle_cfg_title':'การตั้งค่าการปิดเงินเดือนรายเดือน','salary.payroll_day_label':'วันปิดเงินเดือน:',
+    'salary.payroll_day_desc':'(1~28): ระบบจะแจ้งเตือนให้ปิดเงินเดือนเดือนก่อนในวันนี้',
+    'salary.save_cfg':'บันทึกการตั้งค่า','salary.cfg_saved':'บันทึกแล้ว',
+    'salary.settle_now':'ปิดเงินเดือนเดือนก่อนทันที',
+    'salary.reminder_title':'วันนี้คือวันปิดเงินเดือน (วันที่ {0} ของทุกเดือน)',
+    'salary.reminder_desc':'ยังไม่ได้สร้างเงินเดือน {0} — ปิดงวดเดี๋ยวนี้เลย',
     'adminmgr.desc':'จัดการบัญชีเข้าสู่ระบบแอดมิน ตั้งค่าโมดูลที่เข้าถึงได้สำหรับแต่ละบัญชี',
     'stores.desc':'จัดการหลายสาขาและมอบหมายพนักงานให้กับสาขาที่เกี่ยวข้อง',
     'search.staff_placeholder':'🔍 ค้นหาพนักงาน...',
@@ -7103,6 +7154,12 @@ const TRANSLATIONS = {
     'sched.shift_types_desc':'设置工作班别与时间',
     'leave.types_desc':'设置假别名称、薪资倍率、天数上限',
     'salary.items_desc':'设置每月薪资计算时使用的津贴和扣除项目',
+    'salary.settle_cfg_title':'每月结算设置','salary.payroll_day_label':'每月结算日：第',
+    'salary.payroll_day_desc':'日（1~28）：当天系统自动提醒结算上月薪资',
+    'salary.save_cfg':'保存设置','salary.cfg_saved':'已保存',
+    'salary.settle_now':'立即结算上月薪资',
+    'salary.reminder_title':'今天是结算日（每月 {0} 日）',
+    'salary.reminder_desc':'{0} 薪资尚未生成，建议立即结算',
     'adminmgr.desc':'管理后台登录账号，可自由勾选各账号可存取的模块',
     'stores.desc':'管理多个门店，并为员工指派所属门店',
     // Search
@@ -10884,6 +10941,7 @@ function initSalary() {
   const ym=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   if (!document.getElementById('sal-month').value) document.getElementById('sal-month').value=ym;
   switchSalaryTab('calc');
+  checkPayrollReminder();
 }
 
 function switchSalaryTab(tab) {
@@ -10894,11 +10952,51 @@ function switchSalaryTab(tab) {
     if (panel) panel.style.display = t===tab ? '' : 'none';
   });
   if (tab==='calc')        loadSalaryRecords();
-  if (tab==='settings')    { loadSalaryStaff(); loadSalaryItems(); }
+  if (tab==='settings')    { loadSalaryStaff(); loadSalaryItems(); loadSalaryConfig(); }
   if (tab==='items')       loadSalaryItems();
   if (tab==='withholding') initWithholdingTab();
   if (tab==='edi')         initEdiTab();
   if (tab==='advances')    initAdvancesTab();
+}
+
+// ── 薪資結算設定 ──────────────────────────────────────────────────
+async function loadSalaryConfig() {
+  const {ok, data} = await api('/api/salary/settings');
+  if (ok && data.payroll_day) {
+    document.getElementById('sal-payroll-day').value = data.payroll_day;
+  }
+}
+
+async function saveSalaryConfig() {
+  const day = parseInt(document.getElementById('sal-payroll-day').value) || 5;
+  const {ok} = await api('/api/salary/settings', apiJSON({payroll_day: day}), 'PUT');
+  if (ok) {
+    const msg = document.getElementById('sal-cfg-msg');
+    msg.textContent = t('salary.cfg_saved');
+    setTimeout(() => { msg.textContent = ''; }, 2500);
+  }
+}
+
+async function checkPayrollReminder() {
+  const {ok, data} = await api('/api/salary/payroll-check');
+  const rem = document.getElementById('sal-payroll-reminder');
+  if (!ok || !data.is_payroll_day || data.records_exist) {
+    rem.style.display = 'none';
+    return;
+  }
+  document.getElementById('sal-reminder-title').textContent = tf('salary.reminder_title', data.payroll_day);
+  document.getElementById('sal-reminder-desc').textContent  = tf('salary.reminder_desc', data.prev_month);
+  rem.dataset.prevMonth = data.prev_month;
+  rem.style.display = 'flex';
+}
+
+async function generateSalaryForPrevMonth() {
+  const rem = document.getElementById('sal-payroll-reminder');
+  const prevMonth = rem.dataset.prevMonth || '';
+  if (!prevMonth) return;
+  document.getElementById('sal-month').value = prevMonth;
+  rem.style.display = 'none';
+  await generateSalary();
 }
 
 // ── 預支管理 ─────────────────────────────────────────────────
@@ -11111,11 +11209,11 @@ async function loadSalaryRecords() {
 
 async function generateSalary() {
   const month = document.getElementById('sal-month').value;
-  if (!month) { showToast('請選擇月份','error'); return; }
-  if (!confirm(`確定自動產生/更新 ${month} 的薪資記錄？`)) return;
+  if (!month) { showToast(t('salary.need_month'),'error'); return; }
+  if (!confirm(tf('salary.confirm_gen', month))) return;
   const {ok,data} = await api('/api/salary/records/generate', apiJSON({month}));
   if (!ok) return;
-  showToast(`已產生 ${data.generated} 筆薪資記錄`,'success'); await loadSalaryRecords();
+  showToast(tf('salary.generated', data.generated),'success'); await loadSalaryRecords();
 }
 
 async function openSalDetail(id) {

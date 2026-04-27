@@ -5166,6 +5166,25 @@ def init_salary_db():
 
 init_salary_db()
 
+def init_salary_config_db():
+    try:
+        with get_db() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS salary_config (
+                    id          INT PRIMARY KEY DEFAULT 1,
+                    payroll_day INT DEFAULT 5,
+                    updated_at  TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+            conn.execute("""
+                INSERT INTO salary_config (id, payroll_day)
+                VALUES (1, 5) ON CONFLICT (id) DO NOTHING
+            """)
+    except Exception as e:
+        print(f"[salary_config_init] {e}")
+
+init_salary_config_db()
+
 def salary_item_row(row):
     if not row: return None
     d = dict(row)
@@ -6164,6 +6183,51 @@ def api_salary_advance_delete(aid):
     with get_db() as conn:
         conn.execute("DELETE FROM salary_advances WHERE id=%s", (aid,))
     return jsonify({'deleted': aid})
+
+# ── Salary Config (payroll day) ───────────────────────────────────
+
+@app.route('/api/salary/settings', methods=['GET'])
+@require_module('salary')
+def api_salary_settings_get():
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM salary_config WHERE id=1").fetchone()
+    return jsonify({'payroll_day': int(row['payroll_day'] or 5) if row else 5})
+
+@app.route('/api/salary/settings', methods=['PUT'])
+@require_module('salary')
+def api_salary_settings_put():
+    b = request.get_json(force=True)
+    payroll_day = int(b.get('payroll_day', 5))
+    if payroll_day < 1 or payroll_day > 28:
+        return jsonify({'error': '結算日必須介於 1~28'}), 400
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE salary_config SET payroll_day=%s, updated_at=NOW() WHERE id=1",
+            (payroll_day,)
+        )
+    return jsonify({'ok': True, 'payroll_day': payroll_day})
+
+@app.route('/api/salary/payroll-check', methods=['GET'])
+@require_module('salary')
+def api_salary_payroll_check():
+    from datetime import date as _dpay
+    today = _dpay.today()
+    with get_db() as conn:
+        cfg = conn.execute("SELECT payroll_day FROM salary_config WHERE id=1").fetchone()
+        payroll_day = int(cfg['payroll_day'] or 5) if cfg else 5
+        prev_y = today.year if today.month > 1 else today.year - 1
+        prev_m = today.month - 1 if today.month > 1 else 12
+        prev_month = f"{prev_y:04d}-{prev_m:02d}"
+        cnt = conn.execute(
+            "SELECT COUNT(*) as c FROM salary_records WHERE month=%s", (prev_month,)
+        ).fetchone()['c']
+    return jsonify({
+        'payroll_day':    payroll_day,
+        'is_payroll_day': today.day == payroll_day,
+        'today_day':      today.day,
+        'prev_month':     prev_month,
+        'records_exist':  cnt > 0,
+    })
 
 # ── Salary Staff Settings ─────────────────────────────────────────
 
