@@ -5271,6 +5271,14 @@ def _calc_service_years(hire_date_str):
     except Exception:
         return 0.0
 
+def _clip_leave_to_month(ls, le, month_start, month_end_exclusive):
+    """Return how many days of leave [ls, le] fall within [month_start, month_end_exclusive)."""
+    if not hasattr(ls, 'year'): ls = date.fromisoformat(str(ls))
+    if not hasattr(le, 'year'): le = date.fromisoformat(str(le))
+    clip_s = max(ls, month_start)
+    clip_e = min(le, month_end_exclusive - _td(days=1))
+    return float((clip_e - clip_s).days + 1) if clip_s <= clip_e else 0.0
+
 def _calc_punch_hours(conn, staff_id, month):
     """
     從打卡記錄計算實際工時（時薪制用）
@@ -5292,6 +5300,7 @@ def _calc_punch_hours(conn, staff_id, month):
         WHERE staff_id=%s
           AND punched_at AT TIME ZONE 'Asia/Taipei' >= %s::date
           AND punched_at AT TIME ZONE 'Asia/Taipei' < %s::date
+          AND deleted_at IS NULL
         ORDER BY punched_at ASC
     """, (staff_id, f"{month}-01", _range_end_h)).fetchall()
 
@@ -5459,15 +5468,25 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
     else:
         _sal_s3, _sal_e3 = _month_range(month)
         leave_rows = conn.execute("""
-            SELECT lr.total_days, lt.pay_rate, lt.code, lt.name as leave_name
+            SELECT lr.start_date, lr.end_date, lt.pay_rate, lt.code, lt.name as leave_name
             FROM leave_requests lr
             JOIN leave_types lt ON lt.id = lr.leave_type_id
             WHERE lr.staff_id=%s AND lr.status='approved'
-              AND lr.start_date >= %s::date AND lr.start_date < %s::date
-        """, (staff['id'], _sal_s3, _sal_e3)).fetchall()
-    leave_days    = sum(float(r['total_days']) for r in leave_rows)
-    unpaid_days   = sum(float(r['total_days']) for r in leave_rows if float(r['pay_rate']) == 0)
-    half_pay_days = sum(float(r['total_days']) for r in leave_rows if 0 < float(r['pay_rate']) < 1)
+              AND lr.start_date < %s::date AND lr.end_date >= %s::date
+        """, (staff['id'], _sal_e3, _sal_s3)).fetchall()
+    _ms_d = _d5(y, m, 1)
+    _me_d = _d5.fromisoformat(_month_range(month)[1])
+    leave_days    = 0.0
+    unpaid_days   = 0.0
+    _half_entries = []   # (clipped_days, pay_rate, leave_name)
+    for _lr in leave_rows:
+        _days = _clip_leave_to_month(_lr['start_date'], _lr['end_date'], _ms_d, _me_d)
+        leave_days += _days
+        _pr = float(_lr['pay_rate'])
+        if _pr == 0:
+            unpaid_days += _days
+        elif 0 < _pr < 1:
+            _half_entries.append((_days, _pr, _lr['leave_name']))
     actual_days   = total_work_days - leave_days
 
     # ── 日薪 / 時薪（用於請假扣款） ───────────────────────
@@ -5629,17 +5648,16 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
         })
         deduction_total += deduct
 
-    if half_pay_days > 0 and daily_wage > 0:
-        leave_names = '、'.join(set(
-            r['leave_name'] for r in leave_rows if 0 < float(r['pay_rate']) < 1
-        ))
-        deduct = round(daily_wage * half_pay_days * 0.5, 2)
-        items.append({
-            'id': 'halfpay', 'name': f'半薪假扣款（{leave_names}）', 'type': 'deduction',
-            'amount': deduct, 'formula': '',
-            'calc_note': f'{half_pay_days}天 × 日薪${round(daily_wage, 0)} × 0.5',
-        })
-        deduction_total += deduct
+    for (_hdays, _hrate, _hname) in _half_entries:
+        if _hdays > 0 and daily_wage > 0:
+            _dr = round(1 - _hrate, 4)
+            deduct = round(daily_wage * _hdays * _dr, 2)
+            items.append({
+                'id': f'halfpay_{_hname}', 'name': f'部分薪假扣款（{_hname}）', 'type': 'deduction',
+                'amount': deduct, 'formula': '',
+                'calc_note': f'{_hdays}天 × 日薪${round(daily_wage, 0)} × {_dr}',
+            })
+            deduction_total += deduct
 
     # ── 月薪制：缺勤扣款（打卡記錄核查） ─────────────────────
     absent_days = 0
@@ -5654,14 +5672,15 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
                 FROM punch_records WHERE staff_id=%s
                   AND punched_at AT TIME ZONE 'Asia/Taipei' >= %s::date
                   AND punched_at AT TIME ZONE 'Asia/Taipei' < %s::date
+                  AND deleted_at IS NULL
             """, (staff['id'], _ps, _pe)).fetchall()
             punched_dates = {r['work_date'].isoformat() if hasattr(r['work_date'], 'isoformat') else str(r['work_date']) for r in punch_rows}
-            # 已核准請假日期集合
+            # 已核准請假日期集合（含跨月假別）
             leave_date_rows = conn.execute("""
                 SELECT start_date, end_date FROM leave_requests
                 WHERE staff_id=%s AND status='approved'
-                  AND start_date >= %s::date AND start_date < %s::date
-            """, (staff['id'], _ps, _pe)).fetchall()
+                  AND start_date < %s::date AND end_date >= %s::date
+            """, (staff['id'], _pe, _ps)).fetchall()
             leave_date_set = set()
             for _lr in leave_date_rows:
                 _ld = _lr['start_date']
@@ -5895,14 +5914,14 @@ def api_salary_generate():
             """, (staff_ids, _batch_ms, _batch_me)).fetchall()
             _ot_totals_b = {r['staff_id']: float(r['total']) for r in _ot_rows_b}
 
-            # 4. 全員請假記錄（含假別）
+            # 4. 全員請假記錄（含假別，含跨月假別）
             _leave_rows_b = conn.execute("""
-                SELECT lr.staff_id, lr.total_days, lt.pay_rate, lt.code, lt.name as leave_name
+                SELECT lr.staff_id, lr.start_date, lr.end_date, lt.pay_rate, lt.code, lt.name as leave_name
                 FROM leave_requests lr
                 JOIN leave_types lt ON lt.id = lr.leave_type_id
                 WHERE lr.staff_id = ANY(%s) AND lr.status='approved'
-                  AND lr.start_date >= %s::date AND lr.start_date < %s::date
-            """, (staff_ids, _batch_ms, _batch_me)).fetchall()
+                  AND lr.start_date < %s::date AND lr.end_date >= %s::date
+            """, (staff_ids, _batch_me, _batch_ms)).fetchall()
             _leave_map_b: dict = {}
             for _r in _leave_rows_b:
                 _leave_map_b.setdefault(_r['staff_id'], []).append(dict(_r))
@@ -5922,12 +5941,12 @@ def api_salary_generate():
                 _ds = _r['work_date'].isoformat() if hasattr(_r['work_date'], 'isoformat') else str(_r['work_date'])
                 _punch_dates_b.setdefault(_r['staff_id'], set()).add(_ds)
 
-            # 6. 全員請假日期範圍（用於缺勤判斷）
+            # 6. 全員請假日期範圍（用於缺勤判斷，含跨月假別）
             _leave_date_rows_b = conn.execute("""
                 SELECT staff_id, start_date, end_date FROM leave_requests
                 WHERE staff_id = ANY(%s) AND status='approved'
-                  AND start_date >= %s::date AND start_date < %s::date
-            """, (staff_ids, _batch_ms, _batch_me)).fetchall()
+                  AND start_date < %s::date AND end_date >= %s::date
+            """, (staff_ids, _batch_me, _batch_ms)).fetchall()
             _leave_date_sets_b: dict = {}
             for _lr in _leave_date_rows_b:
                 _sid = _lr['staff_id']
@@ -9340,12 +9359,12 @@ def api_salary_preview():
         _ot_totals_pv = {r['staff_id']: float(r['total']) for r in _ot_rows_pv}
 
         _leave_rows_pv = conn.execute("""
-            SELECT lr.staff_id, lr.total_days, lt.pay_rate, lt.code, lt.name as leave_name
+            SELECT lr.staff_id, lr.start_date, lr.end_date, lt.pay_rate, lt.code, lt.name as leave_name
             FROM leave_requests lr
             JOIN leave_types lt ON lt.id = lr.leave_type_id
             WHERE lr.staff_id = ANY(%s) AND lr.status='approved'
-              AND lr.start_date >= %s::date AND lr.start_date < %s::date
-        """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
+              AND lr.start_date < %s::date AND lr.end_date >= %s::date
+        """, (staff_ids, _mend_pv, _mstart_pv)).fetchall()
         _leave_map_pv: dict = {}
         for _r in _leave_rows_pv:
             _leave_map_pv.setdefault(_r['staff_id'], []).append(dict(_r))
@@ -9367,8 +9386,8 @@ def api_salary_preview():
         _leave_date_rows_pv = conn.execute("""
             SELECT staff_id, start_date, end_date FROM leave_requests
             WHERE staff_id = ANY(%s) AND status='approved'
-              AND start_date >= %s::date AND start_date < %s::date
-        """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
+              AND start_date < %s::date AND end_date >= %s::date
+        """, (staff_ids, _mend_pv, _mstart_pv)).fetchall()
         _leave_date_sets_pv: dict = {}
         for _lr in _leave_date_rows_pv:
             _sid = _lr['staff_id']
