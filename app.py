@@ -7509,7 +7509,7 @@ def api_dashboard_leave_distribution():
         rows = conn.execute("""
             SELECT lt.name, lt.color,
                    COUNT(*) as cnt,
-                   COALESCE(SUM(lr.days), 0) as days
+                   COALESCE(SUM(lr.total_days), 0) as days
             FROM leave_requests lr
             JOIN leave_types lt ON lt.id=lr.leave_type_id
             WHERE lr.status='approved'
