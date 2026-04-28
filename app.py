@@ -1265,8 +1265,8 @@ def api_punch_staff_create():
     password = b.get('password', '').strip()
     if not name:     return jsonify({'error': '姓名為必填'}), 400
     if not username: return jsonify({'error': '帳號為必填'}), 400
-    if not password or len(password) < 4:
-        return jsonify({'error': '密碼至少 4 個字元'}), 400
+    if not password:
+        return jsonify({'error': '請設定密碼'}), 400
     employee_code  = (b.get('employee_code') or '').strip() or None
     department     = (b.get('department') or '').strip()
     role           = (b.get('role') or '').strip()
@@ -1334,8 +1334,6 @@ def api_punch_staff_update(sid):
         return jsonify({'error': '姓名和帳號為必填'}), 400
     with get_db() as conn:
         if password:
-            if len(password) < 4:
-                return jsonify({'error': '密碼至少 4 個字元'}), 400
             row = conn.execute("""
                 UPDATE punch_staff
                 SET name=%s,username=%s,password_hash=%s,password_plain=%s,role=%s,active=%s,employee_code=%s,
@@ -5443,24 +5441,28 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
         actual_work_hours, punch_work_days, punch_details = _calc_punch_hours(
             conn, staff['id'], month
         )
-        # 時薪制的 base_salary 等於 實際工時 × 時薪
-        hourly_base_pay = round(actual_work_hours * hourly_rate, 2)
+        # 時薪制本薪：扣除已核准加班時數，避免加班時數以基本時薪重複計算
+        # （加班申請的 ot_pay 已含該時數的完整倍率，無需再以底薪重複計算）
+        _regular_hrs = max(0.0, actual_work_hours - total_ot_hours)
+        hourly_base_pay = round(_regular_hrs * hourly_rate, 2)
     else:
         # 月薪制：daily_wage 用於請假扣款
         hourly_base_pay = 0.0
 
     # ── 已核准加班費 ────────────────────────────────────────
     if batch_ctx is not None:
-        ot_pay = batch_ctx['ot_totals'].get(staff['id'], 0.0)
+        ot_pay          = batch_ctx['ot_totals'].get(staff['id'], 0.0)
+        total_ot_hours  = batch_ctx['ot_hours'].get(staff['id'],  0.0)
     else:
         _sal_s2, _sal_e2 = _month_range(month)
         ot_rows = conn.execute("""
-            SELECT COALESCE(SUM(ot_pay), 0) as total
+            SELECT COALESCE(SUM(ot_pay),0) as total, COALESCE(SUM(ot_hours),0) as hrs
             FROM overtime_requests
             WHERE staff_id=%s AND status='approved'
               AND request_date >= %s::date AND request_date < %s::date
         """, (staff['id'], _sal_s2, _sal_e2)).fetchone()
-        ot_pay = float(ot_rows['total']) if ot_rows else 0.0
+        ot_pay         = float(ot_rows['total']) if ot_rows else 0.0
+        total_ot_hours = float(ot_rows['hrs'])   if ot_rows else 0.0
 
     # ── 請假資訊 ────────────────────────────────────────────
     if batch_ctx is not None:
@@ -5526,10 +5528,10 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
         })
         allowance_total += hourly_base_pay
 
-        # 時薪制加班費（從打卡計算，若無申請記錄則估算）
-        # 先用「加班申請」核准金額；若為 0 則嘗試從工時估算
+        # 時薪制加班費（從打卡估算，僅在無核准申請時使用）
+        # 此路徑下 hourly_base_pay 已包含所有打卡工時的基本時薪，
+        # 故估算值只加「超時加給倍率 - 1」的差額部分，避免重複計算。
         if ot_pay == 0 and actual_work_hours > 0:
-            # 每天超過 daily_hours 的部分算加班
             for pd in punch_details:
                 overtime_h = max(0.0, pd['net_hours'] - daily_hours)
                 if overtime_h > 0:
@@ -5537,7 +5539,8 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
                     h2 = max(0.0, overtime_h - 2.0)
                     rate1 = float(staff.get('ot_rate1') or 1.33)
                     rate2 = float(staff.get('ot_rate2') or 1.67)
-                    ot_pay += round(hourly_rate * (h1 * rate1 + h2 * rate2), 2)
+                    # 只計算超時加給（倍率-1），基本時薪已算入 hourly_base_pay
+                    ot_pay += round(hourly_rate * (h1 * (rate1 - 1.0) + h2 * (rate2 - 1.0)), 2)
 
         # 時薪制的保險費以 insured_salary 為準（若未設定則用月薪換算）
         if insured_salary == 0:
@@ -5906,13 +5909,14 @@ def api_salary_generate():
 
             # 3. 全員加班費合計
             _ot_rows_b = conn.execute("""
-                SELECT staff_id, COALESCE(SUM(ot_pay),0) as total
+                SELECT staff_id, COALESCE(SUM(ot_pay),0) as total, COALESCE(SUM(ot_hours),0) as hrs
                 FROM overtime_requests
                 WHERE staff_id = ANY(%s) AND status='approved'
                   AND request_date >= %s::date AND request_date < %s::date
                 GROUP BY staff_id
             """, (staff_ids, _batch_ms, _batch_me)).fetchall()
             _ot_totals_b = {r['staff_id']: float(r['total']) for r in _ot_rows_b}
+            _ot_hours_b  = {r['staff_id']: float(r['hrs'])   for r in _ot_rows_b}
 
             # 4. 全員請假記錄（含假別，含跨月假別）
             _leave_rows_b = conn.execute("""
@@ -5976,6 +5980,7 @@ def api_salary_generate():
                 'shift_dates':     _shift_dates_b,
                 'holiday_dates':   _holiday_dates_b,
                 'ot_totals':       _ot_totals_b,
+                'ot_hours':        _ot_hours_b,
                 'leave_rows':      _leave_map_b,
                 'punch_dates':     _punch_dates_b,
                 'leave_date_sets': _leave_date_sets_b,
@@ -6878,6 +6883,22 @@ def api_anomaly_report_excel():
             ORDER BY work_date, ps.name
         """, (month,)).fetchall()
 
+        # Also fetch employees with shifts but no punch records (no-show days)
+        noshow_rows = conn.execute("""
+            SELECT ps.id as staff_id, ps.name as staff_name, ps.department,
+                   sa.shift_date::date as work_date
+            FROM shift_assignments sa
+            JOIN punch_staff ps ON ps.id=sa.staff_id AND ps.active=TRUE
+            WHERE TO_CHAR(sa.shift_date,'YYYY-MM')=%s
+              AND NOT EXISTS (
+                SELECT 1 FROM punch_records pr
+                WHERE pr.staff_id=sa.staff_id
+                  AND (pr.punched_at AT TIME ZONE 'Asia/Taipei')::date=sa.shift_date
+                  AND pr.deleted_at IS NULL
+              )
+            ORDER BY sa.shift_date, ps.name
+        """, (month,)).fetchall()
+
         shift_rows = conn.execute("""
             SELECT sa.staff_id, sa.shift_date,
                    st.start_time::text as start_time,
@@ -6963,6 +6984,29 @@ def api_anomaly_report_excel():
                 'detail':       detail,
             })
 
+    # Add no-show anomalies (scheduled but no punch records, excluding leaves)
+    for r in noshow_rows:
+        ds = str(r['work_date'])
+        sid = r['staff_id']
+        if (sid, ds) in leave_set:
+            continue
+        work_date_d = _dax.fromisoformat(ds)
+        if work_date_d >= today:
+            continue
+        shift = shift_map.get((sid, ds))
+        anomalies.append({
+            'staff_name':  r['staff_name'],
+            'department':  r['department'] or '',
+            'date':        ds,
+            'shift_start': str(shift['start_time'])[:5] if shift else '—',
+            'shift_end':   str(shift['end_time'])[:5]   if shift else '—',
+            'clock_in':    '—',
+            'clock_out':   '—',
+            'anomaly_type': '未打卡',
+            'detail':       '排班日無任何打卡記錄',
+        })
+    anomalies.sort(key=lambda x: (x['date'], x['staff_name']))
+
     # Build Excel
     wb   = openpyxl.Workbook()
     ws   = wb.active
@@ -6988,7 +7032,7 @@ def api_anomaly_report_excel():
         ws.column_dimensions[ws.cell(row=1, column=ci).column_letter].width = w
 
     for ri, a in enumerate(anomalies, 2):
-        row_fill = err_fill if a['anomaly_type'] in ('缺上班打卡','缺下班打卡') else warn_fill
+        row_fill = err_fill if a['anomaly_type'] in ('缺上班打卡','缺下班打卡','未打卡') else warn_fill
         vals = [a['staff_name'], a['department'], a['date'],
                 a['shift_start'], a['shift_end'],
                 a['clock_in'], a['clock_out'],
@@ -9350,13 +9394,14 @@ def api_salary_preview():
         }
 
         _ot_rows_pv = conn.execute("""
-            SELECT staff_id, COALESCE(SUM(ot_pay),0) as total
+            SELECT staff_id, COALESCE(SUM(ot_pay),0) as total, COALESCE(SUM(ot_hours),0) as hrs
             FROM overtime_requests
             WHERE staff_id = ANY(%s) AND status='approved'
               AND request_date >= %s::date AND request_date < %s::date
             GROUP BY staff_id
         """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
         _ot_totals_pv = {r['staff_id']: float(r['total']) for r in _ot_rows_pv}
+        _ot_hours_pv  = {r['staff_id']: float(r['hrs'])   for r in _ot_rows_pv}
 
         _leave_rows_pv = conn.execute("""
             SELECT lr.staff_id, lr.start_date, lr.end_date, lt.pay_rate, lt.code, lt.name as leave_name
