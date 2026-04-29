@@ -9474,6 +9474,7 @@ def api_salary_preview():
             'shift_dates':     _shift_dates_pv,
             'holiday_dates':   _holiday_dates_pv,
             'ot_totals':       _ot_totals_pv,
+            'ot_hours':        _ot_hours_pv,
             'leave_rows':      _leave_map_pv,
             'punch_dates':     _punch_dates_pv,
             'leave_date_sets': _leave_date_sets_pv,
