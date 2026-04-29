@@ -394,6 +394,7 @@ def init_db():
         # 補休追蹤
         "ALTER TABLE overtime_requests ADD COLUMN IF NOT EXISTS comp_days NUMERIC(5,2) DEFAULT 0",
         "ALTER TABLE overtime_requests ADD COLUMN IF NOT EXISTS pay_mode TEXT DEFAULT 'cash'",
+        "ALTER TABLE overtime_requests ADD COLUMN IF NOT EXISTS ot_date DATE",
         # 薪資單發送記錄
         """CREATE TABLE IF NOT EXISTS payslip_sends (
             id          SERIAL PRIMARY KEY,
@@ -11956,17 +11957,16 @@ def mobile_salary():
     staff_id = int(u['sub'])
     with get_db() as conn:
         rows = conn.execute(
-            """SELECT id, period_year, period_month, base_salary, bonus, deductions,
-                      net_salary, status, paid_at, created_at
-               FROM salary_records WHERE staff_id=%s ORDER BY period_year DESC, period_month DESC LIMIT 12""",
+            """SELECT id, month, base_salary, ot_pay,
+                      allowance_total, deduction_total, net_pay, status, created_at
+               FROM salary_records WHERE staff_id=%s ORDER BY month DESC LIMIT 12""",
             (staff_id,)
         ).fetchall()
     data = []
     for r in rows:
         d = dict(r)
-        for k in ('paid_at','created_at'):
-            if d.get(k): d[k] = str(d[k])
-        for k in ('base_salary','bonus','deductions','net_salary'):
+        if d.get('created_at'): d['created_at'] = str(d['created_at'])
+        for k in ('base_salary', 'ot_pay', 'allowance_total', 'deduction_total', 'net_pay'):
             if d.get(k) is not None: d[k] = float(d[k])
         data.append(d)
     return jsonify(data)
@@ -11995,9 +11995,9 @@ def mobile_overtime():
     with get_db() as conn:
         conn.execute(
             """INSERT INTO overtime_requests
-               (staff_id, ot_date, ot_hours, reason, status)
-               VALUES (%s, %s, %s, %s, 'pending')""",
-            (staff_id, ot_date, hours, reason)
+               (staff_id, request_date, ot_date, ot_hours, reason, status)
+               VALUES (%s, %s, %s, %s, %s, 'pending')""",
+            (staff_id, ot_date, ot_date, hours, reason)
         )
     return jsonify({'ok': True})
 
