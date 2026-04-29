@@ -5434,6 +5434,21 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
     daily_hours    = float(staff.get('daily_hours')    or 8)
     service_years  = _calc_service_years(staff.get('hire_date'))
 
+    # ── 已核准加班費（必須先取得，時薪制計算本薪時需要 total_ot_hours）──
+    if batch_ctx is not None:
+        ot_pay          = batch_ctx['ot_totals'].get(staff['id'], 0.0)
+        total_ot_hours  = batch_ctx['ot_hours'].get(staff['id'],  0.0)
+    else:
+        _sal_s2, _sal_e2 = _month_range(month)
+        ot_rows = conn.execute("""
+            SELECT COALESCE(SUM(ot_pay),0) as total, COALESCE(SUM(ot_hours),0) as hrs
+            FROM overtime_requests
+            WHERE staff_id=%s AND status='approved'
+              AND request_date >= %s::date AND request_date < %s::date
+        """, (staff['id'], _sal_s2, _sal_e2)).fetchone()
+        ot_pay         = float(ot_rows['total']) if ot_rows else 0.0
+        total_ot_hours = float(ot_rows['hrs'])   if ot_rows else 0.0
+
     # ── 時薪制：從打卡記錄計算工時 ──────────────────────────
     actual_work_hours = 0.0
     punch_details     = []
@@ -5448,21 +5463,6 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
     else:
         # 月薪制：daily_wage 用於請假扣款
         hourly_base_pay = 0.0
-
-    # ── 已核准加班費 ────────────────────────────────────────
-    if batch_ctx is not None:
-        ot_pay          = batch_ctx['ot_totals'].get(staff['id'], 0.0)
-        total_ot_hours  = batch_ctx['ot_hours'].get(staff['id'],  0.0)
-    else:
-        _sal_s2, _sal_e2 = _month_range(month)
-        ot_rows = conn.execute("""
-            SELECT COALESCE(SUM(ot_pay),0) as total, COALESCE(SUM(ot_hours),0) as hrs
-            FROM overtime_requests
-            WHERE staff_id=%s AND status='approved'
-              AND request_date >= %s::date AND request_date < %s::date
-        """, (staff['id'], _sal_s2, _sal_e2)).fetchone()
-        ot_pay         = float(ot_rows['total']) if ot_rows else 0.0
-        total_ot_hours = float(ot_rows['hrs'])   if ot_rows else 0.0
 
     # ── 請假資訊 ────────────────────────────────────────────
     if batch_ctx is not None:
@@ -9447,6 +9447,15 @@ def api_salary_preview():
             "SELECT * FROM salary_items WHERE active=TRUE ORDER BY sort_order, id"
         ).fetchall()]
 
+        _adv_rows_pv = conn.execute("""
+            SELECT id, staff_id, amount, advance_date, note
+            FROM salary_advances
+            WHERE staff_id = ANY(%s) AND deduct_month=%s AND status='pending'
+        """, (staff_ids, month)).fetchall()
+        _advances_pv: dict = {}
+        for _ar in _adv_rows_pv:
+            _advances_pv.setdefault(_ar['staff_id'], []).append(dict(_ar))
+
         # 批次統計打卡天數
         _punch_count_pv = conn.execute("""
             SELECT staff_id, COUNT(DISTINCT (punched_at AT TIME ZONE 'Asia/Taipei')::date) AS n
@@ -9479,6 +9488,7 @@ def api_salary_preview():
             'punch_dates':     _punch_dates_pv,
             'leave_date_sets': _leave_date_sets_pv,
             'salary_items':    _salary_items_pv,
+            'advances':        _advances_pv,
         }
 
         for staff in staff_list:
