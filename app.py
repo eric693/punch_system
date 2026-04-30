@@ -4420,7 +4420,7 @@ def _calc_leave_days(start_date_str, end_date_str, start_half=False, end_half=Fa
         total_min  = 0
         cur = s
         while cur <= e:
-            if cur.weekday() != 6:
+            if cur.weekday() < 5:
                 if cur == s and cur == e:
                     total_min += max(0, et_min - st_min)
                 elif cur == s:
@@ -4436,7 +4436,7 @@ def _calc_leave_days(start_date_str, end_date_str, start_half=False, end_half=Fa
     days = 0.0
     cur  = s
     while cur <= e:
-        if cur.weekday() != 6:
+        if cur.weekday() < 5:
             if cur == s and cur == e:
                 if start_half and end_half: days += 1.0
                 elif start_half or end_half: days += 0.5
@@ -5094,6 +5094,7 @@ def init_salary_db():
         "ALTER TABLE punch_staff ADD COLUMN IF NOT EXISTS salary_item_ids JSONB DEFAULT NULL",
         "ALTER TABLE punch_staff ADD COLUMN IF NOT EXISTS salary_item_overrides JSONB DEFAULT NULL",
         "ALTER TABLE salary_records ADD COLUMN IF NOT EXISTS income_tax_withheld NUMERIC(12,2) DEFAULT 0",
+        "ALTER TABLE salary_records ADD COLUMN IF NOT EXISTS absent_days NUMERIC(5,1) DEFAULT 0",
         """CREATE TABLE IF NOT EXISTS salary_records (
             id              SERIAL PRIMARY KEY,
             staff_id        INT REFERENCES punch_staff(id) ON DELETE CASCADE,
@@ -5195,7 +5196,7 @@ def salary_record_row(row):
     if not row: return None
     d = dict(row)
     for f in ['base_salary','insured_salary','work_days','actual_days','leave_days',
-              'unpaid_days','ot_pay','allowance_total','deduction_total','net_pay']:
+              'unpaid_days','absent_days','ot_pay','allowance_total','deduction_total','net_pay']:
         if d.get(f) is not None: d[f] = float(d[f])
     if isinstance(d.get('items'), str):
         try: d['items'] = _json.loads(d['items'])
@@ -5579,7 +5580,7 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
                 ORDER BY sort_order, id
             """).fetchall()
         for it in salary_items_rows:
-            calc_amt = _eval_formula(it['formula'] or '', base_salary or insured_salary,
+            calc_amt = _eval_formula(it['formula'] or '', base_salary,
                                      insured_salary, service_years)
             amt, overridden = _apply_override(it['id'], calc_amt)
             note = f'手動設定 ${amt}' if overridden else (it['formula'] or '')
@@ -5996,23 +5997,23 @@ def api_salary_generate():
                 conn.execute("""
                     INSERT INTO salary_records
                       (staff_id, month, base_salary, insured_salary, work_days, actual_days,
-                       leave_days, unpaid_days, ot_pay, allowance_total, deduction_total,
+                       leave_days, unpaid_days, absent_days, ot_pay, allowance_total, deduction_total,
                        net_pay, items, status, updated_at)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,'draft',NOW())
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,'draft',NOW())
                     ON CONFLICT (staff_id, month) DO UPDATE
                       SET base_salary=%s, insured_salary=%s, work_days=%s, actual_days=%s,
-                          leave_days=%s, unpaid_days=%s, ot_pay=%s, allowance_total=%s,
+                          leave_days=%s, unpaid_days=%s, absent_days=%s, ot_pay=%s, allowance_total=%s,
                           deduction_total=%s, net_pay=%s, items=%s::jsonb,
                           status=CASE WHEN salary_records.status='confirmed' THEN 'confirmed' ELSE 'draft' END,
                           updated_at=NOW()
                 """, (
                     data['staff_id'], month, data['base_salary'], data['insured_salary'],
                     data['work_days'], data['actual_days'], data['leave_days'], data['unpaid_days'],
-                    data['ot_pay'], data['allowance_total'], data['deduction_total'],
+                    data['absent_days'], data['ot_pay'], data['allowance_total'], data['deduction_total'],
                     data['net_pay'], items_json,
                     data['base_salary'], data['insured_salary'], data['work_days'], data['actual_days'],
-                    data['leave_days'], data['unpaid_days'], data['ot_pay'], data['allowance_total'],
-                    data['deduction_total'], data['net_pay'], items_json,
+                    data['leave_days'], data['unpaid_days'], data['absent_days'], data['ot_pay'],
+                    data['allowance_total'], data['deduction_total'], data['net_pay'], items_json,
                 ))
                 generated += 1
         finally:
@@ -9506,6 +9507,7 @@ def api_salary_preview():
                 'actual_days':     float(data['actual_days']),
                 'leave_days':      float(data['leave_days']),
                 'unpaid_days':     float(data['unpaid_days']),
+                'absent_days':     float(data['absent_days']),
                 'ot_count':        ot_stat['n'],
                 'ot_hours':        ot_stat['hrs'],
                 'ot_pay':          float(data['ot_pay']),
@@ -11325,11 +11327,11 @@ def _line_submit_leave(staff, user_id, text):
             WHERE staff_id=%s AND leave_type_id=%s AND year=%s
         """, (staff['id'], lt['id'], int(year))).fetchone()
 
-        # Calculate requested days (exclude Sunday)
+        # Calculate requested days (exclude Saturday and Sunday)
         from datetime import timedelta as _tdlv
         s = _dlv.fromisoformat(date_str1); e = _dlv.fromisoformat(date_str2)
         days = sum(1 for i in range((e-s).days+1)
-                   if (_dlv.fromisoformat(date_str1) + __import__('datetime').timedelta(days=i)).weekday() != 6)
+                   if (_dlv.fromisoformat(date_str1) + __import__('datetime').timedelta(days=i)).weekday() < 5)
 
         remain = None
         if bal:
