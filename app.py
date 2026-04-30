@@ -5399,7 +5399,7 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
                 for _d in range(1, days_in_month + 1):
                     _dt = _d5(y, m, _d)
                     _ds = _dt.isoformat()
-                    if _dt.weekday() != 6 and _ds not in holiday_dates:
+                    if _dt.weekday() < 5 and _ds not in holiday_dates:
                         scheduled_dates.add(_ds)
                 total_work_days = len(scheduled_dates)
         else:
@@ -5414,7 +5414,7 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
                 scheduled_dates = {r['shift_date'].isoformat() if hasattr(r['shift_date'], 'isoformat') else str(r['shift_date']) for r in shift_date_rows}
                 total_work_days = len(scheduled_dates)
             else:
-                # 2. 備援：日曆扣除週日 + 國定假日
+                # 2. 備援：日曆扣除週六週日 + 國定假日
                 holiday_rows = conn.execute("""
                     SELECT date FROM public_holidays
                     WHERE date >= %s::date AND date < %s::date
@@ -5424,7 +5424,7 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
                 for _d in range(1, days_in_month + 1):
                     _dt = _d5(y, m, _d)
                     _ds = _dt.isoformat()
-                    if _dt.weekday() != 6 and _ds not in holiday_dates:
+                    if _dt.weekday() < 5 and _ds not in holiday_dates:
                         scheduled_dates.add(_ds)
                 total_work_days = len(scheduled_dates)
 
