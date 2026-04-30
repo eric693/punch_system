@@ -2194,8 +2194,9 @@ def _do_line_leave_submit(staff, user_id, leave_type_name, start_date, end_date,
                 type=leave_type_name, avail='、'.join(r['name'] for r in avail)))
             return
 
+        sched = _get_scheduled_dates(conn, staff['id'], start_date, end_date)
         days = _calc_leave_days(start_date, end_date, start_half=start_half, end_half=end_half,
-                                start_time=start_time, end_time=end_time)
+                                start_time=start_time, end_time=end_time, scheduled_dates=sched)
         year = int(start_date[:4])
         bal = conn.execute("""
             SELECT total_days, used_days FROM leave_balances
@@ -4388,13 +4389,31 @@ def _calc_annual_leave_schedule(hire_date_str):
 
     return result
 
+def _get_scheduled_dates(conn, staff_id, start_date_str, end_date_str):
+    """回傳員工在指定區間內有排班的日期集合；若完全無排班記錄則回傳 None（供 fallback 用）。"""
+    rows = conn.execute(
+        "SELECT shift_date FROM shift_assignments WHERE staff_id=%s AND shift_date BETWEEN %s AND %s",
+        (staff_id, start_date_str, end_date_str)
+    ).fetchall()
+    if not rows:
+        return None
+    return {r['shift_date'] for r in rows}
+
+
 def _calc_leave_days(start_date_str, end_date_str, start_half=False, end_half=False,
-                     start_time=None, end_time=None, work_hours=8):
-    """計算請假天數（含半天、自訂時段），排除週日。
+                     start_time=None, end_time=None, work_hours=8, scheduled_dates=None):
+    """計算請假天數（含半天、自訂時段）。
+    scheduled_dates: 員工實際排班日期的 set[date]。提供時依排班判斷工作日（支援週末班）；
+                     未提供時 fallback 為週一～週五。
     若提供 start_time/end_time（HH:MM 字串），以小時換算天數（hours / work_hours）。
     多天時：首日從 start_time 到下班、末日從上班到 end_time、中間天各 work_hours 小時。
     """
-    from datetime import date as _date, timedelta as _tdd, time as _time
+    from datetime import date as _date, timedelta as _tdd
+
+    def _is_workday(d):
+        if scheduled_dates is not None:
+            return d in scheduled_dates
+        return d.weekday() < 5
 
     def _parse_time(t):
         if not t: return None
@@ -4420,7 +4439,7 @@ def _calc_leave_days(start_date_str, end_date_str, start_half=False, end_half=Fa
         total_min  = 0
         cur = s
         while cur <= e:
-            if cur.weekday() < 5:
+            if _is_workday(cur):
                 if cur == s and cur == e:
                     total_min += max(0, et_min - st_min)
                 elif cur == s:
@@ -4436,7 +4455,7 @@ def _calc_leave_days(start_date_str, end_date_str, start_half=False, end_half=Fa
     days = 0.0
     cur  = s
     while cur <= e:
-        if cur.weekday() < 5:
+        if _is_workday(cur):
             if cur == s and cur == e:
                 if start_half and end_half: days += 1.0
                 elif start_half or end_half: days += 0.5
@@ -4563,12 +4582,14 @@ def api_leave_request_admin_create():
     if not all([sid, leave_type_id, start_date, end_date]):
         return jsonify({'error': '缺少必要欄位'}), 400
 
-    total_days = _calc_leave_days(start_date, end_date, start_half, end_half,
-                                  start_time=start_time, end_time=end_time)
-    if total_days <= 0:
-        return jsonify({'error': '請假天數不合理，請檢查日期'}), 400
-
     with get_db() as conn:
+        sched = _get_scheduled_dates(conn, sid, start_date, end_date)
+        total_days = _calc_leave_days(start_date, end_date, start_half, end_half,
+                                      start_time=start_time, end_time=end_time,
+                                      scheduled_dates=sched)
+        if total_days <= 0:
+            return jsonify({'error': '請假天數不合理，請檢查日期'}), 400
+
         row = conn.execute("""
             INSERT INTO leave_requests
               (staff_id, leave_type_id, start_date, end_date, start_half, end_half,
@@ -4781,11 +4802,13 @@ def api_leave_submit():
     if not all([leave_type_id, start_date, end_date]):
         return jsonify({'error': '缺少必要欄位'}), 400
 
-    total_days = _calc_leave_days(start_date, end_date, start_half, end_half)
-    if total_days <= 0:
-        return jsonify({'error': '請假天數不合理，請檢查日期'}), 400
-
     with get_db() as conn:
+        sched = _get_scheduled_dates(conn, sid, start_date, end_date)
+        total_days = _calc_leave_days(start_date, end_date, start_half, end_half,
+                                      scheduled_dates=sched)
+        if total_days <= 0:
+            return jsonify({'error': '請假天數不合理，請檢查日期'}), 400
+
         # Check balance for types with limits
         lt = conn.execute("SELECT * FROM leave_types WHERE id=%s", (leave_type_id,)).fetchone()
         if lt and lt['max_days'] is not None:
@@ -5031,6 +5054,7 @@ def api_leave_balance_update(bid):
 @require_module('leave')
 def api_leave_summary(staff_id, month):
     """取得員工某月請假摘要（供薪資計算用）"""
+    _ms, _me = _month_range(month)
     with get_db() as conn:
         rows = conn.execute("""
             SELECT lr.*, lt.name as leave_type_name, lt.code, lt.pay_rate
@@ -5038,15 +5062,18 @@ def api_leave_summary(staff_id, month):
             JOIN leave_types lt ON lt.id=lr.leave_type_id
             WHERE lr.staff_id=%s
               AND lr.status='approved'
-              AND to_char(lr.start_date,'YYYY-MM')=%s
+              AND lr.start_date < %s::date AND lr.end_date >= %s::date
             ORDER BY lr.start_date
-        """, (staff_id, month)).fetchall()
+        """, (staff_id, _me, _ms)).fetchall()
+    from datetime import date as _dlsum
+    _ms_d = _dlsum.fromisoformat(_ms)
+    _me_d = _dlsum.fromisoformat(_me)
     total_leave_days = 0.0
     unpaid_days      = 0.0
     half_pay_days    = 0.0
     items = []
     for r in rows:
-        d = float(r['total_days'])
+        d = _clip_leave_to_month(r['start_date'], r['end_date'], _ms_d, _me_d)
         pay_r = float(r['pay_rate'])
         total_leave_days += d
         if pay_r == 0:   unpaid_days   += d
@@ -5271,13 +5298,26 @@ def _calc_service_years(hire_date_str):
     except Exception:
         return 0.0
 
-def _clip_leave_to_month(ls, le, month_start, month_end_exclusive):
-    """Return how many days of leave [ls, le] fall within [month_start, month_end_exclusive)."""
+def _clip_leave_to_month(ls, le, month_start, month_end_exclusive, scheduled_dates=None):
+    """Return how many WORK days of leave [ls, le] fall within [month_start, month_end_exclusive).
+    scheduled_dates: set of ISO date strings or date objects representing scheduled work days.
+    If provided and non-empty, only those days are counted; otherwise falls back to Mon-Fri."""
     if not hasattr(ls, 'year'): ls = date.fromisoformat(str(ls))
     if not hasattr(le, 'year'): le = date.fromisoformat(str(le))
     clip_s = max(ls, month_start)
     clip_e = min(le, month_end_exclusive - _td(days=1))
-    return float((clip_e - clip_s).days + 1) if clip_s <= clip_e else 0.0
+    if clip_s > clip_e:
+        return 0.0
+    count = 0.0
+    cur = clip_s
+    while cur <= clip_e:
+        if scheduled_dates:
+            if cur.isoformat() in scheduled_dates or cur in scheduled_dates:
+                count += 1.0
+        elif cur.weekday() < 5:
+            count += 1.0
+        cur += _td(days=1)
+    return count
 
 def _calc_punch_hours(conn, staff_id, month):
     """
@@ -5446,7 +5486,8 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
             SELECT COALESCE(SUM(ot_pay),0) as total, COALESCE(SUM(ot_hours),0) as hrs
             FROM overtime_requests
             WHERE staff_id=%s AND status='approved'
-              AND request_date >= %s::date AND request_date < %s::date
+              AND COALESCE(ot_date, request_date) >= %s::date
+              AND COALESCE(ot_date, request_date) < %s::date
         """, (staff['id'], _sal_s2, _sal_e2)).fetchone()
         ot_pay         = float(ot_rows['total']) if ot_rows else 0.0
         total_ot_hours = float(ot_rows['hrs'])   if ot_rows else 0.0
@@ -5484,7 +5525,8 @@ def _auto_generate_salary(conn, staff, month, work_days=None, batch_ctx=None):
     unpaid_days   = 0.0
     _half_entries = []   # (clipped_days, pay_rate, leave_name)
     for _lr in leave_rows:
-        _days = _clip_leave_to_month(_lr['start_date'], _lr['end_date'], _ms_d, _me_d)
+        _days = _clip_leave_to_month(_lr['start_date'], _lr['end_date'], _ms_d, _me_d,
+                                     scheduled_dates=scheduled_dates)
         leave_days += _days
         _pr = float(_lr['pay_rate'])
         if _pr == 0:
@@ -5909,12 +5951,13 @@ def api_salary_generate():
                 for r in _hol_rows_b
             }
 
-            # 3. 全員加班費合計
+            # 3. 全員加班費合計（以實際加班日 ot_date 為準，fallback request_date）
             _ot_rows_b = conn.execute("""
                 SELECT staff_id, COALESCE(SUM(ot_pay),0) as total, COALESCE(SUM(ot_hours),0) as hrs
                 FROM overtime_requests
                 WHERE staff_id = ANY(%s) AND status='approved'
-                  AND request_date >= %s::date AND request_date < %s::date
+                  AND COALESCE(ot_date, request_date) >= %s::date
+                  AND COALESCE(ot_date, request_date) < %s::date
                 GROUP BY staff_id
             """, (staff_ids, _batch_ms, _batch_me)).fetchall()
             _ot_totals_b = {r['staff_id']: float(r['total']) for r in _ot_rows_b}
@@ -9399,7 +9442,8 @@ def api_salary_preview():
             SELECT staff_id, COALESCE(SUM(ot_pay),0) as total, COALESCE(SUM(ot_hours),0) as hrs
             FROM overtime_requests
             WHERE staff_id = ANY(%s) AND status='approved'
-              AND request_date >= %s::date AND request_date < %s::date
+              AND COALESCE(ot_date, request_date) >= %s::date
+              AND COALESCE(ot_date, request_date) < %s::date
             GROUP BY staff_id
         """, (staff_ids, _mstart_pv, _mend_pv)).fetchall()
         _ot_totals_pv = {r['staff_id']: float(r['total']) for r in _ot_rows_pv}
@@ -11327,11 +11371,9 @@ def _line_submit_leave(staff, user_id, text):
             WHERE staff_id=%s AND leave_type_id=%s AND year=%s
         """, (staff['id'], lt['id'], int(year))).fetchone()
 
-        # Calculate requested days (exclude Saturday and Sunday)
-        from datetime import timedelta as _tdlv
-        s = _dlv.fromisoformat(date_str1); e = _dlv.fromisoformat(date_str2)
-        days = sum(1 for i in range((e-s).days+1)
-                   if (_dlv.fromisoformat(date_str1) + __import__('datetime').timedelta(days=i)).weekday() < 5)
+        # 計算請假天數（依排班，支援週末班）
+        sched = _get_scheduled_dates(conn, staff['id'], date_str1, date_str2)
+        days = _calc_leave_days(date_str1, date_str2, scheduled_dates=sched)
 
         remain = None
         if bal:
@@ -11344,7 +11386,7 @@ def _line_submit_leave(staff, user_id, text):
         # Create leave request
         row = conn.execute("""
             INSERT INTO leave_requests
-              (staff_id, leave_type_id, start_date, end_date, days,
+              (staff_id, leave_type_id, start_date, end_date, total_days,
                reason, status, created_at)
             VALUES (%s,%s,%s,%s,%s,%s,'pending',NOW()) RETURNING id
         """, (staff['id'], lt['id'], date_str1, date_str2, days, reason or '（LINE 請假）')).fetchone()
@@ -11871,7 +11913,7 @@ def mobile_leave_list():
     with get_db() as conn:
         rows = conn.execute(
             """SELECT lr.id, lt.name AS leave_type, lr.start_date, lr.end_date,
-                      lr.days, lr.reason, lr.status, lr.created_at
+                      lr.total_days AS days, lr.reason, lr.status, lr.created_at
                FROM leave_requests lr
                JOIN leave_types lt ON lr.leave_type_id = lt.id
                WHERE lr.staff_id=%s ORDER BY lr.created_at DESC LIMIT 50""",
@@ -11901,14 +11943,15 @@ def mobile_leave_apply():
     if not leave_type_id or not start_date:
         return jsonify({'error': '缺少必填欄位'}), 400
     try:
-        sd = _dt.strptime(start_date, '%Y-%m-%d').date()
-        ed = _dt.strptime(end_date,   '%Y-%m-%d').date()
-        days = (ed - sd).days + 1
+        _dt.strptime(start_date, '%Y-%m-%d')
+        _dt.strptime(end_date,   '%Y-%m-%d')
     except Exception:
         return jsonify({'error': '日期格式錯誤'}), 400
     with get_db() as conn:
+        sched = _get_scheduled_dates(conn, staff_id, start_date, end_date)
+        days = _calc_leave_days(start_date, end_date, scheduled_dates=sched)
         conn.execute(
-            """INSERT INTO leave_requests (staff_id, leave_type_id, start_date, end_date, days, reason, status)
+            """INSERT INTO leave_requests (staff_id, leave_type_id, start_date, end_date, total_days, reason, status)
                VALUES (%s, %s, %s, %s, %s, %s, 'pending')""",
             (staff_id, leave_type_id, start_date, end_date, days, reason)
         )
@@ -12103,7 +12146,7 @@ def mobile_admin_leaves():
     with get_db() as conn:
         rows = conn.execute(
             """SELECT lr.id, ps.name AS staff_name, lt.name AS leave_type,
-                      lr.start_date, lr.end_date, lr.days, lr.reason, lr.status, lr.created_at
+                      lr.start_date, lr.end_date, lr.total_days AS days, lr.reason, lr.status, lr.created_at
                FROM leave_requests lr
                JOIN punch_staff ps ON lr.staff_id = ps.id
                JOIN leave_types lt ON lr.leave_type_id = lt.id
