@@ -231,6 +231,9 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <a href="#" class="nav-item"        id="nav-insurance" data-i18n="nav.insurance" onclick="showPage('insurance',event)">勞健保明細</a>
     <a href="#" class="nav-item"        id="nav-report-center" data-i18n="nav.report_center" onclick="showPage('report-center',event)">報表中心</a>
     <a href="#" class="nav-item"        id="nav-hr-analysis" data-i18n="nav.hr_analysis" onclick="showPage('hr-analysis',event)">人力成本分析</a>
+    <a href="#" class="nav-item"        id="nav-crm"       data-i18n="nav.crm"       onclick="showPage('crm',event)">客戶管理</a>
+    <a href="#" class="nav-item"        id="nav-orders"    data-i18n="nav.orders"    onclick="showPage('orders',event)">報價訂單</a>
+    <a href="#" class="nav-item"        id="nav-ecommerce" data-i18n="nav.ecommerce" onclick="showPage('ecommerce',event)">電商串接</a>
     <a href="#" class="nav-item"        id="nav-adminmgr" data-i18n="nav.adminmgr" onclick="showPage('adminmgr',event)" style="display:none">帳號管理</a>
   </nav>
   <div class="sidebar-bottom">
@@ -2282,6 +2285,122 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     </div>
   </div><!-- end page-insurance -->
 
+  <!-- ── CRM 客戶管理 ── -->
+  <div class="page" id="page-crm" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:15px;font-weight:700;color:var(--navy)" data-i18n="page.crm">CRM 客戶管理</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="exportCrmExcel()">匯出 Excel</button>
+        <button class="btn btn-primary btn-sm" onclick="openCrmCreate()">＋ 新增客戶</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px" data-i18n="crm.stat.total">客戶總數</div><div id="crm-stat-total" style="font-size:26px;font-weight:800;color:var(--navy)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px" data-i18n="crm.stat.active">活躍客戶</div><div id="crm-stat-active" style="font-size:26px;font-weight:800;color:var(--green)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px" data-i18n="crm.stat.vip">VIP 客戶</div><div id="crm-stat-vip" style="font-size:26px;font-weight:800;color:#c8a96e">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px" data-i18n="crm.stat.interactions">本月互動</div><div id="crm-stat-inter" style="font-size:26px;font-weight:800;color:var(--accent)">—</div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <select class="filter-input" id="crm-filter-status" onchange="loadCrmList()" style="min-width:110px">
+        <option value="">全部狀態</option>
+        <option value="active" data-i18n="crm.status.active">活躍</option>
+        <option value="vip" data-i18n="crm.status.vip">VIP</option>
+        <option value="inactive" data-i18n="crm.status.inactive">停用</option>
+      </select>
+      <input class="filter-input" id="crm-filter-q" placeholder="搜尋公司/聯絡人/電話…" oninput="loadCrmList()" style="flex:1;min-width:200px">
+    </div>
+    <div class="card" style="overflow:hidden"><div id="crm-list-wrap" style="padding:0"></div></div>
+    <!-- slide panel -->
+    <div id="crm-panel-backdrop" onclick="closeCrmPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150"></div>
+    <div id="crm-panel" style="display:none;position:fixed;top:0;right:0;width:480px;max-width:100vw;height:100vh;background:#fff;z-index:160;overflow-y:auto;box-shadow:-4px 0 24px rgba(0,0,0,.15);padding:28px 28px 40px">
+      <button onclick="closeCrmPanel()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:20px" id="crm-panel-title">客戶詳情</div>
+      <div id="crm-panel-body"></div>
+    </div>
+  </div><!-- end page-crm -->
+
+  <!-- ── 報價訂單 ── -->
+  <div class="page" id="page-orders" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:15px;font-weight:700;color:var(--navy)" data-i18n="page.orders">報價／訂單</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" id="orders-btn-add-quote" onclick="openQuoteModal()">＋ 新增報價單</button>
+        <button class="btn btn-primary btn-sm" id="orders-btn-add-order" onclick="openOrderModal()" style="display:none">＋ 新增訂單</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">訂單總數</div><div id="ord-stat-total" style="font-size:26px;font-weight:800;color:var(--navy)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">待處理</div><div id="ord-stat-pending" style="font-size:26px;font-weight:800;color:var(--orange)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">進行中</div><div id="ord-stat-proc" style="font-size:26px;font-weight:800;color:var(--accent)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">本月營收</div><div id="ord-stat-rev" style="font-size:20px;font-weight:800;color:var(--green)">—</div></div>
+    </div>
+    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border)">
+      <button id="ord-tab-quotes" onclick="switchOrdersTab('quotes')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid var(--accent);font-weight:700;color:var(--navy)">報價單</button>
+      <button id="ord-tab-orders" onclick="switchOrdersTab('orders')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">訂單</button>
+    </div>
+    <div id="ord-panel-quotes">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="filter-input" id="quote-filter-status" onchange="loadQuotes()" style="min-width:110px">
+          <option value="">全部狀態</option>
+          <option value="draft">草稿</option><option value="sent">已送出</option>
+          <option value="accepted">已接受</option><option value="rejected">已拒絕</option><option value="expired">已過期</option>
+        </select>
+        <input class="filter-input" id="quote-filter-q" placeholder="搜尋單號/客戶/標題…" oninput="loadQuotes()" style="flex:1;min-width:180px">
+      </div>
+      <div class="card" style="overflow:hidden"><div id="quotes-list-wrap"></div></div>
+    </div>
+    <div id="ord-panel-orders" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="filter-input" id="order-filter-status" onchange="loadOrdersList()" style="min-width:110px">
+          <option value="">全部狀態</option>
+          <option value="pending">待處理</option><option value="processing">處理中</option>
+          <option value="shipped">已出貨</option><option value="completed">已完成</option><option value="cancelled">已取消</option>
+        </select>
+        <select class="filter-input" id="order-filter-channel" onchange="loadOrdersList()" style="min-width:100px">
+          <option value="">全部管道</option>
+          <option value="direct">直銷</option><option value="shopee">蝦皮</option>
+          <option value="website">官網</option><option value="other">其他</option>
+        </select>
+        <input class="filter-input" id="order-filter-q" placeholder="搜尋單號/客戶…" oninput="loadOrdersList()" style="flex:1;min-width:160px">
+      </div>
+      <div class="card" style="overflow:hidden"><div id="orders-list-wrap"></div></div>
+    </div>
+  </div><!-- end page-orders -->
+
+  <!-- ── 電商串接 ── -->
+  <div class="page" id="page-ecommerce" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:15px;font-weight:700;color:var(--navy)" data-i18n="page.ecommerce">電商平台串接</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="syncOrders()">↺ 立即同步</button>
+        <button class="btn btn-primary btn-sm" onclick="openPlatformModal()">＋ 新增平台</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">已啟用平台</div><div id="ecom-stat-plat" style="font-size:26px;font-weight:800;color:var(--navy)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">今日同步</div><div id="ecom-stat-synced" style="font-size:26px;font-weight:800;color:var(--accent)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">待匯入訂單</div><div id="ecom-stat-pending" style="font-size:26px;font-weight:800;color:var(--orange)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">電商訂單總數</div><div id="ecom-stat-total" style="font-size:26px;font-weight:800;color:var(--green)">—</div></div>
+    </div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">已設定平台</div>
+      <div id="ecom-platforms-wrap" style="display:flex;flex-wrap:wrap;gap:14px"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <select class="filter-input" id="ecom-filter-platform" onchange="loadEcomOrders()" style="min-width:110px">
+        <option value="">全部平台</option>
+        <option value="shopee">蝦皮</option><option value="website">官網</option><option value="other">其他</option>
+      </select>
+      <select class="filter-input" id="ecom-filter-status" onchange="loadEcomOrders()" style="min-width:100px">
+        <option value="">全部狀態</option>
+        <option value="pending">待處理</option><option value="processing">處理中</option>
+        <option value="shipped">已出貨</option><option value="completed">已完成</option>
+      </select>
+      <input class="filter-input" id="ecom-filter-q" placeholder="搜尋訂單號/買家…" oninput="loadEcomOrders()" style="flex:1;min-width:160px">
+    </div>
+    <div class="card" style="overflow:hidden"><div id="ecom-orders-wrap"></div></div>
+  </div><!-- end page-ecommerce -->
+
 
   <!-- ══════════════════════════════════════════════════════════════ -->
   <!-- 報表中心 -->
@@ -2656,6 +2775,177 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <button class="btn btn-outline" onclick="closeLoanReviewModal()" data-i18n="btn.cancel">取消</button>
       <button class="btn btn-danger" onclick="submitLoanReview('reject')" data-i18n="btn.reject">拒絕</button>
       <button class="btn btn-primary" onclick="submitLoanReview('approve')" data-i18n="btn.approve">核准</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 報價單 Modal ── -->
+<div id="quote-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:760px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:28px 32px;position:relative">
+    <button onclick="closeQuoteModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    <h3 id="qm-title" style="margin:0 0 20px;font-size:16px;color:var(--navy)">新增報價單</h3>
+    <input type="hidden" id="qm-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <label class="form-label">客戶名稱 <span style="color:var(--red)">*</span></label>
+        <input class="form-input" id="qm-customer" style="width:100%" placeholder="請輸入客戶名稱">
+      </div>
+      <div>
+        <label class="form-label">報價主旨</label>
+        <input class="form-input" id="qm-note" style="width:100%" placeholder="例：2026年度服務採購">
+      </div>
+      <div>
+        <label class="form-label">稅率 (%)</label>
+        <input class="form-input" id="qm-tax-rate" type="number" value="5" min="0" max="100" style="width:100%" oninput="_calcQuoteTotals()">
+      </div>
+      <div>
+        <label class="form-label">有效天數</label>
+        <input class="form-input" id="qm-valid-days" type="number" value="30" min="1" style="width:100%">
+      </div>
+      <div>
+        <label class="form-label">狀態</label>
+        <select class="form-input" id="qm-status" style="width:100%">
+          <option value="draft">草稿</option>
+          <option value="sent">已送出</option>
+          <option value="accepted">已接受</option>
+          <option value="rejected">已拒絕</option>
+        </select>
+      </div>
+    </div>
+    <label class="form-label">報價明細</label>
+    <div style="overflow-x:auto;margin-bottom:8px">
+      <table class="data-table" style="margin:0;min-width:600px">
+        <thead><tr><th>品項</th><th>數量</th><th>單位</th><th>單價</th><th>小計</th><th></th></tr></thead>
+        <tbody id="qm-items"></tbody>
+      </table>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="_addQuoteItem()" style="margin-bottom:16px">＋ 新增品項</button>
+    <div style="text-align:right;font-size:13px;line-height:2;margin-bottom:14px">
+      <div>小計：<span id="qm-subtotal" style="font-weight:600">NT$0</span></div>
+      <div>稅額：<span id="qm-tax" style="font-weight:600">NT$0</span></div>
+      <div style="font-size:15px;color:var(--navy)">合計：<span id="qm-total" style="font-weight:700">NT$0</span></div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label class="form-label">備註</label>
+      <textarea class="form-input" id="qm-remarks" rows="2" style="width:100%;resize:vertical" placeholder="其他說明（選填）"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeQuoteModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveQuote()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 訂單 Modal ── -->
+<div id="order-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:760px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:28px 32px;position:relative">
+    <button onclick="closeOrderModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    <h3 id="om-title-text" style="margin:0 0 20px;font-size:16px;color:var(--navy)">新增訂單</h3>
+    <input type="hidden" id="om-id">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <label class="form-label">客戶名稱 <span style="color:var(--red)">*</span></label>
+        <input class="form-input" id="om-customer" style="width:100%" placeholder="請輸入客戶名稱">
+      </div>
+      <div>
+        <label class="form-label">訂單主旨</label>
+        <input class="form-input" id="om-note-text" style="width:100%" placeholder="例：2026年採購訂單">
+      </div>
+      <div>
+        <label class="form-label">來源管道</label>
+        <select class="form-input" id="om-channel" style="width:100%">
+          <option value="direct">直接銷售</option>
+          <option value="shopee">蝦皮</option>
+          <option value="website">官網</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">稅率 (%)</label>
+        <input class="form-input" id="om-tax-rate" type="number" value="5" min="0" max="100" style="width:100%" oninput="_calcOrderTotals()">
+      </div>
+      <div>
+        <label class="form-label">狀態</label>
+        <select class="form-input" id="om-status" style="width:100%">
+          <option value="pending">待處理</option>
+          <option value="processing">處理中</option>
+          <option value="shipped">已出貨</option>
+          <option value="completed">已完成</option>
+          <option value="cancelled">已取消</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">已付金額</label>
+        <input class="form-input" id="om-paid" type="number" value="0" min="0" style="width:100%">
+      </div>
+      <div style="grid-column:span 2">
+        <label class="form-label">送貨地址</label>
+        <input class="form-input" id="om-shipping" style="width:100%" placeholder="收件地址（選填）">
+      </div>
+    </div>
+    <label class="form-label">訂單明細</label>
+    <div style="overflow-x:auto;margin-bottom:8px">
+      <table class="data-table" style="margin:0;min-width:600px">
+        <thead><tr><th>品項</th><th>數量</th><th>單位</th><th>單價</th><th>小計</th><th></th></tr></thead>
+        <tbody id="om-items"></tbody>
+      </table>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="_addOrderItem()" style="margin-bottom:16px">＋ 新增品項</button>
+    <div style="text-align:right;font-size:13px;line-height:2;margin-bottom:14px">
+      <div>小計：<span id="om-subtotal" style="font-weight:600">NT$0</span></div>
+      <div>稅額：<span id="om-tax" style="font-weight:600">NT$0</span></div>
+      <div style="font-size:15px;color:var(--navy)">合計：<span id="om-total" style="font-weight:700">NT$0</span></div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label class="form-label">備註</label>
+      <textarea class="form-input" id="om-remarks-text" rows="2" style="width:100%;resize:vertical" placeholder="其他說明（選填）"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeOrderModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveOrder()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 電商平台 Modal ── -->
+<div id="platform-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;width:480px;max-width:95vw;padding:28px 32px;position:relative">
+    <button onclick="closePlatformModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+    <h3 id="pm-modal-title" style="margin:0 0 20px;font-size:16px;color:var(--navy)">新增電商平台</h3>
+    <input type="hidden" id="pm-id">
+    <div style="display:grid;gap:12px">
+      <div>
+        <label class="form-label">平台類型</label>
+        <select class="form-input" id="pm-platform" style="width:100%">
+          <option value="shopee">蝦皮 Shopee</option>
+          <option value="website">官方網站</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">店家名稱</label>
+        <input class="form-input" id="pm-shop" style="width:100%" placeholder="例：我的蝦皮店">
+      </div>
+      <div>
+        <label class="form-label">API Key</label>
+        <input class="form-input" id="pm-key" style="width:100%" placeholder="平台提供的 API Key">
+      </div>
+      <div>
+        <label class="form-label">API Secret</label>
+        <input class="form-input" id="pm-secret" type="password" style="width:100%" placeholder="平台提供的 API Secret">
+      </div>
+      <div>
+        <label class="form-label">Webhook URL</label>
+        <input class="form-input" id="pm-webhook" style="width:100%" placeholder="https://your-domain/webhook（選填）">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="pm-enabled" style="width:16px;height:16px">
+        <label for="pm-enabled" style="font-size:13px;color:var(--navy);cursor:pointer">啟用此平台</label>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-outline" onclick="closePlatformModal()">取消</button>
+      <button class="btn btn-primary" onclick="savePlatform()">儲存</button>
     </div>
   </div>
 </div>
@@ -3735,6 +4025,9 @@ const ALL_MODULES = [
   { key:'insurance',     label:'勞健保明細' },
   { key:'report-center', label:'報表中心' },
   { key:'hr-analysis',   label:'人力成本分析' },
+  { key:'crm',           label:'客戶管理' },
+  { key:'orders',        label:'報價訂單' },
+  { key:'ecommerce',     label:'電商串接' },
 ];
 function hasModule(m) { return ADMIN_IS_SUPER || ADMIN_PERMS.includes(m); }
 
@@ -4506,8 +4799,40 @@ const TRANSLATIONS = {
     'module.key.finance':'財務管理','module.key.expense-review':'費用審核',
     'module.key.perf':'績效考核','module.key.stores':'門市管理','module.key.training':'教育訓練','module.key.labor-law':'勞基法通知','module.key.insurance':'勞健保明細',
     'module.key.report-center':'報表中心','module.key.hr-analysis':'人力成本分析',
+    'module.key.crm':'客戶管理','module.key.orders':'報價訂單','module.key.ecommerce':'電商串接',
     'nav.report_center':'報表中心','nav.hr_analysis':'人力成本分析',
+    'nav.crm':'客戶管理','nav.orders':'報價訂單','nav.ecommerce':'電商串接',
     'page.report-center':'報表中心','page.hr-analysis':'人力成本分析',
+    'page.crm':'CRM 客戶管理','page.orders':'報價／訂單','page.ecommerce':'電商平台串接',
+    'crm.stat.total':'客戶總數','crm.stat.active':'活躍客戶','crm.stat.vip':'VIP 客戶','crm.stat.interactions':'本月互動',
+    'crm.col.company':'公司名稱','crm.col.contact':'聯絡人','crm.col.phone':'電話',
+    'crm.col.industry':'行業','crm.col.assigned':'負責業務','crm.col.status':'狀態','crm.col.last_contact':'最後聯繫',
+    'crm.status.active':'活躍','crm.status.vip':'VIP','crm.status.inactive':'停用',
+    'crm.source.referral':'轉介紹','crm.source.ad':'廣告','crm.source.website':'官網','crm.source.cold':'冷電','crm.source.other':'其他',
+    'crm.itype.call':'電話','crm.itype.email':'Email','crm.itype.meeting':'會議','crm.itype.visit':'拜訪','crm.itype.other':'其他',
+    'crm.btn.add':'新增客戶','crm.btn.export':'匯出 Excel','crm.btn.save':'儲存','crm.btn.delete':'刪除',
+    'crm.btn.add_interaction':'新增互動','crm.no_customers':'尚無客戶資料',
+    'crm.detail.title':'客戶詳情','crm.detail.basic':'基本資料','crm.detail.interactions':'互動記錄',
+    'crm.confirm_delete':'確定刪除此客戶？此操作無法復原。',
+    'orders.tab.quotes':'報價單','orders.tab.orders':'訂單',
+    'orders.stat.total':'訂單總數','orders.stat.pending':'待處理','orders.stat.processing':'進行中','orders.stat.revenue':'本月營收',
+    'orders.col.no':'單號','orders.col.customer':'客戶','orders.col.title':'標題',
+    'orders.col.amount':'金額','orders.col.status':'狀態','orders.col.channel':'管道','orders.col.date':'建立時間',
+    'orders.status.draft':'草稿','orders.status.sent':'已送出','orders.status.accepted':'已接受',
+    'orders.status.rejected':'已拒絕','orders.status.expired':'已過期',
+    'orders.status.pending':'待處理','orders.status.processing':'處理中',
+    'orders.status.shipped':'已出貨','orders.status.completed':'已完成','orders.status.cancelled':'已取消',
+    'orders.channel.direct':'直銷','orders.channel.shopee':'蝦皮','orders.channel.website':'官網','orders.channel.other':'其他',
+    'orders.btn.add_quote':'新增報價單','orders.btn.add_order':'新增訂單','orders.btn.convert':'轉為訂單',
+    'orders.item.name':'品項名稱','orders.item.qty':'數量','orders.item.unit':'單位','orders.item.price':'單價','orders.item.amount':'小計',
+    'orders.subtotal':'小計','orders.tax':'稅額','orders.total':'合計',
+    'ecom.stat.platforms':'已啟用平台','ecom.stat.synced':'今日同步','ecom.stat.pending':'待匯入','ecom.stat.total':'訂單總數',
+    'ecom.col.platform':'平台','ecom.col.order_id':'平台訂單號','ecom.col.buyer':'買家',
+    'ecom.col.amount':'金額','ecom.col.status':'狀態','ecom.col.synced':'同步時間',
+    'ecom.btn.sync':'立即同步','ecom.btn.import':'匯入訂單','ecom.btn.add_platform':'新增平台',
+    'ecom.platform.shopee':'蝦皮購物','ecom.platform.website':'自家官網','ecom.platform.other':'其他平台',
+    'ecom.no_platforms':'尚未設定任何平台','ecom.no_orders':'尚無電商訂單',
+    'ecom.sync_done':'同步完成','ecom.import_done':'已匯入為訂單',
     'rc.group.attendance':'出勤類','rc.group.salary':'薪資類','rc.group.leave':'請假類',
     'rc.report.attendance':'出勤記錄','rc.report.monthly_stats':'月統計摘要','rc.report.overtime':'加班記錄',
     'rc.report.salary':'薪資明細','rc.report.staff_list':'員工名冊',
@@ -5309,8 +5634,38 @@ const TRANSLATIONS = {
     'module.key.finance':'Finance','module.key.expense-review':'Expense Review',
     'module.key.perf':'Performance','module.key.stores':'Stores','module.key.training':'Training','module.key.labor-law':'Labor Law','module.key.insurance':'Insurance Details',
     'module.key.report-center':'Report Center','module.key.hr-analysis':'HR Cost Analysis',
+    'module.key.crm':'CRM','module.key.orders':'Quotes/Orders','module.key.ecommerce':'E-Commerce',
     'nav.report_center':'Report Center','nav.hr_analysis':'HR Cost Analysis',
+    'nav.crm':'CRM','nav.orders':'Quotes/Orders','nav.ecommerce':'E-Commerce',
     'page.report-center':'Report Center','page.hr-analysis':'HR Cost Analysis',
+    'page.crm':'CRM','page.orders':'Quotes/Orders','page.ecommerce':'E-Commerce',
+    'crm.stat.total':'Total Customers','crm.stat.active':'Active','crm.stat.vip':'VIP','crm.stat.interactions':'Interactions',
+    'crm.col.company':'Company','crm.col.contact':'Contact','crm.col.phone':'Phone',
+    'crm.col.industry':'Industry','crm.col.assigned':'Assigned To','crm.col.status':'Status','crm.col.last_contact':'Last Contact',
+    'crm.status.active':'Active','crm.status.vip':'VIP','crm.status.inactive':'Inactive',
+    'crm.btn.add':'Add Customer','crm.btn.export':'Export Excel','crm.btn.save':'Save','crm.btn.delete':'Delete',
+    'crm.btn.add_interaction':'Add Interaction','crm.no_customers':'No customers yet',
+    'crm.detail.title':'Customer Detail','crm.detail.basic':'Basic Info','crm.detail.interactions':'Interactions',
+    'crm.confirm_delete':'Delete this customer? This cannot be undone.',
+    'orders.tab.quotes':'Quotes','orders.tab.orders':'Orders',
+    'orders.stat.total':'Total Orders','orders.stat.pending':'Pending','orders.stat.processing':'Processing','orders.stat.revenue':'Monthly Revenue',
+    'orders.col.no':'Number','orders.col.customer':'Customer','orders.col.title':'Title',
+    'orders.col.amount':'Amount','orders.col.status':'Status','orders.col.channel':'Channel','orders.col.date':'Date',
+    'orders.status.draft':'Draft','orders.status.sent':'Sent','orders.status.accepted':'Accepted',
+    'orders.status.rejected':'Rejected','orders.status.expired':'Expired',
+    'orders.status.pending':'Pending','orders.status.processing':'Processing',
+    'orders.status.shipped':'Shipped','orders.status.completed':'Completed','orders.status.cancelled':'Cancelled',
+    'orders.channel.direct':'Direct','orders.channel.shopee':'Shopee','orders.channel.website':'Website','orders.channel.other':'Other',
+    'orders.btn.add_quote':'New Quote','orders.btn.add_order':'New Order','orders.btn.convert':'Convert to Order',
+    'orders.item.name':'Item','orders.item.qty':'Qty','orders.item.unit':'Unit','orders.item.price':'Unit Price','orders.item.amount':'Amount',
+    'orders.subtotal':'Subtotal','orders.tax':'Tax','orders.total':'Total',
+    'ecom.stat.platforms':'Platforms','ecom.stat.synced':'Synced Today','ecom.stat.pending':'Pending Import','ecom.stat.total':'Total Orders',
+    'ecom.col.platform':'Platform','ecom.col.order_id':'Order ID','ecom.col.buyer':'Buyer',
+    'ecom.col.amount':'Amount','ecom.col.status':'Status','ecom.col.synced':'Synced At',
+    'ecom.btn.sync':'Sync Now','ecom.btn.import':'Import','ecom.btn.add_platform':'Add Platform',
+    'ecom.platform.shopee':'Shopee','ecom.platform.website':'Website','ecom.platform.other':'Other',
+    'ecom.no_platforms':'No platforms configured','ecom.no_orders':'No e-commerce orders',
+    'ecom.sync_done':'Sync complete','ecom.import_done':'Imported as order',
     'rc.group.attendance':'Attendance','rc.group.salary':'Salary','rc.group.leave':'Leave',
     'rc.report.attendance':'Attendance Records','rc.report.monthly_stats':'Monthly Summary','rc.report.overtime':'Overtime Records',
     'rc.report.salary':'Salary Details','rc.report.staff_list':'Staff List',
@@ -6108,6 +6463,26 @@ const TRANSLATIONS = {
     'module.key.finance':'財務管理','module.key.expense-review':'経費審査',
     'module.key.perf':'人事評価','module.key.stores':'店舗管理','module.key.training':'トレーニング','module.key.labor-law':'労基法通知','module.key.insurance':'労健保明細',
     'module.key.report-center':'レポートセンター','module.key.hr-analysis':'人件費分析',
+    'module.key.crm':'顧客管理','module.key.orders':'見積/注文','module.key.ecommerce':'EC連携',
+    'nav.crm':'顧客管理','nav.orders':'見積/注文','nav.ecommerce':'EC連携',
+    'page.crm':'CRM 顧客管理','page.orders':'見積／注文','page.ecommerce':'ECプラットフォーム',
+    'crm.stat.total':'顧客総数','crm.stat.active':'アクティブ','crm.stat.vip':'VIP','crm.stat.interactions':'今月のやり取り',
+    'crm.col.company':'会社名','crm.col.contact':'担当者','crm.col.phone':'電話',
+    'crm.col.industry':'業種','crm.col.assigned':'担当','crm.col.status':'ステータス','crm.col.last_contact':'最終連絡',
+    'crm.status.active':'アクティブ','crm.status.vip':'VIP','crm.status.inactive':'無効',
+    'crm.btn.add':'顧客追加','crm.btn.export':'Excel出力','crm.btn.save':'保存','crm.btn.delete':'削除',
+    'crm.btn.add_interaction':'やり取り追加','crm.no_customers':'顧客データなし',
+    'crm.detail.title':'顧客詳細','crm.detail.basic':'基本情報','crm.detail.interactions':'やり取り履歴',
+    'crm.confirm_delete':'この顧客を削除しますか？',
+    'orders.tab.quotes':'見積書','orders.tab.orders':'注文',
+    'orders.stat.total':'注文総数','orders.stat.pending':'保留中','orders.stat.processing':'処理中','orders.stat.revenue':'今月売上',
+    'orders.status.draft':'下書き','orders.status.sent':'送信済','orders.status.accepted':'承認','orders.status.rejected':'却下','orders.status.expired':'期限切れ',
+    'orders.status.pending':'保留','orders.status.processing':'処理中','orders.status.shipped':'出荷済','orders.status.completed':'完了','orders.status.cancelled':'キャンセル',
+    'orders.btn.add_quote':'見積作成','orders.btn.add_order':'注文作成','orders.btn.convert':'注文に変換',
+    'orders.subtotal':'小計','orders.tax':'税額','orders.total':'合計',
+    'ecom.btn.sync':'今すぐ同期','ecom.btn.import':'インポート','ecom.btn.add_platform':'プラットフォーム追加',
+    'ecom.no_platforms':'プラットフォーム未設定','ecom.no_orders':'ECオーダーなし',
+    'ecom.sync_done':'同期完了','ecom.import_done':'注文としてインポート済',
     'nav.report_center':'レポートセンター','nav.hr_analysis':'人件費分析',
     'page.report-center':'レポートセンター','page.hr-analysis':'人件費分析',
     'rc.group.attendance':'勤怠','rc.group.salary':'給与','rc.group.leave':'休暇',
@@ -6880,6 +7255,26 @@ const TRANSLATIONS = {
     'module.key.finance':'Tài chính','module.key.expense-review':'Chi phí',
     'module.key.perf':'Đánh giá','module.key.stores':'Cửa hàng','module.key.training':'Đào tạo','module.key.labor-law':'Luật LĐ','module.key.insurance':'Chi tiết BH',
     'module.key.report-center':'Trung tâm báo cáo','module.key.hr-analysis':'Phân tích chi phí NS',
+    'module.key.crm':'CRM','module.key.orders':'Báo giá/Đơn','module.key.ecommerce':'TMĐT',
+    'nav.crm':'CRM','nav.orders':'Báo giá/Đơn','nav.ecommerce':'TMĐT',
+    'page.crm':'CRM Khách hàng','page.orders':'Báo giá/Đơn hàng','page.ecommerce':'Nền tảng TMĐT',
+    'crm.stat.total':'Tổng KH','crm.stat.active':'Hoạt động','crm.stat.vip':'VIP','crm.stat.interactions':'Tương tác tháng',
+    'crm.col.company':'Công ty','crm.col.contact':'Liên hệ','crm.col.phone':'SĐT',
+    'crm.col.industry':'Ngành','crm.col.assigned':'Phụ trách','crm.col.status':'Trạng thái','crm.col.last_contact':'Liên hệ cuối',
+    'crm.status.active':'Hoạt động','crm.status.vip':'VIP','crm.status.inactive':'Không hoạt động',
+    'crm.btn.add':'Thêm KH','crm.btn.export':'Xuất Excel','crm.btn.save':'Lưu','crm.btn.delete':'Xóa',
+    'crm.btn.add_interaction':'Thêm tương tác','crm.no_customers':'Chưa có khách hàng',
+    'crm.detail.title':'Chi tiết KH','crm.detail.basic':'Thông tin cơ bản','crm.detail.interactions':'Lịch sử tương tác',
+    'crm.confirm_delete':'Xóa khách hàng này?',
+    'orders.tab.quotes':'Báo giá','orders.tab.orders':'Đơn hàng',
+    'orders.stat.total':'Tổng đơn','orders.stat.pending':'Chờ xử lý','orders.stat.processing':'Đang xử lý','orders.stat.revenue':'Doanh thu tháng',
+    'orders.status.draft':'Nháp','orders.status.sent':'Đã gửi','orders.status.accepted':'Chấp nhận','orders.status.rejected':'Từ chối','orders.status.expired':'Hết hạn',
+    'orders.status.pending':'Chờ','orders.status.processing':'Xử lý','orders.status.shipped':'Đã giao','orders.status.completed':'Hoàn thành','orders.status.cancelled':'Hủy',
+    'orders.btn.add_quote':'Tạo báo giá','orders.btn.add_order':'Tạo đơn','orders.btn.convert':'Chuyển đơn',
+    'orders.subtotal':'Tạm tính','orders.tax':'Thuế','orders.total':'Tổng',
+    'ecom.btn.sync':'Đồng bộ','ecom.btn.import':'Nhập','ecom.btn.add_platform':'Thêm nền tảng',
+    'ecom.no_platforms':'Chưa cấu hình nền tảng','ecom.no_orders':'Chưa có đơn TMĐT',
+    'ecom.sync_done':'Đồng bộ xong','ecom.import_done':'Đã nhập thành đơn hàng',
     'nav.report_center':'Trung tâm báo cáo','nav.hr_analysis':'Phân tích chi phí NS',
     'page.report-center':'Trung tâm báo cáo','page.hr-analysis':'Phân tích chi phí NS',
     'rc.group.attendance':'Chấm công','rc.group.salary':'Lương','rc.group.leave':'Nghỉ phép',
@@ -7651,6 +8046,26 @@ const TRANSLATIONS = {
     'module.key.finance':'การเงิน','module.key.expense-review':'ค่าใช้จ่าย',
     'module.key.perf':'ประเมินผล','module.key.stores':'สาขา','module.key.training':'ฝึกอบรม','module.key.labor-law':'กฎหมายแรงงาน','module.key.insurance':'รายละเอียดประกัน',
     'module.key.report-center':'ศูนย์รายงาน','module.key.hr-analysis':'วิเคราะห์ต้นทุน HR',
+    'module.key.crm':'CRM','module.key.orders':'ใบเสนอราคา','module.key.ecommerce':'อีคอมเมิร์ซ',
+    'nav.crm':'CRM','nav.orders':'ใบเสนอราคา','nav.ecommerce':'อีคอมเมิร์ซ',
+    'page.crm':'CRM ลูกค้า','page.orders':'ใบเสนอราคา/คำสั่งซื้อ','page.ecommerce':'แพลตฟอร์มอีคอมเมิร์ซ',
+    'crm.stat.total':'ลูกค้าทั้งหมด','crm.stat.active':'ใช้งาน','crm.stat.vip':'VIP','crm.stat.interactions':'การติดต่อเดือนนี้',
+    'crm.col.company':'บริษัท','crm.col.contact':'ผู้ติดต่อ','crm.col.phone':'โทรศัพท์',
+    'crm.col.industry':'อุตสาหกรรม','crm.col.assigned':'ผู้รับผิดชอบ','crm.col.status':'สถานะ','crm.col.last_contact':'ติดต่อล่าสุด',
+    'crm.status.active':'ใช้งาน','crm.status.vip':'VIP','crm.status.inactive':'ไม่ใช้งาน',
+    'crm.btn.add':'เพิ่มลูกค้า','crm.btn.export':'ส่งออก Excel','crm.btn.save':'บันทึก','crm.btn.delete':'ลบ',
+    'crm.btn.add_interaction':'เพิ่มการติดต่อ','crm.no_customers':'ยังไม่มีลูกค้า',
+    'crm.detail.title':'รายละเอียดลูกค้า','crm.detail.basic':'ข้อมูลพื้นฐาน','crm.detail.interactions':'ประวัติการติดต่อ',
+    'crm.confirm_delete':'ลบลูกค้านี้?',
+    'orders.tab.quotes':'ใบเสนอราคา','orders.tab.orders':'คำสั่งซื้อ',
+    'orders.stat.total':'คำสั่งซื้อทั้งหมด','orders.stat.pending':'รอดำเนินการ','orders.stat.processing':'กำลังดำเนินการ','orders.stat.revenue':'รายได้เดือนนี้',
+    'orders.status.draft':'ร่าง','orders.status.sent':'ส่งแล้ว','orders.status.accepted':'ยอมรับ','orders.status.rejected':'ปฏิเสธ','orders.status.expired':'หมดอายุ',
+    'orders.status.pending':'รอ','orders.status.processing':'ดำเนิน','orders.status.shipped':'จัดส่ง','orders.status.completed':'เสร็จ','orders.status.cancelled':'ยกเลิก',
+    'orders.btn.add_quote':'สร้างใบเสนอราคา','orders.btn.add_order':'สร้างคำสั่งซื้อ','orders.btn.convert':'แปลงเป็นคำสั่งซื้อ',
+    'orders.subtotal':'ยอดรวม','orders.tax':'ภาษี','orders.total':'รวมทั้งสิ้น',
+    'ecom.btn.sync':'ซิงค์เดี๋ยวนี้','ecom.btn.import':'นำเข้า','ecom.btn.add_platform':'เพิ่มแพลตฟอร์ม',
+    'ecom.no_platforms':'ยังไม่ได้ตั้งค่าแพลตฟอร์ม','ecom.no_orders':'ยังไม่มีคำสั่งซื้ออีคอมเมิร์ซ',
+    'ecom.sync_done':'ซิงค์เสร็จแล้ว','ecom.import_done':'นำเข้าเป็นคำสั่งซื้อแล้ว',
     'nav.report_center':'ศูนย์รายงาน','nav.hr_analysis':'วิเคราะห์ต้นทุน HR',
     'page.report-center':'ศูนย์รายงาน','page.hr-analysis':'วิเคราะห์ต้นทุน HR',
     'rc.group.attendance':'การเข้างาน','rc.group.salary':'เงินเดือน','rc.group.leave':'การลา',
@@ -8449,6 +8864,26 @@ const TRANSLATIONS = {
     'module.key.finance':'财务管理','module.key.expense-review':'费用审核',
     'module.key.perf':'绩效考核','module.key.stores':'门店管理','module.key.training':'教育培训','module.key.labor-law':'劳基法通知','module.key.insurance':'劳健保明细',
     'module.key.report-center':'报表中心','module.key.hr-analysis':'人力成本分析',
+    'module.key.crm':'客户管理','module.key.orders':'报价/订单','module.key.ecommerce':'电商对接',
+    'nav.crm':'客户管理','nav.orders':'报价订单','nav.ecommerce':'电商对接',
+    'page.crm':'CRM 客户管理','page.orders':'报价／订单','page.ecommerce':'电商平台对接',
+    'crm.stat.total':'客户总数','crm.stat.active':'活跃客户','crm.stat.vip':'VIP客户','crm.stat.interactions':'本月互动',
+    'crm.col.company':'公司名称','crm.col.contact':'联系人','crm.col.phone':'电话',
+    'crm.col.industry':'行业','crm.col.assigned':'负责业务','crm.col.status':'状态','crm.col.last_contact':'最后联系',
+    'crm.status.active':'活跃','crm.status.vip':'VIP','crm.status.inactive':'停用',
+    'crm.btn.add':'新增客户','crm.btn.export':'导出Excel','crm.btn.save':'保存','crm.btn.delete':'删除',
+    'crm.btn.add_interaction':'新增互动','crm.no_customers':'暂无客户数据',
+    'crm.detail.title':'客户详情','crm.detail.basic':'基本资料','crm.detail.interactions':'互动记录',
+    'crm.confirm_delete':'确定删除此客户？',
+    'orders.tab.quotes':'报价单','orders.tab.orders':'订单',
+    'orders.stat.total':'订单总数','orders.stat.pending':'待处理','orders.stat.processing':'进行中','orders.stat.revenue':'本月营收',
+    'orders.status.draft':'草稿','orders.status.sent':'已发送','orders.status.accepted':'已接受','orders.status.rejected':'已拒绝','orders.status.expired':'已过期',
+    'orders.status.pending':'待处理','orders.status.processing':'处理中','orders.status.shipped':'已发货','orders.status.completed':'已完成','orders.status.cancelled':'已取消',
+    'orders.btn.add_quote':'新增报价单','orders.btn.add_order':'新增订单','orders.btn.convert':'转为订单',
+    'orders.subtotal':'小计','orders.tax':'税额','orders.total':'合计',
+    'ecom.btn.sync':'立即同步','ecom.btn.import':'导入订单','ecom.btn.add_platform':'新增平台',
+    'ecom.no_platforms':'暂未配置平台','ecom.no_orders':'暂无电商订单',
+    'ecom.sync_done':'同步完成','ecom.import_done':'已导入为订单',
     'nav.report_center':'报表中心','nav.hr_analysis':'人力成本分析',
     'page.report-center':'报表中心','page.hr-analysis':'人力成本分析',
     'rc.group.attendance':'出勤类','rc.group.salary':'薪资类','rc.group.leave':'请假类',
@@ -9247,6 +9682,26 @@ const TRANSLATIONS = {
     'module.key.finance':'Keuangan','module.key.expense-review':'Tinjauan Biaya',
     'module.key.perf':'Penilaian Kinerja','module.key.stores':'Manajemen Toko','module.key.training':'Pelatihan','module.key.labor-law':'Hukum Ketenagakerjaan','module.key.insurance':'Detail Asuransi',
     'module.key.report-center':'Pusat Laporan','module.key.hr-analysis':'Analisis Biaya SDM',
+    'module.key.crm':'CRM','module.key.orders':'Penawaran/Pesanan','module.key.ecommerce':'E-Commerce',
+    'nav.crm':'CRM','nav.orders':'Penawaran/Pesanan','nav.ecommerce':'E-Commerce',
+    'page.crm':'CRM Pelanggan','page.orders':'Penawaran/Pesanan','page.ecommerce':'Platform E-Commerce',
+    'crm.stat.total':'Total Pelanggan','crm.stat.active':'Aktif','crm.stat.vip':'VIP','crm.stat.interactions':'Interaksi Bulan Ini',
+    'crm.col.company':'Perusahaan','crm.col.contact':'Kontak','crm.col.phone':'Telepon',
+    'crm.col.industry':'Industri','crm.col.assigned':'Ditugaskan','crm.col.status':'Status','crm.col.last_contact':'Kontak Terakhir',
+    'crm.status.active':'Aktif','crm.status.vip':'VIP','crm.status.inactive':'Tidak Aktif',
+    'crm.btn.add':'Tambah Pelanggan','crm.btn.export':'Ekspor Excel','crm.btn.save':'Simpan','crm.btn.delete':'Hapus',
+    'crm.btn.add_interaction':'Tambah Interaksi','crm.no_customers':'Belum ada pelanggan',
+    'crm.detail.title':'Detail Pelanggan','crm.detail.basic':'Info Dasar','crm.detail.interactions':'Riwayat Interaksi',
+    'crm.confirm_delete':'Hapus pelanggan ini?',
+    'orders.tab.quotes':'Penawaran','orders.tab.orders':'Pesanan',
+    'orders.stat.total':'Total Pesanan','orders.stat.pending':'Menunggu','orders.stat.processing':'Diproses','orders.stat.revenue':'Pendapatan Bulan Ini',
+    'orders.status.draft':'Draft','orders.status.sent':'Terkirim','orders.status.accepted':'Diterima','orders.status.rejected':'Ditolak','orders.status.expired':'Kedaluwarsa',
+    'orders.status.pending':'Menunggu','orders.status.processing':'Proses','orders.status.shipped':'Dikirim','orders.status.completed':'Selesai','orders.status.cancelled':'Batal',
+    'orders.btn.add_quote':'Buat Penawaran','orders.btn.add_order':'Buat Pesanan','orders.btn.convert':'Konversi ke Pesanan',
+    'orders.subtotal':'Subtotal','orders.tax':'Pajak','orders.total':'Total',
+    'ecom.btn.sync':'Sinkronkan','ecom.btn.import':'Impor','ecom.btn.add_platform':'Tambah Platform',
+    'ecom.no_platforms':'Belum ada platform','ecom.no_orders':'Belum ada pesanan e-commerce',
+    'ecom.sync_done':'Sinkronisasi selesai','ecom.import_done':'Diimpor sebagai pesanan',
     'nav.report_center':'Pusat Laporan','nav.hr_analysis':'Analisis Biaya SDM',
     'page.report-center':'Pusat Laporan','page.hr-analysis':'Analisis Biaya SDM',
     'rc.group.attendance':'Kehadiran','rc.group.salary':'Gaji','rc.group.leave':'Cuti',
@@ -10455,7 +10910,7 @@ function closeSidebar() {
 function showPage(page, e) {
   if (e) e.preventDefault();
   // 權限檢查（儀表板和帳號管理不受模組限制）
-  const moduleGuard = { punch:'punch', sched:'sched', leave:'leave', salary:'salary', ann:'ann', holiday:'holiday', finance:'finance', 'expense-review':'expense-review', perf:'perf', stores:'stores', training:'training', 'labor-law':'labor-law', 'insurance':'salary', 'report-center':'report-center', 'hr-analysis':'hr-analysis' };
+  const moduleGuard = { punch:'punch', sched:'sched', leave:'leave', salary:'salary', ann:'ann', holiday:'holiday', finance:'finance', 'expense-review':'expense-review', perf:'perf', stores:'stores', training:'training', 'labor-law':'labor-law', 'insurance':'salary', 'report-center':'report-center', 'hr-analysis':'hr-analysis', 'crm':'crm', 'orders':'orders', 'ecommerce':'ecommerce' };
   if (moduleGuard[page] && !hasModule(moduleGuard[page])) {
     showToast('您沒有此功能的存取權限', 'error'); return;
   }
@@ -10464,7 +10919,7 @@ function showPage(page, e) {
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
   setTimeout(refreshBadges, 600);
-  ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training','travel','assets','labor-law','insurance','report-center','hr-analysis'].forEach(p =>
+  ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training','travel','assets','labor-law','insurance','report-center','hr-analysis','crm','orders','ecommerce'].forEach(p =>
     document.getElementById('page-' + p).style.display = p === page ? '' : 'none'
   );
   document.getElementById('page-title').textContent = t('page.' + page) || page;
@@ -10487,6 +10942,9 @@ function showPage(page, e) {
   if (page === 'insurance')       initInsurance();
   if (page === 'report-center')   initReportCenter();
   if (page === 'hr-analysis')     initHrAnalysis();
+  if (page === 'crm')             initCrm();
+  if (page === 'orders')          initOrders();
+  if (page === 'ecommerce')       initEcommerce();
 }
 
 // ── Toast ─────────────────────────────────────────────────────
@@ -17690,6 +18148,564 @@ function showInsChangeForm() {
 
 async function exportInsuranceExcel() {
   window.location.href = '/api/export/insurance-excel';
+}
+
+// ══════════════════════════════════════════════════════════════
+// CRM 客戶管理
+// ══════════════════════════════════════════════════════════════
+let _crmList = [];
+let _crmStaffList = [];
+
+async function initCrm() {
+  await Promise.all([loadCrmStats(), loadCrmList(), _loadCrmStaff()]);
+}
+
+async function _loadCrmStaff() {
+  const { ok, data } = await api('/api/staff?active=1', {}, true);
+  _crmStaffList = ok ? data : [];
+}
+
+async function loadCrmStats() {
+  const { ok, data } = await api('/api/crm/stats', {}, true);
+  if (!ok) return;
+  document.getElementById('crm-stat-total').textContent = data.total;
+  document.getElementById('crm-stat-active').textContent = data.active;
+  document.getElementById('crm-stat-vip').textContent = data.vip;
+  document.getElementById('crm-stat-inter').textContent = data.interactions_this_month;
+}
+
+async function loadCrmList() {
+  const status = document.getElementById('crm-filter-status').value;
+  const q      = document.getElementById('crm-filter-q').value.trim();
+  let url = '/api/crm/customers?';
+  if (status) url += `status=${status}&`;
+  if (q)      url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  _crmList = ok ? data : [];
+  renderCrmList(_crmList);
+}
+
+const CRM_STATUS_COLOR = { active: 'var(--green)', vip: '#c8a96e', inactive: '#aaa' };
+const CRM_STATUS_LABEL = { get active(){return t('crm.status.active');}, get vip(){return 'VIP';}, get inactive(){return t('crm.status.inactive');} };
+
+function renderCrmList(list) {
+  const wrap = document.getElementById('crm-list-wrap');
+  if (!list.length) {
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">${t('crm.no_customers')}</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>${t('crm.col.company')}</th><th>${t('crm.col.contact')}</th><th>${t('crm.col.phone')}</th>
+    <th>${t('crm.col.industry')}</th><th>${t('crm.col.assigned')}</th>
+    <th>${t('crm.col.status')}</th><th>${t('crm.col.last_contact')}</th><th></th>
+  </tr></thead><tbody>${list.map(r => `<tr style="cursor:pointer" onclick="openCrmDetail(${r.id})">
+    <td style="font-weight:600">${escHtml(r.company_name)}</td>
+    <td>${escHtml(r.contact_name||'—')}</td>
+    <td style="font-size:12px">${escHtml(r.phone||'—')}</td>
+    <td style="font-size:12px">${escHtml(r.industry||'—')}</td>
+    <td style="font-size:12px">${escHtml(r.assigned_name||'—')}</td>
+    <td><span style="background:${CRM_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">${CRM_STATUS_LABEL[r.status]||r.status}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${r.last_contact_at||'—'}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();deleteCrmCustomer(${r.id})" style="color:var(--red)">刪除</button></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function openCrmDetail(id) {
+  const { ok, data: list } = await api(`/api/crm/customers?`, {}, true);
+  const customer = _crmList.find(c => c.id === id);
+  if (!customer) return;
+  document.getElementById('crm-panel-title').textContent = customer.company_name;
+  document.getElementById('crm-panel-body').innerHTML = _buildCrmForm(customer);
+  document.getElementById('crm-panel').style.display = '';
+  document.getElementById('crm-panel-backdrop').style.display = '';
+  loadCrmInteractions(id);
+}
+
+function openCrmCreate() {
+  document.getElementById('crm-panel-title').textContent = t('crm.btn.add');
+  document.getElementById('crm-panel-body').innerHTML = _buildCrmForm(null);
+  document.getElementById('crm-panel').style.display = '';
+  document.getElementById('crm-panel-backdrop').style.display = '';
+}
+
+function _buildCrmForm(c) {
+  const staffOpts = _crmStaffList.map(s => `<option value="${s.id}" ${c && c.assigned_to==s.id?'selected':''}>${escHtml(s.name)}</option>`).join('');
+  return `
+  <div style="display:grid;gap:12px">
+    <input type="hidden" id="crm-edit-id" value="${c ? c.id : ''}">
+    <div><label class="form-label">公司名稱 *</label><input class="form-input" id="crm-f-company" value="${escHtml(c?.company_name||'')}"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><label class="form-label">聯絡人</label><input class="form-input" id="crm-f-contact" value="${escHtml(c?.contact_name||'')}"></div>
+      <div><label class="form-label">電話</label><input class="form-input" id="crm-f-phone" value="${escHtml(c?.phone||'')}"></div>
+    </div>
+    <div><label class="form-label">Email</label><input class="form-input" id="crm-f-email" value="${escHtml(c?.email||'')}"></div>
+    <div><label class="form-label">地址</label><input class="form-input" id="crm-f-address" value="${escHtml(c?.address||'')}"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><label class="form-label">行業</label><input class="form-input" id="crm-f-industry" value="${escHtml(c?.industry||'')}"></div>
+      <div><label class="form-label">狀態</label>
+        <select class="form-input" id="crm-f-status">
+          <option value="active" ${c?.status==='active'?'selected':''}>活躍</option>
+          <option value="vip" ${c?.status==='vip'?'selected':''}>VIP</option>
+          <option value="inactive" ${c?.status==='inactive'?'selected':''}>停用</option>
+        </select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><label class="form-label">來源</label>
+        <select class="form-input" id="crm-f-source">
+          <option value="" ${!c?.source?'selected':''}>—</option>
+          <option value="referral" ${c?.source==='referral'?'selected':''}>轉介紹</option>
+          <option value="ad" ${c?.source==='ad'?'selected':''}>廣告</option>
+          <option value="website" ${c?.source==='website'?'selected':''}>官網</option>
+          <option value="cold" ${c?.source==='cold'?'selected':''}>冷電</option>
+          <option value="other" ${c?.source==='other'?'selected':''}>其他</option>
+        </select></div>
+      <div><label class="form-label">負責業務</label>
+        <select class="form-input" id="crm-f-assigned">
+          <option value="">—</option>${staffOpts}
+        </select></div>
+    </div>
+    <div><label class="form-label">最後聯繫日</label><input class="form-input" type="date" id="crm-f-last" value="${c?.last_contact_at||''}"></div>
+    <div><label class="form-label">標籤</label><input class="form-input" id="crm-f-tags" placeholder="用逗號分隔" value="${escHtml(c?.tags||'')}"></div>
+    <div><label class="form-label">備註</label><textarea class="form-input" id="crm-f-notes" rows="3">${escHtml(c?.notes||'')}</textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="${c ? 'saveCrmCustomer()' : 'createCrmCustomer()'}" style="flex:1">${t('crm.btn.save')}</button>
+      <button class="btn btn-outline" onclick="closeCrmPanel()">取消</button>
+    </div>
+  </div>
+  ${c ? `<hr style="margin:20px 0;border-color:var(--border)">
+  <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">${t('crm.detail.interactions')}</div>
+  <div id="crm-interactions-wrap" style="margin-bottom:16px"></div>
+  <div style="background:var(--surface,#f8f9fa);border-radius:8px;padding:14px">
+    <div style="font-size:12px;font-weight:600;color:var(--navy);margin-bottom:10px">新增互動記錄</div>
+    <select class="form-input" id="crm-int-type" style="margin-bottom:8px">
+      <option value="call">電話</option><option value="email">Email</option>
+      <option value="meeting">會議</option><option value="visit">拜訪</option><option value="other">其他</option>
+    </select>
+    <input class="form-input" id="crm-int-title" placeholder="標題" style="margin-bottom:8px">
+    <textarea class="form-input" id="crm-int-content" placeholder="內容說明…" rows="3" style="margin-bottom:8px"></textarea>
+    <input class="form-input" id="crm-int-next" placeholder="下次行動" style="margin-bottom:8px">
+    <input class="form-input" type="date" id="crm-int-date" style="margin-bottom:8px">
+    <button class="btn btn-primary btn-sm" onclick="addCrmInteraction(${c.id})">新增</button>
+  </div>` : ''}`;
+}
+
+function closeCrmPanel() {
+  document.getElementById('crm-panel').style.display = 'none';
+  document.getElementById('crm-panel-backdrop').style.display = 'none';
+}
+
+async function saveCrmCustomer() {
+  const id = document.getElementById('crm-edit-id').value;
+  const body = _collectCrmForm();
+  if (!body) return;
+  const { ok, data } = await api(`/api/crm/customers/${id}`, { method:'PUT', body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast('已儲存','success');
+  closeCrmPanel(); loadCrmList(); loadCrmStats();
+}
+
+async function createCrmCustomer() {
+  const body = _collectCrmForm();
+  if (!body) return;
+  const { ok, data } = await api('/api/crm/customers', { method:'POST', body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'建立失敗','error'); return; }
+  showToast('客戶已建立','success');
+  closeCrmPanel(); loadCrmList(); loadCrmStats();
+}
+
+function _collectCrmForm() {
+  const company = document.getElementById('crm-f-company')?.value.trim();
+  if (!company) { showToast('請填寫公司名稱','error'); return null; }
+  return {
+    company_name:   company,
+    contact_name:   document.getElementById('crm-f-contact')?.value.trim()||'',
+    phone:          document.getElementById('crm-f-phone')?.value.trim()||'',
+    email:          document.getElementById('crm-f-email')?.value.trim()||'',
+    address:        document.getElementById('crm-f-address')?.value.trim()||'',
+    industry:       document.getElementById('crm-f-industry')?.value.trim()||'',
+    status:         document.getElementById('crm-f-status')?.value||'active',
+    source:         document.getElementById('crm-f-source')?.value||'',
+    assigned_to:    document.getElementById('crm-f-assigned')?.value||null,
+    last_contact_at:document.getElementById('crm-f-last')?.value||null,
+    tags:           document.getElementById('crm-f-tags')?.value.trim()||'',
+    notes:          document.getElementById('crm-f-notes')?.value.trim()||'',
+  };
+}
+
+async function deleteCrmCustomer(id) {
+  if (!confirm(t('crm.confirm_delete'))) return;
+  const { ok } = await api(`/api/crm/customers/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); loadCrmList(); loadCrmStats(); }
+}
+
+async function loadCrmInteractions(cid) {
+  const { ok, data } = await api(`/api/crm/customers/${cid}/interactions`, {}, true);
+  const wrap = document.getElementById('crm-interactions-wrap');
+  if (!wrap) return;
+  if (!ok || !data.length) { wrap.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px 0">尚無互動記錄</div>`; return; }
+  const ITYPE = { call:'📞', email:'📧', meeting:'🤝', visit:'🚗', other:'📝' };
+  wrap.innerHTML = data.map(r => `<div style="display:flex;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+    <div style="font-size:18px">${ITYPE[r.interaction_type]||'📝'}</div>
+    <div style="flex:1">
+      <div style="font-size:12px;font-weight:600">${escHtml(r.title||r.interaction_type)}</div>
+      <div style="font-size:12px;color:var(--muted)">${escHtml(r.content||'')}</div>
+      ${r.next_action?`<div style="font-size:11px;color:var(--accent);margin-top:2px">→ ${escHtml(r.next_action)}${r.next_action_date?' ('+r.next_action_date+')':''}</div>`:''}
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${r.staff_name||''} · ${(r.created_at||'').slice(0,10)}</div>
+    </div>
+  </div>`).join('');
+}
+
+async function addCrmInteraction(cid) {
+  const body = {
+    interaction_type: document.getElementById('crm-int-type').value,
+    title:            document.getElementById('crm-int-title').value.trim(),
+    content:          document.getElementById('crm-int-content').value.trim(),
+    next_action:      document.getElementById('crm-int-next').value.trim(),
+    next_action_date: document.getElementById('crm-int-date').value || null,
+  };
+  const { ok } = await api(`/api/crm/customers/${cid}/interactions`, { method:'POST', body: JSON.stringify(body) });
+  if (ok) {
+    showToast('互動已記錄','success');
+    document.getElementById('crm-int-title').value = '';
+    document.getElementById('crm-int-content').value = '';
+    document.getElementById('crm-int-next').value = '';
+    document.getElementById('crm-int-date').value = '';
+    loadCrmInteractions(cid); loadCrmStats();
+  }
+}
+
+async function exportCrmExcel() { window.location.href = '/api/export/crm-excel'; }
+
+// ══════════════════════════════════════════════════════════════
+// 報價訂單
+// ══════════════════════════════════════════════════════════════
+let _ordersTab = 'quotes';
+let _quoteItems = [];
+let _orderItems = [];
+
+async function initOrders() {
+  await loadOrderStats();
+  switchOrdersTab('quotes');
+}
+
+function switchOrdersTab(tab) {
+  _ordersTab = tab;
+  document.getElementById('ord-panel-quotes').style.display  = tab === 'quotes' ? '' : 'none';
+  document.getElementById('ord-panel-orders').style.display  = tab === 'orders' ? '' : 'none';
+  document.getElementById('ord-tab-quotes').style.fontWeight = tab === 'quotes' ? '700' : '400';
+  document.getElementById('ord-tab-orders').style.fontWeight = tab === 'orders' ? '700' : '400';
+  document.getElementById('ord-tab-quotes').style.borderBottom = tab === 'quotes' ? '2px solid var(--accent)' : '2px solid transparent';
+  document.getElementById('ord-tab-orders').style.borderBottom = tab === 'orders' ? '2px solid var(--accent)' : '2px solid transparent';
+  document.getElementById('ord-tab-quotes').style.color = tab === 'quotes' ? 'var(--navy)' : 'var(--muted)';
+  document.getElementById('ord-tab-orders').style.color = tab === 'orders' ? 'var(--navy)' : 'var(--muted)';
+  document.getElementById('orders-btn-add-quote').style.display = tab === 'quotes' ? '' : 'none';
+  document.getElementById('orders-btn-add-order').style.display = tab === 'orders' ? '' : 'none';
+  if (tab === 'quotes') loadQuotes();
+  else loadOrdersList();
+}
+
+async function loadOrderStats() {
+  const { ok, data } = await api('/api/orders/stats', {}, true);
+  if (!ok) return;
+  document.getElementById('ord-stat-total').textContent   = data.total_orders;
+  document.getElementById('ord-stat-pending').textContent = data.pending;
+  document.getElementById('ord-stat-proc').textContent    = data.processing;
+  document.getElementById('ord-stat-rev').textContent     = 'NT$' + (data.total_revenue_month||0).toLocaleString();
+}
+
+const QUOTE_STATUS_COLOR = { draft:'#aaa', sent:'var(--accent)', accepted:'var(--green)', rejected:'var(--red)', expired:'var(--orange)' };
+const ORDER_STATUS_COLOR = { pending:'var(--orange)', processing:'var(--accent)', shipped:'#8b5cf6', completed:'var(--green)', cancelled:'#aaa' };
+
+async function loadQuotes() {
+  const status = document.getElementById('quote-filter-status').value;
+  const q      = document.getElementById('quote-filter-q').value.trim();
+  let url = '/api/orders/quotes?';
+  if (status) url += `status=${status}&`;
+  if (q)      url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  const wrap = document.getElementById('quotes-list-wrap');
+  if (!ok || !data.length) { wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">尚無報價單</div>`; return; }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>報價單號</th><th>客戶</th><th>標題</th><th>金額</th><th>狀態</th><th>建立時間</th><th></th>
+  </tr></thead><tbody>${data.map(r => `<tr>
+    <td style="font-weight:600;font-family:'DM Mono',monospace">${escHtml(r.quote_no)}</td>
+    <td>${escHtml(r.customer_name||'—')}</td>
+    <td style="font-size:13px">${escHtml(r.title||'—')}</td>
+    <td style="font-weight:600">NT$${(r.total||0).toLocaleString()}</td>
+    <td><span style="background:${QUOTE_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${t('orders.status.'+r.status)||r.status}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${(r.created_at||'').slice(0,10)}</td>
+    <td style="display:flex;gap:4px">
+      <button class="btn btn-outline btn-sm" onclick="openQuoteModal(${r.id})">編輯</button>
+      ${r.status!=='accepted'?`<button class="btn btn-primary btn-sm" onclick="convertQuote(${r.id})">轉訂單</button>`:''}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function loadOrdersList() {
+  const status  = document.getElementById('order-filter-status').value;
+  const channel = document.getElementById('order-filter-channel').value;
+  const q       = document.getElementById('order-filter-q').value.trim();
+  let url = '/api/orders/list?';
+  if (status)  url += `status=${status}&`;
+  if (channel) url += `channel=${channel}&`;
+  if (q)       url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  const wrap = document.getElementById('orders-list-wrap');
+  if (!ok || !data.length) { wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">尚無訂單</div>`; return; }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>訂單號</th><th>客戶</th><th>標題</th><th>金額</th><th>管道</th><th>狀態</th><th>建立時間</th><th></th>
+  </tr></thead><tbody>${data.map(r => `<tr>
+    <td style="font-weight:600;font-family:'DM Mono',monospace">${escHtml(r.order_no)}</td>
+    <td>${escHtml(r.customer_name||'—')}</td>
+    <td style="font-size:13px">${escHtml(r.title||'—')}</td>
+    <td style="font-weight:600">NT$${(r.total||0).toLocaleString()}</td>
+    <td style="font-size:12px">${escHtml(r.channel||'')}</td>
+    <td><span style="background:${ORDER_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${t('orders.status.'+r.status)||r.status}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${(r.created_at||'').slice(0,10)}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="openOrderModal(${r.id})">編輯</button></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function openQuoteModal(id=null) {
+  _quoteItems = [];
+  const isEdit = !!id;
+  const modal = document.getElementById('quote-modal');
+  document.getElementById('qm-id').value = id || '';
+  document.getElementById('qm-title').textContent = isEdit ? '編輯報價單' : '新增報價單';
+  if (!isEdit) { _quoteItems = [{name:'',qty:1,unit:'式',unit_price:0,amount:0}]; _renderQuoteItems(); }
+  else {
+    api(`/api/orders/quotes?`, {}, true).then(({ ok, data }) => {
+      // fetch single quote from list
+    });
+  }
+  modal.style.display = 'flex';
+}
+
+function closeQuoteModal() { document.getElementById('quote-modal').style.display = 'none'; }
+
+function _renderQuoteItems() {
+  const wrap = document.getElementById('qm-items');
+  wrap.innerHTML = _quoteItems.map((it,i) => `<tr>
+    <td><input class="form-input" style="width:100%" value="${escHtml(it.name)}" oninput="_quoteItems[${i}].name=this.value"></td>
+    <td><input class="form-input" style="width:60px" type="number" value="${it.qty}" oninput="_quoteItems[${i}].qty=+this.value;_calcQuoteTotals()"></td>
+    <td><input class="form-input" style="width:60px" value="${escHtml(it.unit)}" oninput="_quoteItems[${i}].unit=this.value"></td>
+    <td><input class="form-input" style="width:90px" type="number" value="${it.unit_price}" oninput="_quoteItems[${i}].unit_price=+this.value;_calcQuoteTotals()"></td>
+    <td style="font-weight:600;min-width:80px" id="qm-item-amt-${i}">NT$${((it.qty||0)*(it.unit_price||0)).toLocaleString()}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="_removeQuoteItem(${i})" style="color:var(--red)">✕</button></td>
+  </tr>`).join('');
+  _calcQuoteTotals();
+}
+
+function _calcQuoteTotals() {
+  let sub = 0;
+  _quoteItems.forEach((it,i) => {
+    const amt = (it.qty||0) * (it.unit_price||0);
+    it.amount = amt; sub += amt;
+    const el = document.getElementById(`qm-item-amt-${i}`);
+    if (el) el.textContent = 'NT$' + amt.toLocaleString();
+  });
+  const tax = sub * (parseFloat(document.getElementById('qm-tax-rate')?.value||5)/100);
+  if(document.getElementById('qm-subtotal')) document.getElementById('qm-subtotal').textContent = 'NT$'+sub.toLocaleString();
+  if(document.getElementById('qm-tax'))      document.getElementById('qm-tax').textContent      = 'NT$'+tax.toLocaleString();
+  if(document.getElementById('qm-total'))    document.getElementById('qm-total').textContent    = 'NT$'+(sub+tax).toLocaleString();
+}
+
+function _addQuoteItem() { _quoteItems.push({name:'',qty:1,unit:'式',unit_price:0,amount:0}); _renderQuoteItems(); }
+function _removeQuoteItem(i) { _quoteItems.splice(i,1); _renderQuoteItems(); }
+
+async function saveQuote() {
+  const id = document.getElementById('qm-id').value;
+  const body = {
+    customer_name: document.getElementById('qm-customer').value.trim(),
+    title:         document.getElementById('qm-note').value.trim(),
+    items:         _quoteItems,
+    tax_rate:      parseFloat(document.getElementById('qm-tax-rate').value||5),
+    valid_days:    parseInt(document.getElementById('qm-valid-days')?.value||30),
+    notes:         document.getElementById('qm-remarks').value.trim(),
+    status:        document.getElementById('qm-status').value,
+  };
+  const url = id ? `/api/orders/quotes/${id}` : '/api/orders/quotes';
+  const method = id ? 'PUT' : 'POST';
+  const { ok, data } = await api(url, { method, body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast(id ? '報價單已更新' : `報價單 ${data.quote_no} 已建立`, 'success');
+  closeQuoteModal(); loadQuotes(); loadOrderStats();
+}
+
+async function convertQuote(id) {
+  if (!confirm('確定要將此報價單轉換為訂單？')) return;
+  const { ok, data } = await api(`/api/orders/quotes/${id}/convert`, { method:'POST' });
+  if (!ok) { showToast(data?.error||'轉換失敗','error'); return; }
+  showToast(`訂單 ${data.order_no} 已建立`,'success');
+  loadQuotes(); loadOrderStats();
+}
+
+function openOrderModal(id=null) {
+  _orderItems = [{name:'',qty:1,unit:'式',unit_price:0,amount:0}];
+  document.getElementById('om-id').value = id || '';
+  document.getElementById('om-title-text').textContent = id ? '編輯訂單' : '新增訂單';
+  _renderOrderItems();
+  document.getElementById('order-modal').style.display = 'flex';
+}
+function closeOrderModal() { document.getElementById('order-modal').style.display = 'none'; }
+
+function _renderOrderItems() {
+  const wrap = document.getElementById('om-items');
+  wrap.innerHTML = _orderItems.map((it,i) => `<tr>
+    <td><input class="form-input" style="width:100%" value="${escHtml(it.name)}" oninput="_orderItems[${i}].name=this.value"></td>
+    <td><input class="form-input" style="width:60px" type="number" value="${it.qty}" oninput="_orderItems[${i}].qty=+this.value;_calcOrderTotals()"></td>
+    <td><input class="form-input" style="width:60px" value="${escHtml(it.unit)}" oninput="_orderItems[${i}].unit=this.value"></td>
+    <td><input class="form-input" style="width:90px" type="number" value="${it.unit_price}" oninput="_orderItems[${i}].unit_price=+this.value;_calcOrderTotals()"></td>
+    <td style="font-weight:600;min-width:80px" id="om-item-amt-${i}">NT$0</td>
+    <td><button class="btn btn-outline btn-sm" onclick="_removeOrderItem(${i})" style="color:var(--red)">✕</button></td>
+  </tr>`).join('');
+  _calcOrderTotals();
+}
+function _calcOrderTotals() {
+  let sub = 0;
+  _orderItems.forEach((it,i) => {
+    const amt=(it.qty||0)*(it.unit_price||0); it.amount=amt; sub+=amt;
+    const el=document.getElementById(`om-item-amt-${i}`); if(el)el.textContent='NT$'+amt.toLocaleString();
+  });
+  const tax=sub*(parseFloat(document.getElementById('om-tax-rate')?.value||5)/100);
+  if(document.getElementById('om-subtotal'))document.getElementById('om-subtotal').textContent='NT$'+sub.toLocaleString();
+  if(document.getElementById('om-tax'))document.getElementById('om-tax').textContent='NT$'+tax.toLocaleString();
+  if(document.getElementById('om-total'))document.getElementById('om-total').textContent='NT$'+(sub+tax).toLocaleString();
+}
+function _addOrderItem(){_orderItems.push({name:'',qty:1,unit:'式',unit_price:0,amount:0});_renderOrderItems();}
+function _removeOrderItem(i){_orderItems.splice(i,1);_renderOrderItems();}
+
+async function saveOrder() {
+  const id = document.getElementById('om-id').value;
+  const body = {
+    customer_name:    document.getElementById('om-customer').value.trim(),
+    title:            document.getElementById('om-note-text').value.trim(),
+    items:            _orderItems,
+    tax_rate:         parseFloat(document.getElementById('om-tax-rate').value||5),
+    status:           document.getElementById('om-status').value,
+    channel:          document.getElementById('om-channel').value,
+    paid_amount:      parseFloat(document.getElementById('om-paid').value||0),
+    shipping_address: document.getElementById('om-shipping').value.trim(),
+    notes:            document.getElementById('om-remarks-text').value.trim(),
+  };
+  const url = id ? `/api/orders/${id}` : '/api/orders/create';
+  const method = id ? 'PUT' : 'POST';
+  const { ok, data } = await api(url, { method, body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast(id ? '訂單已更新' : `訂單 ${data.order_no} 已建立`, 'success');
+  closeOrderModal(); loadOrdersList(); loadOrderStats();
+}
+
+// ══════════════════════════════════════════════════════════════
+// 電商串接
+// ══════════════════════════════════════════════════════════════
+async function initEcommerce() {
+  await Promise.all([loadEcomStats(), loadPlatforms(), loadEcomOrders()]);
+}
+
+async function loadEcomStats() {
+  const { ok, data } = await api('/api/ecommerce/stats', {}, true);
+  if (!ok) return;
+  document.getElementById('ecom-stat-plat').textContent    = data.platforms_count;
+  document.getElementById('ecom-stat-synced').textContent  = data.synced_today;
+  document.getElementById('ecom-stat-pending').textContent = data.pending_import;
+  document.getElementById('ecom-stat-total').textContent   = data.total_orders;
+}
+
+const PLAT_ICON = { shopee:'🛒', website:'🌐', other:'📦' };
+
+async function loadPlatforms() {
+  const { ok, data } = await api('/api/ecommerce/platforms', {}, true);
+  const wrap = document.getElementById('ecom-platforms-wrap');
+  if (!ok || !data.length) {
+    wrap.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:8px">${t('ecom.no_platforms')}</div>`;
+    return;
+  }
+  wrap.innerHTML = data.map(p => `<div class="card" style="padding:18px;min-width:220px;flex:0 0 220px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:24px">${PLAT_ICON[p.platform]||'📦'}</div>
+      <span style="background:${p.enabled?'var(--green)':'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${p.enabled?'啟用':'停用'}</span>
+    </div>
+    <div style="font-weight:700;color:var(--navy);margin-bottom:4px">${escHtml(p.shop_name||p.platform)}</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">上次同步：${p.last_sync_at?new Date(p.last_sync_at).toLocaleString():'從未'}</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-outline btn-sm" onclick="openPlatformModal(${p.id})">設定</button>
+      <button class="btn btn-primary btn-sm" onclick="syncOrders(${p.id})">同步</button>
+      <button class="btn btn-outline btn-sm" onclick="deletePlatform(${p.id})" style="color:var(--red)">✕</button>
+    </div>
+  </div>`).join('');
+}
+
+function openPlatformModal(id=null) {
+  document.getElementById('pm-id').value = id||'';
+  document.getElementById('pm-modal-title').textContent = id ? '編輯平台設定' : '新增電商平台';
+  if (!id) {
+    document.getElementById('pm-platform').value = 'shopee';
+    document.getElementById('pm-shop').value = '';
+    document.getElementById('pm-key').value = '';
+    document.getElementById('pm-secret').value = '';
+    document.getElementById('pm-webhook').value = '';
+    document.getElementById('pm-enabled').checked = false;
+  }
+  document.getElementById('platform-modal').style.display = 'flex';
+}
+function closePlatformModal() { document.getElementById('platform-modal').style.display = 'none'; }
+
+async function savePlatform() {
+  const body = {
+    id:          document.getElementById('pm-id').value || undefined,
+    platform:    document.getElementById('pm-platform').value,
+    shop_name:   document.getElementById('pm-shop').value.trim(),
+    api_key:     document.getElementById('pm-key').value.trim(),
+    api_secret:  document.getElementById('pm-secret').value.trim(),
+    webhook_url: document.getElementById('pm-webhook').value.trim(),
+    enabled:     document.getElementById('pm-enabled').checked,
+  };
+  const { ok } = await api('/api/ecommerce/platforms', { method:'POST', body: JSON.stringify(body) });
+  if (ok) { showToast('平台設定已儲存','success'); closePlatformModal(); loadPlatforms(); loadEcomStats(); }
+}
+
+async function deletePlatform(id) {
+  if (!confirm('確定刪除此平台設定？')) return;
+  const { ok } = await api(`/api/ecommerce/platforms/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); loadPlatforms(); loadEcomStats(); }
+}
+
+async function syncOrders(platformId=null) {
+  const body = platformId ? { platform_id: platformId } : {};
+  const { ok, data } = await api('/api/ecommerce/orders/sync', { method:'POST', body: JSON.stringify(body) });
+  if (ok) { showToast(data.message||t('ecom.sync_done'),'success'); loadPlatforms(); loadEcomStats(); loadEcomOrders(); }
+}
+
+async function loadEcomOrders() {
+  const platform = document.getElementById('ecom-filter-platform').value;
+  const status   = document.getElementById('ecom-filter-status').value;
+  const q        = document.getElementById('ecom-filter-q').value.trim();
+  let url = '/api/ecommerce/orders?';
+  if (platform) url += `platform=${platform}&`;
+  if (status)   url += `status=${status}&`;
+  if (q)        url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  const wrap = document.getElementById('ecom-orders-wrap');
+  if (!ok || !data.length) { wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">${t('ecom.no_orders')}</div>`; return; }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>平台</th><th>訂單號</th><th>買家</th><th>金額</th><th>狀態</th><th>同步時間</th><th></th>
+  </tr></thead><tbody>${data.map(r => `<tr>
+    <td>${PLAT_ICON[r.platform]||'📦'} ${escHtml(r.platform)}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(r.platform_order_id)}</td>
+    <td>${escHtml(r.buyer_name||'—')}</td>
+    <td style="font-weight:600">NT$${(r.total||0).toLocaleString()}</td>
+    <td><span style="background:${ORDER_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${t('orders.status.'+r.status)||r.status}</span></td>
+    <td style="font-size:11px;color:var(--muted)">${(r.synced_at||'').slice(0,16).replace('T',' ')}</td>
+    <td>${!r.order_no?`<button class="btn btn-primary btn-sm" onclick="importEcomOrder(${r.id})">匯入訂單</button>`:'<span style="font-size:11px;color:var(--green)">已匯入</span>'}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function importEcomOrder(id) {
+  const { ok, data } = await api(`/api/ecommerce/orders/${id}/import`, { method:'POST' });
+  if (!ok) { showToast(data?.error||'匯入失敗','error'); return; }
+  showToast(`${t('ecom.import_done')} ${data.order_no}`,'success');
+  loadEcomOrders(); loadEcomStats();
 }
 </script>
 </html>

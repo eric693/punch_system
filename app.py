@@ -14504,3 +14504,790 @@ def api_export_insurance_excel():
         download_name=filename,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CRM 客戶管理 / 報價訂單 / 電商串接
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def init_crm_db():
+    migrations = [
+        """CREATE TABLE IF NOT EXISTS crm_customers (
+            id              SERIAL PRIMARY KEY,
+            company_name    TEXT NOT NULL,
+            contact_name    TEXT DEFAULT '',
+            phone           TEXT DEFAULT '',
+            email           TEXT DEFAULT '',
+            address         TEXT DEFAULT '',
+            industry        TEXT DEFAULT '',
+            status          TEXT DEFAULT 'active',
+            source          TEXT DEFAULT '',
+            assigned_to     INT REFERENCES punch_staff(id) ON DELETE SET NULL,
+            tags            TEXT DEFAULT '',
+            notes           TEXT DEFAULT '',
+            last_contact_at DATE,
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS crm_interactions (
+            id              SERIAL PRIMARY KEY,
+            customer_id     INT REFERENCES crm_customers(id) ON DELETE CASCADE,
+            staff_id        INT REFERENCES punch_staff(id) ON DELETE SET NULL,
+            interaction_type TEXT DEFAULT 'call',
+            title           TEXT DEFAULT '',
+            content         TEXT DEFAULT '',
+            next_action     TEXT DEFAULT '',
+            next_action_date DATE,
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS crm_quotes (
+            id              SERIAL PRIMARY KEY,
+            quote_no        TEXT NOT NULL UNIQUE,
+            customer_id     INT REFERENCES crm_customers(id) ON DELETE SET NULL,
+            customer_name   TEXT DEFAULT '',
+            title           TEXT DEFAULT '',
+            status          TEXT DEFAULT 'draft',
+            items           JSONB DEFAULT '[]',
+            subtotal        NUMERIC(14,2) DEFAULT 0,
+            tax_rate        NUMERIC(5,2) DEFAULT 5,
+            tax_amount      NUMERIC(14,2) DEFAULT 0,
+            total           NUMERIC(14,2) DEFAULT 0,
+            valid_days      INT DEFAULT 30,
+            notes           TEXT DEFAULT '',
+            created_by      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS crm_orders (
+            id              SERIAL PRIMARY KEY,
+            order_no        TEXT NOT NULL UNIQUE,
+            quote_id        INT REFERENCES crm_quotes(id) ON DELETE SET NULL,
+            customer_id     INT REFERENCES crm_customers(id) ON DELETE SET NULL,
+            customer_name   TEXT DEFAULT '',
+            title           TEXT DEFAULT '',
+            status          TEXT DEFAULT 'pending',
+            items           JSONB DEFAULT '[]',
+            subtotal        NUMERIC(14,2) DEFAULT 0,
+            tax_rate        NUMERIC(5,2) DEFAULT 5,
+            tax_amount      NUMERIC(14,2) DEFAULT 0,
+            total           NUMERIC(14,2) DEFAULT 0,
+            paid_amount     NUMERIC(14,2) DEFAULT 0,
+            channel         TEXT DEFAULT 'direct',
+            shipping_address TEXT DEFAULT '',
+            notes           TEXT DEFAULT '',
+            created_by      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS ecommerce_platforms (
+            id              SERIAL PRIMARY KEY,
+            platform        TEXT NOT NULL,
+            shop_name       TEXT DEFAULT '',
+            api_key         TEXT DEFAULT '',
+            api_secret      TEXT DEFAULT '',
+            webhook_url     TEXT DEFAULT '',
+            enabled         BOOLEAN DEFAULT FALSE,
+            last_sync_at    TIMESTAMPTZ,
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS ecommerce_orders (
+            id                  SERIAL PRIMARY KEY,
+            platform            TEXT NOT NULL,
+            platform_order_id   TEXT NOT NULL,
+            shop_name           TEXT DEFAULT '',
+            buyer_name          TEXT DEFAULT '',
+            buyer_phone         TEXT DEFAULT '',
+            buyer_address       TEXT DEFAULT '',
+            items               JSONB DEFAULT '[]',
+            subtotal            NUMERIC(14,2) DEFAULT 0,
+            shipping_fee        NUMERIC(14,2) DEFAULT 0,
+            discount            NUMERIC(14,2) DEFAULT 0,
+            total               NUMERIC(14,2) DEFAULT 0,
+            status              TEXT DEFAULT 'pending',
+            order_no            INT REFERENCES crm_orders(id) ON DELETE SET NULL,
+            platform_created_at TIMESTAMPTZ,
+            synced_at           TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(platform, platform_order_id)
+        )""",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[crm_init] {str(e)[:120]}")
+
+init_crm_db()
+
+
+# ── CRM Customers ──────────────────────────────────────────────────────────────
+
+@app.route('/api/crm/customers', methods=['GET'])
+@require_module('crm')
+def api_crm_customers_list():
+    status = request.args.get('status', '').strip()
+    q      = request.args.get('q', '').strip()
+    assigned_to = request.args.get('assigned_to', '').strip()
+    with get_db() as conn:
+        sql = """
+            SELECT c.*, s.name AS assigned_name
+            FROM crm_customers c
+            LEFT JOIN punch_staff s ON s.id = c.assigned_to
+            WHERE 1=1
+        """
+        params = []
+        if status:
+            sql += " AND c.status = %s"; params.append(status)
+        if q:
+            sql += " AND (c.company_name ILIKE %s OR c.contact_name ILIKE %s OR c.phone ILIKE %s)"
+            params += [f'%{q}%', f'%{q}%', f'%{q}%']
+        if assigned_to:
+            sql += " AND c.assigned_to = %s"; params.append(int(assigned_to))
+        sql += " ORDER BY c.updated_at DESC"
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        if d.get('last_contact_at'):
+            d['last_contact_at'] = str(d['last_contact_at'])
+        if d.get('created_at'):
+            d['created_at'] = d['created_at'].isoformat()
+        if d.get('updated_at'):
+            d['updated_at'] = d['updated_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/crm/customers', methods=['POST'])
+@require_module('crm')
+def api_crm_customers_create():
+    b = request.get_json(force=True) or {}
+    if not b.get('company_name', '').strip():
+        return jsonify({'error': '公司名稱為必填'}), 400
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO crm_customers
+              (company_name, contact_name, phone, email, address, industry,
+               status, source, assigned_to, tags, notes, last_contact_at)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id
+        """, (
+            b['company_name'].strip(),
+            b.get('contact_name',''), b.get('phone',''), b.get('email',''),
+            b.get('address',''), b.get('industry',''),
+            b.get('status','active'), b.get('source',''),
+            b.get('assigned_to') or None,
+            b.get('tags',''), b.get('notes',''),
+            b.get('last_contact_at') or None,
+        )).fetchone()
+    return jsonify({'id': row['id']}), 201
+
+
+@app.route('/api/crm/customers/<int:cid>', methods=['PUT'])
+@require_module('crm')
+def api_crm_customers_update(cid):
+    b = request.get_json(force=True) or {}
+    if not b.get('company_name', '').strip():
+        return jsonify({'error': '公司名稱為必填'}), 400
+    with get_db() as conn:
+        conn.execute("""
+            UPDATE crm_customers
+            SET company_name=%s, contact_name=%s, phone=%s, email=%s,
+                address=%s, industry=%s, status=%s, source=%s, assigned_to=%s,
+                tags=%s, notes=%s, last_contact_at=%s, updated_at=NOW()
+            WHERE id=%s
+        """, (
+            b['company_name'].strip(),
+            b.get('contact_name',''), b.get('phone',''), b.get('email',''),
+            b.get('address',''), b.get('industry',''),
+            b.get('status','active'), b.get('source',''),
+            b.get('assigned_to') or None,
+            b.get('tags',''), b.get('notes',''),
+            b.get('last_contact_at') or None,
+            cid,
+        ))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/crm/customers/<int:cid>', methods=['DELETE'])
+@require_module('crm')
+def api_crm_customers_delete(cid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM crm_customers WHERE id=%s", (cid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/crm/customers/<int:cid>/interactions', methods=['GET'])
+@require_module('crm')
+def api_crm_interactions_list(cid):
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT i.*, s.name AS staff_name
+            FROM crm_interactions i
+            LEFT JOIN punch_staff s ON s.id = i.staff_id
+            WHERE i.customer_id = %s
+            ORDER BY i.created_at DESC
+        """, (cid,)).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        if d.get('next_action_date'):
+            d['next_action_date'] = str(d['next_action_date'])
+        if d.get('created_at'):
+            d['created_at'] = d['created_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/crm/customers/<int:cid>/interactions', methods=['POST'])
+@require_module('crm')
+def api_crm_interactions_create(cid):
+    b = request.get_json(force=True) or {}
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO crm_interactions
+              (customer_id, staff_id, interaction_type, title, content, next_action, next_action_date)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id
+        """, (
+            cid,
+            b.get('staff_id') or None,
+            b.get('interaction_type','call'),
+            b.get('title',''), b.get('content',''),
+            b.get('next_action',''),
+            b.get('next_action_date') or None,
+        )).fetchone()
+        conn.execute("UPDATE crm_customers SET last_contact_at=CURRENT_DATE, updated_at=NOW() WHERE id=%s", (cid,))
+    return jsonify({'id': row['id']}), 201
+
+
+@app.route('/api/crm/stats', methods=['GET'])
+@require_module('crm')
+def api_crm_stats():
+    with get_db() as conn:
+        total    = conn.execute("SELECT COUNT(*) AS n FROM crm_customers").fetchone()['n']
+        active   = conn.execute("SELECT COUNT(*) AS n FROM crm_customers WHERE status='active'").fetchone()['n']
+        vip      = conn.execute("SELECT COUNT(*) AS n FROM crm_customers WHERE status='vip'").fetchone()['n']
+        inactive = conn.execute("SELECT COUNT(*) AS n FROM crm_customers WHERE status='inactive'").fetchone()['n']
+        this_month = conn.execute("""
+            SELECT COUNT(*) AS n FROM crm_interactions
+            WHERE date_trunc('month', created_at) = date_trunc('month', NOW())
+        """).fetchone()['n']
+    return jsonify({'total': total, 'active': active, 'vip': vip, 'inactive': inactive,
+                    'interactions_this_month': this_month})
+
+
+@app.route('/api/export/crm-excel', methods=['GET'])
+@require_module('crm')
+def api_export_crm_excel():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from openpyxl.utils import get_column_letter
+    import io
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT c.id, c.company_name, c.contact_name, c.phone, c.email,
+                   c.address, c.industry, c.status, c.source,
+                   s.name AS assigned_name, c.tags, c.notes,
+                   c.last_contact_at, c.created_at
+            FROM crm_customers c
+            LEFT JOIN punch_staff s ON s.id = c.assigned_to
+            ORDER BY c.company_name
+        """).fetchall()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '客戶管理'
+    headers = ['ID','公司名稱','聯絡人','電話','Email','地址','行業','狀態','來源','負責業務','標籤','備註','最後聯繫','建立時間']
+    fill = PatternFill('solid', fgColor='1F4E79')
+    for ci, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=ci, value=h)
+        cell.font = Font(bold=True, color='FFFFFF')
+        cell.fill = fill
+        cell.alignment = Alignment(horizontal='center')
+    for r in rows:
+        ws.append([r['id'], r['company_name'], r['contact_name'], r['phone'], r['email'],
+                   r['address'], r['industry'], r['status'], r['source'], r['assigned_name'] or '',
+                   r['tags'], r['notes'],
+                   str(r['last_contact_at']) if r['last_contact_at'] else '',
+                   r['created_at'].strftime('%Y-%m-%d') if r['created_at'] else ''])
+    for ci in range(1, len(headers)+1):
+        ws.column_dimensions[get_column_letter(ci)].width = 16
+    buf = io.BytesIO()
+    wb.save(buf); buf.seek(0)
+    from flask import send_file
+    return send_file(buf, as_attachment=True,
+                     download_name=f'crm_customers_{_dt.now().strftime("%Y%m%d")}.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+# ── Orders / Quotes ────────────────────────────────────────────────────────────
+
+def _calc_quote_totals(items, tax_rate):
+    subtotal = sum(round(float(it.get('qty',0)) * float(it.get('unit_price',0)), 2) for it in items)
+    tax_amount = round(subtotal * float(tax_rate) / 100, 2)
+    total = round(subtotal + tax_amount, 2)
+    return subtotal, tax_amount, total
+
+def _next_quote_no():
+    ym = _dt.now().strftime('%Y%m')
+    with get_db() as conn:
+        n = conn.execute(
+            "SELECT COUNT(*) AS c FROM crm_quotes WHERE quote_no LIKE %s",
+            (f'Q-{ym}-%',)
+        ).fetchone()['c']
+    return f'Q-{ym}-{(n+1):03d}'
+
+def _next_order_no():
+    ym = _dt.now().strftime('%Y%m')
+    with get_db() as conn:
+        n = conn.execute(
+            "SELECT COUNT(*) AS c FROM crm_orders WHERE order_no LIKE %s",
+            (f'O-{ym}-%',)
+        ).fetchone()['c']
+    return f'O-{ym}-{(n+1):03d}'
+
+
+@app.route('/api/orders/quotes', methods=['GET'])
+@require_module('orders')
+def api_orders_quotes_list():
+    status = request.args.get('status','').strip()
+    q      = request.args.get('q','').strip()
+    with get_db() as conn:
+        sql = "SELECT * FROM crm_quotes WHERE 1=1"
+        params = []
+        if status:
+            sql += " AND status=%s"; params.append(status)
+        if q:
+            sql += " AND (quote_no ILIKE %s OR customer_name ILIKE %s OR title ILIKE %s)"
+            params += [f'%{q}%', f'%{q}%', f'%{q}%']
+        sql += " ORDER BY created_at DESC"
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        d['subtotal']   = float(d['subtotal']   or 0)
+        d['tax_amount'] = float(d['tax_amount']  or 0)
+        d['total']      = float(d['total']       or 0)
+        d['tax_rate']   = float(d['tax_rate']    or 5)
+        if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+        if d.get('updated_at'): d['updated_at'] = d['updated_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/orders/quotes', methods=['POST'])
+@require_module('orders')
+def api_orders_quotes_create():
+    b = request.get_json(force=True) or {}
+    items    = b.get('items', [])
+    tax_rate = float(b.get('tax_rate', 5))
+    subtotal, tax_amount, total = _calc_quote_totals(items, tax_rate)
+    quote_no = _next_quote_no()
+    customer_name = b.get('customer_name','')
+    if not customer_name and b.get('customer_id'):
+        with get_db() as conn:
+            c = conn.execute("SELECT company_name FROM crm_customers WHERE id=%s", (b['customer_id'],)).fetchone()
+            if c: customer_name = c['company_name']
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO crm_quotes
+              (quote_no, customer_id, customer_name, title, status, items,
+               subtotal, tax_rate, tax_amount, total, valid_days, notes, created_by)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id
+        """, (
+            quote_no,
+            b.get('customer_id') or None, customer_name,
+            b.get('title',''), b.get('status','draft'),
+            _json.dumps(items, ensure_ascii=False),
+            subtotal, tax_rate, tax_amount, total,
+            int(b.get('valid_days', 30)),
+            b.get('notes',''),
+            session.get('username',''),
+        )).fetchone()
+    return jsonify({'id': row['id'], 'quote_no': quote_no}), 201
+
+
+@app.route('/api/orders/quotes/<int:qid>', methods=['PUT'])
+@require_module('orders')
+def api_orders_quotes_update(qid):
+    b = request.get_json(force=True) or {}
+    items    = b.get('items', [])
+    tax_rate = float(b.get('tax_rate', 5))
+    subtotal, tax_amount, total = _calc_quote_totals(items, tax_rate)
+    customer_name = b.get('customer_name','')
+    if not customer_name and b.get('customer_id'):
+        with get_db() as conn:
+            c = conn.execute("SELECT company_name FROM crm_customers WHERE id=%s", (b['customer_id'],)).fetchone()
+            if c: customer_name = c['company_name']
+    with get_db() as conn:
+        conn.execute("""
+            UPDATE crm_quotes
+            SET customer_id=%s, customer_name=%s, title=%s, status=%s, items=%s,
+                subtotal=%s, tax_rate=%s, tax_amount=%s, total=%s,
+                valid_days=%s, notes=%s, updated_at=NOW()
+            WHERE id=%s
+        """, (
+            b.get('customer_id') or None, customer_name,
+            b.get('title',''), b.get('status','draft'),
+            _json.dumps(items, ensure_ascii=False),
+            subtotal, tax_rate, tax_amount, total,
+            int(b.get('valid_days', 30)),
+            b.get('notes',''), qid,
+        ))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/orders/quotes/<int:qid>/status', methods=['PUT'])
+@require_module('orders')
+def api_orders_quotes_status(qid):
+    b = request.get_json(force=True) or {}
+    status = b.get('status','draft')
+    with get_db() as conn:
+        conn.execute("UPDATE crm_quotes SET status=%s, updated_at=NOW() WHERE id=%s", (status, qid))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/orders/quotes/<int:qid>/convert', methods=['POST'])
+@require_module('orders')
+def api_orders_quotes_convert(qid):
+    with get_db() as conn:
+        q = conn.execute("SELECT * FROM crm_quotes WHERE id=%s", (qid,)).fetchone()
+        if not q:
+            return jsonify({'error': '報價單不存在'}), 404
+        order_no = _next_order_no()
+        row = conn.execute("""
+            INSERT INTO crm_orders
+              (order_no, quote_id, customer_id, customer_name, title, status,
+               items, subtotal, tax_rate, tax_amount, total, created_by)
+            VALUES (%s,%s,%s,%s,%s,'pending',%s,%s,%s,%s,%s,%s)
+            RETURNING id
+        """, (
+            order_no, qid, q['customer_id'], q['customer_name'], q['title'],
+            _json.dumps(q['items'] if isinstance(q['items'], list) else [], ensure_ascii=False),
+            q['subtotal'], q['tax_rate'], q['tax_amount'], q['total'],
+            session.get('username',''),
+        )).fetchone()
+        conn.execute("UPDATE crm_quotes SET status='accepted', updated_at=NOW() WHERE id=%s", (qid,))
+    return jsonify({'id': row['id'], 'order_no': order_no}), 201
+
+
+@app.route('/api/orders/list', methods=['GET'])
+@require_module('orders')
+def api_orders_list():
+    status  = request.args.get('status','').strip()
+    channel = request.args.get('channel','').strip()
+    q       = request.args.get('q','').strip()
+    with get_db() as conn:
+        sql = "SELECT * FROM crm_orders WHERE 1=1"
+        params = []
+        if status:
+            sql += " AND status=%s"; params.append(status)
+        if channel:
+            sql += " AND channel=%s"; params.append(channel)
+        if q:
+            sql += " AND (order_no ILIKE %s OR customer_name ILIKE %s OR title ILIKE %s)"
+            params += [f'%{q}%', f'%{q}%', f'%{q}%']
+        sql += " ORDER BY created_at DESC"
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        for f in ('subtotal','tax_amount','total','paid_amount','tax_rate'):
+            d[f] = float(d[f] or 0)
+        if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+        if d.get('updated_at'): d['updated_at'] = d['updated_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/orders/create', methods=['POST'])
+@require_module('orders')
+def api_orders_create():
+    b = request.get_json(force=True) or {}
+    items    = b.get('items', [])
+    tax_rate = float(b.get('tax_rate', 5))
+    subtotal, tax_amount, total = _calc_quote_totals(items, tax_rate)
+    order_no = _next_order_no()
+    customer_name = b.get('customer_name','')
+    if not customer_name and b.get('customer_id'):
+        with get_db() as conn:
+            c = conn.execute("SELECT company_name FROM crm_customers WHERE id=%s", (b['customer_id'],)).fetchone()
+            if c: customer_name = c['company_name']
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO crm_orders
+              (order_no, customer_id, customer_name, title, status, items,
+               subtotal, tax_rate, tax_amount, total, paid_amount,
+               channel, shipping_address, notes, created_by)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id
+        """, (
+            order_no,
+            b.get('customer_id') or None, customer_name,
+            b.get('title',''), b.get('status','pending'),
+            _json.dumps(items, ensure_ascii=False),
+            subtotal, tax_rate, tax_amount, total,
+            float(b.get('paid_amount', 0)),
+            b.get('channel','direct'),
+            b.get('shipping_address',''), b.get('notes',''),
+            session.get('username',''),
+        )).fetchone()
+    return jsonify({'id': row['id'], 'order_no': order_no}), 201
+
+
+@app.route('/api/orders/<int:oid>', methods=['PUT'])
+@require_module('orders')
+def api_orders_update(oid):
+    b = request.get_json(force=True) or {}
+    items    = b.get('items', [])
+    tax_rate = float(b.get('tax_rate', 5))
+    subtotal, tax_amount, total = _calc_quote_totals(items, tax_rate)
+    customer_name = b.get('customer_name','')
+    if not customer_name and b.get('customer_id'):
+        with get_db() as conn:
+            c = conn.execute("SELECT company_name FROM crm_customers WHERE id=%s", (b['customer_id'],)).fetchone()
+            if c: customer_name = c['company_name']
+    with get_db() as conn:
+        conn.execute("""
+            UPDATE crm_orders
+            SET customer_id=%s, customer_name=%s, title=%s, status=%s, items=%s,
+                subtotal=%s, tax_rate=%s, tax_amount=%s, total=%s,
+                paid_amount=%s, channel=%s, shipping_address=%s, notes=%s, updated_at=NOW()
+            WHERE id=%s
+        """, (
+            b.get('customer_id') or None, customer_name,
+            b.get('title',''), b.get('status','pending'),
+            _json.dumps(items, ensure_ascii=False),
+            subtotal, tax_rate, tax_amount, total,
+            float(b.get('paid_amount', 0)),
+            b.get('channel','direct'),
+            b.get('shipping_address',''), b.get('notes',''), oid,
+        ))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/orders/<int:oid>/status', methods=['PUT'])
+@require_module('orders')
+def api_orders_status(oid):
+    b = request.get_json(force=True) or {}
+    with get_db() as conn:
+        conn.execute("UPDATE crm_orders SET status=%s, updated_at=NOW() WHERE id=%s",
+                     (b.get('status','pending'), oid))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/orders/stats', methods=['GET'])
+@require_module('orders')
+def api_orders_stats():
+    with get_db() as conn:
+        total   = conn.execute("SELECT COUNT(*) AS n FROM crm_orders").fetchone()['n']
+        pending = conn.execute("SELECT COUNT(*) AS n FROM crm_orders WHERE status='pending'").fetchone()['n']
+        processing = conn.execute("SELECT COUNT(*) AS n FROM crm_orders WHERE status='processing'").fetchone()['n']
+        completed  = conn.execute("SELECT COUNT(*) AS n FROM crm_orders WHERE status='completed'").fetchone()['n']
+        rev = conn.execute("""
+            SELECT COALESCE(SUM(total),0) AS s FROM crm_orders
+            WHERE date_trunc('month',created_at)=date_trunc('month',NOW())
+            AND status NOT IN ('cancelled')
+        """).fetchone()['s']
+    return jsonify({'total_orders': total, 'pending': pending,
+                    'processing': processing, 'completed': completed,
+                    'total_revenue_month': float(rev)})
+
+
+@app.route('/api/export/orders-excel', methods=['GET'])
+@require_module('orders')
+def api_export_orders_excel():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from openpyxl.utils import get_column_letter
+    import io
+    month = request.args.get('month','').strip()
+    with get_db() as conn:
+        sql = "SELECT * FROM crm_orders WHERE 1=1"
+        params = []
+        if month:
+            sql += " AND to_char(created_at,'YYYY-MM')=%s"; params.append(month)
+        sql += " ORDER BY created_at DESC"
+        rows = conn.execute(sql, params).fetchall()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '訂單列表'
+    headers = ['訂單號','客戶','標題','狀態','管道','小計','稅額','總計','已付','備註','建立時間']
+    fill = PatternFill('solid', fgColor='1F4E79')
+    for ci, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=ci, value=h)
+        cell.font = Font(bold=True, color='FFFFFF')
+        cell.fill = fill
+        cell.alignment = Alignment(horizontal='center')
+    for r in rows:
+        ws.append([r['order_no'], r['customer_name'], r['title'], r['status'], r['channel'],
+                   float(r['subtotal'] or 0), float(r['tax_amount'] or 0), float(r['total'] or 0),
+                   float(r['paid_amount'] or 0), r['notes'],
+                   r['created_at'].strftime('%Y-%m-%d') if r['created_at'] else ''])
+    for ci in range(1, len(headers)+1):
+        ws.column_dimensions[get_column_letter(ci)].width = 15
+    buf = io.BytesIO()
+    wb.save(buf); buf.seek(0)
+    from flask import send_file
+    return send_file(buf, as_attachment=True,
+                     download_name=f'orders_{_dt.now().strftime("%Y%m%d")}.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+# ── Ecommerce ──────────────────────────────────────────────────────────────────
+
+@app.route('/api/ecommerce/platforms', methods=['GET'])
+@require_module('ecommerce')
+def api_ecom_platforms_list():
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM ecommerce_platforms ORDER BY id").fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        d['api_secret'] = '****' if d.get('api_secret') else ''
+        if d.get('last_sync_at'): d['last_sync_at'] = d['last_sync_at'].isoformat()
+        if d.get('created_at'):   d['created_at']   = d['created_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/ecommerce/platforms', methods=['POST'])
+@require_module('ecommerce')
+def api_ecom_platforms_save():
+    b = request.get_json(force=True) or {}
+    pid = b.get('id')
+    with get_db() as conn:
+        if pid:
+            conn.execute("""
+                UPDATE ecommerce_platforms
+                SET platform=%s, shop_name=%s, api_key=%s,
+                    api_secret=CASE WHEN %s='' THEN api_secret ELSE %s END,
+                    webhook_url=%s, enabled=%s
+                WHERE id=%s
+            """, (
+                b.get('platform',''), b.get('shop_name',''),
+                b.get('api_key',''),
+                b.get('api_secret',''), b.get('api_secret',''),
+                b.get('webhook_url',''), bool(b.get('enabled', False)),
+                pid,
+            ))
+            return jsonify({'id': pid})
+        else:
+            row = conn.execute("""
+                INSERT INTO ecommerce_platforms (platform, shop_name, api_key, api_secret, webhook_url, enabled)
+                VALUES (%s,%s,%s,%s,%s,%s) RETURNING id
+            """, (
+                b.get('platform',''), b.get('shop_name',''),
+                b.get('api_key',''), b.get('api_secret',''),
+                b.get('webhook_url',''), bool(b.get('enabled', False)),
+            )).fetchone()
+            return jsonify({'id': row['id']}), 201
+
+
+@app.route('/api/ecommerce/platforms/<int:pid>', methods=['DELETE'])
+@require_module('ecommerce')
+def api_ecom_platforms_delete(pid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM ecommerce_platforms WHERE id=%s", (pid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/ecommerce/orders', methods=['GET'])
+@require_module('ecommerce')
+def api_ecom_orders_list():
+    platform = request.args.get('platform','').strip()
+    status   = request.args.get('status','').strip()
+    q        = request.args.get('q','').strip()
+    with get_db() as conn:
+        sql = "SELECT * FROM ecommerce_orders WHERE 1=1"
+        params = []
+        if platform:
+            sql += " AND platform=%s"; params.append(platform)
+        if status:
+            sql += " AND status=%s"; params.append(status)
+        if q:
+            sql += " AND (platform_order_id ILIKE %s OR buyer_name ILIKE %s OR shop_name ILIKE %s)"
+            params += [f'%{q}%', f'%{q}%', f'%{q}%']
+        sql += " ORDER BY synced_at DESC"
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        for f in ('subtotal','shipping_fee','discount','total'):
+            d[f] = float(d[f] or 0)
+        if d.get('platform_created_at'): d['platform_created_at'] = d['platform_created_at'].isoformat()
+        if d.get('synced_at'):           d['synced_at']           = d['synced_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/ecommerce/orders/sync', methods=['POST'])
+@require_module('ecommerce')
+def api_ecom_orders_sync():
+    b = request.get_json(force=True) or {}
+    platform_id = b.get('platform_id')
+    with get_db() as conn:
+        if platform_id:
+            conn.execute("UPDATE ecommerce_platforms SET last_sync_at=NOW() WHERE id=%s", (platform_id,))
+        else:
+            conn.execute("UPDATE ecommerce_platforms SET last_sync_at=NOW() WHERE enabled=TRUE")
+    return jsonify({'ok': True, 'synced': 0, 'message': '同步完成（需設定 API 金鑰以取得真實資料）'})
+
+
+@app.route('/api/ecommerce/orders/<int:oid>/status', methods=['PUT'])
+@require_module('ecommerce')
+def api_ecom_orders_status(oid):
+    b = request.get_json(force=True) or {}
+    with get_db() as conn:
+        conn.execute("UPDATE ecommerce_orders SET status=%s WHERE id=%s",
+                     (b.get('status','pending'), oid))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/ecommerce/orders/<int:oid>/import', methods=['POST'])
+@require_module('ecommerce')
+def api_ecom_orders_import(oid):
+    with get_db() as conn:
+        eo = conn.execute("SELECT * FROM ecommerce_orders WHERE id=%s", (oid,)).fetchone()
+        if not eo:
+            return jsonify({'error': '訂單不存在'}), 404
+        order_no = _next_order_no()
+        row = conn.execute("""
+            INSERT INTO crm_orders
+              (order_no, customer_name, title, status, items,
+               subtotal, tax_rate, tax_amount, total, channel,
+               shipping_address, notes, created_by)
+            VALUES (%s,%s,%s,'pending',%s,%s,0,0,%s,%s,%s,%s,%s)
+            RETURNING id
+        """, (
+            order_no, eo['buyer_name'],
+            f"{eo['platform']} 訂單 {eo['platform_order_id']}",
+            _json.dumps(eo['items'] if isinstance(eo['items'], list) else [], ensure_ascii=False),
+            float(eo['subtotal'] or 0),
+            float(eo['total'] or 0),
+            eo['platform'],
+            eo['buyer_address'] or '',
+            f"從電商平台匯入: {eo['platform_order_id']}",
+            session.get('username',''),
+        )).fetchone()
+        conn.execute("UPDATE ecommerce_orders SET order_no=%s, status='processing' WHERE id=%s",
+                     (row['id'], oid))
+    return jsonify({'id': row['id'], 'order_no': order_no}), 201
+
+
+@app.route('/api/ecommerce/stats', methods=['GET'])
+@require_module('ecommerce')
+def api_ecom_stats():
+    with get_db() as conn:
+        total_orders  = conn.execute("SELECT COUNT(*) AS n FROM ecommerce_orders").fetchone()['n']
+        platforms_cnt = conn.execute("SELECT COUNT(*) AS n FROM ecommerce_platforms WHERE enabled=TRUE").fetchone()['n']
+        synced_today  = conn.execute("""
+            SELECT COUNT(*) AS n FROM ecommerce_orders
+            WHERE synced_at::date = CURRENT_DATE
+        """).fetchone()['n']
+        pending_import = conn.execute("""
+            SELECT COUNT(*) AS n FROM ecommerce_orders WHERE order_no IS NULL
+        """).fetchone()['n']
+    return jsonify({'total_orders': total_orders, 'platforms_count': platforms_cnt,
+                    'synced_today': synced_today, 'pending_import': pending_import})
