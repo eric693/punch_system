@@ -18211,7 +18211,6 @@ function renderCrmList(list) {
 }
 
 async function openCrmDetail(id) {
-  const { ok, data: list } = await api(`/api/crm/customers?`, {}, true);
   const customer = _crmList.find(c => c.id === id);
   if (!customer) return;
   document.getElementById('crm-panel-title').textContent = customer.company_name;
@@ -18382,6 +18381,8 @@ async function exportCrmExcel() { window.location.href = '/api/export/crm-excel'
 let _ordersTab = 'quotes';
 let _quoteItems = [];
 let _orderItems = [];
+let _quotesList = [];
+let _ordersList = [];
 
 async function initOrders() {
   await loadOrderStats();
@@ -18423,6 +18424,7 @@ async function loadQuotes() {
   if (status) url += `status=${status}&`;
   if (q)      url += `q=${encodeURIComponent(q)}&`;
   const { ok, data } = await api(url, {}, true);
+  _quotesList = ok ? data : [];
   const wrap = document.getElementById('quotes-list-wrap');
   if (!ok || !data.length) { wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">尚無報價單</div>`; return; }
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
@@ -18450,6 +18452,7 @@ async function loadOrdersList() {
   if (channel) url += `channel=${channel}&`;
   if (q)       url += `q=${encodeURIComponent(q)}&`;
   const { ok, data } = await api(url, {}, true);
+  _ordersList = ok ? data : [];
   const wrap = document.getElementById('orders-list-wrap');
   if (!ok || !data.length) { wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">尚無訂單</div>`; return; }
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
@@ -18472,12 +18475,29 @@ function openQuoteModal(id=null) {
   const modal = document.getElementById('quote-modal');
   document.getElementById('qm-id').value = id || '';
   document.getElementById('qm-title').textContent = isEdit ? '編輯報價單' : '新增報價單';
-  if (!isEdit) { _quoteItems = [{name:'',qty:1,unit:'式',unit_price:0,amount:0}]; _renderQuoteItems(); }
-  else {
-    api(`/api/orders/quotes?`, {}, true).then(({ ok, data }) => {
-      // fetch single quote from list
-    });
+  if (!isEdit) {
+    _quoteItems = [{name:'',qty:1,unit:'式',unit_price:0,amount:0}];
+    document.getElementById('qm-customer').value = '';
+    document.getElementById('qm-note').value = '';
+    document.getElementById('qm-tax-rate').value = '5';
+    document.getElementById('qm-valid-days').value = '30';
+    document.getElementById('qm-remarks').value = '';
+    document.getElementById('qm-status').value = 'draft';
+  } else {
+    const q = _quotesList.find(x => x.id === id);
+    if (q) {
+      document.getElementById('qm-customer').value = q.customer_name || '';
+      document.getElementById('qm-note').value     = q.title || '';
+      document.getElementById('qm-tax-rate').value = q.tax_rate || 5;
+      document.getElementById('qm-valid-days').value = q.valid_days || 30;
+      document.getElementById('qm-remarks').value  = q.notes || '';
+      document.getElementById('qm-status').value   = q.status || 'draft';
+      _quoteItems = Array.isArray(q.items) ? q.items.map(it => ({...it})) : [{name:'',qty:1,unit:'式',unit_price:0,amount:0}];
+    } else {
+      _quoteItems = [{name:'',qty:1,unit:'式',unit_price:0,amount:0}];
+    }
   }
+  _renderQuoteItems();
   modal.style.display = 'flex';
 }
 
@@ -18541,9 +18561,35 @@ async function convertQuote(id) {
 }
 
 function openOrderModal(id=null) {
-  _orderItems = [{name:'',qty:1,unit:'式',unit_price:0,amount:0}];
+  const isEdit = !!id;
   document.getElementById('om-id').value = id || '';
-  document.getElementById('om-title-text').textContent = id ? '編輯訂單' : '新增訂單';
+  document.getElementById('om-title-text').textContent = isEdit ? '編輯訂單' : '新增訂單';
+  if (!isEdit) {
+    _orderItems = [{name:'',qty:1,unit:'式',unit_price:0,amount:0}];
+    document.getElementById('om-customer').value      = '';
+    document.getElementById('om-note-text').value     = '';
+    document.getElementById('om-channel').value       = 'direct';
+    document.getElementById('om-tax-rate').value      = '5';
+    document.getElementById('om-status').value        = 'pending';
+    document.getElementById('om-paid').value          = '0';
+    document.getElementById('om-shipping').value      = '';
+    document.getElementById('om-remarks-text').value  = '';
+  } else {
+    const o = _ordersList.find(x => x.id === id);
+    if (o) {
+      document.getElementById('om-customer').value     = o.customer_name || '';
+      document.getElementById('om-note-text').value    = o.title || '';
+      document.getElementById('om-channel').value      = o.channel || 'direct';
+      document.getElementById('om-tax-rate').value     = o.tax_rate || 5;
+      document.getElementById('om-status').value       = o.status || 'pending';
+      document.getElementById('om-paid').value         = o.paid_amount || 0;
+      document.getElementById('om-shipping').value     = o.shipping_address || '';
+      document.getElementById('om-remarks-text').value = o.notes || '';
+      _orderItems = Array.isArray(o.items) ? o.items.map(it => ({...it})) : [{name:'',qty:1,unit:'式',unit_price:0,amount:0}];
+    } else {
+      _orderItems = [{name:'',qty:1,unit:'式',unit_price:0,amount:0}];
+    }
+  }
   _renderOrderItems();
   document.getElementById('order-modal').style.display = 'flex';
 }
