@@ -13993,3 +13993,157 @@ def api_staff_asset_loans():
             ORDER BY al.loan_date DESC LIMIT 100
         """, params).fetchall()
     return jsonify([_loan_row(r) for r in rows])
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 勞基法通知模組 (Labor Law Notification)
+# ═══════════════════════════════════════════════════════════════════
+
+def _ensure_labor_law_tables():
+    with get_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS labor_law_amendments (
+                id              SERIAL PRIMARY KEY,
+                amendment_date  DATE NOT NULL UNIQUE,
+                description     TEXT DEFAULT '',
+                source          TEXT DEFAULT '全國法規資料庫',
+                ann_status      TEXT DEFAULT 'pending',
+                ann_id          INT,
+                recorded_at     TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS labor_law_check_log (
+                id          SERIAL PRIMARY KEY,
+                checked_at  TIMESTAMPTZ DEFAULT NOW(),
+                found_new   BOOLEAN DEFAULT FALSE,
+                result_msg  TEXT DEFAULT ''
+            )
+        """)
+
+
+def _fetch_labor_law_amendment():
+    """Fetch latest labor standards law amendment info from MOJ API."""
+    import json
+    url = 'https://law.moj.gov.tw/api/Laws?pcode=N0030001'
+    req = urllib.request.Request(url, headers={
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0',
+    })
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        data = json.loads(resp.read().decode('utf-8'))
+    if isinstance(data, list) and data:
+        law = data[0]
+    elif isinstance(data, dict):
+        law = data
+    else:
+        raise ValueError('Unexpected API response format')
+    raw_date = law.get('LawModifiedDate') or law.get('AmendDate') or ''
+    if len(raw_date) == 8 and raw_date.isdigit():
+        amendment_date = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:]}"
+    elif raw_date:
+        amendment_date = raw_date
+    else:
+        raise ValueError('No amendment date in API response')
+    description = f"勞動基準法修正（{law.get('LawName', '勞動基準法')}）"
+    return amendment_date, description, law
+
+
+@app.route('/api/labor-law/stats', methods=['GET'])
+@login_required
+def api_labor_law_stats():
+    _ensure_labor_law_tables()
+    with get_db() as conn:
+        total = conn.execute("SELECT COUNT(*) as cnt FROM labor_law_amendments").fetchone()['cnt']
+        latest = conn.execute("SELECT MAX(amendment_date) as d FROM labor_law_amendments").fetchone()['d']
+        last_check = conn.execute("SELECT MAX(checked_at) as t FROM labor_law_check_log").fetchone()['t']
+    return jsonify({
+        'total': total,
+        'latest_date': latest.isoformat() if latest else None,
+        'last_check': last_check.isoformat() if last_check else None,
+    })
+
+
+@app.route('/api/labor-law/records', methods=['GET'])
+@login_required
+def api_labor_law_records():
+    _ensure_labor_law_tables()
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT id, amendment_date, description, source, ann_status, ann_id, recorded_at
+            FROM labor_law_amendments ORDER BY amendment_date DESC LIMIT 100
+        """).fetchall()
+    return jsonify([{
+        'id': r['id'],
+        'amendment_date': r['amendment_date'].isoformat() if r['amendment_date'] else '',
+        'description': r['description'],
+        'source': r['source'],
+        'ann_status': r['ann_status'],
+        'ann_id': r['ann_id'],
+        'recorded_at': r['recorded_at'].isoformat() if r['recorded_at'] else '',
+    } for r in rows])
+
+
+@app.route('/api/labor-law/check', methods=['POST'])
+@login_required
+def api_labor_law_check():
+    _ensure_labor_law_tables()
+    try:
+        amendment_date, description, raw = _fetch_labor_law_amendment()
+    except Exception as e:
+        with get_db() as conn:
+            conn.execute(
+                "INSERT INTO labor_law_check_log (found_new, result_msg) VALUES (%s, %s)",
+                (False, f'API 錯誤: {e}')
+            )
+        return jsonify({'error': f'無法連接全國法規資料庫：{e}'}), 502
+
+    with get_db() as conn:
+        existing = conn.execute(
+            "SELECT id FROM labor_law_amendments WHERE amendment_date=%s", (amendment_date,)
+        ).fetchone()
+        if existing:
+            conn.execute(
+                "INSERT INTO labor_law_check_log (found_new, result_msg) VALUES (%s, %s)",
+                (False, f'已有記錄 {amendment_date}，無新修正')
+            )
+            return jsonify({'found_new': False, 'amendment_date': amendment_date})
+
+        row = conn.execute("""
+            INSERT INTO labor_law_amendments (amendment_date, description, source)
+            VALUES (%s, %s, %s) RETURNING id
+        """, (amendment_date, description, '全國法規資料庫')).fetchone()
+        new_id = row['id']
+
+        ann_row = conn.execute("""
+            INSERT INTO announcements
+              (title, content, category, priority, is_pinned, visible_to, author, active)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
+        """, (
+            f'【勞基法修正通知】{amendment_date}',
+            f'勞動基準法於 {amendment_date} 發布修正。請至全國法規資料庫（law.moj.gov.tw）查閱完整條文，確認是否影響現行薪資、假別及出勤規定。',
+            'policy', 'high', True, 'all', '系統自動', True
+        )).fetchone()
+        ann_id = ann_row['id']
+
+        conn.execute(
+            "UPDATE labor_law_amendments SET ann_status='announced', ann_id=%s WHERE id=%s",
+            (ann_id, new_id)
+        )
+        conn.execute(
+            "INSERT INTO labor_law_check_log (found_new, result_msg) VALUES (%s, %s)",
+            (True, f'發現新修正 {amendment_date}，已建立公告 #{ann_id}')
+        )
+
+    _cache_del('ann:public')
+    return jsonify({'found_new': True, 'amendment_date': amendment_date, 'ann_id': ann_id})
+
+
+@app.route('/api/labor-law/reset', methods=['POST'])
+@login_required
+def api_labor_law_reset():
+    _ensure_labor_law_tables()
+    with get_db() as conn:
+        conn.execute("DELETE FROM labor_law_amendments")
+        conn.execute("DELETE FROM labor_law_check_log")
+    return jsonify({'ok': True})

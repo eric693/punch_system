@@ -227,6 +227,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <a href="#" class="nav-item"        id="nav-training" data-i18n="nav.training" onclick="showPage('training',event)">教育訓練</a>
     <a href="#" class="nav-item"        id="nav-travel"   data-i18n="nav.travel"   onclick="showPage('travel',event)">差旅申請<span class="nav-badge" id="badge-travel" style="display:none"></span></a>
     <a href="#" class="nav-item"        id="nav-assets"   data-i18n="nav.assets"   onclick="showPage('assets',event)">資產管理</a>
+    <a href="#" class="nav-item"        id="nav-labor-law" data-i18n="nav.labor_law" onclick="showPage('labor-law',event)">勞基法通知</a>
     <a href="#" class="nav-item"        id="nav-adminmgr" data-i18n="nav.adminmgr" onclick="showPage('adminmgr',event)" style="display:none">帳號管理</a>
   </nav>
   <div class="sidebar-bottom">
@@ -2081,6 +2082,57 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     </div>
   </div><!-- end page-assets -->
 
+  <!-- ── 勞基法通知 ── -->
+  <div class="page" id="page-labor-law" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--navy)" data-i18n="labor_law.title">勞動基準法異動監控</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px" data-i18n="labor_law.subtitle">系統每週自動抓取全國法規資料庫，偵測勞基法修正。有新修正時自動建立公告通知。</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=N0030001" target="_blank" rel="noopener" class="btn btn-outline btn-sm" data-i18n="labor_law.btn_open_db">開啟全國法規資料庫 ↗</a>
+        <button class="btn btn-outline btn-sm" onclick="laborLawCheck()" data-i18n="labor_law.btn_check">立即檢查更新</button>
+        <button class="btn btn-primary btn-sm" onclick="laborLawReset()" data-i18n="labor_law.btn_reset">重新整理</button>
+      </div>
+    </div>
+
+    <!-- Stats cards -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+      <div class="card" style="padding:20px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px" data-i18n="labor_law.stat_total">修正記錄總數</div>
+        <div id="ll-stat-total" style="font-size:28px;font-weight:800;color:var(--navy)">—</div>
+      </div>
+      <div class="card" style="padding:20px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px" data-i18n="labor_law.stat_latest">最近修正日期</div>
+        <div id="ll-stat-latest" style="font-size:18px;font-weight:700;color:var(--accent)">尚無資料</div>
+      </div>
+      <div class="card" style="padding:20px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px" data-i18n="labor_law.stat_last_check">最後檢查時間</div>
+        <div id="ll-stat-check" style="font-size:15px;font-weight:600;color:var(--text)">尚未執行</div>
+      </div>
+    </div>
+
+    <!-- History table -->
+    <div class="card" style="padding:20px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:700;color:var(--navy)" data-i18n="labor_law.history_title">修正歷史記錄</div>
+        <div style="font-size:11px;color:var(--muted)">來源：全國法規資料庫（law.moj.gov.tw）</div>
+      </div>
+      <div id="ll-records-wrap"></div>
+    </div>
+
+    <!-- Info box -->
+    <div style="background:var(--blue-bg,#eff6ff);border-left:4px solid var(--accent);border-radius:8px;padding:16px 20px">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px" data-i18n="labor_law.info_title">關於勞基法監控</div>
+      <ul style="margin:0;padding-left:18px;font-size:13px;color:var(--text);line-height:1.8">
+        <li data-i18n="labor_law.info1">系統每 7 天自動從全國法規資料庫抓取勞動基準法（法規代號 N0030001）修正記錄</li>
+        <li data-i18n="labor_law.info2">發現新修正時，自動在「公告管理」新增高優先度公告提醒人資人員</li>
+        <li data-i18n="labor_law.info3">可點擊「立即檢查更新」手動觸發一次即時抓取</li>
+        <li data-i18n="labor_law.info4">公告後請至全國法規資料庫確認完整條文，本系統僅提示修正日期，不取代法律諮詢</li>
+      </ul>
+    </div>
+  </div><!-- end page-labor-law -->
+
 
 </main>
 
@@ -3363,6 +3415,7 @@ const ALL_MODULES = [
   { key:'perf',           label:'績效考核' },
   { key:'stores',         label:'門市管理' },
   { key:'training',       label:'教育訓練' },
+  { key:'labor-law',     label:'勞基法通知' },
 ];
 function hasModule(m) { return ADMIN_IS_SUPER || ADMIN_PERMS.includes(m); }
 
@@ -3375,13 +3428,27 @@ const TRANSLATIONS = {
     'nav.menu':'功能選單','nav.dash':'儀表板','nav.punch':'打卡管理','nav.sched':'排班管理',
     'nav.leave':'請假管理','nav.salary':'薪資管理','nav.ann':'公告管理','nav.holiday':'國定假日',
     'nav.finance':'財務管理','nav.expense':'費用審核','nav.perf':'績效考核','nav.stores':'門市管理',
-    'nav.training':'教育訓練','nav.travel':'差旅申請','nav.assets':'資產管理','nav.adminmgr':'帳號管理',
+    'nav.training':'教育訓練','nav.travel':'差旅申請','nav.assets':'資產管理','nav.labor_law':'勞基法通知','nav.adminmgr':'帳號管理',
     'nav.bio':'生物辨識綁定','nav.logout':'登出系統',
     // Page titles
     'page.dash':'儀表板','page.punch':'打卡管理','page.sched':'排班管理','page.leave':'請假管理',
     'page.salary':'薪資管理','page.ann':'公告管理','page.holiday':'國定假日','page.finance':'財務管理',
     'page.adminmgr':'帳號管理','page.expense-review':'費用審核','page.perf':'績效考核',
-    'page.stores':'門市管理','page.training':'教育訓練追蹤','page.travel':'差旅申請','page.assets':'資產管理',
+    'page.stores':'門市管理','page.training':'教育訓練追蹤','page.travel':'差旅申請','page.assets':'資產管理','page.labor-law':'勞基法通知',
+    // Labor law notification
+    'labor_law.title':'勞動基準法異動監控','labor_law.subtitle':'系統每週自動抓取全國法規資料庫，偵測勞基法修正。有新修正時自動建立公告通知。',
+    'labor_law.btn_open_db':'開啟全國法規資料庫 ↗','labor_law.btn_check':'立即檢查更新','labor_law.btn_reset':'重新整理',
+    'labor_law.stat_total':'修正記錄總數','labor_law.stat_latest':'最近修正日期','labor_law.stat_last_check':'最後檢查時間',
+    'labor_law.history_title':'修正歷史記錄','labor_law.no_records':'尚無資料，請點擊「立即檢查更新」',
+    'labor_law.info_title':'關於勞基法監控',
+    'labor_law.info1':'系統每 7 天自動從全國法規資料庫抓取勞動基準法（法規代號 N0030001）修正記錄',
+    'labor_law.info2':'發現新修正時，自動在「公告管理」新增高優先度公告提醒人資人員',
+    'labor_law.info3':'可點擊「立即檢查更新」手動觸發一次即時抓取',
+    'labor_law.info4':'公告後請至全國法規資料庫確認完整條文，本系統僅提示修正日期，不取代法律諮詢',
+    'labor_law.col_date':'修正日期','labor_law.col_desc':'說明 / 異動摘要','labor_law.col_ann_status':'公告狀態',
+    'labor_law.col_recorded':'收錄時間','labor_law.col_source':'來源',
+    'labor_law.ann_announced':'已公告','labor_law.ann_pending':'待公告',
+    'labor_law.checking':'檢查中…','labor_law.found_new':'發現新修正，已建立公告！','labor_law.no_new':'目前無新修正。',
     // Brand
     'brand.title':'管理後台','brand.sub':'Management System',
     // Punch tabs
@@ -4105,7 +4172,7 @@ const TRANSLATIONS = {
     'module.key.punch':'打卡管理','module.key.sched':'排班管理','module.key.leave':'請假管理',
     'module.key.salary':'薪資管理','module.key.ann':'公告管理','module.key.holiday':'國定假日',
     'module.key.finance':'財務管理','module.key.expense-review':'費用審核',
-    'module.key.perf':'績效考核','module.key.stores':'門市管理','module.key.training':'教育訓練',
+    'module.key.perf':'績效考核','module.key.stores':'門市管理','module.key.training':'教育訓練','module.key.labor-law':'勞基法通知',
     'loading':'載入中...','load_fail':'載入失敗','salary_preview.loading':'計算中，請稍候...',
     'anomaly.no_records':'近 7 天無異常記錄',
     'anomaly.sev.error':'嚴重','anomaly.sev.warning':'警告','anomaly.sev.info':'提示',
@@ -4126,13 +4193,26 @@ const TRANSLATIONS = {
     'nav.menu':'Menu','nav.dash':'Dashboard','nav.punch':'Attendance','nav.sched':'Schedule',
     'nav.leave':'Leave','nav.salary':'Salary','nav.ann':'Announcements','nav.holiday':'Holidays',
     'nav.finance':'Finance','nav.expense':'Expense Review','nav.perf':'Performance','nav.stores':'Stores',
-    'nav.training':'Training','nav.travel':'Travel','nav.assets':'Assets','nav.adminmgr':'Accounts',
+    'nav.training':'Training','nav.travel':'Travel','nav.assets':'Assets','nav.labor_law':'Labor Law','nav.adminmgr':'Accounts',
     'nav.bio':'Biometric Binding','nav.logout':'Logout',
     // Page titles
     'page.dash':'Dashboard','page.punch':'Attendance','page.sched':'Schedule','page.leave':'Leave',
     'page.salary':'Salary','page.ann':'Announcements','page.holiday':'Holidays','page.finance':'Finance',
     'page.adminmgr':'Accounts','page.expense-review':'Expense Review','page.perf':'Performance',
-    'page.stores':'Stores','page.training':'Training','page.travel':'Travel','page.assets':'Assets',
+    'page.stores':'Stores','page.training':'Training','page.travel':'Travel','page.assets':'Assets','page.labor-law':'Labor Law Notices',
+    'labor_law.title':'Labor Standards Law Monitor','labor_law.subtitle':'System auto-checks the national law database weekly for amendments. New amendments trigger announcements automatically.',
+    'labor_law.btn_open_db':'Open Law Database ↗','labor_law.btn_check':'Check Now','labor_law.btn_reset':'Refresh',
+    'labor_law.stat_total':'Total Amendment Records','labor_law.stat_latest':'Latest Amendment Date','labor_law.stat_last_check':'Last Check Time',
+    'labor_law.history_title':'Amendment History','labor_law.no_records':'No records yet. Click "Check Now" to fetch.',
+    'labor_law.info_title':'About Labor Law Monitor',
+    'labor_law.info1':'Auto-checks Labor Standards Law (Code N0030001) every 7 days from the national law database',
+    'labor_law.info2':'New amendments automatically create high-priority announcements in Announcement Management',
+    'labor_law.info3':'Click "Check Now" to trigger an immediate manual fetch',
+    'labor_law.info4':'Always verify full legal text at law.moj.gov.tw; this system only shows amendment dates',
+    'labor_law.col_date':'Amendment Date','labor_law.col_desc':'Description / Summary','labor_law.col_ann_status':'Announcement Status',
+    'labor_law.col_recorded':'Recorded At','labor_law.col_source':'Source',
+    'labor_law.ann_announced':'Announced','labor_law.ann_pending':'Pending',
+    'labor_law.checking':'Checking…','labor_law.found_new':'New amendment found! Announcement created.','labor_law.no_new':'No new amendments.',
     // Brand
     'brand.title':'Admin Panel','brand.sub':'Management System',
     // Punch tabs
@@ -4857,7 +4937,7 @@ const TRANSLATIONS = {
     'module.key.punch':'Attendance','module.key.sched':'Schedule','module.key.leave':'Leave',
     'module.key.salary':'Salary','module.key.ann':'Announcements','module.key.holiday':'Holidays',
     'module.key.finance':'Finance','module.key.expense-review':'Expense Review',
-    'module.key.perf':'Performance','module.key.stores':'Stores','module.key.training':'Training',
+    'module.key.perf':'Performance','module.key.stores':'Stores','module.key.training':'Training','module.key.labor-law':'Labor Law',
     'loading':'Loading...','load_fail':'Load failed','salary_preview.loading':'Calculating, please wait...',
     'anomaly.no_records':'No anomalies in the past 7 days',
     'anomaly.sev.error':'Critical','anomaly.sev.warning':'Warning','anomaly.sev.info':'Info',
@@ -4875,13 +4955,25 @@ const TRANSLATIONS = {
     'nav.menu':'メニュー','nav.dash':'ダッシュボード','nav.punch':'勤怠管理','nav.sched':'シフト管理',
     'nav.leave':'休暇管理','nav.salary':'給与管理','nav.ann':'お知らせ','nav.holiday':'祝日設定',
     'nav.finance':'財務管理','nav.expense':'経費審査','nav.perf':'人事評価','nav.stores':'店舗管理',
-    'nav.training':'トレーニング','nav.travel':'出張申請','nav.assets':'資産管理','nav.adminmgr':'アカウント',
+    'nav.training':'トレーニング','nav.travel':'出張申請','nav.assets':'資産管理','nav.labor_law':'労基法通知','nav.adminmgr':'アカウント',
     'nav.bio':'生体認証登録','nav.logout':'ログアウト',
     // Page titles
     'page.dash':'ダッシュボード','page.punch':'勤怠管理','page.sched':'シフト管理','page.leave':'休暇管理',
     'page.salary':'給与管理','page.ann':'お知らせ','page.holiday':'祝日設定','page.finance':'財務管理',
     'page.adminmgr':'アカウント','page.expense-review':'経費審査','page.perf':'人事評価',
-    'page.stores':'店舗管理','page.training':'トレーニング','page.travel':'出張申請','page.assets':'資産管理',
+    'page.stores':'店舗管理','page.training':'トレーニング','page.travel':'出張申請','page.assets':'資産管理','page.labor-law':'労基法通知',
+    'labor_law.title':'労働基準法改正モニター','labor_law.subtitle':'システムが週次で法令データベースを確認し、改正を検知します。',
+    'labor_law.btn_open_db':'法令DBを開く ↗','labor_law.btn_check':'今すぐ確認','labor_law.btn_reset':'更新',
+    'labor_law.stat_total':'改正記録数','labor_law.stat_latest':'最新改正日','labor_law.stat_last_check':'最終確認時刻',
+    'labor_law.history_title':'改正履歴','labor_law.no_records':'記録なし。「今すぐ確認」をクリックしてください。',
+    'labor_law.info_title':'労基法モニターについて',
+    'labor_law.info1':'7日ごとに自動で労働基準法（法令番号 N0030001）の改正記録を取得',
+    'labor_law.info2':'新しい改正が見つかった場合、お知らせ管理に高優先度のお知らせを自動作成',
+    'labor_law.info3':'「今すぐ確認」で手動即時取得可能','labor_law.info4':'改正後は法令DBで全文を確認してください',
+    'labor_law.col_date':'改正日','labor_law.col_desc':'説明','labor_law.col_ann_status':'通知状態',
+    'labor_law.col_recorded':'記録日時','labor_law.col_source':'出典',
+    'labor_law.ann_announced':'通知済','labor_law.ann_pending':'未通知',
+    'labor_law.checking':'確認中…','labor_law.found_new':'新しい改正を検知！お知らせを作成しました。','labor_law.no_new':'新しい改正はありません。',
     // Brand
     'brand.title':'管理パネル','brand.sub':'Management System',
     // Punch tabs
@@ -5606,7 +5698,7 @@ const TRANSLATIONS = {
     'module.key.punch':'勤怠管理','module.key.sched':'シフト管理','module.key.leave':'休暇管理',
     'module.key.salary':'給与管理','module.key.ann':'お知らせ','module.key.holiday':'祝日設定',
     'module.key.finance':'財務管理','module.key.expense-review':'経費審査',
-    'module.key.perf':'人事評価','module.key.stores':'店舗管理','module.key.training':'トレーニング',
+    'module.key.perf':'人事評価','module.key.stores':'店舗管理','module.key.training':'トレーニング','module.key.labor-law':'労基法通知',
     'loading':'読込中...','load_fail':'読込失敗','salary_preview.loading':'計算中、お待ちください...',
     'anomaly.no_records':'過去7日間に異常はありません',
     'anomaly.sev.error':'重大','anomaly.sev.warning':'警告','anomaly.sev.info':'情報',
@@ -5623,12 +5715,23 @@ const TRANSLATIONS = {
     'nav.menu':'Menu','nav.dash':'Bảng điều khiển','nav.punch':'Chấm công','nav.sched':'Lịch làm việc',
     'nav.leave':'Nghỉ phép','nav.salary':'Lương','nav.ann':'Thông báo','nav.holiday':'Ngày lễ',
     'nav.finance':'Tài chính','nav.expense':'Chi phí','nav.perf':'Đánh giá','nav.stores':'Cửa hàng',
-    'nav.training':'Đào tạo','nav.travel':'Công tác','nav.assets':'Tài sản','nav.adminmgr':'Tài khoản',
+    'nav.training':'Đào tạo','nav.travel':'Công tác','nav.assets':'Tài sản','nav.labor_law':'Luật Lao động','nav.adminmgr':'Tài khoản',
     'nav.bio':'Đăng ký sinh trắc','nav.logout':'Đăng xuất',
     'page.dash':'Bảng điều khiển','page.punch':'Chấm công','page.sched':'Lịch làm việc','page.leave':'Nghỉ phép',
     'page.salary':'Lương','page.ann':'Thông báo','page.holiday':'Ngày lễ','page.finance':'Tài chính',
     'page.adminmgr':'Tài khoản','page.expense-review':'Duyệt chi phí','page.perf':'Đánh giá',
-    'page.stores':'Cửa hàng','page.training':'Đào tạo','page.travel':'Công tác','page.assets':'Tài sản',
+    'page.stores':'Cửa hàng','page.training':'Đào tạo','page.travel':'Công tác','page.assets':'Tài sản','page.labor-law':'Thông báo Luật LĐ',
+    'labor_law.title':'Giám sát sửa đổi Luật Lao động','labor_law.subtitle':'Hệ thống tự động kiểm tra CSDL pháp luật hàng tuần.',
+    'labor_law.btn_open_db':'Mở CSDL pháp luật ↗','labor_law.btn_check':'Kiểm tra ngay','labor_law.btn_reset':'Làm mới',
+    'labor_law.stat_total':'Tổng bản ghi','labor_law.stat_latest':'Ngày sửa đổi gần nhất','labor_law.stat_last_check':'Lần kiểm tra cuối',
+    'labor_law.history_title':'Lịch sử sửa đổi','labor_law.no_records':'Chưa có dữ liệu. Nhấn "Kiểm tra ngay".',
+    'labor_law.info_title':'Về tính năng giám sát',
+    'labor_law.info1':'Tự động kiểm tra mỗi 7 ngày','labor_law.info2':'Sửa đổi mới sẽ tạo thông báo ưu tiên cao',
+    'labor_law.info3':'Nhấn "Kiểm tra ngay" để lấy dữ liệu thủ công','labor_law.info4':'Xác nhận toàn văn tại trang pháp luật',
+    'labor_law.col_date':'Ngày sửa đổi','labor_law.col_desc':'Mô tả','labor_law.col_ann_status':'Trạng thái TB',
+    'labor_law.col_recorded':'Ghi nhận lúc','labor_law.col_source':'Nguồn',
+    'labor_law.ann_announced':'Đã thông báo','labor_law.ann_pending':'Chờ TB',
+    'labor_law.checking':'Đang kiểm tra…','labor_law.found_new':'Phát hiện sửa đổi mới! Đã tạo thông báo.','labor_law.no_new':'Không có sửa đổi mới.',
     'brand.title':'Quản trị','brand.sub':'Management System',
     'punch.tab.summary':'Tổng hợp','punch.tab.anomaly':'Cảnh báo','punch.tab.mstats':'Thống kê tháng',
     'punch.tab.records':'Lịch sử','punch.tab.manual':'Chấm bù','punch.tab.requests':'Yêu cầu chấm',
@@ -6329,7 +6432,7 @@ const TRANSLATIONS = {
     'module.key.punch':'Chấm công','module.key.sched':'Lịch làm việc','module.key.leave':'Nghỉ phép',
     'module.key.salary':'Lương','module.key.ann':'Thông báo','module.key.holiday':'Ngày lễ',
     'module.key.finance':'Tài chính','module.key.expense-review':'Chi phí',
-    'module.key.perf':'Đánh giá','module.key.stores':'Cửa hàng','module.key.training':'Đào tạo',
+    'module.key.perf':'Đánh giá','module.key.stores':'Cửa hàng','module.key.training':'Đào tạo','module.key.labor-law':'Luật LĐ',
     'loading':'Đang tải...','load_fail':'Tải thất bại','salary_preview.loading':'Đang tính toán, vui lòng chờ...',
     'anomaly.no_records':'Không có bất thường trong 7 ngày qua',
     'anomaly.sev.error':'Nghiêm trọng','anomaly.sev.warning':'Cảnh báo','anomaly.sev.info':'Thông tin',
@@ -6345,12 +6448,23 @@ const TRANSLATIONS = {
     'nav.menu':'เมนู','nav.dash':'แดชบอร์ด','nav.punch':'บันทึกเวลา','nav.sched':'ตารางงาน',
     'nav.leave':'การลา','nav.salary':'เงินเดือน','nav.ann':'ประกาศ','nav.holiday':'วันหยุด',
     'nav.finance':'การเงิน','nav.expense':'ค่าใช้จ่าย','nav.perf':'ประเมินผล','nav.stores':'สาขา',
-    'nav.training':'ฝึกอบรม','nav.travel':'เดินทาง','nav.assets':'สินทรัพย์','nav.adminmgr':'บัญชีผู้ใช้',
+    'nav.training':'ฝึกอบรม','nav.travel':'เดินทาง','nav.assets':'สินทรัพย์','nav.labor_law':'กฎหมายแรงงาน','nav.adminmgr':'บัญชีผู้ใช้',
     'nav.bio':'ลงทะเบียนไบโอเมตริก','nav.logout':'ออกจากระบบ',
     'page.dash':'แดชบอร์ด','page.punch':'บันทึกเวลา','page.sched':'ตารางงาน','page.leave':'การลา',
     'page.salary':'เงินเดือน','page.ann':'ประกาศ','page.holiday':'วันหยุด','page.finance':'การเงิน',
     'page.adminmgr':'บัญชีผู้ใช้','page.expense-review':'อนุมัติค่าใช้จ่าย','page.perf':'ประเมินผล',
-    'page.stores':'สาขา','page.training':'ฝึกอบรม','page.travel':'เดินทาง','page.assets':'สินทรัพย์',
+    'page.stores':'สาขา','page.training':'ฝึกอบรม','page.travel':'เดินทาง','page.assets':'สินทรัพย์','page.labor-law':'แจ้งเตือนกฎหมาย',
+    'labor_law.title':'ติดตามการแก้ไขกฎหมายแรงงาน','labor_law.subtitle':'ระบบตรวจสอบฐานข้อมูลกฎหมายอัตโนมัติทุกสัปดาห์',
+    'labor_law.btn_open_db':'เปิดฐานข้อมูลกฎหมาย ↗','labor_law.btn_check':'ตรวจสอบทันที','labor_law.btn_reset':'รีเฟรช',
+    'labor_law.stat_total':'รวมบันทึกการแก้ไข','labor_law.stat_latest':'วันแก้ไขล่าสุด','labor_law.stat_last_check':'ตรวจสอบล่าสุด',
+    'labor_law.history_title':'ประวัติการแก้ไข','labor_law.no_records':'ไม่มีข้อมูล กดปุ่ม "ตรวจสอบทันที"',
+    'labor_law.info_title':'เกี่ยวกับการติดตาม',
+    'labor_law.info1':'ตรวจสอบอัตโนมัติทุก 7 วัน','labor_law.info2':'การแก้ไขใหม่จะสร้างประกาศอัตโนมัติ',
+    'labor_law.info3':'กดปุ่ม "ตรวจสอบทันที" เพื่อดึงข้อมูลด้วยตนเอง','labor_law.info4':'ยืนยันข้อความเต็มที่เว็บไซต์กฎหมาย',
+    'labor_law.col_date':'วันที่แก้ไข','labor_law.col_desc':'รายละเอียด','labor_law.col_ann_status':'สถานะประกาศ',
+    'labor_law.col_recorded':'บันทึกเมื่อ','labor_law.col_source':'แหล่งที่มา',
+    'labor_law.ann_announced':'ประกาศแล้ว','labor_law.ann_pending':'รอประกาศ',
+    'labor_law.checking':'กำลังตรวจสอบ…','labor_law.found_new':'พบการแก้ไขใหม่! สร้างประกาศแล้ว','labor_law.no_new':'ไม่มีการแก้ไขใหม่',
     'brand.title':'ระบบจัดการ','brand.sub':'Management System',
     'punch.tab.summary':'สรุปการเข้างาน','punch.tab.anomaly':'แจ้งเตือน','punch.tab.mstats':'สถิติรายเดือน',
     'punch.tab.records':'บันทึก','punch.tab.manual':'บันทึกแทน','punch.tab.requests':'คำขอบันทึก',
@@ -7051,7 +7165,7 @@ const TRANSLATIONS = {
     'module.key.punch':'บันทึกเวลา','module.key.sched':'ตารางงาน','module.key.leave':'การลา',
     'module.key.salary':'เงินเดือน','module.key.ann':'ประกาศ','module.key.holiday':'วันหยุด',
     'module.key.finance':'การเงิน','module.key.expense-review':'ค่าใช้จ่าย',
-    'module.key.perf':'ประเมินผล','module.key.stores':'สาขา','module.key.training':'ฝึกอบรม',
+    'module.key.perf':'ประเมินผล','module.key.stores':'สาขา','module.key.training':'ฝึกอบรม','module.key.labor-law':'กฎหมายแรงงาน',
     'loading':'กำลังโหลด...','load_fail':'โหลดล้มเหลว','salary_preview.loading':'กำลังคำนวณ กรุณารอ...',
     'anomaly.no_records':'ไม่มีความผิดปกติใน 7 วันที่ผ่านมา',
     'anomaly.sev.error':'วิกฤต','anomaly.sev.warning':'คำเตือน','anomaly.sev.info':'ข้อมูล',
@@ -7069,13 +7183,25 @@ const TRANSLATIONS = {
     'nav.menu':'功能菜单','nav.dash':'仪表盘','nav.punch':'打卡管理','nav.sched':'排班管理',
     'nav.leave':'请假管理','nav.salary':'薪资管理','nav.ann':'公告管理','nav.holiday':'法定节假日',
     'nav.finance':'财务管理','nav.expense':'费用审核','nav.perf':'绩效考核','nav.stores':'门店管理',
-    'nav.training':'教育培训','nav.travel':'差旅申请','nav.assets':'资产管理','nav.adminmgr':'账号管理',
+    'nav.training':'教育培训','nav.travel':'差旅申请','nav.assets':'资产管理','nav.labor_law':'劳基法通知','nav.adminmgr':'账号管理',
     'nav.bio':'生物识别绑定','nav.logout':'退出系统',
     // Page titles
     'page.dash':'仪表盘','page.punch':'打卡管理','page.sched':'排班管理','page.leave':'请假管理',
     'page.salary':'薪资管理','page.ann':'公告管理','page.holiday':'法定节假日','page.finance':'财务管理',
     'page.adminmgr':'账号管理','page.expense-review':'费用审核','page.perf':'绩效考核',
-    'page.stores':'门店管理','page.training':'教育培训跟踪','page.travel':'差旅申请','page.assets':'资产管理',
+    'page.stores':'门店管理','page.training':'教育培训跟踪','page.travel':'差旅申请','page.assets':'资产管理','page.labor-law':'劳基法通知',
+    'labor_law.title':'劳动基准法变动监控','labor_law.subtitle':'系统每周自动抓取全国法规数据库，检测劳基法修正。',
+    'labor_law.btn_open_db':'打开全国法规数据库 ↗','labor_law.btn_check':'立即检查更新','labor_law.btn_reset':'刷新',
+    'labor_law.stat_total':'修正记录总数','labor_law.stat_latest':'最近修正日期','labor_law.stat_last_check':'最后检查时间',
+    'labor_law.history_title':'修正历史记录','labor_law.no_records':'暂无数据，请点击「立即检查更新」',
+    'labor_law.info_title':'关于劳基法监控',
+    'labor_law.info1':'每7天自动从全国法规数据库抓取劳动基准法修正记录',
+    'labor_law.info2':'发现新修正时，自动在「公告管理」新增高优先级公告',
+    'labor_law.info3':'可点击「立即检查更新」手动触发即时抓取','labor_law.info4':'公告后请至全国法规数据库确认完整条文',
+    'labor_law.col_date':'修正日期','labor_law.col_desc':'说明/变动摘要','labor_law.col_ann_status':'公告状态',
+    'labor_law.col_recorded':'收录时间','labor_law.col_source':'来源',
+    'labor_law.ann_announced':'已公告','labor_law.ann_pending':'待公告',
+    'labor_law.checking':'检查中…','labor_law.found_new':'发现新修正，已建立公告！','labor_law.no_new':'当前无新修正。',
     // Brand
     'brand.title':'管理后台','brand.sub':'Management System',
     // Punch tabs
@@ -7799,7 +7925,7 @@ const TRANSLATIONS = {
     'module.key.punch':'打卡管理','module.key.sched':'排班管理','module.key.leave':'请假管理',
     'module.key.salary':'薪资管理','module.key.ann':'公告管理','module.key.holiday':'法定节假日',
     'module.key.finance':'财务管理','module.key.expense-review':'费用审核',
-    'module.key.perf':'绩效考核','module.key.stores':'门店管理','module.key.training':'教育培训',
+    'module.key.perf':'绩效考核','module.key.stores':'门店管理','module.key.training':'教育培训','module.key.labor-law':'劳基法通知',
     'loading':'加载中...','load_fail':'加载失败','salary_preview.loading':'计算中，请稍候...',
     'anomaly.no_records':'近 7 天无异常记录',
     'anomaly.sev.error':'严重','anomaly.sev.warning':'警告','anomaly.sev.info':'提示',
@@ -7817,13 +7943,24 @@ const TRANSLATIONS = {
     'nav.menu':'Menu','nav.dash':'Dasbor','nav.punch':'Absensi','nav.sched':'Jadwal',
     'nav.leave':'Cuti','nav.salary':'Gaji','nav.ann':'Pengumuman','nav.holiday':'Hari Libur',
     'nav.finance':'Keuangan','nav.expense':'Tinjauan Biaya','nav.perf':'Penilaian Kinerja','nav.stores':'Manajemen Toko',
-    'nav.training':'Pelatihan','nav.travel':'Perjalanan Dinas','nav.assets':'Aset','nav.adminmgr':'Akun',
+    'nav.training':'Pelatihan','nav.travel':'Perjalanan Dinas','nav.assets':'Aset','nav.labor_law':'Hukum Ketenagakerjaan','nav.adminmgr':'Akun',
     'nav.bio':'Pendaftaran Biometrik','nav.logout':'Keluar',
     // Page titles
     'page.dash':'Dasbor','page.punch':'Absensi','page.sched':'Jadwal','page.leave':'Cuti',
     'page.salary':'Gaji','page.ann':'Pengumuman','page.holiday':'Hari Libur','page.finance':'Keuangan',
     'page.adminmgr':'Akun','page.expense-review':'Tinjauan Biaya','page.perf':'Penilaian Kinerja',
-    'page.stores':'Manajemen Toko','page.training':'Pelatihan','page.travel':'Perjalanan Dinas','page.assets':'Aset',
+    'page.stores':'Manajemen Toko','page.training':'Pelatihan','page.travel':'Perjalanan Dinas','page.assets':'Aset','page.labor-law':'Notifikasi Hukum',
+    'labor_law.title':'Monitor Perubahan Hukum Ketenagakerjaan','labor_law.subtitle':'Sistem otomatis memeriksa database hukum setiap minggu.',
+    'labor_law.btn_open_db':'Buka Database Hukum ↗','labor_law.btn_check':'Periksa Sekarang','labor_law.btn_reset':'Perbarui',
+    'labor_law.stat_total':'Total Catatan','labor_law.stat_latest':'Tanggal Amandemen Terbaru','labor_law.stat_last_check':'Pemeriksaan Terakhir',
+    'labor_law.history_title':'Riwayat Amandemen','labor_law.no_records':'Belum ada data. Klik "Periksa Sekarang".',
+    'labor_law.info_title':'Tentang Monitor Hukum',
+    'labor_law.info1':'Otomatis memeriksa setiap 7 hari','labor_law.info2':'Amandemen baru membuat pengumuman prioritas tinggi secara otomatis',
+    'labor_law.info3':'Klik "Periksa Sekarang" untuk pemeriksaan manual','labor_law.info4':'Verifikasi teks lengkap di situs database hukum',
+    'labor_law.col_date':'Tanggal Amandemen','labor_law.col_desc':'Deskripsi','labor_law.col_ann_status':'Status Pengumuman',
+    'labor_law.col_recorded':'Dicatat Pada','labor_law.col_source':'Sumber',
+    'labor_law.ann_announced':'Diumumkan','labor_law.ann_pending':'Menunggu',
+    'labor_law.checking':'Memeriksa…','labor_law.found_new':'Amandemen baru ditemukan! Pengumuman dibuat.','labor_law.no_new':'Tidak ada amandemen baru.',
     // Brand
     'brand.title':'Panel Admin','brand.sub':'Sistem Manajemen',
     // Punch tabs
@@ -8548,7 +8685,7 @@ const TRANSLATIONS = {
     'module.key.punch':'Absensi','module.key.sched':'Jadwal','module.key.leave':'Cuti',
     'module.key.salary':'Gaji','module.key.ann':'Pengumuman','module.key.holiday':'Hari Libur',
     'module.key.finance':'Keuangan','module.key.expense-review':'Tinjauan Biaya',
-    'module.key.perf':'Penilaian Kinerja','module.key.stores':'Manajemen Toko','module.key.training':'Pelatihan',
+    'module.key.perf':'Penilaian Kinerja','module.key.stores':'Manajemen Toko','module.key.training':'Pelatihan','module.key.labor-law':'Hukum Ketenagakerjaan',
     'loading':'Memuat...','load_fail':'Gagal dimuat','salary_preview.loading':'Menghitung, mohon tunggu...',
     'anomaly.no_records':'Tidak ada anomali dalam 7 hari terakhir',
     'anomaly.sev.error':'Kritis','anomaly.sev.warning':'Peringatan','anomaly.sev.info':'Info',
@@ -9733,7 +9870,7 @@ function closeSidebar() {
 function showPage(page, e) {
   if (e) e.preventDefault();
   // 權限檢查（儀表板和帳號管理不受模組限制）
-  const moduleGuard = { punch:'punch', sched:'sched', leave:'leave', salary:'salary', ann:'ann', holiday:'holiday', finance:'finance', 'expense-review':'expense-review', perf:'perf', stores:'stores', training:'training' };
+  const moduleGuard = { punch:'punch', sched:'sched', leave:'leave', salary:'salary', ann:'ann', holiday:'holiday', finance:'finance', 'expense-review':'expense-review', perf:'perf', stores:'stores', training:'training', 'labor-law':'labor-law' };
   if (moduleGuard[page] && !hasModule(moduleGuard[page])) {
     showToast('您沒有此功能的存取權限', 'error'); return;
   }
@@ -9742,7 +9879,7 @@ function showPage(page, e) {
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
   setTimeout(refreshBadges, 600);
-  ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training','travel','assets'].forEach(p =>
+  ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training','travel','assets','labor-law'].forEach(p =>
     document.getElementById('page-' + p).style.display = p === page ? '' : 'none'
   );
   document.getElementById('page-title').textContent = t('page.' + page) || page;
@@ -9761,6 +9898,7 @@ function showPage(page, e) {
   if (page === 'training')        initTraining();
   if (page === 'travel')          initTravel();
   if (page === 'assets')          initAssets();
+  if (page === 'labor-law')       initLaborLaw();
 }
 
 // ── Toast ─────────────────────────────────────────────────────
@@ -16492,6 +16630,87 @@ async function submitLoanReview(action) {
   closeLoanReviewModal();
   loadAssets(); loadActiveLoanList(); loadPendingLoanList();
   showToast(action==='approve'?t('loan.approved_toast'):t('loan.rejected_toast'),'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// 勞基法通知模組
+// ══════════════════════════════════════════════════════════════
+async function initLaborLaw() {
+  await Promise.all([loadLaborLawStats(), loadLaborLawRecords()]);
+}
+
+async function loadLaborLawStats() {
+  const { ok, data } = await api('/api/labor-law/stats', {}, true);
+  if (!ok) return;
+  document.getElementById('ll-stat-total').textContent = data.total ?? '—';
+  document.getElementById('ll-stat-latest').textContent = data.latest_date
+    ? data.latest_date
+    : t('labor_law.stat_latest') === '最近修正日期' ? '尚無資料' : 'No data';
+  if (data.last_check) {
+    const d = new Date(data.last_check);
+    document.getElementById('ll-stat-check').textContent = d.toLocaleString();
+  } else {
+    document.getElementById('ll-stat-check').textContent =
+      t('labor_law.stat_last_check') === '最後檢查時間' ? '尚未執行' : 'Not run yet';
+  }
+}
+
+async function loadLaborLawRecords() {
+  const wrap = document.getElementById('ll-records-wrap');
+  wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>`;
+  const { ok, data } = await api('/api/labor-law/records', {}, true);
+  if (!ok || !data.length) {
+    wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">${t('labor_law.no_records')}</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>${t('labor_law.col_date')}</th>
+    <th>${t('labor_law.col_desc')}</th>
+    <th>${t('labor_law.col_ann_status')}</th>
+    <th>${t('labor_law.col_recorded')}</th>
+    <th>${t('labor_law.col_source')}</th>
+  </tr></thead><tbody>${data.map(r => {
+    const statusLabel = r.ann_status === 'announced'
+      ? `<span style="color:var(--green);font-weight:600">${t('labor_law.ann_announced')}</span>`
+      : `<span style="color:var(--orange)">${t('labor_law.ann_pending')}</span>`;
+    const recorded = r.recorded_at ? new Date(r.recorded_at).toLocaleString() : '—';
+    return `<tr>
+      <td style="font-weight:600;white-space:nowrap">${escHtml(r.amendment_date)}</td>
+      <td style="font-size:13px">${escHtml(r.description)}</td>
+      <td>${statusLabel}</td>
+      <td style="font-size:12px;color:var(--muted);white-space:nowrap">${recorded}</td>
+      <td style="font-size:12px"><a href="https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=N0030001" target="_blank" rel="noopener" style="color:var(--accent)">${escHtml(r.source)}</a></td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+async function laborLawCheck() {
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = t('labor_law.checking');
+  const { ok, data } = await api('/api/labor-law/check', { method: 'POST' });
+  btn.disabled = false;
+  btn.textContent = orig;
+  if (!ok) {
+    showToast(data?.error || '檢查失敗', 'error');
+    return;
+  }
+  if (data.found_new) {
+    showToast(t('labor_law.found_new'), 'success');
+  } else {
+    showToast(t('labor_law.no_new'), 'success');
+  }
+  await Promise.all([loadLaborLawStats(), loadLaborLawRecords()]);
+}
+
+async function laborLawReset() {
+  if (!confirm('確定要清除所有勞基法修正記錄與檢查日誌嗎？')) return;
+  const { ok } = await api('/api/labor-law/reset', { method: 'POST' });
+  if (ok) {
+    showToast('已重新整理', 'success');
+    await Promise.all([loadLaborLawStats(), loadLaborLawRecords()]);
+  }
 }
 </script>
 </html>
