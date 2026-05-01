@@ -9379,6 +9379,21 @@ def init_insurance_db():
                     setting_value TEXT DEFAULT ''
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS insurance_change_log (
+                    id              SERIAL PRIMARY KEY,
+                    staff_id        INT REFERENCES punch_staff(id) ON DELETE CASCADE,
+                    old_salary      NUMERIC(12,2) DEFAULT 0,
+                    new_salary      NUMERIC(12,2) NOT NULL,
+                    effective_date  DATE NOT NULL,
+                    change_reason   TEXT DEFAULT '',
+                    created_at      TIMESTAMPTZ DEFAULT NOW(),
+                    created_by      TEXT DEFAULT ''
+                )
+            """)
+            conn.execute(
+                "ALTER TABLE punch_staff ADD COLUMN IF NOT EXISTS insurance_dependents INT DEFAULT 0"
+            )
         for k, v in [('labor_insurance_no', ''), ('health_insurance_no', ''),
                      ('employer_name', ''), ('employer_id', '')]:
             with get_db() as conn:
@@ -14251,3 +14266,241 @@ def api_hr_analysis_dept_breakdown():
         'ot_total_hours': float(ot_row['total_hours']),
         'ot_total_pay': float(ot_row['total_pay']),
     })
+
+
+# ── 勞健保明細 APIs ────────────────────────────────────────────────────────────
+
+def _calc_insurance(ins, base, deps):
+    labor_emp    = round(ins * 0.125 * 0.20)
+    labor_emp2   = round(ins * 0.125 * 0.70)
+    health_emp   = round(ins * 0.0517 * 0.30 * (1 + deps))
+    health_emp2  = round(ins * 0.0517 * 0.60)
+    pension      = round(base * 0.06)
+    return {
+        'labor_emp':       labor_emp,
+        'labor_employer':  labor_emp2,
+        'health_emp':      health_emp,
+        'health_employer': health_emp2,
+        'pension':         pension,
+        'total_emp_deduct':      labor_emp + health_emp,
+        'total_employer_cost':   labor_emp2 + health_emp2 + pension,
+    }
+
+
+@app.route('/api/insurance/staff-detail', methods=['GET'])
+@require_module('salary')
+def api_insurance_staff_detail():
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT id, name, department, role, insured_salary, base_salary,
+                   COALESCE(insurance_dependents, 0) AS insurance_dependents,
+                   hire_date
+            FROM punch_staff
+            WHERE active = TRUE
+            ORDER BY name
+        """).fetchall()
+    result = []
+    for s in rows:
+        ins  = float(s['insured_salary'] or 0)
+        base = float(s['base_salary'] or 0)
+        deps = int(s['insurance_dependents'] or 0)
+        calc = _calc_insurance(ins, base, deps)
+        result.append({
+            'id':                   s['id'],
+            'name':                 s['name'],
+            'department':           s['department'] or '',
+            'role':                 s['role'] or '',
+            'insured_salary':       ins,
+            'base_salary':          base,
+            'insurance_dependents': deps,
+            'hire_date':            s['hire_date'].isoformat() if s['hire_date'] else '',
+            **calc,
+        })
+    return jsonify(result)
+
+
+@app.route('/api/insurance/summary', methods=['GET'])
+@require_module('salary')
+def api_insurance_summary():
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT insured_salary, base_salary,
+                   COALESCE(insurance_dependents, 0) AS insurance_dependents
+            FROM punch_staff
+            WHERE active = TRUE
+        """).fetchall()
+    totals = {
+        'total_labor_emp': 0, 'total_labor_employer': 0,
+        'total_health_emp': 0, 'total_health_employer': 0,
+        'total_pension': 0, 'staff_count': len(rows),
+        'total_monthly_employer_cost': 0,
+    }
+    for s in rows:
+        ins  = float(s['insured_salary'] or 0)
+        base = float(s['base_salary'] or 0)
+        deps = int(s['insurance_dependents'] or 0)
+        c = _calc_insurance(ins, base, deps)
+        totals['total_labor_emp']           += c['labor_emp']
+        totals['total_labor_employer']      += c['labor_employer']
+        totals['total_health_emp']          += c['health_emp']
+        totals['total_health_employer']     += c['health_employer']
+        totals['total_pension']             += c['pension']
+        totals['total_monthly_employer_cost'] += c['total_employer_cost']
+    return jsonify(totals)
+
+
+@app.route('/api/insurance/change-log', methods=['GET'])
+@require_module('salary')
+def api_insurance_change_log_get():
+    staff_id = request.args.get('staff_id', '')
+    limit    = int(request.args.get('limit', 50))
+    with get_db() as conn:
+        if staff_id:
+            rows = conn.execute("""
+                SELECT cl.*, ps.name AS staff_name
+                FROM insurance_change_log cl
+                JOIN punch_staff ps ON ps.id = cl.staff_id
+                WHERE cl.staff_id = %s
+                ORDER BY cl.created_at DESC
+                LIMIT %s
+            """, (int(staff_id), limit)).fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT cl.*, ps.name AS staff_name
+                FROM insurance_change_log cl
+                JOIN punch_staff ps ON ps.id = cl.staff_id
+                ORDER BY cl.created_at DESC
+                LIMIT %s
+            """, (limit,)).fetchall()
+    result = []
+    for r in rows:
+        result.append({
+            'id':             r['id'],
+            'staff_id':       r['staff_id'],
+            'staff_name':     r['staff_name'],
+            'old_salary':     float(r['old_salary'] or 0),
+            'new_salary':     float(r['new_salary']),
+            'effective_date': r['effective_date'].isoformat() if r['effective_date'] else '',
+            'change_reason':  r['change_reason'] or '',
+            'created_at':     r['created_at'].isoformat() if r['created_at'] else '',
+            'created_by':     r['created_by'] or '',
+        })
+    return jsonify(result)
+
+
+@app.route('/api/insurance/change-log', methods=['POST'])
+@require_module('salary')
+def api_insurance_change_log_post():
+    b = request.get_json(force=True) or {}
+    staff_id       = b.get('staff_id')
+    new_salary     = b.get('new_salary')
+    effective_date = b.get('effective_date', '').strip()
+    change_reason  = b.get('change_reason', '').strip()
+    if not staff_id:
+        return jsonify({'error': '請選擇員工'}), 400
+    try:
+        new_salary = float(new_salary)
+        if new_salary <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return jsonify({'error': '投保薪資必須大於0'}), 400
+    if not effective_date:
+        return jsonify({'error': '請填寫生效日期'}), 400
+    try:
+        from datetime import date as _date
+        _date.fromisoformat(effective_date)
+    except ValueError:
+        return jsonify({'error': '日期格式錯誤'}), 400
+    with get_db() as conn:
+        staff = conn.execute(
+            "SELECT id, name, insured_salary FROM punch_staff WHERE id = %s",
+            (int(staff_id),)
+        ).fetchone()
+        if not staff:
+            return jsonify({'error': '找不到員工'}), 404
+        old_salary = float(staff['insured_salary'] or 0)
+        created_by = session.get('admin_user', '')
+        conn.execute(
+            "UPDATE punch_staff SET insured_salary = %s WHERE id = %s",
+            (new_salary, int(staff_id))
+        )
+        new_row = conn.execute("""
+            INSERT INTO insurance_change_log
+                (staff_id, old_salary, new_salary, effective_date, change_reason, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id, staff_id, old_salary, new_salary, effective_date,
+                      change_reason, created_at, created_by
+        """, (int(staff_id), old_salary, new_salary, effective_date, change_reason, created_by)
+        ).fetchone()
+    return jsonify({
+        'id':             new_row['id'],
+        'staff_id':       new_row['staff_id'],
+        'staff_name':     staff['name'],
+        'old_salary':     float(new_row['old_salary'] or 0),
+        'new_salary':     float(new_row['new_salary']),
+        'effective_date': new_row['effective_date'].isoformat(),
+        'change_reason':  new_row['change_reason'] or '',
+        'created_at':     new_row['created_at'].isoformat(),
+        'created_by':     new_row['created_by'] or '',
+    }), 201
+
+
+@app.route('/api/export/insurance-excel', methods=['GET'])
+@require_module('salary')
+def api_export_insurance_excel():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+    from openpyxl.utils import get_column_letter
+    from datetime import datetime as _dt
+    import io
+
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT id, name, department, role, insured_salary, base_salary,
+                   COALESCE(insurance_dependents, 0) AS insurance_dependents
+            FROM punch_staff
+            WHERE active = TRUE
+            ORDER BY name
+        """).fetchall()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '勞健保明細'
+
+    headers = ['序號', '姓名', '部門/職稱', '投保薪資', '眷屬口數',
+               '勞保員工', '健保員工', '員工合計扣款',
+               '勞保雇主', '健保雇主', '勞退提撥', '雇主合計成本']
+    header_fill = PatternFill('solid', fgColor='1F4E79')
+    for ci, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=ci, value=h)
+        cell.font = Font(bold=True, color='FFFFFF')
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
+
+    for ri, s in enumerate(rows, 2):
+        ins  = float(s['insured_salary'] or 0)
+        base = float(s['base_salary'] or 0)
+        deps = int(s['insurance_dependents'] or 0)
+        c = _calc_insurance(ins, base, deps)
+        dept_role = s['department'] or s['role'] or ''
+        ws.append([
+            ri - 1, s['name'], dept_role, ins, deps,
+            c['labor_emp'], c['health_emp'], c['total_emp_deduct'],
+            c['labor_employer'], c['health_employer'], c['pension'], c['total_employer_cost'],
+        ])
+
+    for ci in range(1, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(ci)].width = 14
+
+    now_ym = _dt.now().strftime('%Y%m')
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f'insurance_detail_{now_ym}.xlsx'
+    from flask import send_file
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
