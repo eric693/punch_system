@@ -16903,3 +16903,448 @@ def api_acc_dashboard():
         'ap_overdue': ap_overdue,
         'voucher_draft': voucher_draft,
     })
+
+
+# ══════════════════════════════════════════════════════════════
+# 會計記帳 Phase 5 — 發票 / 財務報表
+# ══════════════════════════════════════════════════════════════
+
+def init_invoice_db():
+    migrations = [
+        """CREATE TABLE IF NOT EXISTS acc_invoices (
+            id              SERIAL PRIMARY KEY,
+            invoice_no      TEXT NOT NULL UNIQUE,
+            invoice_type    TEXT NOT NULL DEFAULT 'sales',
+            invoice_date    DATE NOT NULL,
+            seller_ban      TEXT DEFAULT '',
+            seller_name     TEXT DEFAULT '',
+            buyer_ban       TEXT DEFAULT '',
+            buyer_name      TEXT DEFAULT '',
+            customer_id     INT REFERENCES crm_customers(id) ON DELETE SET NULL,
+            order_id        INT REFERENCES crm_orders(id) ON DELETE SET NULL,
+            shipment_id     INT REFERENCES inv_shipments(id) ON DELETE SET NULL,
+            po_id           INT REFERENCES inv_purchase_orders(id) ON DELETE SET NULL,
+            subtotal        NUMERIC(14,2) DEFAULT 0,
+            tax_rate        NUMERIC(5,2) DEFAULT 5,
+            tax_amount      NUMERIC(14,2) DEFAULT 0,
+            total           NUMERIC(14,2) DEFAULT 0,
+            items           JSONB DEFAULT '[]',
+            carrier_type    TEXT DEFAULT '',
+            carrier_id      TEXT DEFAULT '',
+            npc_code        TEXT DEFAULT '',
+            status          TEXT NOT NULL DEFAULT 'issued',
+            voucher_id      INT REFERENCES acc_vouchers(id) ON DELETE SET NULL,
+            notes           TEXT DEFAULT '',
+            created_by      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS acc_tax_filings (
+            id              SERIAL PRIMARY KEY,
+            filing_type     TEXT NOT NULL,
+            period          TEXT NOT NULL,
+            due_date        DATE,
+            filed_date      DATE,
+            tax_amount      NUMERIC(14,2) DEFAULT 0,
+            status          TEXT NOT NULL DEFAULT 'pending',
+            notes           TEXT DEFAULT '',
+            created_by      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_acc_invoices_date   ON acc_invoices(invoice_date, invoice_type)",
+        "CREATE INDEX IF NOT EXISTS idx_acc_invoices_cust   ON acc_invoices(customer_id)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_acc_tax_period ON acc_tax_filings(filing_type, period)",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[invoice_init] {str(e)[:120]}")
+
+init_invoice_db()
+
+
+def _invoice_row(r):
+    return {
+        'id': r['id'], 'invoice_no': r['invoice_no'],
+        'invoice_type': r['invoice_type'],
+        'invoice_date': str(r['invoice_date']) if r['invoice_date'] else None,
+        'seller_name': r['seller_name'], 'seller_ban': r['seller_ban'],
+        'buyer_name':  r['buyer_name'],  'buyer_ban':  r['buyer_ban'],
+        'customer_id': r['customer_id'],
+        'order_id': r['order_id'], 'shipment_id': r['shipment_id'], 'po_id': r['po_id'],
+        'subtotal':    float(r['subtotal'] or 0),
+        'tax_rate':    float(r['tax_rate'] or 5),
+        'tax_amount':  float(r['tax_amount'] or 0),
+        'total':       float(r['total'] or 0),
+        'items':       r['items'] if isinstance(r['items'], list) else [],
+        'carrier_type': r['carrier_type'], 'carrier_id': r['carrier_id'],
+        'npc_code': r['npc_code'], 'status': r['status'],
+        'notes': r['notes'], 'created_by': r['created_by'],
+        'created_at': str(r['created_at'])[:10] if r['created_at'] else None,
+    }
+
+
+# ── 發票 CRUD ─────────────────────────────────────────────────
+
+@app.route('/api/accounting/invoices', methods=['GET'])
+@require_module('accounting')
+def api_acc_invoices_list():
+    inv_type    = request.args.get('type', '').strip()
+    month       = request.args.get('month', '').strip()
+    customer_id = request.args.get('customer_id', '').strip()
+    status      = request.args.get('status', '').strip()
+    q           = request.args.get('q', '').strip()
+    sql = "SELECT * FROM acc_invoices WHERE 1=1"
+    params = []
+    if inv_type:
+        sql += " AND invoice_type=%s"; params.append(inv_type)
+    if month:
+        sql += " AND TO_CHAR(invoice_date,'YYYY-MM')=%s"; params.append(month)
+    if customer_id:
+        sql += " AND customer_id=%s"; params.append(int(customer_id))
+    if status:
+        sql += " AND status=%s"; params.append(status)
+    if q:
+        sql += " AND (invoice_no ILIKE %s OR buyer_name ILIKE %s OR seller_name ILIKE %s)"
+        params += [f'%{q}%', f'%{q}%', f'%{q}%']
+    sql += " ORDER BY invoice_date DESC, id DESC LIMIT 300"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return jsonify([_invoice_row(r) for r in rows])
+
+
+@app.route('/api/accounting/invoices', methods=['POST'])
+@require_module('accounting')
+def api_acc_invoice_create():
+    import datetime as _dt, json as _json
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    items = d.get('items', [])
+    subtotal   = float(d.get('subtotal', 0)) or sum(float(it.get('amount', 0)) for it in items)
+    tax_rate   = float(d.get('tax_rate', 5))
+    tax_amount = round(subtotal * tax_rate / 100, 2)
+    total      = round(subtotal + tax_amount, 2)
+    inv_date   = d.get('invoice_date') or str(_dt.date.today())
+    with get_db() as conn:
+        inv_no = _next_acc_no('INV', 'acc_invoices', 'invoice_no')
+        row = conn.execute(
+            """INSERT INTO acc_invoices
+               (invoice_no, invoice_type, invoice_date,
+                seller_ban, seller_name, buyer_ban, buyer_name,
+                customer_id, order_id, shipment_id, po_id,
+                subtotal, tax_rate, tax_amount, total, items,
+                carrier_type, carrier_id, npc_code, notes, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+               RETURNING *""",
+            (inv_no, d.get('invoice_type', 'sales'), inv_date,
+             d.get('seller_ban', ''), d.get('seller_name', ''),
+             d.get('buyer_ban', ''), d.get('buyer_name', ''),
+             d.get('customer_id') or None, d.get('order_id') or None,
+             d.get('shipment_id') or None, d.get('po_id') or None,
+             subtotal, tax_rate, tax_amount, total,
+             _json.dumps(items),
+             d.get('carrier_type', ''), d.get('carrier_id', ''),
+             d.get('npc_code', ''), d.get('notes', ''), admin)
+        ).fetchone()
+    return jsonify(_invoice_row(row)), 201
+
+
+@app.route('/api/accounting/invoices/<int:iid>/void', methods=['PUT'])
+@require_module('accounting')
+def api_acc_invoice_void(iid):
+    with get_db() as conn:
+        inv = conn.execute("SELECT status FROM acc_invoices WHERE id=%s", (iid,)).fetchone()
+        if not inv:
+            return jsonify({'error': '發票不存在'}), 404
+        if inv['status'] == 'void':
+            return jsonify({'error': '發票已作廢'}), 400
+        conn.execute(
+            "UPDATE acc_invoices SET status='void', updated_at=NOW() WHERE id=%s", (iid,)
+        )
+    return jsonify({'ok': True})
+
+
+@app.route('/api/accounting/invoices/from-shipment/<int:sid>', methods=['POST'])
+@require_module('accounting')
+def api_acc_invoice_from_shipment(sid):
+    """從出貨單自動開立銷售發票。"""
+    import datetime as _dt, json as _json
+    admin = session.get('admin_display', session.get('admin', ''))
+    with get_db() as conn:
+        sh = conn.execute("SELECT * FROM inv_shipments WHERE id=%s", (sid,)).fetchone()
+        if not sh:
+            return jsonify({'error': '出貨單不存在'}), 404
+        existing = conn.execute(
+            "SELECT id, invoice_no FROM acc_invoices WHERE shipment_id=%s AND status != 'void'",
+            (sid,)
+        ).fetchone()
+        if existing:
+            return jsonify({'error': f'此出貨單已有發票 {existing["invoice_no"]}'}), 409
+
+        ship_items = sh['items'] if isinstance(sh['items'], list) else []
+        inv_items  = [{'name': it.get('name',''), 'qty': it.get('qty',0), 'unit': it.get('unit','個'), 'unit_price': 0, 'amount': 0} for it in ship_items]
+        subtotal   = float(sh.get('total', 0) or 0)
+        tax_rate   = 5.0
+        tax_amount = round(subtotal * tax_rate / 100, 2)
+        total      = round(subtotal + tax_amount, 2)
+
+        inv_no = _next_acc_no('INV', 'acc_invoices', 'invoice_no')
+        row = conn.execute(
+            """INSERT INTO acc_invoices
+               (invoice_no, invoice_type, invoice_date,
+                buyer_name, customer_id, shipment_id, order_id,
+                subtotal, tax_rate, tax_amount, total, items, created_by)
+               VALUES (%s,'sales',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+            (inv_no, str(_dt.date.today()),
+             sh['customer_name'], sh['customer_id'], sid, sh['order_id'],
+             subtotal, tax_rate, tax_amount, total,
+             _json.dumps(inv_items), admin)
+        ).fetchone()
+    return jsonify(_invoice_row(row)), 201
+
+
+# ── 報稅記錄 ─────────────────────────────────────────────────
+
+@app.route('/api/accounting/tax-filings', methods=['GET'])
+@require_module('accounting')
+def api_acc_tax_filings_list():
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM acc_tax_filings ORDER BY period DESC, filing_type"
+        ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/accounting/tax-filings', methods=['POST'])
+@require_module('accounting')
+def api_acc_tax_filing_create():
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    with get_db() as conn:
+        conn.execute(
+            """INSERT INTO acc_tax_filings
+               (filing_type, period, due_date, tax_amount, status, notes, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s,%s)
+               ON CONFLICT (filing_type, period) DO UPDATE
+               SET tax_amount=%s, status=%s, notes=%s""",
+            (d.get('filing_type','vat_401'), d.get('period',''),
+             d.get('due_date') or None, d.get('tax_amount', 0),
+             d.get('status','pending'), d.get('notes',''), admin,
+             d.get('tax_amount',0), d.get('status','pending'), d.get('notes',''))
+        )
+    return jsonify({'ok': True}), 201
+
+
+@app.route('/api/accounting/tax-filings/<int:fid>', methods=['PUT'])
+@require_module('accounting')
+def api_acc_tax_filing_update(fid):
+    d = request.get_json() or {}
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE acc_tax_filings SET status=%s, filed_date=%s, tax_amount=%s, notes=%s WHERE id=%s",
+            (d.get('status','pending'), d.get('filed_date') or None,
+             d.get('tax_amount', 0), d.get('notes',''), fid)
+        )
+    return jsonify({'ok': True})
+
+
+# ── 進銷項稅額統計 ────────────────────────────────────────────
+
+@app.route('/api/accounting/tax-summary', methods=['GET'])
+@require_module('accounting')
+def api_acc_tax_summary():
+    period = request.args.get('period', '').strip()  # YYYY-MM or YYYY-Q1
+    if not period:
+        import datetime as _dt
+        period = _dt.date.today().strftime('%Y-%m')
+    with get_db() as conn:
+        sales = conn.execute(
+            """SELECT COALESCE(SUM(subtotal),0) AS subtotal,
+                      COALESCE(SUM(tax_amount),0) AS tax_amount,
+                      COUNT(*) AS cnt
+               FROM acc_invoices
+               WHERE invoice_type='sales' AND status='issued'
+               AND TO_CHAR(invoice_date,'YYYY-MM')=%s""", (period,)
+        ).fetchone()
+        purchase = conn.execute(
+            """SELECT COALESCE(SUM(subtotal),0) AS subtotal,
+                      COALESCE(SUM(tax_amount),0) AS tax_amount,
+                      COUNT(*) AS cnt
+               FROM acc_invoices
+               WHERE invoice_type='purchase' AND status='issued'
+               AND TO_CHAR(invoice_date,'YYYY-MM')=%s""", (period,)
+        ).fetchone()
+    sales_tax    = float(sales['tax_amount'] or 0)
+    purchase_tax = float(purchase['tax_amount'] or 0)
+    return jsonify({
+        'period': period,
+        'sales':    {'subtotal': float(sales['subtotal'] or 0), 'tax': sales_tax, 'count': sales['cnt']},
+        'purchase': {'subtotal': float(purchase['subtotal'] or 0), 'tax': purchase_tax, 'count': purchase['cnt']},
+        'payable_tax': round(sales_tax - purchase_tax, 2),
+    })
+
+
+# ── 三大財務報表 ──────────────────────────────────────────────
+
+@app.route('/api/accounting/trial-balance', methods=['GET'])
+@require_module('accounting')
+def api_acc_trial_balance():
+    """試算表：彙總已過帳傳票的各科目餘額。"""
+    month = request.args.get('month', '').strip()
+    sql = """
+        SELECT a.code, a.name, a.account_type, a.normal_balance, a.level,
+               COALESCE(SUM(l.debit),0)  AS total_debit,
+               COALESCE(SUM(l.credit),0) AS total_credit
+        FROM acc_accounts a
+        LEFT JOIN acc_voucher_lines l ON l.account_id = a.id
+        LEFT JOIN acc_vouchers v      ON v.id = l.voucher_id AND v.status = 'posted'
+    """
+    params = []
+    if month:
+        sql += " AND TO_CHAR(v.voucher_date,'YYYY-MM') <= %s"; params.append(month)
+    sql += " WHERE a.active=TRUE GROUP BY a.id, a.code, a.name, a.account_type, a.normal_balance, a.level ORDER BY a.sort_order, a.code"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        dr = float(r['total_debit'] or 0)
+        cr = float(r['total_credit'] or 0)
+        balance = dr - cr if r['normal_balance'] == 'debit' else cr - dr
+        result.append({
+            'code': r['code'], 'name': r['name'],
+            'account_type': r['account_type'], 'level': r['level'],
+            'total_debit': dr, 'total_credit': cr, 'balance': round(balance, 2),
+        })
+    return jsonify(result)
+
+
+@app.route('/api/accounting/income-statement', methods=['GET'])
+@require_module('accounting')
+def api_acc_income_statement():
+    """損益表：本期收入 - 成本費用。"""
+    year  = request.args.get('year', '').strip()
+    month = request.args.get('month', '').strip()
+    if not year:
+        import datetime as _dt
+        year = str(_dt.date.today().year)
+
+    date_filter = f"EXTRACT(YEAR FROM v.voucher_date)=%s"
+    params = [int(year)]
+    if month:
+        date_filter += " AND EXTRACT(MONTH FROM v.voucher_date)=%s"
+        params.append(int(month))
+
+    with get_db() as conn:
+        rows = conn.execute(f"""
+            SELECT a.code, a.name, a.account_type,
+                   COALESCE(SUM(l.debit),0)  AS dr,
+                   COALESCE(SUM(l.credit),0) AS cr
+            FROM acc_accounts a
+            JOIN acc_voucher_lines l ON l.account_id = a.id
+            JOIN acc_vouchers v      ON v.id = l.voucher_id AND v.status = 'posted'
+            WHERE a.account_type IN ('revenue','expense') AND {date_filter}
+            GROUP BY a.code, a.name, a.account_type
+            ORDER BY a.account_type DESC, a.code
+        """, params).fetchall()
+
+    revenue = 0.0
+    cogs    = 0.0
+    expense = 0.0
+    items   = []
+    for r in rows:
+        dr, cr = float(r['dr'] or 0), float(r['cr'] or 0)
+        amt = cr - dr if r['account_type'] == 'revenue' else dr - cr
+        items.append({'code': r['code'], 'name': r['name'], 'type': r['account_type'], 'amount': round(amt, 2)})
+        if r['account_type'] == 'revenue':
+            revenue += amt
+        elif r['code'].startswith('5'):
+            cogs += amt
+        else:
+            expense += amt
+
+    gross_profit  = round(revenue - cogs, 2)
+    operating_income = round(gross_profit - expense, 2)
+    return jsonify({
+        'period': f"{year}" + (f"-{month.zfill(2)}" if month else ""),
+        'revenue': round(revenue, 2), 'cogs': round(cogs, 2),
+        'gross_profit': gross_profit, 'expense': round(expense, 2),
+        'operating_income': operating_income,
+        'items': items,
+    })
+
+
+@app.route('/api/accounting/balance-sheet', methods=['GET'])
+@require_module('accounting')
+def api_acc_balance_sheet():
+    """資產負債表：截至特定日期的各科目餘額。"""
+    as_of = request.args.get('as_of_date', '').strip()
+    if not as_of:
+        import datetime as _dt
+        as_of = str(_dt.date.today())
+
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT a.code, a.name, a.account_type, a.normal_balance, a.level,
+                   COALESCE(SUM(l.debit),0)  AS dr,
+                   COALESCE(SUM(l.credit),0) AS cr
+            FROM acc_accounts a
+            LEFT JOIN acc_voucher_lines l ON l.account_id = a.id
+            LEFT JOIN acc_vouchers v      ON v.id = l.voucher_id
+                AND v.status = 'posted' AND v.voucher_date <= %s
+            WHERE a.account_type IN ('asset','liability','equity') AND a.active=TRUE
+            GROUP BY a.code, a.name, a.account_type, a.normal_balance, a.level
+            ORDER BY a.sort_order, a.code
+        """, (as_of,)).fetchall()
+
+    totals = {'asset': 0.0, 'liability': 0.0, 'equity': 0.0}
+    items  = []
+    for r in rows:
+        dr, cr = float(r['dr'] or 0), float(r['cr'] or 0)
+        balance = dr - cr if r['normal_balance'] == 'debit' else cr - dr
+        items.append({
+            'code': r['code'], 'name': r['name'],
+            'account_type': r['account_type'], 'level': r['level'],
+            'balance': round(balance, 2),
+        })
+        if r['level'] >= 2:
+            totals[r['account_type']] = totals.get(r['account_type'], 0) + balance
+
+    return jsonify({
+        'as_of_date': as_of,
+        'total_assets':      round(totals['asset'], 2),
+        'total_liabilities': round(totals['liability'], 2),
+        'total_equity':      round(totals['equity'], 2),
+        'items': items,
+    })
+
+
+# ── Excel 匯出 ────────────────────────────────────────────────
+
+@app.route('/api/export/invoices-excel', methods=['GET'])
+@require_module('accounting')
+def api_export_invoices_excel():
+    month = request.args.get('month', '').strip()
+    inv_type = request.args.get('type', '').strip()
+    from export_helpers import build_excel_response
+    sql = "SELECT * FROM acc_invoices WHERE status != 'void'"
+    params = []
+    if month:
+        sql += " AND TO_CHAR(invoice_date,'YYYY-MM')=%s"; params.append(month)
+    if inv_type:
+        sql += " AND invoice_type=%s"; params.append(inv_type)
+    sql += " ORDER BY invoice_date DESC, id DESC"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    headers = ['發票號碼','類型','日期','賣方統編','賣方','買方統編','買方','未稅金額','稅率','稅額','含稅總計','狀態','備註']
+    type_map = {'sales':'銷售','purchase':'進項','credit_note':'折讓'}
+    data = [[
+        r['invoice_no'], type_map.get(r['invoice_type'], r['invoice_type']),
+        str(r['invoice_date']) if r['invoice_date'] else '',
+        r['seller_ban'], r['seller_name'], r['buyer_ban'], r['buyer_name'],
+        float(r['subtotal'] or 0), f"{float(r['tax_rate'] or 5):.0f}%",
+        float(r['tax_amount'] or 0), float(r['total'] or 0),
+        r['status'], r['notes'],
+    ] for r in rows]
+    return build_excel_response(headers, data, f'invoices_{month or "all"}.xlsx')

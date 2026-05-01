@@ -2750,6 +2750,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <button id="acc-tab-receivables"  onclick="switchAccTab('receivables')"  style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">應收帳款<span class="nav-badge" id="badge-acc-ar" style="display:none;margin-left:4px;background:var(--orange)"></span></button>
       <button id="acc-tab-payables"     onclick="switchAccTab('payables')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">應付帳款<span class="nav-badge" id="badge-acc-ap" style="display:none;margin-left:4px;background:var(--red)"></span></button>
       <button id="acc-tab-accounts"     onclick="switchAccTab('accounts')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">科目設定</button>
+      <button id="acc-tab-invoices"     onclick="switchAccTab('invoices')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">發票管理</button>
+      <button id="acc-tab-reports"      onclick="switchAccTab('reports')"      style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">財務報表</button>
     </div>
 
     <!-- 儀表板 Panel -->
@@ -2857,6 +2859,105 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card" style="overflow:hidden"><div id="acc-accounts-wrap">
         <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
       </div></div>
+    </div>
+
+    <!-- 發票管理 Panel -->
+    <div id="acc-panel-invoices" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="filter-input" id="inv-filter-type" onchange="loadInvoices()" style="min-width:110px">
+          <option value="">全部類型</option>
+          <option value="sales">銷項發票</option>
+          <option value="purchase">進項發票</option>
+        </select>
+        <select class="filter-input" id="inv-filter-status" onchange="loadInvoices()" style="min-width:110px">
+          <option value="">全部狀態</option>
+          <option value="valid">有效</option>
+          <option value="void">作廢</option>
+        </select>
+        <input class="filter-input" id="inv-filter-month" type="month" onchange="loadInvoices()" style="min-width:130px" placeholder="年月">
+        <input class="filter-input" id="inv-filter-q" placeholder="搜尋發票號 / 客戶…" oninput="loadInvoices()" style="flex:1;min-width:160px">
+        <button class="btn btn-primary btn-sm" onclick="openInvoiceModal()">＋ 新增發票</button>
+        <a class="btn btn-outline btn-sm" id="inv-export-btn" href="/api/export/invoices-excel" target="_blank">匯出 Excel</a>
+      </div>
+      <!-- 稅額統計摘要 -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px" id="inv-stat-row">
+        <div class="card" style="padding:14px;border-left:4px solid var(--green)">
+          <div style="font-size:11px;color:var(--muted)">銷項稅額</div>
+          <div id="inv-stat-sales-tax" style="font-size:20px;font-weight:800;color:var(--green)">—</div>
+        </div>
+        <div class="card" style="padding:14px;border-left:4px solid var(--red)">
+          <div style="font-size:11px;color:var(--muted)">進項稅額</div>
+          <div id="inv-stat-pur-tax" style="font-size:20px;font-weight:800;color:var(--red)">—</div>
+        </div>
+        <div class="card" style="padding:14px;border-left:4px solid var(--navy)">
+          <div style="font-size:11px;color:var(--muted)">應納稅額</div>
+          <div id="inv-stat-net-tax" style="font-size:20px;font-weight:800;color:var(--navy)">—</div>
+        </div>
+        <div class="card" style="padding:14px;border-left:4px solid var(--accent)">
+          <div style="font-size:11px;color:var(--muted)">本期筆數</div>
+          <div id="inv-stat-count" style="font-size:20px;font-weight:800;color:var(--accent)">—</div>
+        </div>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="acc-invoices-wrap"></div></div>
+    </div>
+
+    <!-- 財務報表 Panel -->
+    <div id="acc-panel-reports" style="display:none">
+      <!-- 子頁籤 -->
+      <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0">
+        <button id="rpt-tab-trial"   onclick="switchRptTab('trial')"   style="padding:6px 16px;background:none;border:none;border-bottom:2px solid var(--accent);cursor:pointer;font-size:12px;font-weight:700;color:var(--navy)">試算表</button>
+        <button id="rpt-tab-income"  onclick="switchRptTab('income')"  style="padding:6px 16px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:12px;color:var(--muted)">損益表</button>
+        <button id="rpt-tab-balance" onclick="switchRptTab('balance')" style="padding:6px 16px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:12px;color:var(--muted)">資產負債表</button>
+        <button id="rpt-tab-tax"     onclick="switchRptTab('tax')"     style="padding:6px 16px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:12px;color:var(--muted)">稅務申報</button>
+      </div>
+
+      <!-- 試算表 -->
+      <div id="rpt-panel-trial">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:600;color:var(--navy)">試算表</span>
+          <input type="month" id="rpt-trial-month" class="filter-input" style="min-width:130px">
+          <button class="btn btn-primary btn-sm" onclick="loadTrialBalance()">產生報表</button>
+        </div>
+        <div class="card" style="overflow:hidden"><div id="rpt-trial-wrap">
+          <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">請選擇月份後點擊「產生報表」</div>
+        </div></div>
+      </div>
+
+      <!-- 損益表 -->
+      <div id="rpt-panel-income" style="display:none">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:600;color:var(--navy)">損益表</span>
+          <input type="month" id="rpt-income-month" class="filter-input" style="min-width:130px">
+          <button class="btn btn-primary btn-sm" onclick="loadIncomeStatement()">產生報表</button>
+        </div>
+        <div class="card" style="overflow:hidden"><div id="rpt-income-wrap">
+          <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">請選擇月份後點擊「產生報表」</div>
+        </div></div>
+      </div>
+
+      <!-- 資產負債表 -->
+      <div id="rpt-panel-balance" style="display:none">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:600;color:var(--navy)">資產負債表</span>
+          <input type="date" id="rpt-balance-date" class="filter-input" style="min-width:140px">
+          <button class="btn btn-primary btn-sm" onclick="loadBalanceSheet()">產生報表</button>
+        </div>
+        <div class="card" style="overflow:hidden"><div id="rpt-balance-wrap">
+          <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">請選擇日期後點擊「產生報表」</div>
+        </div></div>
+      </div>
+
+      <!-- 稅務申報 -->
+      <div id="rpt-panel-tax" style="display:none">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:600;color:var(--navy)">稅務申報摘要</span>
+          <input type="month" id="rpt-tax-month" class="filter-input" style="min-width:130px">
+          <button class="btn btn-primary btn-sm" onclick="loadTaxSummary()">查詢</button>
+        </div>
+        <div id="rpt-tax-wrap">
+          <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">請選擇月份後點擊「查詢」</div>
+        </div>
+      </div>
     </div>
   </div><!-- end page-accounting -->
 
@@ -3023,6 +3124,70 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
         <button class="btn btn-outline" onclick="closeAPPayModal()">取消</button>
         <button class="btn btn-primary" onclick="submitAPPayment()">確認付款</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 發票 Modal ── -->
+  <div id="inv-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:640px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+        <div id="inv-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">新增發票</div>
+        <button onclick="closeInvoiceModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <input type="hidden" id="inv-modal-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label class="form-label">發票類型 *</label>
+          <select class="form-input" id="inv-modal-type">
+            <option value="sales">銷項發票</option>
+            <option value="purchase">進項發票</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">發票號碼 *</label>
+          <input class="form-input" id="inv-modal-no" placeholder="例：AB12345678">
+        </div>
+        <div>
+          <label class="form-label">開票日期 *</label>
+          <input class="form-input" type="date" id="inv-modal-date">
+        </div>
+        <div>
+          <label class="form-label">申報期間</label>
+          <input class="form-input" type="month" id="inv-modal-period" placeholder="YYYY-MM">
+        </div>
+        <div>
+          <label class="form-label">買方名稱</label>
+          <input class="form-input" id="inv-modal-buyer-name" placeholder="公司名稱">
+        </div>
+        <div>
+          <label class="form-label">買方統編</label>
+          <input class="form-input" id="inv-modal-buyer-tin" placeholder="統一編號">
+        </div>
+        <div>
+          <label class="form-label">稅前金額 *</label>
+          <input class="form-input" id="inv-modal-subtotal" type="number" min="0" step="0.01" oninput="calcInvTax()">
+        </div>
+        <div>
+          <label class="form-label">稅率 (%)</label>
+          <input class="form-input" id="inv-modal-tax-rate" type="number" value="5" min="0" max="100" oninput="calcInvTax()">
+        </div>
+        <div>
+          <label class="form-label">稅額</label>
+          <input class="form-input" id="inv-modal-tax-amount" type="number" min="0" step="0.01" readonly style="background:#f8f9fa">
+        </div>
+        <div>
+          <label class="form-label">含稅總額</label>
+          <input class="form-input" id="inv-modal-total" type="number" readonly style="background:#f8f9fa">
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <label class="form-label">備註</label>
+        <input class="form-input" id="inv-modal-note" placeholder="選填">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <button class="btn btn-outline" onclick="closeInvoiceModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveInvoice()">儲存</button>
       </div>
     </div>
   </div>
@@ -20138,7 +20303,7 @@ async function initAccounting() {
 
 function switchAccTab(tab) {
   _accCurrentTab = tab;
-  ['dashboard','vouchers','receivables','payables','accounts'].forEach(t => {
+  ['dashboard','vouchers','receivables','payables','accounts','invoices','reports'].forEach(t => {
     const btn   = document.getElementById('acc-tab-' + t);
     const panel = document.getElementById('acc-panel-' + t);
     if (btn)   { btn.style.borderBottomColor = t===tab?'var(--accent)':'transparent'; btn.style.fontWeight = t===tab?'700':'400'; btn.style.color = t===tab?'var(--navy)':'var(--muted)'; }
@@ -20149,6 +20314,19 @@ function switchAccTab(tab) {
   if (tab==='receivables') loadARList();
   if (tab==='payables')    loadAPList();
   if (tab==='accounts')    renderAccAccountsTable();
+  if (tab==='invoices')    loadInvoices();
+  if (tab==='reports')     { /* sub-tabs; user selects */ }
+}
+
+let _rptCurrentTab = 'trial';
+function switchRptTab(tab) {
+  _rptCurrentTab = tab;
+  ['trial','income','balance','tax'].forEach(t => {
+    const btn   = document.getElementById('rpt-tab-' + t);
+    const panel = document.getElementById('rpt-panel-' + t);
+    if (btn)   { btn.style.borderBottomColor = t===tab?'var(--accent)':'transparent'; btn.style.fontWeight = t===tab?'700':'400'; btn.style.color = t===tab?'var(--navy)':'var(--muted)'; }
+    if (panel) panel.style.display = t===tab ? '' : 'none';
+  });
 }
 
 // ── 儀表板 ───────────────────────────────────────────────────
@@ -20559,6 +20737,312 @@ function renderAccAccountsTable() {
     <td style="font-size:12px">${r.normal_balance==='debit'?'借方':'貸方'}</td>
     <td style="font-size:12px;color:var(--muted)">${r.level}</td>
   </tr>`).join('')}</tbody></table>`;
+}
+
+// ── 發票管理 ─────────────────────────────────────────────────
+
+const INV_TYPE_LABEL  = { sales:'銷項', purchase:'進項' };
+const INV_STATUS_LABEL = { valid:'有效', void:'作廢' };
+
+async function loadInvoices() {
+  const type   = document.getElementById('inv-filter-type')?.value   || '';
+  const status = document.getElementById('inv-filter-status')?.value || '';
+  const month  = document.getElementById('inv-filter-month')?.value  || '';
+  const q      = document.getElementById('inv-filter-q')?.value      || '';
+  const wrap   = document.getElementById('acc-invoices-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">載入中…</div>';
+
+  let url = '/api/accounting/invoices?limit=200';
+  if (type)   url += '&invoice_type=' + encodeURIComponent(type);
+  if (status) url += '&status='       + encodeURIComponent(status);
+  if (month)  url += '&month='        + encodeURIComponent(month);
+  if (q)      url += '&q='            + encodeURIComponent(q);
+
+  const { ok, data } = await api(url, {}, true);
+  if (!ok) { wrap.innerHTML = '<div style="padding:24px;color:var(--red)">載入失敗</div>'; return; }
+
+  // stat cards
+  const salesTax = data.reduce((s,r)=> r.invoice_type==='sales'  && r.status==='valid' ? s+parseFloat(r.tax_amount||0) : s, 0);
+  const purTax   = data.reduce((s,r)=> r.invoice_type==='purchase'&& r.status==='valid' ? s+parseFloat(r.tax_amount||0) : s, 0);
+  const netTax   = salesTax - purTax;
+  const el = id => document.getElementById(id);
+  if (el('inv-stat-sales-tax')) el('inv-stat-sales-tax').textContent = 'NT$'+Math.round(salesTax).toLocaleString();
+  if (el('inv-stat-pur-tax'))   el('inv-stat-pur-tax').textContent   = 'NT$'+Math.round(purTax).toLocaleString();
+  if (el('inv-stat-net-tax'))   el('inv-stat-net-tax').textContent   = 'NT$'+Math.round(netTax).toLocaleString();
+  if (el('inv-stat-count'))     el('inv-stat-count').textContent     = data.filter(r=>r.status==='valid').length;
+
+  if (!data.length) {
+    wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無發票資料</div>'; return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>發票號碼</th><th>類型</th><th>開票日期</th><th>買方</th><th>統編</th>
+    <th style="text-align:right">稅前金額</th><th style="text-align:right">稅額</th>
+    <th style="text-align:right">含稅總額</th><th>狀態</th><th>操作</th>
+  </tr></thead><tbody>${data.map(r=>{
+    const isVoid = r.status==='void';
+    return `<tr style="${isVoid?'opacity:.5':''}">
+      <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${escHtml(r.invoice_no)}</td>
+      <td><span style="background:${r.invoice_type==='sales'?'var(--green)':'var(--navy)'};color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">${INV_TYPE_LABEL[r.invoice_type]||r.invoice_type}</span></td>
+      <td style="font-size:12px">${r.invoice_date||'—'}</td>
+      <td style="font-size:12px">${escHtml(r.buyer_name||'—')}</td>
+      <td style="font-size:12px;font-family:'DM Mono',monospace">${escHtml(r.buyer_tin||'—')}</td>
+      <td style="text-align:right;font-size:12px">NT$${Math.round(r.subtotal||0).toLocaleString()}</td>
+      <td style="text-align:right;font-size:12px">NT$${Math.round(r.tax_amount||0).toLocaleString()}</td>
+      <td style="text-align:right;font-size:12px;font-weight:600">NT$${Math.round(r.total_amount||0).toLocaleString()}</td>
+      <td><span style="background:${isVoid?'var(--muted)':'var(--green)'};color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">${INV_STATUS_LABEL[r.status]||r.status}</span></td>
+      <td style="white-space:nowrap">
+        ${!isVoid ? `<button class="btn btn-outline btn-sm" onclick="openInvoiceModal(${r.id})">編輯</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="voidInvoice(${r.id},'${escHtml(r.invoice_no)}')">作廢</button>` : '—'}
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function openInvoiceModal(id) {
+  document.getElementById('inv-modal-id').value   = id || '';
+  document.getElementById('inv-modal-title').textContent = id ? '編輯發票' : '新增發票';
+  document.getElementById('inv-modal-no').value          = '';
+  document.getElementById('inv-modal-type').value        = 'sales';
+  document.getElementById('inv-modal-date').value        = new Date().toISOString().slice(0,10);
+  document.getElementById('inv-modal-period').value      = new Date().toISOString().slice(0,7);
+  document.getElementById('inv-modal-buyer-name').value  = '';
+  document.getElementById('inv-modal-buyer-tin').value   = '';
+  document.getElementById('inv-modal-subtotal').value    = '';
+  document.getElementById('inv-modal-tax-rate').value    = '5';
+  document.getElementById('inv-modal-tax-amount').value  = '';
+  document.getElementById('inv-modal-total').value       = '';
+  document.getElementById('inv-modal-note').value        = '';
+
+  if (id) {
+    api(`/api/accounting/invoices/${id}`, {}, true).then(({ok, data}) => {
+      if (!ok) return;
+      document.getElementById('inv-modal-no').value         = data.invoice_no   || '';
+      document.getElementById('inv-modal-type').value       = data.invoice_type || 'sales';
+      document.getElementById('inv-modal-date').value       = data.invoice_date || '';
+      document.getElementById('inv-modal-period').value     = data.period_month || '';
+      document.getElementById('inv-modal-buyer-name').value = data.buyer_name   || '';
+      document.getElementById('inv-modal-buyer-tin').value  = data.buyer_tin    || '';
+      document.getElementById('inv-modal-subtotal').value   = data.subtotal     || '';
+      document.getElementById('inv-modal-tax-rate').value   = data.tax_rate != null ? data.tax_rate : '5';
+      document.getElementById('inv-modal-tax-amount').value = data.tax_amount   || '';
+      document.getElementById('inv-modal-total').value      = data.total_amount || '';
+      document.getElementById('inv-modal-note').value       = data.note         || '';
+    });
+  }
+  document.getElementById('inv-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+function closeInvoiceModal() { document.getElementById('inv-modal-bg').style.display = 'none'; }
+
+function calcInvTax() {
+  const sub  = parseFloat(document.getElementById('inv-modal-subtotal').value) || 0;
+  const rate = parseFloat(document.getElementById('inv-modal-tax-rate').value) || 0;
+  const tax  = Math.round(sub * rate / 100);
+  document.getElementById('inv-modal-tax-amount').value = tax;
+  document.getElementById('inv-modal-total').value      = sub + tax;
+}
+
+async function saveInvoice() {
+  const id      = document.getElementById('inv-modal-id').value;
+  const no      = document.getElementById('inv-modal-no').value.trim();
+  const subtotal= parseFloat(document.getElementById('inv-modal-subtotal').value);
+  if (!no)             { showToast('請填寫發票號碼','warning'); return; }
+  if (isNaN(subtotal)) { showToast('請填寫稅前金額','warning'); return; }
+
+  const payload = {
+    invoice_no:   no,
+    invoice_type: document.getElementById('inv-modal-type').value,
+    invoice_date: document.getElementById('inv-modal-date').value,
+    period_month: document.getElementById('inv-modal-period').value,
+    buyer_name:   document.getElementById('inv-modal-buyer-name').value.trim(),
+    buyer_tin:    document.getElementById('inv-modal-buyer-tin').value.trim(),
+    subtotal,
+    tax_rate:     parseFloat(document.getElementById('inv-modal-tax-rate').value)||0,
+    tax_amount:   parseFloat(document.getElementById('inv-modal-tax-amount').value)||0,
+    total_amount: parseFloat(document.getElementById('inv-modal-total').value)||0,
+    note:         document.getElementById('inv-modal-note').value.trim(),
+  };
+
+  const url    = id ? `/api/accounting/invoices/${id}` : '/api/accounting/invoices';
+  const method = id ? 'PUT' : 'POST';
+  const { ok, data } = await api(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast('發票已儲存','success');
+  closeInvoiceModal();
+  loadInvoices();
+}
+
+async function voidInvoice(id, no) {
+  if (!confirm(`確定要作廢發票 ${no}？此操作無法還原。`)) return;
+  const { ok, data } = await api(`/api/accounting/invoices/${id}/void`, { method:'POST' });
+  if (!ok) { showToast(data?.error||'作廢失敗','error'); return; }
+  showToast('發票已作廢','success');
+  loadInvoices();
+}
+
+// ── 財務報表 ─────────────────────────────────────────────────
+
+async function loadTrialBalance() {
+  const month = document.getElementById('rpt-trial-month').value;
+  if (!month) { showToast('請選擇月份','warning'); return; }
+  const wrap = document.getElementById('rpt-trial-wrap');
+  wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">計算中…</div>';
+  const { ok, data } = await api(`/api/accounting/trial-balance?month=${month}`, {}, true);
+  if (!ok) { wrap.innerHTML = '<div style="padding:24px;color:var(--red)">載入失敗</div>'; return; }
+  if (!data.length) { wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">該期間無過帳傳票</div>'; return; }
+
+  const totalDr = data.reduce((s,r)=>s+parseFloat(r.total_debit ||0),0);
+  const totalCr = data.reduce((s,r)=>s+parseFloat(r.total_credit||0),0);
+  const balanced = Math.abs(totalDr-totalCr)<0.01;
+
+  wrap.innerHTML = `
+    <div style="padding:12px 16px;background:${balanced?'#f0fff4':'#fff5f5'};border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:${balanced?'var(--green)':'var(--red)'}">
+      ${balanced?'✓ 借貸平衡':'⚠ 借貸不平衡'} &nbsp;|&nbsp; 借方合計：NT$${Math.round(totalDr).toLocaleString()} &nbsp;貸方合計：NT$${Math.round(totalCr).toLocaleString()}
+    </div>
+    <table class="data-table" style="margin:0"><thead><tr>
+      <th>科目代號</th><th>科目名稱</th>
+      <th style="text-align:right">借方合計</th><th style="text-align:right">貸方合計</th><th style="text-align:right">餘額</th>
+    </tr></thead><tbody>${data.map(r=>{
+      const bal = parseFloat(r.total_debit||0)-parseFloat(r.total_credit||0);
+      return `<tr>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(r.code)}</td>
+        <td style="font-size:13px">${escHtml(r.name)}</td>
+        <td style="text-align:right;font-size:12px">${r.total_debit>0?'NT$'+Math.round(r.total_debit).toLocaleString():'—'}</td>
+        <td style="text-align:right;font-size:12px">${r.total_credit>0?'NT$'+Math.round(r.total_credit).toLocaleString():'—'}</td>
+        <td style="text-align:right;font-size:12px;font-weight:600;color:${bal>=0?'var(--navy)':'var(--red)'}">${bal!==0?'NT$'+Math.round(Math.abs(bal)).toLocaleString()+(bal<0?' (貸)':' (借)'):'—'}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+async function loadIncomeStatement() {
+  const month = document.getElementById('rpt-income-month').value;
+  if (!month) { showToast('請選擇月份','warning'); return; }
+  const wrap = document.getElementById('rpt-income-wrap');
+  wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">計算中…</div>';
+  const [y,m] = month.split('-');
+  const { ok, data } = await api(`/api/accounting/income-statement?year=${y}&month=${m}`, {}, true);
+  if (!ok) { wrap.innerHTML = '<div style="padding:24px;color:var(--red)">載入失敗</div>'; return; }
+
+  const rev  = parseFloat(data.revenue||0);
+  const cogs = parseFloat(data.cogs   ||0);
+  const exp  = parseFloat(data.expenses||0);
+  const gross= rev-cogs;
+  const net  = gross-exp;
+
+  const row = (label,val,bold,color)=>`<tr${bold?' style="font-weight:700;border-top:2px solid var(--border)"':''}>
+    <td style="padding:8px 16px;font-size:13px${color?';color:'+color:''}">${label}</td>
+    <td style="text-align:right;padding:8px 16px;font-size:13px;font-weight:${bold?700:400}${color?';color:'+color:''}">NT$${Math.round(Math.abs(val)).toLocaleString()}</td>
+  </tr>`;
+
+  wrap.innerHTML = `<table style="width:100%;border-collapse:collapse">
+    <thead><tr style="background:var(--navy);color:#fff"><th style="padding:10px 16px;text-align:left">損益表 ${y}年${m}月</th><th style="padding:10px 16px;text-align:right">金額</th></tr></thead>
+    <tbody>
+      ${row('營業收入',rev,false,'var(--green)')}
+      ${row('銷貨成本',cogs,false,'var(--muted)')}
+      ${row('毛利',gross,true,gross>=0?'var(--green)':'var(--red)')}
+      ${row('營業費用',exp,false,'var(--muted)')}
+      ${row('本期淨利',net,true,net>=0?'var(--green)':'var(--red)')}
+    </tbody>
+  </table>
+  ${(data.revenue_detail||[]).length?`<div style="padding:12px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)">
+    收入明細：${(data.revenue_detail||[]).map(r=>`${escHtml(r.name)} NT$${Math.round(r.amount).toLocaleString()}`).join('、')}
+  </div>`:''}`;
+}
+
+async function loadBalanceSheet() {
+  const asOf = document.getElementById('rpt-balance-date').value;
+  if (!asOf) { showToast('請選擇日期','warning'); return; }
+  const wrap = document.getElementById('rpt-balance-wrap');
+  wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">計算中…</div>';
+  const { ok, data } = await api(`/api/accounting/balance-sheet?as_of_date=${asOf}`, {}, true);
+  if (!ok) { wrap.innerHTML = '<div style="padding:24px;color:var(--red)">載入失敗</div>'; return; }
+
+  const section = (title, items, color) => {
+    const total = items.reduce((s,r)=>s+parseFloat(r.balance||0),0);
+    return `<tr style="background:#f8f9fa"><td colspan="2" style="padding:8px 16px;font-weight:700;font-size:13px;color:${color}">${title}</td></tr>
+      ${items.map(r=>`<tr><td style="padding:4px 16px 4px 28px;font-size:12px">${escHtml(r.name)}</td>
+        <td style="text-align:right;padding:4px 16px;font-size:12px">NT$${Math.round(Math.abs(r.balance||0)).toLocaleString()}</td></tr>`).join('')}
+      <tr style="border-top:1px solid var(--border)"><td style="padding:6px 16px;font-weight:700;font-size:12px">${title} 合計</td>
+        <td style="text-align:right;padding:6px 16px;font-weight:700;font-size:12px;color:${color}">NT$${Math.round(Math.abs(total)).toLocaleString()}</td></tr>`;
+  };
+
+  const assets      = data.filter(r=>r.account_type==='asset');
+  const liabilities = data.filter(r=>r.account_type==='liability');
+  const equity      = data.filter(r=>r.account_type==='equity');
+
+  wrap.innerHTML = `<table style="width:100%;border-collapse:collapse">
+    <thead><tr style="background:var(--navy);color:#fff"><th style="padding:10px 16px;text-align:left">資產負債表 截至 ${asOf}</th><th style="padding:10px 16px;text-align:right">金額</th></tr></thead>
+    <tbody>
+      ${section('資產',assets,'var(--green)')}
+      ${section('負債',liabilities,'var(--red)')}
+      ${section('股東權益',equity,'var(--navy)')}
+    </tbody>
+  </table>`;
+}
+
+async function loadTaxSummary() {
+  const month = document.getElementById('rpt-tax-month').value;
+  if (!month) { showToast('請選擇月份','warning'); return; }
+  const wrap = document.getElementById('rpt-tax-wrap');
+  wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">計算中…</div>';
+  const { ok, data } = await api(`/api/accounting/tax-summary?month=${month}`, {}, true);
+  if (!ok) { wrap.innerHTML = '<div style="padding:24px;color:var(--red)">載入失敗</div>'; return; }
+
+  const salesTax = parseFloat(data.sales_tax   ||0);
+  const purTax   = parseFloat(data.purchase_tax ||0);
+  const netTax   = salesTax - purTax;
+  const salesAmt = parseFloat(data.sales_amount ||0);
+  const purAmt   = parseFloat(data.purchase_amount||0);
+
+  wrap.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
+      <div class="card" style="padding:18px;border-left:4px solid var(--green)">
+        <div style="font-size:11px;color:var(--muted)">銷項稅額</div>
+        <div style="font-size:22px;font-weight:800;color:var(--green)">NT$${Math.round(salesTax).toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">銷售額：NT$${Math.round(salesAmt).toLocaleString()}</div>
+      </div>
+      <div class="card" style="padding:18px;border-left:4px solid var(--red)">
+        <div style="font-size:11px;color:var(--muted)">進項稅額</div>
+        <div style="font-size:22px;font-weight:800;color:var(--red)">NT$${Math.round(purTax).toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">採購額：NT$${Math.round(purAmt).toLocaleString()}</div>
+      </div>
+      <div class="card" style="padding:18px;border-left:4px solid var(--navy)">
+        <div style="font-size:11px;color:var(--muted)">應納稅額（銷-進）</div>
+        <div style="font-size:22px;font-weight:800;color:${netTax>=0?'var(--navy)':'var(--green)'}">NT$${Math.round(Math.abs(netTax)).toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">${netTax>=0?'應繳稅款':'留抵稅額'}</div>
+      </div>
+    </div>
+    <div class="card" style="padding:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">申報明細 ${month}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f8f9fa;border-bottom:1px solid var(--border)">
+          <th style="padding:8px;text-align:left">項目</th>
+          <th style="padding:8px;text-align:right">筆數</th>
+          <th style="padding:8px;text-align:right">銷售/採購額</th>
+          <th style="padding:8px;text-align:right">稅額</th>
+        </tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px">銷項發票</td>
+            <td style="text-align:right;padding:8px">${data.sales_count||0} 張</td>
+            <td style="text-align:right;padding:8px">NT$${Math.round(salesAmt).toLocaleString()}</td>
+            <td style="text-align:right;padding:8px;color:var(--green);font-weight:600">NT$${Math.round(salesTax).toLocaleString()}</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px">進項發票</td>
+            <td style="text-align:right;padding:8px">${data.purchase_count||0} 張</td>
+            <td style="text-align:right;padding:8px">NT$${Math.round(purAmt).toLocaleString()}</td>
+            <td style="text-align:right;padding:8px;color:var(--red);font-weight:600">NT$${Math.round(purTax).toLocaleString()}</td>
+          </tr>
+          <tr style="background:#f8f9fa;font-weight:700">
+            <td style="padding:8px">合計</td>
+            <td style="text-align:right;padding:8px">${(data.sales_count||0)+(data.purchase_count||0)} 張</td>
+            <td style="text-align:right;padding:8px">—</td>
+            <td style="text-align:right;padding:8px;color:${netTax>=0?'var(--navy)':'var(--green)'}">NT$${Math.round(Math.abs(netTax)).toLocaleString()} ${netTax>=0?'（應繳）':'（留抵）'}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
 }
 </script>
 </html>
