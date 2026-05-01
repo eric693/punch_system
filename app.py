@@ -14147,3 +14147,107 @@ def api_labor_law_reset():
         conn.execute("DELETE FROM labor_law_amendments")
         conn.execute("DELETE FROM labor_law_check_log")
     return jsonify({'ok': True})
+
+
+@app.route('/api/hr-analysis/overview')
+@login_required
+def api_hr_analysis_overview():
+    year = request.args.get('year', str(datetime.now().year))
+    months = [f"{year}-{str(m).zfill(2)}" for m in range(1, 13)]
+    with get_db() as conn:
+        salary_rows = conn.execute("""
+            SELECT month, COALESCE(SUM(net_pay), 0) AS total
+            FROM salary_records
+            WHERE month LIKE %s
+            GROUP BY month
+        """, (f"{year}-%",)).fetchall()
+        salary_map = {r['month']: float(r['total']) for r in salary_rows}
+
+        ot_rows = conn.execute("""
+            SELECT TO_CHAR(request_date, 'YYYY-MM') AS month,
+                   COALESCE(SUM(ot_pay), 0) AS total
+            FROM overtime_requests
+            WHERE status = 'approved'
+              AND TO_CHAR(request_date, 'YYYY') = %s
+            GROUP BY TO_CHAR(request_date, 'YYYY-MM')
+        """, (year,)).fetchall()
+        ot_map = {r['month']: float(r['total']) for r in ot_rows}
+
+        staff_count = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM punch_staff WHERE active = TRUE"
+        ).fetchone()['cnt']
+
+    salary_cost = [salary_map.get(m, 0.0) for m in months]
+    ot_cost = [ot_map.get(m, 0.0) for m in months]
+    total_salary_year = sum(salary_cost)
+    total_ot_year = sum(ot_cost)
+    avg_monthly_salary = round(total_salary_year / 12, 2)
+
+    return jsonify({
+        'months': months,
+        'salary_cost': salary_cost,
+        'ot_cost': ot_cost,
+        'headcount': [staff_count] * 12,
+        'total_salary_year': total_salary_year,
+        'total_ot_year': total_ot_year,
+        'avg_monthly_salary': avg_monthly_salary,
+        'staff_count': staff_count,
+    })
+
+
+@app.route('/api/hr-analysis/dept-breakdown')
+@login_required
+def api_hr_analysis_dept_breakdown():
+    month = request.args.get('month', datetime.now().strftime('%Y-%m'))
+    with get_db() as conn:
+        dept_rows = conn.execute("""
+            SELECT
+                CASE
+                    WHEN ps.department IS NOT NULL AND ps.department != '' THEN ps.department
+                    WHEN ps.role IS NOT NULL AND ps.role != '' THEN ps.role
+                    ELSE '未分類'
+                END AS dept,
+                COALESCE(SUM(sr.net_pay), 0) AS total_pay,
+                COUNT(sr.id) AS headcount,
+                COALESCE(AVG(sr.net_pay), 0) AS avg_pay
+            FROM salary_records sr
+            JOIN punch_staff ps ON ps.id = sr.staff_id
+            WHERE sr.month = %s
+            GROUP BY dept
+            ORDER BY total_pay DESC
+        """, (month,)).fetchall()
+
+        leave_rows = conn.execute("""
+            SELECT lt.name, lt.color,
+                   COALESCE(SUM(lr.total_days), 0) AS days
+            FROM leave_requests lr
+            JOIN leave_types lt ON lt.id = lr.leave_type_id
+            WHERE lr.status = 'approved'
+              AND lr.start_date >= %s
+              AND lr.start_date < (DATE_TRUNC('month', %s::date) + INTERVAL '1 month')::date
+            GROUP BY lt.name, lt.color
+        """, (f"{month}-01", f"{month}-01")).fetchall()
+
+        ot_row = conn.execute("""
+            SELECT COALESCE(SUM(ot_hours), 0) AS total_hours,
+                   COALESCE(SUM(ot_pay), 0) AS total_pay
+            FROM overtime_requests
+            WHERE status = 'approved'
+              AND TO_CHAR(request_date, 'YYYY-MM') = %s
+        """, (month,)).fetchone()
+
+    labels = [r['dept'] for r in dept_rows]
+    salary = [float(r['total_pay']) for r in dept_rows]
+    headcount = [r['headcount'] for r in dept_rows]
+    avg_salary = [round(float(r['avg_pay']), 2) for r in dept_rows]
+    leave_types = [{'name': r['name'], 'days': float(r['days']), 'color': r['color'] or '#4a7bda'} for r in leave_rows]
+
+    return jsonify({
+        'labels': labels,
+        'salary': salary,
+        'headcount': headcount,
+        'avg_salary': avg_salary,
+        'leave_types': leave_types,
+        'ot_total_hours': float(ot_row['total_hours']),
+        'ot_total_pay': float(ot_row['total_pay']),
+    })

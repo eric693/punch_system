@@ -228,6 +228,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <a href="#" class="nav-item"        id="nav-travel"   data-i18n="nav.travel"   onclick="showPage('travel',event)">差旅申請<span class="nav-badge" id="badge-travel" style="display:none"></span></a>
     <a href="#" class="nav-item"        id="nav-assets"   data-i18n="nav.assets"   onclick="showPage('assets',event)">資產管理</a>
     <a href="#" class="nav-item"        id="nav-labor-law" data-i18n="nav.labor_law" onclick="showPage('labor-law',event)">勞基法通知</a>
+    <a href="#" class="nav-item"        id="nav-report-center" data-i18n="nav.report_center" onclick="showPage('report-center',event)">報表中心</a>
+    <a href="#" class="nav-item"        id="nav-hr-analysis" data-i18n="nav.hr_analysis" onclick="showPage('hr-analysis',event)">人力成本分析</a>
     <a href="#" class="nav-item"        id="nav-adminmgr" data-i18n="nav.adminmgr" onclick="showPage('adminmgr',event)" style="display:none">帳號管理</a>
   </nav>
   <div class="sidebar-bottom">
@@ -2134,6 +2136,173 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div><!-- end page-labor-law -->
 
 
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 報表中心 -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-report-center" style="display:none">
+    <div style="padding:28px 32px">
+
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:13px;color:var(--muted)" data-i18n="label.year">年度</label>
+          <select class="form-input" id="rc-year" style="width:100px" onchange="rcUpdateMonth()"></select>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:13px;color:var(--muted)" data-i18n="label.month">月份</label>
+          <select class="form-input" id="rc-month" style="width:80px">
+            <option value="01">01</option><option value="02">02</option><option value="03">03</option>
+            <option value="04">04</option><option value="05">05</option><option value="06">06</option>
+            <option value="07">07</option><option value="08">08</option><option value="09">09</option>
+            <option value="10">10</option><option value="11">11</option><option value="12">12</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px">
+
+        <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:-8px" data-i18n="rc.group.attendance">出勤類</div>
+
+        <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:22px">📋</div>
+          <div style="font-weight:700;color:var(--navy)" data-i18n="rc.report.attendance">出勤記錄</div>
+          <div style="font-size:12px;color:var(--muted)" data-i18n="rc.desc.attendance">月份出勤打卡明細，含上下班時間</div>
+          <button class="btn btn-primary btn-sm" onclick="downloadReport('attendance')" data-i18n="rc.btn.download">下載 Excel</button>
+        </div>
+
+        <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:22px">📊</div>
+          <div style="font-weight:700;color:var(--navy)" data-i18n="rc.report.monthly_stats">月統計摘要</div>
+          <div style="font-size:12px;color:var(--muted)" data-i18n="rc.desc.monthly_stats">每位員工本月出勤天數、工時與異常統計</div>
+          <button class="btn btn-primary btn-sm" onclick="downloadReport('attendance-summary')" data-i18n="rc.btn.download">下載 Excel</button>
+        </div>
+
+        <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:22px">⏱️</div>
+          <div style="font-weight:700;color:var(--navy)" data-i18n="rc.report.overtime">加班記錄</div>
+          <div style="font-size:12px;color:var(--muted)" data-i18n="rc.desc.overtime">月份加班申請明細與費用統計</div>
+          <button class="btn btn-primary btn-sm" onclick="downloadReport('overtime')" data-i18n="rc.btn.download">下載 Excel</button>
+        </div>
+
+        <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:-8px" data-i18n="rc.group.salary">薪資類</div>
+
+        <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:22px">💰</div>
+          <div style="font-weight:700;color:var(--navy)" data-i18n="rc.report.salary">薪資明細</div>
+          <div style="font-size:12px;color:var(--muted)" data-i18n="rc.desc.salary">月份全員薪資計算結果與各項目明細</div>
+          <button class="btn btn-primary btn-sm" onclick="downloadReport('salary')" data-i18n="rc.btn.download">下載 Excel</button>
+        </div>
+
+        <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:22px">👥</div>
+          <div style="font-weight:700;color:var(--navy)" data-i18n="rc.report.staff_list">員工名冊</div>
+          <div style="font-size:12px;color:var(--muted)" data-i18n="rc.desc.staff_list">在職員工基本資料與薪資設定總覽</div>
+          <button class="btn btn-primary btn-sm" onclick="downloadReport('staff')" data-i18n="rc.btn.download">下載 Excel</button>
+        </div>
+
+        <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:-8px" data-i18n="rc.group.leave">請假類</div>
+
+        <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:22px">📅</div>
+          <div style="font-weight:700;color:var(--navy)" data-i18n="rc.report.leave">請假記錄</div>
+          <div style="font-size:12px;color:var(--muted)" data-i18n="rc.desc.leave">月份請假申請明細，含假別與天數</div>
+          <button class="btn btn-primary btn-sm" onclick="downloadReport('leave')" data-i18n="rc.btn.download">下載 Excel</button>
+        </div>
+
+        <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:22px">🗂️</div>
+          <div style="font-weight:700;color:var(--navy)" data-i18n="rc.report.leave_balances">假別餘額</div>
+          <div style="font-size:12px;color:var(--muted)" data-i18n="rc.desc.leave_balances">全員各假別剩餘天數一覽表</div>
+          <button class="btn btn-primary btn-sm" onclick="downloadReport('leave-balances')" data-i18n="rc.btn.download">下載 Excel</button>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- end page-report-center -->
+
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 人力成本分析 -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-hr-analysis" style="display:none">
+    <div style="padding:28px 32px">
+
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap">
+        <label style="font-size:13px;color:var(--muted)" data-i18n="label.year">年度</label>
+        <select class="form-input" id="hra-year" style="width:100px" onchange="loadHrOverview()"></select>
+        <button class="btn btn-outline btn-sm" onclick="loadHrOverview()" data-i18n="btn.search">查詢</button>
+      </div>
+
+      <div class="stats-row" style="margin-bottom:24px">
+        <div class="stat-card" style="border-left:4px solid var(--navy)">
+          <div class="stat-label" data-i18n="hra.kpi.total_salary">年度總薪資</div>
+          <div class="stat-value" id="hra-total-salary">—</div>
+        </div>
+        <div class="stat-card" style="border-left:4px solid var(--accent)">
+          <div class="stat-label" data-i18n="hra.kpi.avg_monthly">月均薪資費</div>
+          <div class="stat-value" id="hra-avg-monthly">—</div>
+        </div>
+        <div class="stat-card" style="border-left:4px solid #e8820c">
+          <div class="stat-label" data-i18n="hra.kpi.total_ot">年度加班費</div>
+          <div class="stat-value" id="hra-total-ot">—</div>
+        </div>
+        <div class="stat-card" style="border-left:4px solid var(--green)">
+          <div class="stat-label" data-i18n="hra.kpi.staff_count">在職人數</div>
+          <div class="stat-value" id="hra-staff-count">—</div>
+          <div class="stat-sub" data-i18n="hra.kpi.staff_unit">人</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:20px;align-items:start">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" data-i18n="hra.chart.trend">12 個月薪資與加班費趨勢</span>
+          </div>
+          <div style="padding:16px"><canvas id="hra-trend-chart" height="200"></canvas></div>
+        </div>
+        <div class="card" style="padding:20px">
+          <div style="font-weight:700;color:var(--navy);font-size:14px;margin-bottom:14px" data-i18n="hra.breakdown.title">部門薪資分析月份</div>
+          <select class="form-input" id="hra-breakdown-month" style="width:100%;margin-bottom:12px" onchange="loadHrBreakdown()"></select>
+          <button class="btn btn-primary btn-sm" style="width:100%" onclick="loadHrBreakdown()" data-i18n="btn.search">查詢</button>
+          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px" data-i18n="hra.ot.title">本月加班統計</div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+              <span data-i18n="hra.ot.hours">加班時數</span>
+              <span id="hra-ot-hours" style="font-weight:600">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span data-i18n="hra.ot.pay">加班費用</span>
+              <span id="hra-ot-pay" style="font-weight:600;color:var(--accent)">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" data-i18n="hra.chart.dept_salary">部門薪資分佈</span>
+          </div>
+          <div style="padding:16px"><canvas id="hra-dept-chart" height="220"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" data-i18n="hra.chart.leave_dist">請假類型分佈</span>
+          </div>
+          <div style="padding:16px;display:flex;justify-content:center"><canvas id="hra-leave-chart" height="220" style="max-width:300px"></canvas></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title" data-i18n="hra.table.title">部門薪資明細表</span>
+        </div>
+        <div id="hra-dept-table" style="overflow-x:auto"></div>
+      </div>
+
+    </div>
+  </div><!-- end page-hr-analysis -->
+
+
 </main>
 
 <!-- ── 差旅申請 Modal ── -->
@@ -3416,6 +3585,8 @@ const ALL_MODULES = [
   { key:'stores',         label:'門市管理' },
   { key:'training',       label:'教育訓練' },
   { key:'labor-law',     label:'勞基法通知' },
+  { key:'report-center', label:'報表中心' },
+  { key:'hr-analysis',   label:'人力成本分析' },
 ];
 function hasModule(m) { return ADMIN_IS_SUPER || ADMIN_PERMS.includes(m); }
 
@@ -4173,6 +4344,31 @@ const TRANSLATIONS = {
     'module.key.salary':'薪資管理','module.key.ann':'公告管理','module.key.holiday':'國定假日',
     'module.key.finance':'財務管理','module.key.expense-review':'費用審核',
     'module.key.perf':'績效考核','module.key.stores':'門市管理','module.key.training':'教育訓練','module.key.labor-law':'勞基法通知',
+    'module.key.report-center':'報表中心','module.key.hr-analysis':'人力成本分析',
+    'nav.report_center':'報表中心','nav.hr_analysis':'人力成本分析',
+    'page.report-center':'報表中心','page.hr-analysis':'人力成本分析',
+    'rc.group.attendance':'出勤類','rc.group.salary':'薪資類','rc.group.leave':'請假類',
+    'rc.report.attendance':'出勤記錄','rc.report.monthly_stats':'月統計摘要','rc.report.overtime':'加班記錄',
+    'rc.report.salary':'薪資明細','rc.report.staff_list':'員工名冊',
+    'rc.report.leave':'請假記錄','rc.report.leave_balances':'假別餘額',
+    'rc.desc.attendance':'月份出勤打卡明細，含上下班時間',
+    'rc.desc.monthly_stats':'每位員工本月出勤天數、工時與異常統計',
+    'rc.desc.overtime':'月份加班申請明細與費用統計',
+    'rc.desc.salary':'月份全員薪資計算結果與各項目明細',
+    'rc.desc.staff_list':'在職員工基本資料與薪資設定總覽',
+    'rc.desc.leave':'月份請假申請明細，含假別與天數',
+    'rc.desc.leave_balances':'全員各假別剩餘天數一覽表',
+    'rc.btn.download':'下載 Excel',
+    'hra.kpi.total_salary':'年度總薪資','hra.kpi.avg_monthly':'月均薪資費',
+    'hra.kpi.total_ot':'年度加班費','hra.kpi.staff_count':'在職人數','hra.kpi.staff_unit':'人',
+    'hra.chart.trend':'12 個月薪資與加班費趨勢','hra.chart.dept_salary':'部門薪資分佈',
+    'hra.chart.leave_dist':'請假類型分佈',
+    'hra.breakdown.title':'部門薪資分析月份',
+    'hra.ot.title':'本月加班統計','hra.ot.hours':'加班時數','hra.ot.pay':'加班費用',
+    'hra.table.title':'部門薪資明細表',
+    'hra.table.dept':'部門','hra.table.headcount':'人數','hra.table.total_salary':'薪資總額',
+    'hra.table.avg_salary':'平均薪資','hra.legend.salary':'薪資費用','hra.legend.ot':'加班費',
+    'hra.no_data':'暫無資料',
     'loading':'載入中...','load_fail':'載入失敗','salary_preview.loading':'計算中，請稍候...',
     'anomaly.no_records':'近 7 天無異常記錄',
     'anomaly.sev.error':'嚴重','anomaly.sev.warning':'警告','anomaly.sev.info':'提示',
@@ -4938,6 +5134,31 @@ const TRANSLATIONS = {
     'module.key.salary':'Salary','module.key.ann':'Announcements','module.key.holiday':'Holidays',
     'module.key.finance':'Finance','module.key.expense-review':'Expense Review',
     'module.key.perf':'Performance','module.key.stores':'Stores','module.key.training':'Training','module.key.labor-law':'Labor Law',
+    'module.key.report-center':'Report Center','module.key.hr-analysis':'HR Cost Analysis',
+    'nav.report_center':'Report Center','nav.hr_analysis':'HR Cost Analysis',
+    'page.report-center':'Report Center','page.hr-analysis':'HR Cost Analysis',
+    'rc.group.attendance':'Attendance','rc.group.salary':'Salary','rc.group.leave':'Leave',
+    'rc.report.attendance':'Attendance Records','rc.report.monthly_stats':'Monthly Summary','rc.report.overtime':'Overtime Records',
+    'rc.report.salary':'Salary Details','rc.report.staff_list':'Staff List',
+    'rc.report.leave':'Leave Records','rc.report.leave_balances':'Leave Balances',
+    'rc.desc.attendance':'Monthly attendance check-in/out details',
+    'rc.desc.monthly_stats':'Work days, hours and anomaly stats per staff',
+    'rc.desc.overtime':'Monthly overtime requests and pay summary',
+    'rc.desc.salary':'Monthly full payroll calculation results',
+    'rc.desc.staff_list':'Active staff info and salary settings overview',
+    'rc.desc.leave':'Monthly leave request details with type and days',
+    'rc.desc.leave_balances':'Remaining leave balance for all staff',
+    'rc.btn.download':'Download Excel',
+    'hra.kpi.total_salary':'Annual Salary Cost','hra.kpi.avg_monthly':'Monthly Avg Cost',
+    'hra.kpi.total_ot':'Annual OT Cost','hra.kpi.staff_count':'Active Staff','hra.kpi.staff_unit':'staff',
+    'hra.chart.trend':'12-Month Salary & OT Cost Trend','hra.chart.dept_salary':'Dept Salary Distribution',
+    'hra.chart.leave_dist':'Leave Type Distribution',
+    'hra.breakdown.title':'Dept Breakdown Month',
+    'hra.ot.title':'Monthly OT Summary','hra.ot.hours':'OT Hours','hra.ot.pay':'OT Pay',
+    'hra.table.title':'Dept Salary Breakdown Table',
+    'hra.table.dept':'Department','hra.table.headcount':'Headcount','hra.table.total_salary':'Total Salary',
+    'hra.table.avg_salary':'Avg Salary','hra.legend.salary':'Salary','hra.legend.ot':'OT Pay',
+    'hra.no_data':'No data available',
     'loading':'Loading...','load_fail':'Load failed','salary_preview.loading':'Calculating, please wait...',
     'anomaly.no_records':'No anomalies in the past 7 days',
     'anomaly.sev.error':'Critical','anomaly.sev.warning':'Warning','anomaly.sev.info':'Info',
@@ -5699,6 +5920,31 @@ const TRANSLATIONS = {
     'module.key.salary':'給与管理','module.key.ann':'お知らせ','module.key.holiday':'祝日設定',
     'module.key.finance':'財務管理','module.key.expense-review':'経費審査',
     'module.key.perf':'人事評価','module.key.stores':'店舗管理','module.key.training':'トレーニング','module.key.labor-law':'労基法通知',
+    'module.key.report-center':'レポートセンター','module.key.hr-analysis':'人件費分析',
+    'nav.report_center':'レポートセンター','nav.hr_analysis':'人件費分析',
+    'page.report-center':'レポートセンター','page.hr-analysis':'人件費分析',
+    'rc.group.attendance':'勤怠','rc.group.salary':'給与','rc.group.leave':'休暇',
+    'rc.report.attendance':'勤怠記録','rc.report.monthly_stats':'月次サマリー','rc.report.overtime':'残業記録',
+    'rc.report.salary':'給与明細','rc.report.staff_list':'従業員一覧',
+    'rc.report.leave':'休暇記録','rc.report.leave_balances':'休暇残高',
+    'rc.desc.attendance':'月次出退勤の詳細（打刻時間含む）',
+    'rc.desc.monthly_stats':'従業員ごとの出勤日数・工数・異常統計',
+    'rc.desc.overtime':'月次残業申請明細と費用集計',
+    'rc.desc.salary':'月次全員給与計算結果と各項目明細',
+    'rc.desc.staff_list':'在籍従業員の基本情報と給与設定一覧',
+    'rc.desc.leave':'月次休暇申請明細（種別・日数含む）',
+    'rc.desc.leave_balances':'全従業員の休暇残高一覧',
+    'rc.btn.download':'Excel ダウンロード',
+    'hra.kpi.total_salary':'年間総人件費','hra.kpi.avg_monthly':'月平均人件費',
+    'hra.kpi.total_ot':'年間残業費','hra.kpi.staff_count':'在籍人数','hra.kpi.staff_unit':'人',
+    'hra.chart.trend':'12ヶ月給与・残業費推移','hra.chart.dept_salary':'部門別給与分布',
+    'hra.chart.leave_dist':'休暇種別分布',
+    'hra.breakdown.title':'部門分析対象月',
+    'hra.ot.title':'月次残業集計','hra.ot.hours':'残業時間','hra.ot.pay':'残業費',
+    'hra.table.title':'部門別給与明細表',
+    'hra.table.dept':'部門','hra.table.headcount':'人数','hra.table.total_salary':'給与合計',
+    'hra.table.avg_salary':'平均給与','hra.legend.salary':'給与費用','hra.legend.ot':'残業費',
+    'hra.no_data':'データなし',
     'loading':'読込中...','load_fail':'読込失敗','salary_preview.loading':'計算中、お待ちください...',
     'anomaly.no_records':'過去7日間に異常はありません',
     'anomaly.sev.error':'重大','anomaly.sev.warning':'警告','anomaly.sev.info':'情報',
@@ -6433,6 +6679,31 @@ const TRANSLATIONS = {
     'module.key.salary':'Lương','module.key.ann':'Thông báo','module.key.holiday':'Ngày lễ',
     'module.key.finance':'Tài chính','module.key.expense-review':'Chi phí',
     'module.key.perf':'Đánh giá','module.key.stores':'Cửa hàng','module.key.training':'Đào tạo','module.key.labor-law':'Luật LĐ',
+    'module.key.report-center':'Trung tâm báo cáo','module.key.hr-analysis':'Phân tích chi phí NS',
+    'nav.report_center':'Trung tâm báo cáo','nav.hr_analysis':'Phân tích chi phí NS',
+    'page.report-center':'Trung tâm báo cáo','page.hr-analysis':'Phân tích chi phí NS',
+    'rc.group.attendance':'Chấm công','rc.group.salary':'Lương','rc.group.leave':'Nghỉ phép',
+    'rc.report.attendance':'Hồ sơ chấm công','rc.report.monthly_stats':'Tóm tắt tháng','rc.report.overtime':'Hồ sơ OT',
+    'rc.report.salary':'Chi tiết lương','rc.report.staff_list':'Danh sách nhân viên',
+    'rc.report.leave':'Hồ sơ nghỉ phép','rc.report.leave_balances':'Số dư phép',
+    'rc.desc.attendance':'Chi tiết giờ vào/ra hàng tháng',
+    'rc.desc.monthly_stats':'Thống kê ngày công, giờ làm và bất thường',
+    'rc.desc.overtime':'Chi tiết OT và tổng chi phí tháng',
+    'rc.desc.salary':'Kết quả tính lương toàn bộ nhân viên tháng',
+    'rc.desc.staff_list':'Thông tin cơ bản và cài đặt lương nhân viên',
+    'rc.desc.leave':'Chi tiết đơn nghỉ phép tháng',
+    'rc.desc.leave_balances':'Số dư các loại phép của tất cả nhân viên',
+    'rc.btn.download':'Tải Excel',
+    'hra.kpi.total_salary':'Tổng lương năm','hra.kpi.avg_monthly':'Chi phí TB tháng',
+    'hra.kpi.total_ot':'Tổng OT năm','hra.kpi.staff_count':'Nhân viên','hra.kpi.staff_unit':'người',
+    'hra.chart.trend':'Xu hướng lương & OT 12 tháng','hra.chart.dept_salary':'Phân phối lương theo bộ phận',
+    'hra.chart.leave_dist':'Phân phối loại nghỉ phép',
+    'hra.breakdown.title':'Tháng phân tích bộ phận',
+    'hra.ot.title':'Thống kê OT tháng','hra.ot.hours':'Giờ OT','hra.ot.pay':'Chi phí OT',
+    'hra.table.title':'Bảng chi tiết lương theo bộ phận',
+    'hra.table.dept':'Bộ phận','hra.table.headcount':'Nhân số','hra.table.total_salary':'Tổng lương',
+    'hra.table.avg_salary':'Lương TB','hra.legend.salary':'Lương','hra.legend.ot':'Chi phí OT',
+    'hra.no_data':'Không có dữ liệu',
     'loading':'Đang tải...','load_fail':'Tải thất bại','salary_preview.loading':'Đang tính toán, vui lòng chờ...',
     'anomaly.no_records':'Không có bất thường trong 7 ngày qua',
     'anomaly.sev.error':'Nghiêm trọng','anomaly.sev.warning':'Cảnh báo','anomaly.sev.info':'Thông tin',
@@ -7166,6 +7437,31 @@ const TRANSLATIONS = {
     'module.key.salary':'เงินเดือน','module.key.ann':'ประกาศ','module.key.holiday':'วันหยุด',
     'module.key.finance':'การเงิน','module.key.expense-review':'ค่าใช้จ่าย',
     'module.key.perf':'ประเมินผล','module.key.stores':'สาขา','module.key.training':'ฝึกอบรม','module.key.labor-law':'กฎหมายแรงงาน',
+    'module.key.report-center':'ศูนย์รายงาน','module.key.hr-analysis':'วิเคราะห์ต้นทุน HR',
+    'nav.report_center':'ศูนย์รายงาน','nav.hr_analysis':'วิเคราะห์ต้นทุน HR',
+    'page.report-center':'ศูนย์รายงาน','page.hr-analysis':'วิเคราะห์ต้นทุน HR',
+    'rc.group.attendance':'การเข้างาน','rc.group.salary':'เงินเดือน','rc.group.leave':'การลา',
+    'rc.report.attendance':'บันทึกเวลา','rc.report.monthly_stats':'สรุปรายเดือน','rc.report.overtime':'บันทึก OT',
+    'rc.report.salary':'รายละเอียดเงินเดือน','rc.report.staff_list':'รายชื่อพนักงาน',
+    'rc.report.leave':'บันทึกการลา','rc.report.leave_balances':'วันลาคงเหลือ',
+    'rc.desc.attendance':'รายละเอียดเวลาเข้า-ออกประจำเดือน',
+    'rc.desc.monthly_stats':'สถิติวันทำงาน ชั่วโมง และความผิดปกติ',
+    'rc.desc.overtime':'รายละเอียด OT และสรุปค่าใช้จ่ายเดือน',
+    'rc.desc.salary':'ผลการคำนวณเงินเดือนทั้งหมดประจำเดือน',
+    'rc.desc.staff_list':'ข้อมูลพนักงานและการตั้งค่าเงินเดือน',
+    'rc.desc.leave':'รายละเอียดใบลาประจำเดือน',
+    'rc.desc.leave_balances':'วันลาคงเหลือของพนักงานทุกคน',
+    'rc.btn.download':'ดาวน์โหลด Excel',
+    'hra.kpi.total_salary':'เงินเดือนรวมปี','hra.kpi.avg_monthly':'ต้นทุนเฉลี่ยต่อเดือน',
+    'hra.kpi.total_ot':'ค่า OT รวมปี','hra.kpi.staff_count':'พนักงาน','hra.kpi.staff_unit':'คน',
+    'hra.chart.trend':'แนวโน้มเงินเดือน & OT 12 เดือน','hra.chart.dept_salary':'การกระจายเงินเดือนตามแผนก',
+    'hra.chart.leave_dist':'การกระจายประเภทการลา',
+    'hra.breakdown.title':'เดือนวิเคราะห์แผนก',
+    'hra.ot.title':'สรุป OT เดือนนี้','hra.ot.hours':'ชั่วโมง OT','hra.ot.pay':'ค่า OT',
+    'hra.table.title':'ตารางรายละเอียดเงินเดือนตามแผนก',
+    'hra.table.dept':'แผนก','hra.table.headcount':'จำนวน','hra.table.total_salary':'เงินเดือนรวม',
+    'hra.table.avg_salary':'เงินเดือนเฉลี่ย','hra.legend.salary':'ค่าเงินเดือน','hra.legend.ot':'ค่า OT',
+    'hra.no_data':'ไม่มีข้อมูล',
     'loading':'กำลังโหลด...','load_fail':'โหลดล้มเหลว','salary_preview.loading':'กำลังคำนวณ กรุณารอ...',
     'anomaly.no_records':'ไม่มีความผิดปกติใน 7 วันที่ผ่านมา',
     'anomaly.sev.error':'วิกฤต','anomaly.sev.warning':'คำเตือน','anomaly.sev.info':'ข้อมูล',
@@ -7926,6 +8222,31 @@ const TRANSLATIONS = {
     'module.key.salary':'薪资管理','module.key.ann':'公告管理','module.key.holiday':'法定节假日',
     'module.key.finance':'财务管理','module.key.expense-review':'费用审核',
     'module.key.perf':'绩效考核','module.key.stores':'门店管理','module.key.training':'教育培训','module.key.labor-law':'劳基法通知',
+    'module.key.report-center':'报表中心','module.key.hr-analysis':'人力成本分析',
+    'nav.report_center':'报表中心','nav.hr_analysis':'人力成本分析',
+    'page.report-center':'报表中心','page.hr-analysis':'人力成本分析',
+    'rc.group.attendance':'出勤类','rc.group.salary':'薪资类','rc.group.leave':'请假类',
+    'rc.report.attendance':'出勤记录','rc.report.monthly_stats':'月统计摘要','rc.report.overtime':'加班记录',
+    'rc.report.salary':'薪资明细','rc.report.staff_list':'员工名册',
+    'rc.report.leave':'请假记录','rc.report.leave_balances':'假别余额',
+    'rc.desc.attendance':'月份出勤打卡明细，含上下班时间',
+    'rc.desc.monthly_stats':'每位员工本月出勤天数、工时与异常统计',
+    'rc.desc.overtime':'月份加班申请明细与费用统计',
+    'rc.desc.salary':'月份全员薪资计算结果与各项目明细',
+    'rc.desc.staff_list':'在职员工基本资料与薪资设置总览',
+    'rc.desc.leave':'月份请假申请明细，含假别与天数',
+    'rc.desc.leave_balances':'全员各假别剩余天数一览表',
+    'rc.btn.download':'下载 Excel',
+    'hra.kpi.total_salary':'年度总薪资','hra.kpi.avg_monthly':'月均薪资费',
+    'hra.kpi.total_ot':'年度加班费','hra.kpi.staff_count':'在职人数','hra.kpi.staff_unit':'人',
+    'hra.chart.trend':'12 个月薪资与加班费趋势','hra.chart.dept_salary':'部门薪资分布',
+    'hra.chart.leave_dist':'请假类型分布',
+    'hra.breakdown.title':'部门薪资分析月份',
+    'hra.ot.title':'本月加班统计','hra.ot.hours':'加班时数','hra.ot.pay':'加班费用',
+    'hra.table.title':'部门薪资明细表',
+    'hra.table.dept':'部门','hra.table.headcount':'人数','hra.table.total_salary':'薪资总额',
+    'hra.table.avg_salary':'平均薪资','hra.legend.salary':'薪资费用','hra.legend.ot':'加班费',
+    'hra.no_data':'暂无数据',
     'loading':'加载中...','load_fail':'加载失败','salary_preview.loading':'计算中，请稍候...',
     'anomaly.no_records':'近 7 天无异常记录',
     'anomaly.sev.error':'严重','anomaly.sev.warning':'警告','anomaly.sev.info':'提示',
@@ -8686,6 +9007,31 @@ const TRANSLATIONS = {
     'module.key.salary':'Gaji','module.key.ann':'Pengumuman','module.key.holiday':'Hari Libur',
     'module.key.finance':'Keuangan','module.key.expense-review':'Tinjauan Biaya',
     'module.key.perf':'Penilaian Kinerja','module.key.stores':'Manajemen Toko','module.key.training':'Pelatihan','module.key.labor-law':'Hukum Ketenagakerjaan',
+    'module.key.report-center':'Pusat Laporan','module.key.hr-analysis':'Analisis Biaya SDM',
+    'nav.report_center':'Pusat Laporan','nav.hr_analysis':'Analisis Biaya SDM',
+    'page.report-center':'Pusat Laporan','page.hr-analysis':'Analisis Biaya SDM',
+    'rc.group.attendance':'Kehadiran','rc.group.salary':'Gaji','rc.group.leave':'Cuti',
+    'rc.report.attendance':'Catatan Kehadiran','rc.report.monthly_stats':'Ringkasan Bulanan','rc.report.overtime':'Catatan Lembur',
+    'rc.report.salary':'Detail Gaji','rc.report.staff_list':'Daftar Karyawan',
+    'rc.report.leave':'Catatan Cuti','rc.report.leave_balances':'Saldo Cuti',
+    'rc.desc.attendance':'Detail absensi masuk/keluar bulanan',
+    'rc.desc.monthly_stats':'Statistik hari kerja, jam kerja dan anomali',
+    'rc.desc.overtime':'Detail lembur dan ringkasan biaya bulanan',
+    'rc.desc.salary':'Hasil perhitungan gaji seluruh karyawan bulanan',
+    'rc.desc.staff_list':'Informasi dasar karyawan aktif dan pengaturan gaji',
+    'rc.desc.leave':'Detail permohonan cuti bulanan',
+    'rc.desc.leave_balances':'Saldo cuti semua karyawan',
+    'rc.btn.download':'Unduh Excel',
+    'hra.kpi.total_salary':'Total Gaji Tahunan','hra.kpi.avg_monthly':'Rata-rata Biaya Bulanan',
+    'hra.kpi.total_ot':'Total Lembur Tahunan','hra.kpi.staff_count':'Karyawan Aktif','hra.kpi.staff_unit':'orang',
+    'hra.chart.trend':'Tren Gaji & Lembur 12 Bulan','hra.chart.dept_salary':'Distribusi Gaji per Divisi',
+    'hra.chart.leave_dist':'Distribusi Jenis Cuti',
+    'hra.breakdown.title':'Bulan Analisis Divisi',
+    'hra.ot.title':'Ringkasan Lembur Bulan Ini','hra.ot.hours':'Jam Lembur','hra.ot.pay':'Biaya Lembur',
+    'hra.table.title':'Tabel Detail Gaji per Divisi',
+    'hra.table.dept':'Divisi','hra.table.headcount':'Jumlah','hra.table.total_salary':'Total Gaji',
+    'hra.table.avg_salary':'Rata-rata Gaji','hra.legend.salary':'Biaya Gaji','hra.legend.ot':'Biaya Lembur',
+    'hra.no_data':'Tidak ada data',
     'loading':'Memuat...','load_fail':'Gagal dimuat','salary_preview.loading':'Menghitung, mohon tunggu...',
     'anomaly.no_records':'Tidak ada anomali dalam 7 hari terakhir',
     'anomaly.sev.error':'Kritis','anomaly.sev.warning':'Peringatan','anomaly.sev.info':'Info',
@@ -9870,7 +10216,7 @@ function closeSidebar() {
 function showPage(page, e) {
   if (e) e.preventDefault();
   // 權限檢查（儀表板和帳號管理不受模組限制）
-  const moduleGuard = { punch:'punch', sched:'sched', leave:'leave', salary:'salary', ann:'ann', holiday:'holiday', finance:'finance', 'expense-review':'expense-review', perf:'perf', stores:'stores', training:'training', 'labor-law':'labor-law' };
+  const moduleGuard = { punch:'punch', sched:'sched', leave:'leave', salary:'salary', ann:'ann', holiday:'holiday', finance:'finance', 'expense-review':'expense-review', perf:'perf', stores:'stores', training:'training', 'labor-law':'labor-law', 'report-center':'report-center', 'hr-analysis':'hr-analysis' };
   if (moduleGuard[page] && !hasModule(moduleGuard[page])) {
     showToast('您沒有此功能的存取權限', 'error'); return;
   }
@@ -9879,7 +10225,7 @@ function showPage(page, e) {
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
   setTimeout(refreshBadges, 600);
-  ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training','travel','assets','labor-law'].forEach(p =>
+  ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training','travel','assets','labor-law','report-center','hr-analysis'].forEach(p =>
     document.getElementById('page-' + p).style.display = p === page ? '' : 'none'
   );
   document.getElementById('page-title').textContent = t('page.' + page) || page;
@@ -9899,6 +10245,8 @@ function showPage(page, e) {
   if (page === 'travel')          initTravel();
   if (page === 'assets')          initAssets();
   if (page === 'labor-law')       initLaborLaw();
+  if (page === 'report-center')   initReportCenter();
+  if (page === 'hr-analysis')     initHrAnalysis();
 }
 
 // ── Toast ─────────────────────────────────────────────────────
@@ -16711,6 +17059,208 @@ async function laborLawReset() {
     showToast('已重新整理', 'success');
     await Promise.all([loadLaborLawStats(), loadLaborLawRecords()]);
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 報表中心模組
+// ══════════════════════════════════════════════════════════════
+function initReportCenter() {
+  const yearSel = document.getElementById('rc-year');
+  const monthSel = document.getElementById('rc-month');
+  const now = new Date();
+  const curYear = now.getFullYear();
+  if (!yearSel.options.length) {
+    for (let y = curYear; y >= curYear - 4; y--) {
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = y;
+      yearSel.appendChild(opt);
+    }
+  }
+  yearSel.value = curYear;
+  monthSel.value = String(now.getMonth() + 1).padStart(2, '0');
+}
+
+function rcUpdateMonth() {}
+
+function rcGetYearMonth() {
+  return document.getElementById('rc-year').value + '-' + document.getElementById('rc-month').value;
+}
+
+function downloadReport(type) {
+  const ym = rcGetYearMonth();
+  const urls = {
+    'attendance':         `/api/export/attendance-excel?month=${ym}`,
+    'attendance-summary': `/api/export/attendance-summary-excel?month=${ym}`,
+    'overtime':           `/api/export/overtime-excel?month=${ym}`,
+    'salary':             `/api/export/salary-excel?month=${ym}`,
+    'staff':              `/api/export/staff-excel`,
+    'leave':              `/api/export/leave-excel?month=${ym}`,
+    'leave-balances':     `/api/export/leave-balances-excel`,
+  };
+  const url = urls[type];
+  if (!url) return;
+  window.location.href = url;
+}
+
+// ══════════════════════════════════════════════════════════════
+// 人力成本分析模組
+// ══════════════════════════════════════════════════════════════
+let _hraCharts = {};
+
+function _destroyHraChart(id) {
+  if (_hraCharts[id]) { _hraCharts[id].destroy(); delete _hraCharts[id]; }
+}
+
+async function initHrAnalysis() {
+  const yearSel = document.getElementById('hra-year');
+  const now = new Date();
+  const curYear = now.getFullYear();
+  if (!yearSel.options.length) {
+    for (let y = curYear; y >= curYear - 4; y--) {
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = y;
+      yearSel.appendChild(opt);
+    }
+  }
+  yearSel.value = curYear;
+
+  const bmSel = document.getElementById('hra-breakdown-month');
+  if (!bmSel.options.length) {
+    for (let m = 1; m <= 12; m++) {
+      const opt = document.createElement('option');
+      const mm = String(m).padStart(2, '0');
+      opt.value = `${curYear}-${mm}`; opt.textContent = `${curYear}-${mm}`;
+      bmSel.appendChild(opt);
+    }
+  }
+  const curMon = String(now.getMonth() + 1).padStart(2, '0');
+  bmSel.value = `${curYear}-${curMon}`;
+
+  await Promise.all([loadHrOverview(), loadHrBreakdown()]);
+}
+
+async function loadHrOverview() {
+  const year = document.getElementById('hra-year').value;
+  const { ok, data } = await api(`/api/hr-analysis/overview?year=${year}`, {}, true);
+  if (!ok) return;
+
+  const fmt = v => '$' + Math.round(v).toLocaleString();
+  document.getElementById('hra-total-salary').textContent = fmt(data.total_salary_year);
+  document.getElementById('hra-avg-monthly').textContent  = fmt(data.avg_monthly_salary);
+  document.getElementById('hra-total-ot').textContent     = fmt(data.total_ot_year);
+  document.getElementById('hra-staff-count').textContent  = data.staff_count;
+
+  _destroyHraChart('trend');
+  const ctx = document.getElementById('hra-trend-chart').getContext('2d');
+  const labels = data.months.map(m => m.slice(5));
+  _hraCharts['trend'] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: t('hra.legend.salary'),
+          data: data.salary_cost,
+          borderColor: '#4a7bda',
+          backgroundColor: 'rgba(74,123,218,0.08)',
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+        },
+        {
+          label: t('hra.legend.ot'),
+          data: data.ot_cost,
+          borderColor: '#e8820c',
+          backgroundColor: 'rgba(232,130,12,0.08)',
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top' } },
+      scales: {
+        y: { ticks: { callback: v => '$' + Math.round(v / 1000) + 'k' } },
+      },
+    },
+  });
+}
+
+async function loadHrBreakdown() {
+  const month = document.getElementById('hra-breakdown-month').value;
+  const { ok, data } = await api(`/api/hr-analysis/dept-breakdown?month=${month}`, {}, true);
+  if (!ok) return;
+
+  document.getElementById('hra-ot-hours').textContent = data.ot_total_hours.toFixed(1) + ' h';
+  document.getElementById('hra-ot-pay').textContent = '$' + Math.round(data.ot_total_pay).toLocaleString();
+
+  _destroyHraChart('dept');
+  const dctx = document.getElementById('hra-dept-chart').getContext('2d');
+  if (data.labels.length) {
+    _hraCharts['dept'] = new Chart(dctx, {
+      type: 'bar',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: t('hra.legend.salary'),
+          data: data.salary,
+          backgroundColor: 'rgba(74,123,218,0.75)',
+          borderRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { ticks: { callback: v => '$' + Math.round(v / 1000) + 'k' } },
+        },
+      },
+    });
+  } else {
+    dctx.canvas.parentElement.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px">${t('hra.no_data')}</div>`;
+  }
+
+  _destroyHraChart('leave');
+  const lctx = document.getElementById('hra-leave-chart').getContext('2d');
+  if (data.leave_types.length) {
+    _hraCharts['leave'] = new Chart(lctx, {
+      type: 'doughnut',
+      data: {
+        labels: data.leave_types.map(l => l.name),
+        datasets: [{
+          data: data.leave_types.map(l => l.days),
+          backgroundColor: data.leave_types.map(l => l.color),
+          borderWidth: 2,
+          borderColor: '#fff',
+        }],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      },
+    });
+  } else {
+    lctx.canvas.parentElement.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px">${t('hra.no_data')}</div>`;
+  }
+
+  const wrap = document.getElementById('hra-dept-table');
+  if (!data.labels.length) {
+    wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">${t('hra.no_data')}</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>${t('hra.table.dept')}</th>
+    <th style="text-align:right">${t('hra.table.headcount')}</th>
+    <th style="text-align:right">${t('hra.table.total_salary')}</th>
+    <th style="text-align:right">${t('hra.table.avg_salary')}</th>
+  </tr></thead><tbody>${data.labels.map((dept, i) => `<tr>
+    <td>${escHtml(dept)}</td>
+    <td style="text-align:right">${data.headcount[i]}</td>
+    <td style="text-align:right;font-weight:600">$${Math.round(data.salary[i]).toLocaleString()}</td>
+    <td style="text-align:right;color:var(--muted)">$${Math.round(data.avg_salary[i]).toLocaleString()}</td>
+  </tr>`).join('')}</tbody></table>`;
 }
 </script>
 </html>
