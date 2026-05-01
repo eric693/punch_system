@@ -2744,16 +2744,288 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">本月損益</div><div id="acc-stat-pnl" style="font-size:22px;font-weight:800;color:var(--green)">—</div></div>
     </div>
     <!-- Tab Bar -->
-    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border)">
-      <button id="acc-tab-accounts" onclick="switchAccTab('accounts')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid var(--accent);font-weight:700;color:var(--navy)">科目設定</button>
+    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border);overflow-x:auto">
+      <button id="acc-tab-dashboard"    onclick="switchAccTab('dashboard')"    style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid var(--accent);font-weight:700;color:var(--navy);white-space:nowrap">儀表板</button>
+      <button id="acc-tab-vouchers"     onclick="switchAccTab('vouchers')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">傳票管理<span class="nav-badge" id="badge-acc-vouchers" style="display:none;margin-left:4px"></span></button>
+      <button id="acc-tab-receivables"  onclick="switchAccTab('receivables')"  style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">應收帳款<span class="nav-badge" id="badge-acc-ar" style="display:none;margin-left:4px;background:var(--orange)"></span></button>
+      <button id="acc-tab-payables"     onclick="switchAccTab('payables')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">應付帳款<span class="nav-badge" id="badge-acc-ap" style="display:none;margin-left:4px;background:var(--red)"></span></button>
+      <button id="acc-tab-accounts"     onclick="switchAccTab('accounts')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">科目設定</button>
     </div>
+
+    <!-- 儀表板 Panel -->
+    <div id="acc-panel-dashboard">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
+        <div class="card" style="padding:20px;border-left:4px solid var(--orange)">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">應收帳款未收金額</div>
+          <div id="acc-dash-ar" style="font-size:24px;font-weight:800;color:var(--orange)">—</div>
+          <div id="acc-dash-ar-overdue" style="font-size:12px;color:var(--red);margin-top:4px"></div>
+        </div>
+        <div class="card" style="padding:20px;border-left:4px solid var(--red)">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">應付帳款未付金額</div>
+          <div id="acc-dash-ap" style="font-size:24px;font-weight:800;color:var(--red)">—</div>
+          <div id="acc-dash-ap-overdue" style="font-size:12px;color:var(--red);margin-top:4px"></div>
+        </div>
+        <div class="card" style="padding:20px;border-left:4px solid var(--muted)">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">草稿傳票待過帳</div>
+          <div id="acc-dash-draft" style="font-size:24px;font-weight:800;color:var(--navy)">—</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">需審核過帳</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card" style="padding:16px">
+          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">逾期應收帳款</div>
+          <div id="acc-dash-ar-aging"></div>
+        </div>
+        <div class="card" style="padding:16px">
+          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">快速操作</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <button class="btn btn-outline" onclick="switchAccTab('vouchers');openVoucherModal()">＋ 新增傳票</button>
+            <button class="btn btn-outline" onclick="switchAccTab('receivables');openARModal()">＋ 新增應收</button>
+            <button class="btn btn-outline" onclick="switchAccTab('payables');openAPModal()">＋ 新增應付</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 傳票管理 Panel -->
+    <div id="acc-panel-vouchers" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="filter-input" id="vou-filter-status" onchange="loadVouchers()" style="min-width:110px">
+          <option value="">全部狀態</option>
+          <option value="draft">草稿</option>
+          <option value="posted">已過帳</option>
+          <option value="void">已作廢</option>
+        </select>
+        <select class="filter-input" id="vou-filter-type" onchange="loadVouchers()" style="min-width:110px">
+          <option value="">全部類型</option>
+          <option value="general">一般傳票</option>
+          <option value="purchase">採購傳票</option>
+          <option value="sales">銷售傳票</option>
+          <option value="payment">付款傳票</option>
+          <option value="receipt">收款傳票</option>
+        </select>
+        <input class="filter-input" id="vou-filter-month" type="month" onchange="loadVouchers()" style="min-width:130px">
+        <input class="filter-input" id="vou-filter-q" placeholder="搜尋傳票號 / 摘要…" oninput="loadVouchers()" style="flex:1;min-width:160px">
+        <button class="btn btn-primary btn-sm" onclick="openVoucherModal()">＋ 新增傳票</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="acc-vouchers-wrap"></div></div>
+    </div>
+
+    <!-- 應收帳款 Panel -->
+    <div id="acc-panel-receivables" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="filter-input" id="ar-filter-status" onchange="loadARList()" style="min-width:110px">
+          <option value="">全部狀態</option>
+          <option value="open">未收</option>
+          <option value="partial">部分收款</option>
+          <option value="paid">已收清</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="ar-filter-overdue" onchange="loadARList()"> 僅逾期
+        </label>
+        <input class="filter-input" id="ar-filter-q" placeholder="搜尋客戶名稱…" oninput="loadARList()" style="flex:1;min-width:160px">
+        <button class="btn btn-primary btn-sm" onclick="openARModal()">＋ 新增應收</button>
+        <button class="btn btn-outline btn-sm" onclick="loadARAgingTable()">帳齡分析</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="acc-ar-wrap"></div></div>
+      <div id="acc-ar-aging-wrap" style="margin-top:16px;display:none">
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">應收帳款帳齡分析</div>
+        <div class="card" style="overflow:hidden"><div id="acc-ar-aging-table"></div></div>
+      </div>
+    </div>
+
+    <!-- 應付帳款 Panel -->
+    <div id="acc-panel-payables" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="filter-input" id="ap-filter-status" onchange="loadAPList()" style="min-width:110px">
+          <option value="">全部狀態</option>
+          <option value="open">未付</option>
+          <option value="partial">部分付款</option>
+          <option value="paid">已付清</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="ap-filter-overdue" onchange="loadAPList()"> 僅逾期
+        </label>
+        <input class="filter-input" id="ap-filter-q" placeholder="搜尋供應商名稱…" oninput="loadAPList()" style="flex:1;min-width:160px">
+        <button class="btn btn-primary btn-sm" onclick="openAPModal()">＋ 新增應付</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="acc-ap-wrap"></div></div>
+    </div>
+
     <!-- 科目設定 Panel -->
-    <div id="acc-panel-accounts">
+    <div id="acc-panel-accounts" style="display:none">
       <div class="card" style="overflow:hidden"><div id="acc-accounts-wrap">
         <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
       </div></div>
     </div>
   </div><!-- end page-accounting -->
+
+  <!-- ── 傳票 Modal ── -->
+  <div id="vou-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:800px;max-width:97vw;max-height:92vh;overflow-y:auto;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="font-size:16px;font-weight:700;color:var(--navy)">新增傳票</div>
+        <button onclick="closeVoucherModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
+        <div>
+          <label class="form-label">傳票類型</label>
+          <select class="form-input" id="vou-f-type">
+            <option value="general">一般傳票</option>
+            <option value="purchase">採購傳票</option>
+            <option value="sales">銷售傳票</option>
+            <option value="payment">付款傳票</option>
+            <option value="receipt">收款傳票</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">傳票日期</label>
+          <input class="form-input" type="date" id="vou-f-date">
+        </div>
+        <div>
+          <label class="form-label">摘要</label>
+          <input class="form-input" id="vou-f-desc" placeholder="傳票說明">
+        </div>
+      </div>
+      <!-- 傳票明細表格 -->
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">借貸明細</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
+        <thead><tr style="border-bottom:2px solid var(--border)">
+          <th style="text-align:left;padding:6px 4px;width:40%">會計科目</th>
+          <th style="text-align:right;padding:6px 4px;width:20%">借方（Dr）</th>
+          <th style="text-align:right;padding:6px 4px;width:20%">貸方（Cr）</th>
+          <th style="text-align:left;padding:6px 4px">摘要</th>
+          <th style="width:32px"></th>
+        </tr></thead>
+        <tbody id="vou-lines-wrap"></tbody>
+        <tfoot><tr style="border-top:2px solid var(--border);font-weight:700">
+          <td style="padding:8px 4px">合計</td>
+          <td style="text-align:right;padding:8px 4px" id="vou-total-debit">0</td>
+          <td style="text-align:right;padding:8px 4px" id="vou-total-credit">0</td>
+          <td colspan="2"><span id="vou-balance-msg" style="font-size:12px;margin-left:8px"></span></td>
+        </tr></tfoot>
+      </table>
+      <button class="btn btn-outline btn-sm" onclick="addVoucherLine()" style="margin-bottom:16px">＋ 新增明細行</button>
+      <div style="display:flex;justify-content:flex-end;gap:10px">
+        <button class="btn btn-outline" onclick="closeVoucherModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveVoucher()">儲存草稿</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 應收帳款 Modal ── -->
+  <div id="ar-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:480px;max-width:96vw;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="font-size:16px;font-weight:700;color:var(--navy)">新增應收帳款</div>
+        <button onclick="closeARModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div style="display:grid;gap:12px">
+        <div><label class="form-label">客戶</label>
+          <select class="form-input" id="ar-f-customer">
+            <option value="">— 選擇客戶 —</option>
+          </select></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label class="form-label">金額 *</label><input class="form-input" id="ar-f-amount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
+          <div><label class="form-label">到期日</label><input class="form-input" id="ar-f-due" type="date"></div>
+        </div>
+        <div><label class="form-label">付款條件</label>
+          <select class="form-input" id="ar-f-terms">
+            <option value="immediate">即期</option>
+            <option value="net15">Net 15</option>
+            <option value="net30" selected>Net 30</option>
+            <option value="net60">Net 60</option>
+            <option value="net90">Net 90</option>
+          </select></div>
+        <div><label class="form-label">備註</label><textarea class="form-input" id="ar-f-notes" rows="2" style="resize:vertical"></textarea></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <button class="btn btn-outline" onclick="closeARModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveAR()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 收款 Modal ── -->
+  <div id="ar-pay-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:400px;max-width:96vw;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:700;color:var(--navy)">登錄收款</div>
+        <button onclick="closeARPayModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <input type="hidden" id="ar-pay-id">
+      <div id="ar-pay-info" style="background:#f8f9fa;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px"></div>
+      <div style="display:grid;gap:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label class="form-label">收款日期</label><input class="form-input" type="date" id="ar-pay-date"></div>
+          <div><label class="form-label">收款金額 *</label><input class="form-input" id="ar-pay-amount" type="number" min="0.01" step="0.01"></div>
+        </div>
+        <div><label class="form-label">收款方式</label>
+          <select class="form-input" id="ar-pay-method">
+            <option value="transfer">匯款</option><option value="cash">現金</option>
+            <option value="check">支票</option><option value="card">刷卡</option>
+          </select></div>
+        <div><label class="form-label">參考號碼</label><input class="form-input" id="ar-pay-ref" placeholder="匯款單號/票號"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
+        <button class="btn btn-outline" onclick="closeARPayModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitARPayment()">確認收款</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 應付帳款 Modal ── -->
+  <div id="ap-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:480px;max-width:96vw;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="font-size:16px;font-weight:700;color:var(--navy)">新增應付帳款</div>
+        <button onclick="closeAPModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <div style="display:grid;gap:12px">
+        <div><label class="form-label">供應商</label>
+          <select class="form-input" id="ap-f-vendor">
+            <option value="">— 選擇供應商 —</option>
+          </select></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label class="form-label">金額 *</label><input class="form-input" id="ap-f-amount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
+          <div><label class="form-label">到期日</label><input class="form-input" id="ap-f-due" type="date"></div>
+        </div>
+        <div><label class="form-label">備註</label><textarea class="form-input" id="ap-f-notes" rows="2" style="resize:vertical"></textarea></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <button class="btn btn-outline" onclick="closeAPModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveAP()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 付款 Modal ── -->
+  <div id="ap-pay-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:400px;max-width:96vw;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:700;color:var(--navy)">登錄付款</div>
+        <button onclick="closeAPPayModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <input type="hidden" id="ap-pay-id">
+      <div id="ap-pay-info" style="background:#f8f9fa;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px"></div>
+      <div style="display:grid;gap:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label class="form-label">付款日期</label><input class="form-input" type="date" id="ap-pay-date"></div>
+          <div><label class="form-label">付款金額 *</label><input class="form-input" id="ap-pay-amount" type="number" min="0.01" step="0.01"></div>
+        </div>
+        <div><label class="form-label">付款方式</label>
+          <select class="form-input" id="ap-pay-method">
+            <option value="transfer">匯款</option><option value="cash">現金</option>
+            <option value="check">支票</option>
+          </select></div>
+        <div><label class="form-label">參考號碼</label><input class="form-input" id="ap-pay-ref" placeholder="匯款單號/票號"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
+        <button class="btn btn-outline" onclick="closeAPPayModal()">取消</button>
+        <button class="btn btn-primary" onclick="submitAPPayment()">確認付款</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ══════════════════════════════════════════════════════════════ -->
   <!-- 報表中心 -->
@@ -19853,48 +20125,438 @@ async function updateShipStatus(id, status) {
 // ══════════════════════════════════════════════════════════════
 // 會計記帳模組
 // ══════════════════════════════════════════════════════════════
-let _accCurrentTab = 'accounts';
+let _accCurrentTab = 'dashboard';
+let _accAccounts   = [];
+let _arList        = [];
+let _apList        = [];
+let _voucherList   = [];
 
 async function initAccounting() {
-  await Promise.all([loadAccStats(), loadAccAccounts()]);
-}
-
-async function loadAccStats() {
-  const { ok, data } = await api('/api/accounting/stats', {}, true);
-  if (!ok) return;
-  document.getElementById('acc-stat-accounts').textContent = data.total_accounts;
-  document.getElementById('acc-stat-ar').textContent       = '—';
-  document.getElementById('acc-stat-ap').textContent       = '—';
-  document.getElementById('acc-stat-pnl').textContent      = '—';
+  await Promise.all([loadAccAccounts(), loadAccDashboard()]);
+  switchAccTab(_accCurrentTab);
 }
 
 function switchAccTab(tab) {
   _accCurrentTab = tab;
-  ['accounts'].forEach(t => {
+  ['dashboard','vouchers','receivables','payables','accounts'].forEach(t => {
     const btn   = document.getElementById('acc-tab-' + t);
     const panel = document.getElementById('acc-panel-' + t);
-    if (btn)   { btn.style.borderBottomColor = t === tab ? 'var(--accent)' : 'transparent'; btn.style.fontWeight = t === tab ? '700' : '400'; btn.style.color = t === tab ? 'var(--navy)' : 'var(--muted)'; }
-    if (panel) panel.style.display = t === tab ? '' : 'none';
+    if (btn)   { btn.style.borderBottomColor = t===tab?'var(--accent)':'transparent'; btn.style.fontWeight = t===tab?'700':'400'; btn.style.color = t===tab?'var(--navy)':'var(--muted)'; }
+    if (panel) panel.style.display = t===tab ? '' : 'none';
   });
+  if (tab==='dashboard')   loadAccDashboard();
+  if (tab==='vouchers')    loadVouchers();
+  if (tab==='receivables') loadARList();
+  if (tab==='payables')    loadAPList();
+  if (tab==='accounts')    renderAccAccountsTable();
 }
 
+// ── 儀表板 ───────────────────────────────────────────────────
+
+async function loadAccDashboard() {
+  const { ok, data } = await api('/api/accounting/dashboard', {}, true);
+  if (!ok) return;
+  document.getElementById('acc-stat-accounts').textContent = data.total_accounts;
+  document.getElementById('acc-stat-ar').textContent  = 'NT$' + Math.round(data.ar_open).toLocaleString();
+  document.getElementById('acc-stat-ap').textContent  = 'NT$' + Math.round(data.ap_open).toLocaleString();
+  document.getElementById('acc-stat-pnl').textContent = '—';
+  document.getElementById('acc-dash-ar').textContent  = 'NT$' + Math.round(data.ar_open).toLocaleString();
+  document.getElementById('acc-dash-ap').textContent  = 'NT$' + Math.round(data.ap_open).toLocaleString();
+  document.getElementById('acc-dash-draft').textContent = data.voucher_draft;
+  const arOd = document.getElementById('acc-dash-ar-overdue');
+  if (arOd) arOd.textContent = data.ar_overdue > 0 ? `⚠️ ${data.ar_overdue} 筆逾期未收` : '無逾期';
+  const apOd = document.getElementById('acc-dash-ap-overdue');
+  if (apOd) apOd.textContent = data.ap_overdue > 0 ? `⚠️ ${data.ap_overdue} 筆逾期未付` : '無逾期';
+  setBadge('badge-acc-ar', data.ar_overdue);
+  setBadge('badge-acc-ap', data.ap_overdue);
+  setBadge('badge-acc-vouchers', data.voucher_draft);
+  // 帳齡摘要
+  const { ok: ok2, data: aging } = await api('/api/accounting/receivables/aging', {}, true);
+  const agingWrap = document.getElementById('acc-dash-ar-aging');
+  if (ok2 && aging && aging.length && agingWrap) {
+    agingWrap.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+      <thead><tr style="border-bottom:1px solid var(--border)">
+        <th style="text-align:left;padding:4px">客戶</th>
+        <th style="text-align:right;padding:4px">未到期</th>
+        <th style="text-align:right;padding:4px">1-30天</th>
+        <th style="text-align:right;padding:4px">31-60天</th>
+        <th style="text-align:right;padding:4px">60+天</th>
+      </tr></thead><tbody>${aging.slice(0,5).map(r=>`<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:4px">${escHtml(r.customer_name)}</td>
+        <td style="text-align:right;padding:4px">${r.current?'NT$'+Math.round(r.current).toLocaleString():'—'}</td>
+        <td style="text-align:right;padding:4px;color:${r.d30>0?'var(--orange)':''}">${r.d30?'NT$'+Math.round(r.d30).toLocaleString():'—'}</td>
+        <td style="text-align:right;padding:4px;color:${r.d60>0?'var(--red)':''}">${r.d60?'NT$'+Math.round(r.d60).toLocaleString():'—'}</td>
+        <td style="text-align:right;padding:4px;color:${r.over90>0?'var(--red)':''}">${(r.d90+r.over90)>0?'NT$'+Math.round(r.d90+r.over90).toLocaleString():'—'}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } else if (agingWrap) {
+    agingWrap.innerHTML = '<div style="color:var(--muted);font-size:12px">無逾期應收</div>';
+  }
+}
+
+// ── 傳票管理 ─────────────────────────────────────────────────
+
+const VOU_TYPE_LABEL  = { general:'一般', purchase:'採購', sales:'銷售', payment:'付款', receipt:'收款' };
+const VOU_STATUS_COLOR = { draft:'#aaa', posted:'var(--green)', void:'var(--red)' };
+const VOU_STATUS_LABEL = { draft:'草稿', posted:'已過帳', void:'已作廢' };
 const ACC_TYPE_LABEL  = { asset:'資產', liability:'負債', equity:'股東權益', revenue:'收入', expense:'費用' };
 const ACC_TYPE_COLOR  = { asset:'#2980b9', liability:'#e67e22', equity:'#8e44ad', revenue:'#27ae60', expense:'#c0392b' };
 
+async function loadVouchers() {
+  const status = document.getElementById('vou-filter-status')?.value || '';
+  const vtype  = document.getElementById('vou-filter-type')?.value || '';
+  const month  = document.getElementById('vou-filter-month')?.value || '';
+  const q      = document.getElementById('vou-filter-q')?.value.trim() || '';
+  let url = '/api/accounting/vouchers?';
+  if (status) url += `status=${status}&`;
+  if (vtype)  url += `type=${vtype}&`;
+  if (month)  url += `month=${month}&`;
+  if (q)      url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  _voucherList = ok ? data : [];
+  const wrap = document.getElementById('acc-vouchers-wrap');
+  if (!_voucherList.length) {
+    wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無傳票資料</div>'; return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>傳票號</th><th>類型</th><th>日期</th><th>摘要</th>
+    <th style="text-align:right">借方合計</th><th style="text-align:right">貸方合計</th>
+    <th>狀態</th><th></th>
+  </tr></thead><tbody>${_voucherList.map(r=>`<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${escHtml(r.voucher_no)}</td>
+    <td style="font-size:12px">${VOU_TYPE_LABEL[r.voucher_type]||r.voucher_type}</td>
+    <td style="font-size:12px">${r.voucher_date||'—'}</td>
+    <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(r.description||'—')}</td>
+    <td style="text-align:right;font-size:12px">NT$${(r.total_debit||0).toLocaleString()}</td>
+    <td style="text-align:right;font-size:12px">NT$${(r.total_credit||0).toLocaleString()}</td>
+    <td><span style="background:${VOU_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${VOU_STATUS_LABEL[r.status]||r.status}</span></td>
+    <td style="display:flex;gap:5px">
+      ${r.status==='draft'?`<button class="btn btn-primary btn-sm" onclick="postVoucher(${r.id})">過帳</button>`:''}
+      ${r.status!=='void'?`<button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="voidVoucher(${r.id})">作廢</button>`:''}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function openVoucherModal() {
+  document.getElementById('vou-f-type').value = 'general';
+  document.getElementById('vou-f-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('vou-f-desc').value = '';
+  document.getElementById('vou-lines-wrap').innerHTML = '';
+  addVoucherLine(); addVoucherLine();
+  recalcVoucher();
+  document.getElementById('vou-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+function closeVoucherModal() { document.getElementById('vou-modal-bg').style.display='none'; }
+
+function addVoucherLine() {
+  const tbody  = document.getElementById('vou-lines-wrap');
+  const tr     = document.createElement('tr');
+  const accOpts = _accAccounts.map(a =>
+    `<option value="${a.id}">[${escHtml(a.code)}] ${escHtml(a.name)}</option>`
+  ).join('');
+  tr.innerHTML = `
+    <td style="padding:4px"><select class="form-input" style="font-size:12px;padding:4px 6px"><option value="">— 選擇科目 —</option>${accOpts}</select></td>
+    <td style="padding:4px"><input class="form-input vou-debit"  type="number" min="0" step="0.01" value="0" style="text-align:right;padding:4px 6px" oninput="recalcVoucher()"></td>
+    <td style="padding:4px"><input class="form-input vou-credit" type="number" min="0" step="0.01" value="0" style="text-align:right;padding:4px 6px" oninput="recalcVoucher()"></td>
+    <td style="padding:4px"><input class="form-input" style="font-size:12px;padding:4px 6px" placeholder="明細說明"></td>
+    <td style="padding:4px"><button onclick="this.closest('tr').remove();recalcVoucher()" style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--red)">✕</button></td>`;
+  tbody.appendChild(tr);
+}
+
+function recalcVoucher() {
+  let dr = 0, cr = 0;
+  document.querySelectorAll('.vou-debit').forEach(i  => dr += parseFloat(i.value||0));
+  document.querySelectorAll('.vou-credit').forEach(i => cr += parseFloat(i.value||0));
+  document.getElementById('vou-total-debit').textContent  = dr.toLocaleString();
+  document.getElementById('vou-total-credit').textContent = cr.toLocaleString();
+  const msg = document.getElementById('vou-balance-msg');
+  const diff = Math.abs(dr - cr);
+  msg.textContent = diff < 0.005 ? '✓ 借貸平衡' : `⚠ 差額 ${diff.toFixed(2)}`;
+  msg.style.color = diff < 0.005 ? 'var(--green)' : 'var(--red)';
+}
+
+async function saveVoucher() {
+  const rows  = document.querySelectorAll('#vou-lines-wrap tr');
+  const lines = [];
+  rows.forEach((tr, i) => {
+    const sel   = tr.querySelector('select');
+    const debit = parseFloat(tr.querySelector('.vou-debit')?.value||0);
+    const credit= parseFloat(tr.querySelector('.vou-credit')?.value||0);
+    const desc  = tr.querySelectorAll('input')[2]?.value||'';
+    if (sel?.value && (debit>0||credit>0))
+      lines.push({ account_id: parseInt(sel.value), debit, credit, description: desc });
+  });
+  if (!lines.length) { showToast('請填寫傳票明細','error'); return; }
+  const body = {
+    voucher_type: document.getElementById('vou-f-type').value,
+    voucher_date: document.getElementById('vou-f-date').value,
+    description:  document.getElementById('vou-f-desc').value.trim(),
+    lines,
+  };
+  const { ok, data } = await api('/api/accounting/vouchers', { method:'POST', body:JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast(`傳票 ${data.voucher_no} 已建立（草稿）`,'success');
+  closeVoucherModal();
+  loadVouchers(); loadAccDashboard();
+}
+
+async function postVoucher(id) {
+  if (!confirm('確認過帳？過帳後傳票不可編輯。')) return;
+  const { ok, data } = await api(`/api/accounting/vouchers/${id}/post`, { method:'POST' });
+  if (!ok) { showToast(data?.error||'過帳失敗','error'); return; }
+  showToast('傳票已過帳','success'); loadVouchers(); loadAccDashboard();
+}
+
+async function voidVoucher(id) {
+  const reason = prompt('請輸入作廢原因：');
+  if (reason === null) return;
+  const { ok, data } = await api(`/api/accounting/vouchers/${id}/void`, { method:'POST', body:JSON.stringify({reason}) });
+  if (!ok) { showToast(data?.error||'作廢失敗','error'); return; }
+  showToast('傳票已作廢','success'); loadVouchers(); loadAccDashboard();
+}
+
+// ── 應收帳款 ─────────────────────────────────────────────────
+
+const AR_STATUS_COLOR = { open:'var(--orange)', partial:'var(--accent)', paid:'var(--green)', void:'#aaa', bad_debt:'var(--red)' };
+const AR_STATUS_LABEL = { open:'未收', partial:'部分收款', paid:'已收清', void:'已作廢', bad_debt:'壞帳' };
+
+async function loadARList() {
+  const status  = document.getElementById('ar-filter-status')?.value || '';
+  const overdue = document.getElementById('ar-filter-overdue')?.checked ? '1' : '';
+  const q       = document.getElementById('ar-filter-q')?.value.trim() || '';
+  let url = '/api/accounting/receivables?';
+  if (status)  url += `status=${status}&`;
+  if (overdue) url += `overdue=1&`;
+  const { ok, data } = await api(url, {}, true);
+  _arList = ok ? data : [];
+  const filtered = q ? _arList.filter(r => r.customer_name.includes(q)) : _arList;
+  const wrap = document.getElementById('acc-ar-wrap');
+  if (!filtered.length) {
+    wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無應收帳款資料</div>'; return;
+  }
+  const today = new Date().toISOString().slice(0,10);
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>AR 單號</th><th>客戶</th><th>金額</th><th>已收</th>
+    <th style="text-align:right">餘額</th><th>到期日</th><th>狀態</th><th></th>
+  </tr></thead><tbody>${filtered.map(r => {
+    const isOd = r.due_date && r.due_date < today && r.status !== 'paid';
+    return `<tr style="${isOd?'background:rgba(220,53,69,.05)':''}">
+      <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${escHtml(r.ar_no)}</td>
+      <td>${escHtml(r.customer_name||'—')}</td>
+      <td>NT$${r.amount.toLocaleString()}</td>
+      <td style="color:var(--green)">NT$${r.paid_amount.toLocaleString()}</td>
+      <td style="text-align:right;font-weight:600;color:${r.balance>0?'var(--orange)':'var(--green)'}">NT$${r.balance.toLocaleString()}</td>
+      <td style="font-size:12px;color:${isOd?'var(--red)':'var(--muted)'}">${r.due_date||'—'}${isOd?' ⚠':'  '}</td>
+      <td><span style="background:${AR_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${AR_STATUS_LABEL[r.status]||r.status}</span></td>
+      <td>${r.status!=='paid'&&r.status!=='void'?`<button class="btn btn-primary btn-sm" onclick="openARPayModal(${r.id})">收款</button>`:''}
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+async function loadARAgingTable() {
+  const wrap = document.getElementById('acc-ar-aging-wrap');
+  wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+  if (wrap.style.display === 'none') return;
+  const { ok, data } = await api('/api/accounting/receivables/aging', {}, true);
+  const tbl = document.getElementById('acc-ar-aging-table');
+  if (!ok || !data.length) { tbl.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted)">無逾期應收帳款</div>'; return; }
+  tbl.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>客戶</th><th style="text-align:right">未到期</th>
+    <th style="text-align:right;color:var(--orange)">1-30天</th>
+    <th style="text-align:right;color:var(--red)">31-60天</th>
+    <th style="text-align:right;color:var(--red)">61-90天</th>
+    <th style="text-align:right;color:var(--red)">90天以上</th>
+  </tr></thead><tbody>${data.map(r=>`<tr>
+    <td>${escHtml(r.customer_name)}</td>
+    <td style="text-align:right">${r.current?'NT$'+Math.round(r.current).toLocaleString():'—'}</td>
+    <td style="text-align:right;color:${r.d30?'var(--orange)':''}">${r.d30?'NT$'+Math.round(r.d30).toLocaleString():'—'}</td>
+    <td style="text-align:right;color:${r.d60?'var(--red)':''}">${r.d60?'NT$'+Math.round(r.d60).toLocaleString():'—'}</td>
+    <td style="text-align:right;color:${r.d90?'var(--red)':''}">${r.d90?'NT$'+Math.round(r.d90).toLocaleString():'—'}</td>
+    <td style="text-align:right;color:${r.over90?'var(--red)':''}">${r.over90?'NT$'+Math.round(r.over90).toLocaleString():'—'}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function openARModal() {
+  const csel = document.getElementById('ar-f-customer');
+  csel.innerHTML = '<option value="">— 選擇客戶 —</option>' +
+    _invVendors.map(v => `<option value="${v.id}">${escHtml(v.company_name)}</option>`).join('');
+  document.getElementById('ar-f-amount').value = '';
+  document.getElementById('ar-f-due').value    = '';
+  document.getElementById('ar-f-notes').value  = '';
+  document.getElementById('ar-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+function closeARModal() { document.getElementById('ar-modal-bg').style.display='none'; }
+
+async function saveAR() {
+  const cid  = document.getElementById('ar-f-customer').value;
+  const csel = document.getElementById('ar-f-customer');
+  const cname = cid ? csel.options[csel.selectedIndex].textContent : '';
+  const amt  = parseFloat(document.getElementById('ar-f-amount').value||0);
+  if (!amt || amt <= 0) { showToast('請填入正確金額','error'); return; }
+  const body = {
+    customer_id:   cid ? parseInt(cid) : null,
+    customer_name: cname,
+    amount:        amt,
+    due_date:      document.getElementById('ar-f-due').value || null,
+    payment_terms: document.getElementById('ar-f-terms').value,
+    notes:         document.getElementById('ar-f-notes').value.trim(),
+  };
+  const { ok, data } = await api('/api/accounting/receivables', { method:'POST', body:JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast(`應收帳款 ${data.ar_no} 已建立`,'success');
+  closeARModal(); loadARList(); loadAccDashboard();
+}
+
+function openARPayModal(id) {
+  const ar = _arList.find(x => x.id === id);
+  if (!ar) return;
+  document.getElementById('ar-pay-id').value = id;
+  document.getElementById('ar-pay-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('ar-pay-amount').value = ar.balance;
+  document.getElementById('ar-pay-ref').value = '';
+  document.getElementById('ar-pay-info').innerHTML =
+    `<strong>${escHtml(ar.customer_name)}</strong> — ${ar.ar_no}<br>
+     應收：NT$${ar.amount.toLocaleString()}　已收：NT$${ar.paid_amount.toLocaleString()}　<strong>餘額：NT$${ar.balance.toLocaleString()}</strong>`;
+  document.getElementById('ar-pay-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+function closeARPayModal() { document.getElementById('ar-pay-modal-bg').style.display='none'; }
+
+async function submitARPayment() {
+  const id  = parseInt(document.getElementById('ar-pay-id').value);
+  const amt = parseFloat(document.getElementById('ar-pay-amount').value||0);
+  if (!amt || amt <= 0) { showToast('請填入正確金額','error'); return; }
+  const body = {
+    pay_date: document.getElementById('ar-pay-date').value,
+    amount:   amt,
+    method:   document.getElementById('ar-pay-method').value,
+    ref_no:   document.getElementById('ar-pay-ref').value.trim(),
+  };
+  const { ok, data } = await api(`/api/accounting/receivables/${id}/payment`, { method:'POST', body:JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'收款失敗','error'); return; }
+  showToast(data.status==='paid'?'已全數收清！':'收款登錄成功','success');
+  closeARPayModal(); loadARList(); loadAccDashboard();
+}
+
+// ── 應付帳款 ─────────────────────────────────────────────────
+
+const AP_STATUS_COLOR = { open:'var(--red)', partial:'var(--orange)', paid:'var(--green)', void:'#aaa' };
+const AP_STATUS_LABEL = { open:'未付', partial:'部分付款', paid:'已付清', void:'已作廢' };
+
+async function loadAPList() {
+  const status  = document.getElementById('ap-filter-status')?.value || '';
+  const overdue = document.getElementById('ap-filter-overdue')?.checked ? '1' : '';
+  const q       = document.getElementById('ap-filter-q')?.value.trim() || '';
+  let url = '/api/accounting/payables?';
+  if (status)  url += `status=${status}&`;
+  if (overdue) url += `overdue=1&`;
+  const { ok, data } = await api(url, {}, true);
+  _apList = ok ? data : [];
+  const filtered = q ? _apList.filter(r => r.vendor_name.includes(q)) : _apList;
+  const wrap = document.getElementById('acc-ap-wrap');
+  if (!filtered.length) {
+    wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無應付帳款資料</div>'; return;
+  }
+  const today = new Date().toISOString().slice(0,10);
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>AP 單號</th><th>供應商</th><th>金額</th><th>已付</th>
+    <th style="text-align:right">餘額</th><th>到期日</th><th>狀態</th><th></th>
+  </tr></thead><tbody>${filtered.map(r => {
+    const isOd = r.due_date && r.due_date < today && r.status !== 'paid';
+    return `<tr style="${isOd?'background:rgba(220,53,69,.05)':''}">
+      <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${escHtml(r.ap_no)}</td>
+      <td>${escHtml(r.vendor_name||'—')}</td>
+      <td>NT$${r.amount.toLocaleString()}</td>
+      <td style="color:var(--green)">NT$${r.paid_amount.toLocaleString()}</td>
+      <td style="text-align:right;font-weight:600;color:${r.balance>0?'var(--red)':'var(--green)'}">NT$${r.balance.toLocaleString()}</td>
+      <td style="font-size:12px;color:${isOd?'var(--red)':'var(--muted)'}">${r.due_date||'—'}${isOd?' ⚠':'  '}</td>
+      <td><span style="background:${AP_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${AP_STATUS_LABEL[r.status]||r.status}</span></td>
+      <td>${r.status!=='paid'&&r.status!=='void'?`<button class="btn btn-primary btn-sm" onclick="openAPPayModal(${r.id})">付款</button>`:''}
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function openAPModal() {
+  const vsel = document.getElementById('ap-f-vendor');
+  vsel.innerHTML = '<option value="">— 選擇供應商 —</option>' +
+    _invVendors.map(v => `<option value="${v.id}">${escHtml(v.company_name)}</option>`).join('');
+  document.getElementById('ap-f-amount').value = '';
+  document.getElementById('ap-f-due').value    = '';
+  document.getElementById('ap-f-notes').value  = '';
+  document.getElementById('ap-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+function closeAPModal() { document.getElementById('ap-modal-bg').style.display='none'; }
+
+async function saveAP() {
+  const vid  = document.getElementById('ap-f-vendor').value;
+  const vsel = document.getElementById('ap-f-vendor');
+  const vname = vid ? vsel.options[vsel.selectedIndex].textContent : '';
+  const amt  = parseFloat(document.getElementById('ap-f-amount').value||0);
+  if (!amt || amt <= 0) { showToast('請填入正確金額','error'); return; }
+  const body = {
+    vendor_id:   vid ? parseInt(vid) : null,
+    vendor_name: vname,
+    amount:      amt,
+    due_date:    document.getElementById('ap-f-due').value || null,
+    notes:       document.getElementById('ap-f-notes').value.trim(),
+  };
+  const { ok, data } = await api('/api/accounting/payables', { method:'POST', body:JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast(`應付帳款 ${data.ap_no} 已建立`,'success');
+  closeAPModal(); loadAPList(); loadAccDashboard();
+}
+
+function openAPPayModal(id) {
+  const ap = _apList.find(x => x.id === id);
+  if (!ap) return;
+  document.getElementById('ap-pay-id').value = id;
+  document.getElementById('ap-pay-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('ap-pay-amount').value = ap.balance;
+  document.getElementById('ap-pay-ref').value = '';
+  document.getElementById('ap-pay-info').innerHTML =
+    `<strong>${escHtml(ap.vendor_name)}</strong> — ${ap.ap_no}<br>
+     應付：NT$${ap.amount.toLocaleString()}　已付：NT$${ap.paid_amount.toLocaleString()}　<strong>餘額：NT$${ap.balance.toLocaleString()}</strong>`;
+  document.getElementById('ap-pay-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+function closeAPPayModal() { document.getElementById('ap-pay-modal-bg').style.display='none'; }
+
+async function submitAPPayment() {
+  const id  = parseInt(document.getElementById('ap-pay-id').value);
+  const amt = parseFloat(document.getElementById('ap-pay-amount').value||0);
+  if (!amt || amt <= 0) { showToast('請填入正確金額','error'); return; }
+  const body = {
+    pay_date: document.getElementById('ap-pay-date').value,
+    amount:   amt,
+    method:   document.getElementById('ap-pay-method').value,
+    ref_no:   document.getElementById('ap-pay-ref').value.trim(),
+  };
+  const { ok, data } = await api(`/api/accounting/payables/${id}/payment`, { method:'POST', body:JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'付款失敗','error'); return; }
+  showToast(data.status==='paid'?'已全數付清！':'付款登錄成功','success');
+  closeAPPayModal(); loadAPList(); loadAccDashboard();
+}
+
+// ── 科目設定 ─────────────────────────────────────────────────
+
 async function loadAccAccounts() {
   const { ok, data } = await api('/api/accounting/accounts', {}, true);
+  _accAccounts = ok ? data : [];
+  renderAccAccountsTable();
+}
+
+function renderAccAccountsTable() {
   const wrap = document.getElementById('acc-accounts-wrap');
-  if (!ok || !data.length) {
-    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無科目資料</div>`;
-    return;
+  if (!wrap) return;
+  if (!_accAccounts.length) {
+    wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無科目資料</div>'; return;
   }
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
     <th>科目代號</th><th>科目名稱</th><th>類型</th><th>正常方向</th><th>層級</th>
-  </tr></thead><tbody>${data.map(r => `<tr>
+  </tr></thead><tbody>${_accAccounts.map(r=>`<tr>
     <td style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600">${escHtml(r.code)}</td>
-    <td style="${r.level===1?'font-weight:700':'padding-left:'+(r.level*12)+'px'}">${escHtml(r.name)}</td>
+    <td style="${r.level===1?'font-weight:700':'padding-left:'+(r.level*16)+'px'}">${escHtml(r.name)}</td>
     <td><span style="background:${ACC_TYPE_COLOR[r.account_type]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${ACC_TYPE_LABEL[r.account_type]||r.account_type}</span></td>
-    <td style="font-size:12px">${r.normal_balance === 'debit' ? '借方' : '貸方'}</td>
+    <td style="font-size:12px">${r.normal_balance==='debit'?'借方':'貸方'}</td>
     <td style="font-size:12px;color:var(--muted)">${r.level}</td>
   </tr>`).join('')}</tbody></table>`;
 }

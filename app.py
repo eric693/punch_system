@@ -16383,3 +16383,523 @@ def api_inv_shipment_from_order(order_id):
             (row['id'], order_id)
         )
     return jsonify({'shipment_no': shipment_no, 'id': row['id']}), 201
+
+
+# ══════════════════════════════════════════════════════════════
+# 會計記帳 Phase 4 — 傳票 / AR / AP
+# ══════════════════════════════════════════════════════════════
+
+def init_voucher_db():
+    import json as _json
+    migrations = [
+        """CREATE TABLE IF NOT EXISTS acc_vouchers (
+            id              SERIAL PRIMARY KEY,
+            voucher_no      TEXT NOT NULL UNIQUE,
+            voucher_type    TEXT NOT NULL DEFAULT 'general',
+            voucher_date    DATE NOT NULL,
+            fiscal_year     INT,
+            fiscal_month    INT,
+            description     TEXT DEFAULT '',
+            status          TEXT NOT NULL DEFAULT 'draft',
+            ref_type        TEXT DEFAULT '',
+            ref_id          INT,
+            ref_no          TEXT DEFAULT '',
+            total_debit     NUMERIC(14,2) DEFAULT 0,
+            total_credit    NUMERIC(14,2) DEFAULT 0,
+            created_by      TEXT DEFAULT '',
+            posted_by       TEXT DEFAULT '',
+            posted_at       TIMESTAMPTZ,
+            void_reason     TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS acc_voucher_lines (
+            id          SERIAL PRIMARY KEY,
+            voucher_id  INT REFERENCES acc_vouchers(id) ON DELETE CASCADE,
+            line_no     SMALLINT NOT NULL,
+            account_id  INT REFERENCES acc_accounts(id) ON DELETE RESTRICT,
+            debit       NUMERIC(14,2) DEFAULT 0,
+            credit      NUMERIC(14,2) DEFAULT 0,
+            description TEXT DEFAULT '',
+            cost_center TEXT DEFAULT '',
+            created_at  TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS acc_receivables (
+            id            SERIAL PRIMARY KEY,
+            ar_no         TEXT NOT NULL UNIQUE,
+            customer_id   INT REFERENCES crm_customers(id) ON DELETE SET NULL,
+            customer_name TEXT DEFAULT '',
+            order_id      INT REFERENCES crm_orders(id) ON DELETE SET NULL,
+            shipment_id   INT REFERENCES inv_shipments(id) ON DELETE SET NULL,
+            amount        NUMERIC(14,2) NOT NULL DEFAULT 0,
+            paid_amount   NUMERIC(14,2) DEFAULT 0,
+            due_date      DATE,
+            status        TEXT NOT NULL DEFAULT 'open',
+            payment_terms TEXT DEFAULT 'net30',
+            notes         TEXT DEFAULT '',
+            created_by    TEXT DEFAULT '',
+            created_at    TIMESTAMPTZ DEFAULT NOW(),
+            updated_at    TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS acc_ar_payments (
+            id          SERIAL PRIMARY KEY,
+            ar_id       INT REFERENCES acc_receivables(id) ON DELETE CASCADE,
+            pay_date    DATE NOT NULL,
+            amount      NUMERIC(14,2) NOT NULL,
+            method      TEXT DEFAULT 'transfer',
+            ref_no      TEXT DEFAULT '',
+            voucher_id  INT REFERENCES acc_vouchers(id) ON DELETE SET NULL,
+            notes       TEXT DEFAULT '',
+            created_by  TEXT DEFAULT '',
+            created_at  TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS acc_payables (
+            id            SERIAL PRIMARY KEY,
+            ap_no         TEXT NOT NULL UNIQUE,
+            vendor_id     INT REFERENCES crm_customers(id) ON DELETE SET NULL,
+            vendor_name   TEXT DEFAULT '',
+            po_id         INT REFERENCES inv_purchase_orders(id) ON DELETE SET NULL,
+            amount        NUMERIC(14,2) NOT NULL DEFAULT 0,
+            paid_amount   NUMERIC(14,2) DEFAULT 0,
+            due_date      DATE,
+            status        TEXT NOT NULL DEFAULT 'open',
+            notes         TEXT DEFAULT '',
+            created_by    TEXT DEFAULT '',
+            created_at    TIMESTAMPTZ DEFAULT NOW(),
+            updated_at    TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS acc_ap_payments (
+            id          SERIAL PRIMARY KEY,
+            ap_id       INT REFERENCES acc_payables(id) ON DELETE CASCADE,
+            pay_date    DATE NOT NULL,
+            amount      NUMERIC(14,2) NOT NULL,
+            method      TEXT DEFAULT 'transfer',
+            ref_no      TEXT DEFAULT '',
+            voucher_id  INT REFERENCES acc_vouchers(id) ON DELETE SET NULL,
+            notes       TEXT DEFAULT '',
+            created_by  TEXT DEFAULT '',
+            created_at  TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_acc_vouchers_date     ON acc_vouchers(voucher_date, status)",
+        "CREATE INDEX IF NOT EXISTS idx_acc_vlines_voucher    ON acc_voucher_lines(voucher_id)",
+        "CREATE INDEX IF NOT EXISTS idx_acc_vlines_account    ON acc_voucher_lines(account_id)",
+        "CREATE INDEX IF NOT EXISTS idx_acc_ar_status         ON acc_receivables(status, due_date)",
+        "CREATE INDEX IF NOT EXISTS idx_acc_ap_status         ON acc_payables(status, due_date)",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[voucher_init] {str(e)[:120]}")
+
+init_voucher_db()
+
+
+def _next_acc_no(prefix, table, col):
+    import datetime
+    ym = datetime.date.today().strftime('%Y%m')
+    with get_db() as conn:
+        row = conn.execute(
+            f"SELECT {col} FROM {table} WHERE {col} LIKE %s ORDER BY {col} DESC LIMIT 1",
+            (f"{prefix}-{ym}-%",)
+        ).fetchone()
+    seq = 1
+    if row:
+        try:
+            seq = int(row[0].rsplit('-', 1)[-1]) + 1
+        except Exception:
+            seq = 1
+    return f"{prefix}-{ym}-{seq:04d}"
+
+
+def _voucher_row(r, lines=None):
+    d = {
+        'id': r['id'], 'voucher_no': r['voucher_no'],
+        'voucher_type': r['voucher_type'],
+        'voucher_date': str(r['voucher_date']) if r['voucher_date'] else None,
+        'fiscal_year': r['fiscal_year'], 'fiscal_month': r['fiscal_month'],
+        'description': r['description'], 'status': r['status'],
+        'ref_type': r['ref_type'], 'ref_id': r['ref_id'], 'ref_no': r['ref_no'],
+        'total_debit': float(r['total_debit'] or 0),
+        'total_credit': float(r['total_credit'] or 0),
+        'created_by': r['created_by'], 'posted_by': r['posted_by'],
+        'void_reason': r['void_reason'],
+        'posted_at': str(r['posted_at'])[:19] if r['posted_at'] else None,
+        'created_at': str(r['created_at'])[:19] if r['created_at'] else None,
+    }
+    if lines is not None:
+        d['lines'] = [{
+            'id': l['id'], 'line_no': l['line_no'],
+            'account_id': l['account_id'], 'account_code': l.get('account_code', ''),
+            'account_name': l.get('account_name', ''),
+            'debit': float(l['debit'] or 0), 'credit': float(l['credit'] or 0),
+            'description': l['description'], 'cost_center': l['cost_center'],
+        } for l in lines]
+    return d
+
+
+# ── 傳票 CRUD ─────────────────────────────────────────────────
+
+@app.route('/api/accounting/vouchers', methods=['GET'])
+@require_module('accounting')
+def api_acc_vouchers_list():
+    status = request.args.get('status', '').strip()
+    month  = request.args.get('month', '').strip()
+    q      = request.args.get('q', '').strip()
+    vtype  = request.args.get('type', '').strip()
+    sql = "SELECT * FROM acc_vouchers WHERE 1=1"
+    params = []
+    if status:
+        sql += " AND status=%s"; params.append(status)
+    if vtype:
+        sql += " AND voucher_type=%s"; params.append(vtype)
+    if month:
+        sql += " AND TO_CHAR(voucher_date,'YYYY-MM')=%s"; params.append(month)
+    if q:
+        sql += " AND (voucher_no ILIKE %s OR description ILIKE %s OR ref_no ILIKE %s)"
+        params += [f'%{q}%', f'%{q}%', f'%{q}%']
+    sql += " ORDER BY voucher_date DESC, id DESC LIMIT 300"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return jsonify([_voucher_row(r) for r in rows])
+
+
+@app.route('/api/accounting/vouchers', methods=['POST'])
+@require_module('accounting')
+def api_acc_voucher_create():
+    import json as _json, datetime as _dt
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    lines = d.get('lines', [])
+
+    total_debit  = sum(float(l.get('debit', 0))  for l in lines)
+    total_credit = sum(float(l.get('credit', 0)) for l in lines)
+    if abs(total_debit - total_credit) > 0.005:
+        return jsonify({'error': f'借貸不平衡（借方 {total_debit:.2f}，貸方 {total_credit:.2f}）'}), 400
+    if not lines:
+        return jsonify({'error': '傳票明細不可為空'}), 400
+
+    vdate = d.get('voucher_date') or str(_dt.date.today())
+    fy    = int(vdate[:4])
+    fm    = int(vdate[5:7])
+
+    with get_db() as conn:
+        vno = _next_acc_no('JV', 'acc_vouchers', 'voucher_no')
+        row = conn.execute(
+            """INSERT INTO acc_vouchers
+               (voucher_no, voucher_type, voucher_date, fiscal_year, fiscal_month,
+                description, status, ref_type, ref_id, ref_no,
+                total_debit, total_credit, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s,'draft',%s,%s,%s,%s,%s,%s) RETURNING *""",
+            (vno, d.get('voucher_type', 'general'), vdate, fy, fm,
+             d.get('description', ''),
+             d.get('ref_type', ''), d.get('ref_id') or None, d.get('ref_no', ''),
+             total_debit, total_credit, admin)
+        ).fetchone()
+        for i, l in enumerate(lines, 1):
+            conn.execute(
+                """INSERT INTO acc_voucher_lines
+                   (voucher_id, line_no, account_id, debit, credit, description, cost_center)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                (row['id'], i, int(l['account_id']),
+                 float(l.get('debit', 0)), float(l.get('credit', 0)),
+                 l.get('description', ''), l.get('cost_center', ''))
+            )
+    return jsonify(_voucher_row(row)), 201
+
+
+@app.route('/api/accounting/vouchers/<int:vid>', methods=['GET'])
+@require_module('accounting')
+def api_acc_voucher_get(vid):
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM acc_vouchers WHERE id=%s", (vid,)).fetchone()
+        if not row:
+            return jsonify({'error': '傳票不存在'}), 404
+        lines = conn.execute(
+            """SELECT l.*, a.code AS account_code, a.name AS account_name
+               FROM acc_voucher_lines l
+               JOIN acc_accounts a ON a.id = l.account_id
+               WHERE l.voucher_id=%s ORDER BY l.line_no""", (vid,)
+        ).fetchall()
+    return jsonify(_voucher_row(row, list(lines)))
+
+
+@app.route('/api/accounting/vouchers/<int:vid>/post', methods=['POST'])
+@require_module('accounting')
+def api_acc_voucher_post(vid):
+    admin = session.get('admin_display', session.get('admin', ''))
+    with get_db() as conn:
+        row = conn.execute("SELECT status FROM acc_vouchers WHERE id=%s", (vid,)).fetchone()
+        if not row:
+            return jsonify({'error': '傳票不存在'}), 404
+        if row['status'] != 'draft':
+            return jsonify({'error': '只有草稿傳票可以過帳'}), 400
+        conn.execute(
+            "UPDATE acc_vouchers SET status='posted', posted_by=%s, posted_at=NOW(), updated_at=NOW() WHERE id=%s",
+            (admin, vid)
+        )
+    return jsonify({'ok': True})
+
+
+@app.route('/api/accounting/vouchers/<int:vid>/void', methods=['POST'])
+@require_module('accounting')
+def api_acc_voucher_void(vid):
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    with get_db() as conn:
+        row = conn.execute("SELECT status FROM acc_vouchers WHERE id=%s", (vid,)).fetchone()
+        if not row:
+            return jsonify({'error': '傳票不存在'}), 404
+        if row['status'] == 'void':
+            return jsonify({'error': '傳票已作廢'}), 400
+        conn.execute(
+            "UPDATE acc_vouchers SET status='void', void_reason=%s, updated_at=NOW() WHERE id=%s",
+            (d.get('reason', ''), vid)
+        )
+    return jsonify({'ok': True})
+
+
+# ── 應收帳款 AR ───────────────────────────────────────────────
+
+def _ar_row(r):
+    balance = float(r['amount'] or 0) - float(r['paid_amount'] or 0)
+    return {
+        'id': r['id'], 'ar_no': r['ar_no'],
+        'customer_id': r['customer_id'], 'customer_name': r['customer_name'],
+        'order_id': r['order_id'], 'shipment_id': r['shipment_id'],
+        'amount': float(r['amount'] or 0),
+        'paid_amount': float(r['paid_amount'] or 0),
+        'balance': round(balance, 2),
+        'due_date': str(r['due_date']) if r['due_date'] else None,
+        'status': r['status'], 'payment_terms': r['payment_terms'],
+        'notes': r['notes'], 'created_by': r['created_by'],
+        'created_at': str(r['created_at'])[:10] if r['created_at'] else None,
+    }
+
+
+@app.route('/api/accounting/receivables', methods=['GET'])
+@require_module('accounting')
+def api_acc_ar_list():
+    status      = request.args.get('status', '').strip()
+    customer_id = request.args.get('customer_id', '').strip()
+    overdue     = request.args.get('overdue', '').strip()
+    sql = "SELECT * FROM acc_receivables WHERE 1=1"
+    params = []
+    if status:
+        sql += " AND status=%s"; params.append(status)
+    if customer_id:
+        sql += " AND customer_id=%s"; params.append(int(customer_id))
+    if overdue == '1':
+        sql += " AND due_date < CURRENT_DATE AND status NOT IN ('paid','void')"
+    sql += " ORDER BY due_date ASC NULLS LAST, created_at DESC LIMIT 300"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return jsonify([_ar_row(r) for r in rows])
+
+
+@app.route('/api/accounting/receivables', methods=['POST'])
+@require_module('accounting')
+def api_acc_ar_create():
+    import datetime as _dt
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    amt   = float(d.get('amount', 0))
+    if amt <= 0:
+        return jsonify({'error': '金額必須大於 0'}), 400
+    with get_db() as conn:
+        ar_no = _next_acc_no('AR', 'acc_receivables', 'ar_no')
+        row = conn.execute(
+            """INSERT INTO acc_receivables
+               (ar_no, customer_id, customer_name, order_id, shipment_id,
+                amount, due_date, payment_terms, notes, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+            (ar_no, d.get('customer_id') or None, d.get('customer_name', ''),
+             d.get('order_id') or None, d.get('shipment_id') or None,
+             amt, d.get('due_date') or None,
+             d.get('payment_terms', 'net30'), d.get('notes', ''), admin)
+        ).fetchone()
+    return jsonify(_ar_row(row)), 201
+
+
+@app.route('/api/accounting/receivables/<int:arid>/payment', methods=['POST'])
+@require_module('accounting')
+def api_acc_ar_payment(arid):
+    import datetime as _dt
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    amt   = float(d.get('amount', 0))
+    if amt <= 0:
+        return jsonify({'error': '收款金額必須大於 0'}), 400
+    with get_db() as conn:
+        ar = conn.execute("SELECT * FROM acc_receivables WHERE id=%s", (arid,)).fetchone()
+        if not ar:
+            return jsonify({'error': '應收帳款不存在'}), 404
+        if ar['status'] in ('paid', 'void'):
+            return jsonify({'error': '此應收帳款已結清或作廢'}), 400
+        conn.execute(
+            """INSERT INTO acc_ar_payments (ar_id, pay_date, amount, method, ref_no, notes, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+            (arid, d.get('pay_date') or str(_dt.date.today()),
+             amt, d.get('method', 'transfer'), d.get('ref_no', ''),
+             d.get('notes', ''), admin)
+        )
+        new_paid = float(ar['paid_amount'] or 0) + amt
+        new_status = 'paid' if new_paid >= float(ar['amount']) else 'partial'
+        conn.execute(
+            "UPDATE acc_receivables SET paid_amount=%s, status=%s, updated_at=NOW() WHERE id=%s",
+            (new_paid, new_status, arid)
+        )
+    return jsonify({'ok': True, 'new_paid': new_paid, 'status': new_status})
+
+
+@app.route('/api/accounting/receivables/aging', methods=['GET'])
+@require_module('accounting')
+def api_acc_ar_aging():
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT
+                customer_name,
+                SUM(CASE WHEN due_date >= CURRENT_DATE OR due_date IS NULL THEN amount - paid_amount ELSE 0 END) AS current,
+                SUM(CASE WHEN due_date < CURRENT_DATE AND due_date >= CURRENT_DATE - 30 THEN amount - paid_amount ELSE 0 END) AS d30,
+                SUM(CASE WHEN due_date < CURRENT_DATE - 30 AND due_date >= CURRENT_DATE - 60 THEN amount - paid_amount ELSE 0 END) AS d60,
+                SUM(CASE WHEN due_date < CURRENT_DATE - 60 AND due_date >= CURRENT_DATE - 90 THEN amount - paid_amount ELSE 0 END) AS d90,
+                SUM(CASE WHEN due_date < CURRENT_DATE - 90 THEN amount - paid_amount ELSE 0 END) AS over90
+            FROM acc_receivables
+            WHERE status NOT IN ('paid','void')
+            GROUP BY customer_name
+            HAVING SUM(amount - paid_amount) > 0
+            ORDER BY customer_name
+        """).fetchall()
+    return jsonify([{
+        'customer_name': r['customer_name'],
+        'current': float(r['current'] or 0), 'd30': float(r['d30'] or 0),
+        'd60': float(r['d60'] or 0), 'd90': float(r['d90'] or 0),
+        'over90': float(r['over90'] or 0),
+    } for r in rows])
+
+
+# ── 應付帳款 AP ───────────────────────────────────────────────
+
+def _ap_row(r):
+    balance = float(r['amount'] or 0) - float(r['paid_amount'] or 0)
+    return {
+        'id': r['id'], 'ap_no': r['ap_no'],
+        'vendor_id': r['vendor_id'], 'vendor_name': r['vendor_name'],
+        'po_id': r['po_id'],
+        'amount': float(r['amount'] or 0),
+        'paid_amount': float(r['paid_amount'] or 0),
+        'balance': round(balance, 2),
+        'due_date': str(r['due_date']) if r['due_date'] else None,
+        'status': r['status'],
+        'notes': r['notes'], 'created_by': r['created_by'],
+        'created_at': str(r['created_at'])[:10] if r['created_at'] else None,
+    }
+
+
+@app.route('/api/accounting/payables', methods=['GET'])
+@require_module('accounting')
+def api_acc_ap_list():
+    status    = request.args.get('status', '').strip()
+    vendor_id = request.args.get('vendor_id', '').strip()
+    overdue   = request.args.get('overdue', '').strip()
+    sql = "SELECT * FROM acc_payables WHERE 1=1"
+    params = []
+    if status:
+        sql += " AND status=%s"; params.append(status)
+    if vendor_id:
+        sql += " AND vendor_id=%s"; params.append(int(vendor_id))
+    if overdue == '1':
+        sql += " AND due_date < CURRENT_DATE AND status NOT IN ('paid','void')"
+    sql += " ORDER BY due_date ASC NULLS LAST, created_at DESC LIMIT 300"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return jsonify([_ap_row(r) for r in rows])
+
+
+@app.route('/api/accounting/payables', methods=['POST'])
+@require_module('accounting')
+def api_acc_ap_create():
+    import datetime as _dt
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    amt   = float(d.get('amount', 0))
+    if amt <= 0:
+        return jsonify({'error': '金額必須大於 0'}), 400
+    with get_db() as conn:
+        ap_no = _next_acc_no('AP', 'acc_payables', 'ap_no')
+        row = conn.execute(
+            """INSERT INTO acc_payables
+               (ap_no, vendor_id, vendor_name, po_id,
+                amount, due_date, notes, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+            (ap_no, d.get('vendor_id') or None, d.get('vendor_name', ''),
+             d.get('po_id') or None,
+             amt, d.get('due_date') or None,
+             d.get('notes', ''), admin)
+        ).fetchone()
+    return jsonify(_ap_row(row)), 201
+
+
+@app.route('/api/accounting/payables/<int:apid>/payment', methods=['POST'])
+@require_module('accounting')
+def api_acc_ap_payment(apid):
+    import datetime as _dt
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    amt   = float(d.get('amount', 0))
+    if amt <= 0:
+        return jsonify({'error': '付款金額必須大於 0'}), 400
+    with get_db() as conn:
+        ap = conn.execute("SELECT * FROM acc_payables WHERE id=%s", (apid,)).fetchone()
+        if not ap:
+            return jsonify({'error': '應付帳款不存在'}), 404
+        if ap['status'] in ('paid', 'void'):
+            return jsonify({'error': '此應付帳款已結清或作廢'}), 400
+        conn.execute(
+            """INSERT INTO acc_ap_payments (ap_id, pay_date, amount, method, ref_no, notes, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+            (apid, d.get('pay_date') or str(_dt.date.today()),
+             amt, d.get('method', 'transfer'), d.get('ref_no', ''),
+             d.get('notes', ''), admin)
+        )
+        new_paid = float(ap['paid_amount'] or 0) + amt
+        new_status = 'paid' if new_paid >= float(ap['amount']) else 'partial'
+        conn.execute(
+            "UPDATE acc_payables SET paid_amount=%s, status=%s, updated_at=NOW() WHERE id=%s",
+            (new_paid, new_status, apid)
+        )
+    return jsonify({'ok': True, 'new_paid': new_paid, 'status': new_status})
+
+
+# ── 會計統計（更新版）────────────────────────────────────────
+
+@app.route('/api/accounting/dashboard', methods=['GET'])
+@require_module('accounting')
+def api_acc_dashboard():
+    import datetime as _dt
+    with get_db() as conn:
+        total_accounts = conn.execute("SELECT COUNT(*) AS n FROM acc_accounts WHERE active=TRUE").fetchone()['n']
+        ar_open = conn.execute(
+            "SELECT COALESCE(SUM(amount - paid_amount), 0) AS s FROM acc_receivables WHERE status NOT IN ('paid','void')"
+        ).fetchone()['s']
+        ap_open = conn.execute(
+            "SELECT COALESCE(SUM(amount - paid_amount), 0) AS s FROM acc_payables WHERE status NOT IN ('paid','void')"
+        ).fetchone()['s']
+        ar_overdue = conn.execute(
+            "SELECT COUNT(*) AS n FROM acc_receivables WHERE due_date < CURRENT_DATE AND status NOT IN ('paid','void')"
+        ).fetchone()['n']
+        ap_overdue = conn.execute(
+            "SELECT COUNT(*) AS n FROM acc_payables WHERE due_date < CURRENT_DATE AND status NOT IN ('paid','void')"
+        ).fetchone()['n']
+        voucher_draft = conn.execute(
+            "SELECT COUNT(*) AS n FROM acc_vouchers WHERE status='draft'"
+        ).fetchone()['n']
+    return jsonify({
+        'total_accounts': total_accounts,
+        'ar_open': float(ar_open or 0),
+        'ap_open': float(ap_open or 0),
+        'ar_overdue': ar_overdue,
+        'ap_overdue': ap_overdue,
+        'voucher_draft': voucher_draft,
+    })
