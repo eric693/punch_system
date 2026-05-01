@@ -15744,3 +15744,341 @@ def api_acc_stats():
             "SELECT COUNT(*) AS n FROM acc_accounts WHERE active=TRUE"
         ).fetchone()['n']
     return jsonify({'total_accounts': total_accounts})
+
+
+# ══════════════════════════════════════════════════════════════
+# 進銷存 Phase 2 — 採購訂單 / 入庫
+# ══════════════════════════════════════════════════════════════
+
+def init_purchase_db():
+    migrations = [
+        """CREATE TABLE IF NOT EXISTS inv_purchase_orders (
+            id              SERIAL PRIMARY KEY,
+            po_no           TEXT NOT NULL UNIQUE,
+            vendor_id       INT REFERENCES crm_customers(id) ON DELETE SET NULL,
+            vendor_name     TEXT DEFAULT '',
+            warehouse_id    INT REFERENCES inv_warehouses(id) ON DELETE SET NULL,
+            status          TEXT NOT NULL DEFAULT 'draft',
+            order_date      DATE NOT NULL DEFAULT CURRENT_DATE,
+            expected_date   DATE,
+            items           JSONB DEFAULT '[]',
+            subtotal        NUMERIC(14,2) DEFAULT 0,
+            tax_rate        NUMERIC(5,2) DEFAULT 5,
+            tax_amount      NUMERIC(14,2) DEFAULT 0,
+            total           NUMERIC(14,2) DEFAULT 0,
+            notes           TEXT DEFAULT '',
+            created_by      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS inv_purchase_receipts (
+            id              SERIAL PRIMARY KEY,
+            grn_no          TEXT NOT NULL UNIQUE,
+            po_id           INT REFERENCES inv_purchase_orders(id) ON DELETE SET NULL,
+            warehouse_id    INT REFERENCES inv_warehouses(id) ON DELETE SET NULL,
+            receipt_date    DATE NOT NULL DEFAULT CURRENT_DATE,
+            items           JSONB DEFAULT '[]',
+            total_cost      NUMERIC(14,2) DEFAULT 0,
+            notes           TEXT DEFAULT '',
+            created_by      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_inv_po_status   ON inv_purchase_orders(status, order_date)",
+        "CREATE INDEX IF NOT EXISTS idx_inv_po_vendor   ON inv_purchase_orders(vendor_id)",
+        "CREATE INDEX IF NOT EXISTS idx_inv_grn_po      ON inv_purchase_receipts(po_id)",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[purchase_init] {str(e)[:120]}")
+
+init_purchase_db()
+
+
+def _po_row(r):
+    return {
+        'id': r['id'], 'po_no': r['po_no'],
+        'vendor_id': r['vendor_id'], 'vendor_name': r['vendor_name'],
+        'warehouse_id': r['warehouse_id'], 'warehouse_name': r.get('warehouse_name', ''),
+        'status': r['status'],
+        'order_date': str(r['order_date']) if r['order_date'] else None,
+        'expected_date': str(r['expected_date']) if r['expected_date'] else None,
+        'items': r['items'] if isinstance(r['items'], list) else [],
+        'subtotal': float(r['subtotal'] or 0),
+        'tax_rate': float(r['tax_rate'] or 5),
+        'tax_amount': float(r['tax_amount'] or 0),
+        'total': float(r['total'] or 0),
+        'notes': r['notes'],
+        'created_by': r['created_by'],
+        'created_at': str(r['created_at'])[:19] if r['created_at'] else None,
+    }
+
+
+# ── 採購訂單 CRUD ──────────────────────────────────────────────
+
+@app.route('/api/inventory/purchase-orders', methods=['GET'])
+@require_module('inventory')
+def api_inv_po_list():
+    status    = request.args.get('status', '').strip()
+    vendor_id = request.args.get('vendor_id', '').strip()
+    q         = request.args.get('q', '').strip()
+    sql = """
+        SELECT p.*, w.name AS warehouse_name
+        FROM inv_purchase_orders p
+        LEFT JOIN inv_warehouses w ON w.id = p.warehouse_id
+        WHERE 1=1
+    """
+    params = []
+    if status:
+        sql += " AND p.status=%s"; params.append(status)
+    if vendor_id:
+        sql += " AND p.vendor_id=%s"; params.append(int(vendor_id))
+    if q:
+        sql += " AND (p.po_no ILIKE %s OR p.vendor_name ILIKE %s)"
+        params += [f'%{q}%', f'%{q}%']
+    sql += " ORDER BY p.created_at DESC LIMIT 200"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return jsonify([_po_row(r) for r in rows])
+
+
+@app.route('/api/inventory/purchase-orders', methods=['POST'])
+@require_module('inventory')
+def api_inv_po_create():
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    items = d.get('items', [])
+    subtotal   = sum(float(it.get('qty', 0)) * float(it.get('unit_cost', 0)) for it in items)
+    tax_rate   = float(d.get('tax_rate', 5))
+    tax_amount = round(subtotal * tax_rate / 100, 2)
+    total      = round(subtotal + tax_amount, 2)
+    with get_db() as conn:
+        po_no = _next_inv_no('PO', 'inv_purchase_orders', 'po_no')
+        row = conn.execute(
+            """INSERT INTO inv_purchase_orders
+               (po_no, vendor_id, vendor_name, warehouse_id, status, order_date,
+                expected_date, items, subtotal, tax_rate, tax_amount, total, notes, created_by)
+               VALUES (%s,%s,%s,%s,'draft',%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+            (po_no,
+             d.get('vendor_id') or None,
+             d.get('vendor_name', ''),
+             d.get('warehouse_id') or None,
+             d.get('order_date') or None,
+             d.get('expected_date') or None,
+             __import__('json').dumps(items),
+             subtotal, tax_rate, tax_amount, total,
+             d.get('notes', ''), admin)
+        ).fetchone()
+    return jsonify(_po_row(row)), 201
+
+
+@app.route('/api/inventory/purchase-orders/<int:oid>', methods=['GET'])
+@require_module('inventory')
+def api_inv_po_get(oid):
+    with get_db() as conn:
+        row = conn.execute(
+            """SELECT p.*, w.name AS warehouse_name
+               FROM inv_purchase_orders p
+               LEFT JOIN inv_warehouses w ON w.id = p.warehouse_id
+               WHERE p.id=%s""", (oid,)
+        ).fetchone()
+    if not row:
+        return jsonify({'error': '採購單不存在'}), 404
+    return jsonify(_po_row(row))
+
+
+@app.route('/api/inventory/purchase-orders/<int:oid>', methods=['PUT'])
+@require_module('inventory')
+def api_inv_po_update(oid):
+    d = request.get_json() or {}
+    with get_db() as conn:
+        po = conn.execute("SELECT status FROM inv_purchase_orders WHERE id=%s", (oid,)).fetchone()
+        if not po:
+            return jsonify({'error': '採購單不存在'}), 404
+        if po['status'] not in ('draft',):
+            return jsonify({'error': '已確認的採購單不可編輯'}), 400
+        items      = d.get('items', [])
+        subtotal   = sum(float(it.get('qty', 0)) * float(it.get('unit_cost', 0)) for it in items)
+        tax_rate   = float(d.get('tax_rate', 5))
+        tax_amount = round(subtotal * tax_rate / 100, 2)
+        total      = round(subtotal + tax_amount, 2)
+        conn.execute(
+            """UPDATE inv_purchase_orders SET
+               vendor_id=%s, vendor_name=%s, warehouse_id=%s,
+               order_date=%s, expected_date=%s, items=%s,
+               subtotal=%s, tax_rate=%s, tax_amount=%s, total=%s,
+               notes=%s, updated_at=NOW()
+               WHERE id=%s""",
+            (d.get('vendor_id') or None, d.get('vendor_name', ''),
+             d.get('warehouse_id') or None,
+             d.get('order_date') or None, d.get('expected_date') or None,
+             __import__('json').dumps(items),
+             subtotal, tax_rate, tax_amount, total,
+             d.get('notes', ''), oid)
+        )
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/purchase-orders/<int:oid>/status', methods=['PUT'])
+@require_module('inventory')
+def api_inv_po_status(oid):
+    d      = request.get_json() or {}
+    new_st = d.get('status', '').strip()
+    valid_transitions = {
+        'draft': ['confirmed', 'cancelled'],
+        'confirmed': ['cancelled'],
+    }
+    with get_db() as conn:
+        po = conn.execute("SELECT status FROM inv_purchase_orders WHERE id=%s", (oid,)).fetchone()
+        if not po:
+            return jsonify({'error': '採購單不存在'}), 404
+        allowed = valid_transitions.get(po['status'], [])
+        if new_st not in allowed:
+            return jsonify({'error': f'無法從 {po["status"]} 改為 {new_st}'}), 400
+        conn.execute(
+            "UPDATE inv_purchase_orders SET status=%s, updated_at=NOW() WHERE id=%s",
+            (new_st, oid)
+        )
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/purchase-orders/<int:oid>/receive', methods=['POST'])
+@require_module('inventory')
+def api_inv_po_receive(oid):
+    """建立入庫單，更新庫存，自動將 PO 狀態改為 received/partial。"""
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    items = d.get('items', [])  # [{product_id, qty_received, unit_cost}]
+    if not items:
+        return jsonify({'error': '請填寫入庫明細'}), 400
+
+    with get_db() as conn:
+        po = conn.execute(
+            "SELECT * FROM inv_purchase_orders WHERE id=%s", (oid,)
+        ).fetchone()
+        if not po:
+            return jsonify({'error': '採購單不存在'}), 404
+        if po['status'] not in ('confirmed', 'partial'):
+            return jsonify({'error': '採購單需先確認才能入庫'}), 400
+
+        warehouse_id = d.get('warehouse_id') or po['warehouse_id']
+        if not warehouse_id:
+            return jsonify({'error': '請指定入庫倉庫'}), 400
+
+        receipt_date = d.get('receipt_date') or str(__import__('datetime').date.today())
+        grn_no       = _next_inv_no('GRN', 'inv_purchase_receipts', 'grn_no')
+        total_cost   = sum(float(it.get('qty_received', 0)) * float(it.get('unit_cost', 0)) for it in items)
+
+        # 建立入庫單
+        grn = conn.execute(
+            """INSERT INTO inv_purchase_receipts
+               (grn_no, po_id, warehouse_id, receipt_date, items, total_cost, notes, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
+            (grn_no, oid, warehouse_id, receipt_date,
+             __import__('json').dumps(items), total_cost,
+             d.get('notes', ''), admin)
+        ).fetchone()
+
+        # 更新庫存 + 寫異動流水
+        for it in items:
+            pid = int(it.get('product_id', 0))
+            qty = float(it.get('qty_received', 0))
+            uc  = float(it.get('unit_cost', 0))
+            if pid <= 0 or qty <= 0:
+                continue
+            # upsert inv_stock
+            conn.execute(
+                """INSERT INTO inv_stock (product_id, warehouse_id, qty_on_hand)
+                   VALUES (%s, %s, %s)
+                   ON CONFLICT (product_id, warehouse_id)
+                   DO UPDATE SET qty_on_hand = inv_stock.qty_on_hand + EXCLUDED.qty_on_hand,
+                                 updated_at  = NOW()""",
+                (pid, warehouse_id, qty)
+            )
+            # 異動流水
+            conn.execute(
+                """INSERT INTO inv_transactions
+                   (product_id, warehouse_id, txn_type, qty, unit_cost, ref_type, ref_id, ref_no, created_by)
+                   VALUES (%s,%s,'purchase_in',%s,%s,'purchase_receipt',%s,%s,%s)""",
+                (pid, warehouse_id, qty, uc, grn['id'], grn_no, admin)
+            )
+            # 更新商品成本（最新進貨成本）
+            if uc > 0:
+                conn.execute(
+                    "UPDATE inv_products SET cost_price=%s, updated_at=NOW() WHERE id=%s",
+                    (uc, pid)
+                )
+
+        # 判斷 PO 是否全數入庫
+        po_items = po['items'] if isinstance(po['items'], list) else []
+        total_ordered = sum(float(it.get('qty', 0)) for it in po_items)
+        total_received_new = sum(float(it.get('qty_received', 0)) for it in items)
+        new_status = 'received' if total_received_new >= total_ordered > 0 else 'partial'
+        conn.execute(
+            "UPDATE inv_purchase_orders SET status=%s, updated_at=NOW() WHERE id=%s",
+            (new_status, oid)
+        )
+
+    return jsonify({'ok': True, 'grn_no': grn_no, 'status': new_status}), 201
+
+
+# ── 入庫單查詢 ────────────────────────────────────────────────
+
+@app.route('/api/inventory/purchase-receipts', methods=['GET'])
+@require_module('inventory')
+def api_inv_grn_list():
+    po_id = request.args.get('po_id', '').strip()
+    sql = """
+        SELECT g.*, p.po_no, w.name AS warehouse_name
+        FROM inv_purchase_receipts g
+        LEFT JOIN inv_purchase_orders p ON p.id = g.po_id
+        LEFT JOIN inv_warehouses w ON w.id = g.warehouse_id
+        WHERE 1=1
+    """
+    params = []
+    if po_id:
+        sql += " AND g.po_id=%s"; params.append(int(po_id))
+    sql += " ORDER BY g.created_at DESC LIMIT 200"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    result = [{
+        'id': r['id'], 'grn_no': r['grn_no'], 'po_id': r['po_id'],
+        'po_no': r['po_no'], 'warehouse_name': r['warehouse_name'],
+        'receipt_date': str(r['receipt_date']) if r['receipt_date'] else None,
+        'items': r['items'] if isinstance(r['items'], list) else [],
+        'total_cost': float(r['total_cost'] or 0),
+        'notes': r['notes'], 'created_by': r['created_by'],
+        'created_at': str(r['created_at'])[:19] if r['created_at'] else None,
+    } for r in rows]
+    return jsonify(result)
+
+
+# ── 採購統計 ─────────────────────────────────────────────────
+
+@app.route('/api/inventory/purchase-stats', methods=['GET'])
+@require_module('inventory')
+def api_inv_purchase_stats():
+    with get_db() as conn:
+        draft_cnt = conn.execute(
+            "SELECT COUNT(*) AS n FROM inv_purchase_orders WHERE status='draft'"
+        ).fetchone()['n']
+        confirmed_cnt = conn.execute(
+            "SELECT COUNT(*) AS n FROM inv_purchase_orders WHERE status='confirmed'"
+        ).fetchone()['n']
+        partial_cnt = conn.execute(
+            "SELECT COUNT(*) AS n FROM inv_purchase_orders WHERE status='partial'"
+        ).fetchone()['n']
+        month_total = conn.execute(
+            """SELECT COALESCE(SUM(total),0) AS s FROM inv_purchase_orders
+               WHERE status NOT IN ('cancelled','draft')
+               AND DATE_TRUNC('month', order_date) = DATE_TRUNC('month', CURRENT_DATE)"""
+        ).fetchone()['s']
+    return jsonify({
+        'draft': draft_cnt,
+        'confirmed': confirmed_cnt,
+        'partial': partial_cnt,
+        'pending_receipt': confirmed_cnt + partial_cnt,
+        'month_total': float(month_total or 0),
+    })

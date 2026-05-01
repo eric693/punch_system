@@ -2422,10 +2422,11 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     </div>
     <!-- Tab Bar -->
     <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border)">
-      <button id="inv-tab-stock"    onclick="switchInvTab('stock')"    style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid var(--accent);font-weight:700;color:var(--navy)">庫存總覽</button>
-      <button id="inv-tab-products" onclick="switchInvTab('products')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">商品管理</button>
+      <button id="inv-tab-stock"       onclick="switchInvTab('stock')"       style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid var(--accent);font-weight:700;color:var(--navy)">庫存總覽</button>
+      <button id="inv-tab-products"    onclick="switchInvTab('products')"    style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">商品管理</button>
+      <button id="inv-tab-purchase"    onclick="switchInvTab('purchase')"    style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">採購管理<span class="nav-badge" id="badge-inv-purchase" style="display:none;margin-left:4px"></span></button>
       <button id="inv-tab-transactions" onclick="switchInvTab('transactions')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">異動記錄</button>
-      <button id="inv-tab-warehouses" onclick="switchInvTab('warehouses')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">倉庫設定</button>
+      <button id="inv-tab-warehouses"  onclick="switchInvTab('warehouses')"  style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">倉庫設定</button>
     </div>
 
     <!-- 庫存總覽 Panel -->
@@ -2454,6 +2455,30 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         </select>
       </div>
       <div class="card" style="overflow:hidden"><div id="inv-products-wrap"></div></div>
+    </div>
+
+    <!-- 採購管理 Panel -->
+    <div id="inv-panel-purchase" style="display:none">
+      <!-- 採購統計卡 -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px">
+        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">草稿</div><div id="po-stat-draft" style="font-size:22px;font-weight:800;color:var(--muted)">—</div></div>
+        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">待入庫</div><div id="po-stat-pending" style="font-size:22px;font-weight:800;color:var(--orange)">—</div></div>
+        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">部分入庫</div><div id="po-stat-partial" style="font-size:22px;font-weight:800;color:var(--accent)">—</div></div>
+        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">本月採購額</div><div id="po-stat-month" style="font-size:16px;font-weight:800;color:var(--green)">—</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="filter-input" id="po-filter-status" onchange="loadPOList()" style="min-width:120px">
+          <option value="">全部狀態</option>
+          <option value="draft">草稿</option>
+          <option value="confirmed">已確認</option>
+          <option value="partial">部分入庫</option>
+          <option value="received">已入庫</option>
+          <option value="cancelled">已取消</option>
+        </select>
+        <input class="filter-input" id="po-filter-q" placeholder="搜尋單號 / 供應商…" oninput="loadPOList()" style="flex:1;min-width:180px">
+        <button class="btn btn-primary btn-sm" onclick="openPOModal()">＋ 新增採購單</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="po-list-wrap"></div></div>
     </div>
 
     <!-- 異動記錄 Panel -->
@@ -2534,6 +2559,87 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
         <button class="btn btn-outline" onclick="closeInvWarehouseModal()">取消</button>
         <button class="btn btn-primary" onclick="saveInvWarehouse()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 採購單 Modal ── -->
+  <div id="po-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:720px;max-width:96vw;max-height:92vh;overflow-y:auto;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div id="po-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">新增採購單</div>
+        <button onclick="closePOModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <input type="hidden" id="po-edit-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div>
+          <label class="form-label">供應商</label>
+          <select class="form-input" id="po-f-vendor">
+            <option value="">— 選擇供應商 —</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">倉庫</label>
+          <select class="form-input" id="po-f-warehouse">
+            <option value="">— 選擇倉庫 —</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">採購日期</label>
+          <input class="form-input" type="date" id="po-f-date">
+        </div>
+        <div>
+          <label class="form-label">預計到貨日</label>
+          <input class="form-input" type="date" id="po-f-expected">
+        </div>
+      </div>
+      <!-- 採購明細 -->
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">採購品項</div>
+      <div id="po-items-wrap" style="margin-bottom:10px"></div>
+      <button class="btn btn-outline btn-sm" onclick="addPOItem()" style="margin-bottom:16px">＋ 新增品項</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div>
+          <label class="form-label">稅率 (%)</label>
+          <input class="form-input" type="number" id="po-f-taxrate" value="5" min="0" max="100" step="0.1" oninput="recalcPO()">
+        </div>
+        <div style="padding-top:22px">
+          <div style="font-size:12px;color:var(--muted)">小計：<span id="po-subtotal">NT$0</span>　稅額：<span id="po-taxamt">NT$0</span>　<strong>總計：<span id="po-total" style="color:var(--navy)">NT$0</span></strong></div>
+        </div>
+      </div>
+      <div><label class="form-label">備註</label><textarea class="form-input" id="po-f-notes" rows="2" style="resize:vertical"></textarea></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <button class="btn btn-outline" onclick="closePOModal()">取消</button>
+        <button class="btn btn-primary" onclick="savePO()">儲存草稿</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 入庫 Modal ── -->
+  <div id="grn-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:640px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div id="grn-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">建立入庫單</div>
+        <button onclick="closeGRNModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <input type="hidden" id="grn-po-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div>
+          <label class="form-label">入庫倉庫</label>
+          <select class="form-input" id="grn-f-warehouse">
+            <option value="">— 選擇倉庫 —</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">入庫日期</label>
+          <input class="form-input" type="date" id="grn-f-date">
+        </div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">入庫品項（填寫實際收到數量）</div>
+      <div id="grn-items-wrap" style="margin-bottom:16px"></div>
+      <div><label class="form-label">備註</label><textarea class="form-input" id="grn-f-notes" rows="2" style="resize:vertical"></textarea></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <button class="btn btn-outline" onclick="closeGRNModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveGRN()">確認入庫</button>
       </div>
     </div>
   </div>
@@ -18951,11 +19057,18 @@ async function importEcomOrder(id) {
 // ══════════════════════════════════════════════════════════════
 let _invWarehouses = [];
 let _invProducts   = [];
+let _invVendors    = [];
 let _invCurrentTab = 'stock';
+let _poList        = [];
 
 async function initInventory() {
-  await Promise.all([loadInvStats(), loadInvWarehouses()]);
+  await Promise.all([loadInvStats(), loadInvWarehouses(), loadInvVendors()]);
   switchInvTab(_invCurrentTab);
+}
+
+async function loadInvVendors() {
+  const { ok, data } = await api('/api/crm/customers?status=active', {}, true);
+  _invVendors = ok ? data : [];
 }
 
 async function loadInvStats() {
@@ -18981,7 +19094,7 @@ async function loadInvWarehouses() {
 
 function switchInvTab(tab) {
   _invCurrentTab = tab;
-  const tabs = ['stock','products','transactions','warehouses'];
+  const tabs = ['stock','products','purchase','transactions','warehouses'];
   tabs.forEach(t => {
     const btn   = document.getElementById('inv-tab-' + t);
     const panel = document.getElementById('inv-panel-' + t);
@@ -18992,6 +19105,7 @@ function switchInvTab(tab) {
   if (addBtn) addBtn.style.display = tab === 'products' ? '' : 'none';
   if (tab === 'stock')         loadInvStock();
   if (tab === 'products')      loadInvProducts();
+  if (tab === 'purchase')      { loadPOStats(); loadPOList(); }
   if (tab === 'transactions')  loadInvTransactions();
 }
 
@@ -19210,6 +19324,261 @@ async function saveInvWarehouse() {
   showToast(id ? '倉庫已更新' : '倉庫已新增', 'success');
   closeInvWarehouseModal();
   loadInvWarehouses();
+}
+
+// ── 採購管理 ─────────────────────────────────────────────────
+
+const PO_STATUS_COLOR = { draft:'#aaa', confirmed:'var(--accent)', partial:'var(--orange)', received:'var(--green)', cancelled:'var(--red)' };
+const PO_STATUS_LABEL = { draft:'草稿', confirmed:'已確認', partial:'部分入庫', received:'已入庫', cancelled:'已取消' };
+
+async function loadPOStats() {
+  const { ok, data } = await api('/api/inventory/purchase-stats', {}, true);
+  if (!ok) return;
+  document.getElementById('po-stat-draft').textContent   = data.draft;
+  document.getElementById('po-stat-pending').textContent = data.confirmed;
+  document.getElementById('po-stat-partial').textContent = data.partial;
+  document.getElementById('po-stat-month').textContent   = 'NT$' + Math.round(data.month_total).toLocaleString();
+  setBadge('badge-inv-purchase', data.pending_receipt);
+}
+
+async function loadPOList() {
+  const status = document.getElementById('po-filter-status')?.value || '';
+  const q      = document.getElementById('po-filter-q')?.value.trim() || '';
+  let url = '/api/inventory/purchase-orders?';
+  if (status) url += `status=${status}&`;
+  if (q)      url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  _poList = ok ? data : [];
+  const wrap = document.getElementById('po-list-wrap');
+  if (!_poList.length) {
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無採購單資料</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>採購單號</th><th>供應商</th><th>倉庫</th><th>採購日期</th><th>預計到貨</th>
+    <th style="text-align:right">總金額</th><th>狀態</th><th></th>
+  </tr></thead><tbody>${_poList.map(r => `<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${escHtml(r.po_no)}</td>
+    <td>${escHtml(r.vendor_name||'—')}</td>
+    <td style="font-size:12px">${escHtml(r.warehouse_name||'—')}</td>
+    <td style="font-size:12px">${r.order_date||'—'}</td>
+    <td style="font-size:12px;color:var(--muted)">${r.expected_date||'—'}</td>
+    <td style="text-align:right;font-weight:600">NT$${(r.total||0).toLocaleString()}</td>
+    <td><span style="background:${PO_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${PO_STATUS_LABEL[r.status]||r.status}</span></td>
+    <td style="display:flex;gap:5px;flex-wrap:nowrap">
+      ${r.status==='draft' ? `<button class="btn btn-outline btn-sm" onclick="openPOModal(${r.id})">編輯</button><button class="btn btn-primary btn-sm" onclick="confirmPO(${r.id})">確認</button>` : ''}
+      ${r.status==='confirmed'||r.status==='partial' ? `<button class="btn btn-primary btn-sm" onclick="openGRNModal(${r.id})">入庫</button>` : ''}
+      ${r.status==='draft'||r.status==='confirmed' ? `<button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="cancelPO(${r.id})">取消</button>` : ''}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function openPOModal(id) {
+  const po = id ? _poList.find(x => x.id === id) : null;
+  document.getElementById('po-modal-title').textContent = po ? `編輯採購單 ${po.po_no}` : '新增採購單';
+  document.getElementById('po-edit-id').value = po ? po.id : '';
+
+  // 供應商下拉
+  const vsel = document.getElementById('po-f-vendor');
+  vsel.innerHTML = '<option value="">— 選擇供應商 —</option>' +
+    _invVendors.map(v => `<option value="${v.id}" ${po&&po.vendor_id==v.id?'selected':''}>${escHtml(v.company_name)}</option>`).join('');
+
+  // 倉庫下拉
+  const wsel = document.getElementById('po-f-warehouse');
+  wsel.innerHTML = '<option value="">— 選擇倉庫 —</option>' +
+    _invWarehouses.map(w => `<option value="${w.id}" ${po&&po.warehouse_id==w.id?'selected':''}>${escHtml(w.name)}</option>`).join('');
+
+  document.getElementById('po-f-date').value     = po ? (po.order_date||'') : new Date().toISOString().slice(0,10);
+  document.getElementById('po-f-expected').value  = po ? (po.expected_date||'') : '';
+  document.getElementById('po-f-taxrate').value   = po ? (po.tax_rate||5) : 5;
+  document.getElementById('po-f-notes').value     = po ? (po.notes||'') : '';
+
+  // 品項列表
+  const items = po ? (po.items||[]) : [];
+  document.getElementById('po-items-wrap').innerHTML = '';
+  if (items.length) items.forEach(it => _addPOItemRow(it));
+  else _addPOItemRow();
+  recalcPO();
+
+  document.getElementById('po-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+
+function closePOModal() {
+  document.getElementById('po-modal-bg').style.display = 'none';
+}
+
+function addPOItem() { _addPOItemRow(); recalcPO(); }
+
+function _addPOItemRow(it) {
+  const wrap = document.getElementById('po-items-wrap');
+  const div  = document.createElement('div');
+  div.className = 'po-item-row';
+  div.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end';
+  const prodOpts = _invProducts.map(p =>
+    `<option value="${p.id}" data-cost="${p.cost_price}" ${it&&it.product_id==p.id?'selected':''}>${escHtml(p.sku)} — ${escHtml(p.name)}</option>`
+  ).join('');
+  div.innerHTML = `
+    <div><label class="form-label" style="font-size:11px">商品</label>
+      <select class="form-input" style="font-size:12px" onchange="onPOItemProductChange(this)" oninput="recalcPO()">
+        <option value="">— 選擇商品 —</option>${prodOpts}
+      </select></div>
+    <div><label class="form-label" style="font-size:11px">數量</label>
+      <input class="form-input po-item-qty" type="number" min="0" step="1" value="${it?it.qty:1}" oninput="recalcPO()"></div>
+    <div><label class="form-label" style="font-size:11px">單位</label>
+      <input class="form-input po-item-unit" style="font-size:12px" value="${it?escHtml(it.unit||'個'):'個'}" readonly></div>
+    <div><label class="form-label" style="font-size:11px">單位成本</label>
+      <input class="form-input po-item-cost" type="number" min="0" step="0.01" value="${it?it.unit_cost:0}" oninput="recalcPO()"></div>
+    <div style="padding-bottom:2px"><button onclick="this.closest('.po-item-row').remove();recalcPO()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--red);line-height:1">✕</button></div>`;
+  wrap.appendChild(div);
+}
+
+function onPOItemProductChange(sel) {
+  const row  = sel.closest('.po-item-row');
+  const opt  = sel.options[sel.selectedIndex];
+  const cost = parseFloat(opt.dataset.cost||0);
+  const prod = _invProducts.find(p => p.id == sel.value);
+  if (prod) {
+    row.querySelector('.po-item-unit').value = prod.unit || '個';
+    row.querySelector('.po-item-cost').value = cost;
+  }
+  recalcPO();
+}
+
+function recalcPO() {
+  const rows    = document.querySelectorAll('.po-item-row');
+  let subtotal  = 0;
+  rows.forEach(row => {
+    const qty  = parseFloat(row.querySelector('.po-item-qty')?.value||0);
+    const cost = parseFloat(row.querySelector('.po-item-cost')?.value||0);
+    subtotal  += qty * cost;
+  });
+  const taxRate  = parseFloat(document.getElementById('po-f-taxrate')?.value||5);
+  const taxAmt   = Math.round(subtotal * taxRate) / 100;
+  const total    = subtotal + taxAmt;
+  if (document.getElementById('po-subtotal')) document.getElementById('po-subtotal').textContent = 'NT$' + subtotal.toLocaleString();
+  if (document.getElementById('po-taxamt'))   document.getElementById('po-taxamt').textContent   = 'NT$' + taxAmt.toLocaleString();
+  if (document.getElementById('po-total'))    document.getElementById('po-total').textContent    = 'NT$' + total.toLocaleString();
+}
+
+async function savePO() {
+  const id = document.getElementById('po-edit-id').value;
+  const vendorId = document.getElementById('po-f-vendor').value;
+  const vendorSel = document.getElementById('po-f-vendor');
+  const vendorName = vendorId ? vendorSel.options[vendorSel.selectedIndex].textContent : '';
+  const items = [];
+  document.querySelectorAll('.po-item-row').forEach(row => {
+    const sel  = row.querySelector('select');
+    const pid  = sel?.value;
+    const qty  = parseFloat(row.querySelector('.po-item-qty')?.value||0);
+    const cost = parseFloat(row.querySelector('.po-item-cost')?.value||0);
+    const unit = row.querySelector('.po-item-unit')?.value || '個';
+    const prod = _invProducts.find(p => p.id == pid);
+    if (pid && qty > 0) items.push({ product_id: parseInt(pid), sku: prod?.sku||'', name: prod?.name||'', qty, unit_cost: cost, unit, received_qty: 0 });
+  });
+  if (!items.length) { showToast('請至少新增一筆採購品項', 'error'); return; }
+  const body = {
+    vendor_id:     vendorId ? parseInt(vendorId) : null,
+    vendor_name:   vendorName,
+    warehouse_id:  document.getElementById('po-f-warehouse').value ? parseInt(document.getElementById('po-f-warehouse').value) : null,
+    order_date:    document.getElementById('po-f-date').value || null,
+    expected_date: document.getElementById('po-f-expected').value || null,
+    tax_rate:      parseFloat(document.getElementById('po-f-taxrate').value||5),
+    notes:         document.getElementById('po-f-notes').value.trim(),
+    items,
+  };
+  const url    = id ? `/api/inventory/purchase-orders/${id}` : '/api/inventory/purchase-orders';
+  const method = id ? 'PUT' : 'POST';
+  const { ok, data } = await api(url, { method, body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast(id ? '採購單已更新' : `採購單 ${data?.po_no||''} 已建立`, 'success');
+  closePOModal();
+  loadPOList(); loadPOStats(); loadInvStats();
+}
+
+async function confirmPO(id) {
+  if (!confirm('確認此採購單？確認後可進行入庫。')) return;
+  const { ok, data } = await api(`/api/inventory/purchase-orders/${id}/status`, { method:'PUT', body:JSON.stringify({status:'confirmed'}) });
+  if (!ok) { showToast(data?.error||'操作失敗','error'); return; }
+  showToast('採購單已確認', 'success');
+  loadPOList(); loadPOStats();
+}
+
+async function cancelPO(id) {
+  if (!confirm('確定取消此採購單？')) return;
+  const { ok, data } = await api(`/api/inventory/purchase-orders/${id}/status`, { method:'PUT', body:JSON.stringify({status:'cancelled'}) });
+  if (!ok) { showToast(data?.error||'操作失敗','error'); return; }
+  showToast('採購單已取消', 'success');
+  loadPOList(); loadPOStats();
+}
+
+// ── 入庫 ─────────────────────────────────────────────────────
+
+function openGRNModal(poId) {
+  const po = _poList.find(x => x.id === poId);
+  if (!po) return;
+  document.getElementById('grn-modal-title').textContent = `建立入庫單 — ${po.po_no}`;
+  document.getElementById('grn-po-id').value = poId;
+  document.getElementById('grn-f-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('grn-f-notes').value = '';
+
+  // 倉庫下拉（預選 PO 倉庫）
+  const wsel = document.getElementById('grn-f-warehouse');
+  wsel.innerHTML = '<option value="">— 選擇倉庫 —</option>' +
+    _invWarehouses.map(w => `<option value="${w.id}" ${po.warehouse_id==w.id?'selected':''}>${escHtml(w.name)}</option>`).join('');
+
+  // 入庫品項（來自 PO items）
+  const items = po.items || [];
+  const wrap  = document.getElementById('grn-items-wrap');
+  wrap.innerHTML = items.length
+    ? `<table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:6px 4px">SKU</th>
+          <th style="text-align:left;padding:6px 4px">商品</th>
+          <th style="text-align:right;padding:6px 4px">採購量</th>
+          <th style="text-align:right;padding:6px 4px">實收數量</th>
+          <th style="text-align:right;padding:6px 4px">單位成本</th>
+        </tr></thead><tbody>
+        ${items.map((it,i) => `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:6px 4px;font-family:'DM Mono',monospace;font-size:11px">${escHtml(it.sku||'')}</td>
+          <td style="padding:6px 4px">${escHtml(it.name||'')}</td>
+          <td style="padding:6px 4px;text-align:right">${it.qty} ${escHtml(it.unit||'個')}</td>
+          <td style="padding:6px 4px;text-align:right"><input type="number" min="0" step="1" value="${it.qty}" class="form-input grn-qty" data-pid="${it.product_id}" data-idx="${i}" style="width:80px;text-align:right;padding:4px 6px"></td>
+          <td style="padding:6px 4px;text-align:right"><input type="number" min="0" step="0.01" value="${it.unit_cost||0}" class="form-input grn-cost" data-idx="${i}" style="width:90px;text-align:right;padding:4px 6px"></td>
+        </tr>`).join('')}
+        </tbody></table>`
+    : `<div style="padding:20px;text-align:center;color:var(--muted)">此採購單無品項</div>`;
+
+  document.getElementById('grn-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+
+function closeGRNModal() {
+  document.getElementById('grn-modal-bg').style.display = 'none';
+}
+
+async function saveGRN() {
+  const poId = parseInt(document.getElementById('grn-po-id').value);
+  const wid  = document.getElementById('grn-f-warehouse').value;
+  if (!wid) { showToast('請選擇入庫倉庫', 'error'); return; }
+  const items = [];
+  document.querySelectorAll('.grn-qty').forEach(inp => {
+    const qty  = parseFloat(inp.value||0);
+    const idx  = inp.dataset.idx;
+    const cost = parseFloat(document.querySelector(`.grn-cost[data-idx="${idx}"]`)?.value||0);
+    const pid  = parseInt(inp.dataset.pid);
+    if (qty > 0) items.push({ product_id: pid, qty_received: qty, unit_cost: cost });
+  });
+  if (!items.length) { showToast('請填寫至少一筆入庫數量', 'error'); return; }
+  const body = {
+    warehouse_id:  parseInt(wid),
+    receipt_date:  document.getElementById('grn-f-date').value,
+    notes:         document.getElementById('grn-f-notes').value.trim(),
+    items,
+  };
+  const { ok, data } = await api(`/api/inventory/purchase-orders/${poId}/receive`, { method:'POST', body:JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'入庫失敗','error'); return; }
+  showToast(`入庫單 ${data.grn_no} 已建立，庫存已更新`, 'success');
+  closeGRNModal();
+  loadPOList(); loadPOStats(); loadInvStats(); loadInvStock();
 }
 
 // ══════════════════════════════════════════════════════════════
