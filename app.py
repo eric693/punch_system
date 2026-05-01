@@ -13352,6 +13352,7 @@ def _travel_row(r, expenses=None):
 
 @app.route('/api/travel/requests', methods=['GET'])
 @login_required
+@require_module('travel')
 def api_travel_list():
     status   = request.args.get('status', '')
     staff_id = request.args.get('staff_id', '')
@@ -13373,6 +13374,7 @@ def api_travel_list():
 
 @app.route('/api/travel/requests', methods=['POST'])
 @login_required
+@require_module('travel')
 def api_travel_create():
     b = request.get_json(force=True)
     required = ('staff_id','title','destination','start_date','end_date')
@@ -13392,6 +13394,7 @@ def api_travel_create():
 
 @app.route('/api/travel/requests/<int:rid>', methods=['GET'])
 @login_required
+@require_module('travel')
 def api_travel_get(rid):
     with get_db() as conn:
         row = conn.execute("""
@@ -13409,6 +13412,7 @@ def api_travel_get(rid):
 
 @app.route('/api/travel/requests/<int:rid>', methods=['PUT'])
 @login_required
+@require_module('travel')
 def api_travel_update(rid):
     b = request.get_json(force=True)
     with get_db() as conn:
@@ -13427,6 +13431,7 @@ def api_travel_update(rid):
 
 @app.route('/api/travel/requests/<int:rid>', methods=['DELETE'])
 @login_required
+@require_module('travel')
 def api_travel_delete(rid):
     with get_db() as conn:
         conn.execute("DELETE FROM travel_requests WHERE id=%s AND status='pending'", (rid,))
@@ -13435,6 +13440,7 @@ def api_travel_delete(rid):
 
 @app.route('/api/travel/requests/<int:rid>/review', methods=['POST'])
 @login_required
+@require_module('travel')
 def api_travel_review(rid):
     b           = request.get_json(force=True)
     action      = b.get('action')
@@ -13457,6 +13463,7 @@ def api_travel_review(rid):
 
 @app.route('/api/travel/requests/<int:rid>/expenses', methods=['GET'])
 @login_required
+@require_module('travel')
 def api_travel_expenses_list(rid):
     with get_db() as conn:
         rows = conn.execute(
@@ -13467,6 +13474,7 @@ def api_travel_expenses_list(rid):
 
 @app.route('/api/travel/requests/<int:rid>/expenses', methods=['POST'])
 @login_required
+@require_module('travel')
 def api_travel_expense_add(rid):
     b = request.get_json(force=True)
     if not b.get('amount'):
@@ -13484,6 +13492,7 @@ def api_travel_expense_add(rid):
 
 @app.route('/api/travel/expenses/<int:eid>', methods=['DELETE'])
 @login_required
+@require_module('travel')
 def api_travel_expense_delete(eid):
     with get_db() as conn:
         conn.execute("DELETE FROM travel_expenses WHERE id=%s", (eid,))
@@ -13553,6 +13562,7 @@ def api_travel_expense_get_attachment(eid):
 
 @app.route('/api/travel/stats', methods=['GET'])
 @login_required
+@require_module('travel')
 def api_travel_stats():
     month = request.args.get('month', '')
     cond, params = 'TRUE', []
@@ -13599,6 +13609,7 @@ def _loan_row(r):
 
 @app.route('/api/assets', methods=['GET'])
 @login_required
+@require_module('assets')
 def api_asset_list():
     category = request.args.get('category', '')
     status   = request.args.get('status', '')
@@ -13624,6 +13635,7 @@ def api_asset_list():
 
 @app.route('/api/assets', methods=['POST'])
 @login_required
+@require_module('assets')
 def api_asset_create():
     b = request.get_json(force=True)
     if not b.get('name'):
@@ -13643,6 +13655,7 @@ def api_asset_create():
 
 @app.route('/api/assets/<int:aid>', methods=['PUT'])
 @login_required
+@require_module('assets')
 def api_asset_update(aid):
     b = request.get_json(force=True)
     with get_db() as conn:
@@ -13665,6 +13678,7 @@ def api_asset_update(aid):
 
 @app.route('/api/assets/<int:aid>', methods=['DELETE'])
 @login_required
+@require_module('assets')
 def api_asset_delete(aid):
     with get_db() as conn:
         conn.execute("UPDATE assets SET active=FALSE WHERE id=%s", (aid,))
@@ -13673,6 +13687,7 @@ def api_asset_delete(aid):
 
 @app.route('/api/assets/<int:aid>/loans', methods=['GET'])
 @login_required
+@require_module('assets')
 def api_asset_loans(aid):
     with get_db() as conn:
         rows = conn.execute("""
@@ -13686,6 +13701,7 @@ def api_asset_loans(aid):
 
 @app.route('/api/assets/<int:aid>/loans', methods=['POST'])
 @login_required
+@require_module('assets')
 def api_asset_loan_create(aid):
     b = request.get_json(force=True)
     if not b.get('staff_id') or not b.get('loan_date'):
@@ -13708,6 +13724,7 @@ def api_asset_loan_create(aid):
 
 @app.route('/api/assets/loans/<int:lid>/return', methods=['POST'])
 @login_required
+@require_module('assets')
 def api_asset_loan_return(lid):
     b = request.get_json(force=True)
     return_date = b.get('return_date') or date.today().isoformat()
@@ -13725,6 +13742,7 @@ def api_asset_loan_return(lid):
 
 @app.route('/api/assets/loans/<int:lid>/review', methods=['POST'])
 @login_required
+@require_module('assets')
 def api_asset_loan_review(lid):
     b           = request.get_json(force=True)
     action      = b.get('action')
@@ -13755,6 +13773,7 @@ def api_asset_loan_review(lid):
 
 @app.route('/api/assets/loans', methods=['GET'])
 @login_required
+@require_module('assets')
 def api_all_loans():
     status   = request.args.get('status', 'active')
     staff_id = request.args.get('staff_id', '')
@@ -13775,6 +13794,7 @@ def api_all_loans():
 
 @app.route('/api/assets/stats', methods=['GET'])
 @login_required
+@require_module('assets')
 def api_asset_stats():
     with get_db() as conn:
         row = conn.execute("""

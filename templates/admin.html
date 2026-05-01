@@ -4021,6 +4021,8 @@ const ALL_MODULES = [
   { key:'perf',           label:'績效考核' },
   { key:'stores',         label:'門市管理' },
   { key:'training',       label:'教育訓練' },
+  { key:'travel',        label:'差旅申請' },
+  { key:'assets',        label:'資產管理' },
   { key:'labor-law',     label:'勞基法通知' },
   { key:'insurance',     label:'勞健保明細' },
   { key:'report-center', label:'報表中心' },
@@ -10910,7 +10912,7 @@ function closeSidebar() {
 function showPage(page, e) {
   if (e) e.preventDefault();
   // 權限檢查（儀表板和帳號管理不受模組限制）
-  const moduleGuard = { punch:'punch', sched:'sched', leave:'leave', salary:'salary', ann:'ann', holiday:'holiday', finance:'finance', 'expense-review':'expense-review', perf:'perf', stores:'stores', training:'training', 'labor-law':'labor-law', 'insurance':'salary', 'report-center':'report-center', 'hr-analysis':'hr-analysis', 'crm':'crm', 'orders':'orders', 'ecommerce':'ecommerce' };
+  const moduleGuard = { punch:'punch', sched:'sched', leave:'leave', salary:'salary', ann:'ann', holiday:'holiday', finance:'finance', 'expense-review':'expense-review', perf:'perf', stores:'stores', training:'training', travel:'travel', assets:'assets', 'labor-law':'labor-law', 'insurance':'salary', 'report-center':'report-center', 'hr-analysis':'hr-analysis', 'crm':'crm', 'orders':'orders', 'ecommerce':'ecommerce' };
   if (moduleGuard[page] && !hasModule(moduleGuard[page])) {
     showToast('您沒有此功能的存取權限', 'error'); return;
   }
