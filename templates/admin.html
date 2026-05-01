@@ -2422,11 +2422,12 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     </div>
     <!-- Tab Bar -->
     <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border)">
-      <button id="inv-tab-stock"       onclick="switchInvTab('stock')"       style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid var(--accent);font-weight:700;color:var(--navy)">庫存總覽</button>
-      <button id="inv-tab-products"    onclick="switchInvTab('products')"    style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">商品管理</button>
-      <button id="inv-tab-purchase"    onclick="switchInvTab('purchase')"    style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">採購管理<span class="nav-badge" id="badge-inv-purchase" style="display:none;margin-left:4px"></span></button>
+      <button id="inv-tab-stock"        onclick="switchInvTab('stock')"        style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid var(--accent);font-weight:700;color:var(--navy)">庫存總覽</button>
+      <button id="inv-tab-products"     onclick="switchInvTab('products')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">商品管理</button>
+      <button id="inv-tab-purchase"     onclick="switchInvTab('purchase')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">採購管理<span class="nav-badge" id="badge-inv-purchase" style="display:none;margin-left:4px"></span></button>
+      <button id="inv-tab-shipments"    onclick="switchInvTab('shipments')"    style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">出貨管理<span class="nav-badge" id="badge-inv-shipments" style="display:none;margin-left:4px"></span></button>
       <button id="inv-tab-transactions" onclick="switchInvTab('transactions')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">異動記錄</button>
-      <button id="inv-tab-warehouses"  onclick="switchInvTab('warehouses')"  style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">倉庫設定</button>
+      <button id="inv-tab-warehouses"   onclick="switchInvTab('warehouses')"   style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">倉庫設定</button>
     </div>
 
     <!-- 庫存總覽 Panel -->
@@ -2479,6 +2480,30 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <button class="btn btn-primary btn-sm" onclick="openPOModal()">＋ 新增採購單</button>
       </div>
       <div class="card" style="overflow:hidden"><div id="po-list-wrap"></div></div>
+    </div>
+
+    <!-- 出貨管理 Panel -->
+    <div id="inv-panel-shipments" style="display:none">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px">
+        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">待出貨</div><div id="sh-stat-pending" style="font-size:22px;font-weight:800;color:var(--orange)">—</div></div>
+        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">備貨中</div><div id="sh-stat-picking" style="font-size:22px;font-weight:800;color:var(--accent)">—</div></div>
+        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">已出貨</div><div id="sh-stat-shipped" style="font-size:22px;font-weight:800;color:var(--green)">—</div></div>
+        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">本月出貨</div><div id="sh-stat-month" style="font-size:22px;font-weight:800;color:var(--navy)">—</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="filter-input" id="sh-filter-status" onchange="loadShipmentList()" style="min-width:120px">
+          <option value="">全部狀態</option>
+          <option value="pending">待出貨</option>
+          <option value="picking">備貨中</option>
+          <option value="packed">已打包</option>
+          <option value="shipped">已出貨</option>
+          <option value="delivered">已送達</option>
+          <option value="cancelled">已取消</option>
+        </select>
+        <input class="filter-input" id="sh-filter-q" placeholder="搜尋出貨單號 / 客戶 / 追蹤號…" oninput="loadShipmentList()" style="flex:1;min-width:180px">
+        <button class="btn btn-primary btn-sm" onclick="openShipmentModal()">＋ 新增出貨單</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="sh-list-wrap"></div></div>
     </div>
 
     <!-- 異動記錄 Panel -->
@@ -2610,6 +2635,66 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
         <button class="btn btn-outline" onclick="closePOModal()">取消</button>
         <button class="btn btn-primary" onclick="savePO()">儲存草稿</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 出貨單 Modal ── -->
+  <div id="sh-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:700px;max-width:96vw;max-height:92vh;overflow-y:auto;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div id="sh-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">新增出貨單</div>
+        <button onclick="closeShipmentModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <input type="hidden" id="sh-edit-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+        <div>
+          <label class="form-label">客戶</label>
+          <select class="form-input" id="sh-f-customer" onchange="onShipCustomerChange()">
+            <option value="">— 選擇客戶 —</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">出貨倉庫</label>
+          <select class="form-input" id="sh-f-warehouse">
+            <option value="">— 選擇倉庫 —</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1">
+          <label class="form-label">收件地址</label>
+          <input class="form-input" id="sh-f-addr" placeholder="收件人地址">
+        </div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">出貨品項</div>
+      <div id="sh-items-wrap" style="margin-bottom:10px"></div>
+      <button class="btn btn-outline btn-sm" onclick="addShipItem()" style="margin-bottom:16px">＋ 新增品項</button>
+      <div><label class="form-label">備註</label><textarea class="form-input" id="sh-f-notes" rows="2" style="resize:vertical"></textarea></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <button class="btn btn-outline" onclick="closeShipmentModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveShipment()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 出貨確認 Modal ── -->
+  <div id="sh-ship-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:420px;max-width:96vw;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="font-size:16px;font-weight:700;color:var(--navy)">確認出貨</div>
+        <button onclick="closeShipModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <input type="hidden" id="sh-ship-id">
+      <div style="display:grid;gap:12px">
+        <div><label class="form-label">出貨日期</label><input class="form-input" type="date" id="sh-ship-date"></div>
+        <div><label class="form-label">物流商</label><input class="form-input" id="sh-ship-carrier" placeholder="例：黑貓、新竹、郵局"></div>
+        <div><label class="form-label">追蹤號碼</label><input class="form-input" id="sh-ship-tracking" placeholder="物流追蹤號碼"></div>
+      </div>
+      <div style="background:rgba(220,53,69,.08);border:1px solid rgba(220,53,69,.3);border-radius:8px;padding:12px;margin-top:16px;font-size:12px;color:var(--red)">
+        ⚠️ 確認出貨後將自動扣除庫存，此操作無法復原。
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <button class="btn btn-outline" onclick="closeShipModal()">取消</button>
+        <button class="btn btn-primary" onclick="confirmShip()">確認出貨</button>
       </div>
     </div>
   </div>
@@ -14458,7 +14543,7 @@ async function refreshBadges() {
   setBadge('badge-sched', schedCnt);              // 排班管理 = 排休申請
   setBadge('badge-leave', leaveCnt);              // 請假管理 = 請假申請
   setBadge('badge-expense-review', expenseCnt);   // 費用審核 = 待審費用
-  setBadge('badge-inventory', lowStockCnt);        // 進銷存 = 低庫存商品數
+  setBadge('badge-inventory', lowStockCnt);       // 進銷存 = 低庫存商品數
 
   // ── Tab 內的小 badge（進入頁面後顯示哪個 tab 有待審）──
   setTabDot('tabdot-punchrq', punchRqCnt);
@@ -19094,7 +19179,7 @@ async function loadInvWarehouses() {
 
 function switchInvTab(tab) {
   _invCurrentTab = tab;
-  const tabs = ['stock','products','purchase','transactions','warehouses'];
+  const tabs = ['stock','products','purchase','shipments','transactions','warehouses'];
   tabs.forEach(t => {
     const btn   = document.getElementById('inv-tab-' + t);
     const panel = document.getElementById('inv-panel-' + t);
@@ -19106,6 +19191,7 @@ function switchInvTab(tab) {
   if (tab === 'stock')         loadInvStock();
   if (tab === 'products')      loadInvProducts();
   if (tab === 'purchase')      { loadPOStats(); loadPOList(); }
+  if (tab === 'shipments')     { loadShipmentStats(); loadShipmentList(); }
   if (tab === 'transactions')  loadInvTransactions();
 }
 
@@ -19579,6 +19665,189 @@ async function saveGRN() {
   showToast(`入庫單 ${data.grn_no} 已建立，庫存已更新`, 'success');
   closeGRNModal();
   loadPOList(); loadPOStats(); loadInvStats(); loadInvStock();
+}
+
+// ── 出貨管理 ─────────────────────────────────────────────────
+
+let _shipmentList = [];
+
+const SH_STATUS_COLOR = {
+  pending:'var(--orange)', picking:'var(--accent)', packed:'#8e44ad',
+  shipped:'var(--green)', delivered:'#27ae60', cancelled:'#aaa'
+};
+const SH_STATUS_LABEL = {
+  pending:'待出貨', picking:'備貨中', packed:'已打包',
+  shipped:'已出貨', delivered:'已送達', cancelled:'已取消'
+};
+
+async function loadShipmentStats() {
+  const { ok, data } = await api('/api/inventory/shipment-stats', {}, true);
+  if (!ok) return;
+  document.getElementById('sh-stat-pending').textContent = data.pending;
+  document.getElementById('sh-stat-picking').textContent = data.picking;
+  document.getElementById('sh-stat-shipped').textContent = data.shipped;
+  document.getElementById('sh-stat-month').textContent   = data.month_shipped;
+  setBadge('badge-inv-shipments', data.pending + data.picking);
+}
+
+async function loadShipmentList() {
+  const status = document.getElementById('sh-filter-status')?.value || '';
+  const q      = document.getElementById('sh-filter-q')?.value.trim() || '';
+  let url = '/api/inventory/shipments?';
+  if (status) url += `status=${status}&`;
+  if (q)      url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  _shipmentList = ok ? data : [];
+  const wrap = document.getElementById('sh-list-wrap');
+  if (!_shipmentList.length) {
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無出貨單資料</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>出貨單號</th><th>客戶</th><th>倉庫</th><th>物流商</th>
+    <th>追蹤號碼</th><th>出貨日期</th><th>狀態</th><th></th>
+  </tr></thead><tbody>${_shipmentList.map(r => `<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${escHtml(r.shipment_no)}</td>
+    <td>${escHtml(r.customer_name||'—')}</td>
+    <td style="font-size:12px">${escHtml(r.warehouse_name||'—')}</td>
+    <td style="font-size:12px">${escHtml(r.carrier||'—')}</td>
+    <td style="font-size:12px;font-family:'DM Mono',monospace">${escHtml(r.tracking_no||'—')}</td>
+    <td style="font-size:12px;color:var(--muted)">${r.ship_date||'—'}</td>
+    <td><span style="background:${SH_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${SH_STATUS_LABEL[r.status]||r.status}</span></td>
+    <td style="display:flex;gap:5px;flex-wrap:nowrap">
+      ${r.status==='pending'||r.status==='picking'||r.status==='packed' ? `<button class="btn btn-outline btn-sm" onclick="openShipmentModal(${r.id})">編輯</button>` : ''}
+      ${r.status==='pending' ? `<button class="btn btn-outline btn-sm" onclick="updateShipStatus(${r.id},'picking')">備貨</button>` : ''}
+      ${r.status==='picking' ? `<button class="btn btn-outline btn-sm" onclick="updateShipStatus(${r.id},'packed')">打包</button>` : ''}
+      ${r.status==='pending'||r.status==='picking'||r.status==='packed' ? `<button class="btn btn-primary btn-sm" onclick="openShipModal(${r.id})">出貨</button>` : ''}
+      ${r.status==='shipped' ? `<button class="btn btn-outline btn-sm" onclick="updateShipStatus(${r.id},'delivered')">已送達</button>` : ''}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function openShipmentModal(id) {
+  const sh = id ? _shipmentList.find(x => x.id === id) : null;
+  document.getElementById('sh-modal-title').textContent = sh ? `編輯出貨單 ${sh.shipment_no}` : '新增出貨單';
+  document.getElementById('sh-edit-id').value = sh ? sh.id : '';
+
+  const csel = document.getElementById('sh-f-customer');
+  csel.innerHTML = '<option value="">— 選擇客戶 —</option>' +
+    _invVendors.map(v => `<option value="${v.id}" data-addr="${escHtml(v.address||'')}" ${sh&&sh.customer_id==v.id?'selected':''}>${escHtml(v.company_name)}</option>`).join('');
+
+  const wsel = document.getElementById('sh-f-warehouse');
+  wsel.innerHTML = '<option value="">— 選擇倉庫 —</option>' +
+    _invWarehouses.map(w => `<option value="${w.id}" ${sh&&sh.warehouse_id==w.id?'selected':''}>${escHtml(w.name)}</option>`).join('');
+
+  document.getElementById('sh-f-addr').value  = sh ? (sh.shipping_addr||'') : '';
+  document.getElementById('sh-f-notes').value = sh ? (sh.notes||'') : '';
+
+  const wrap = document.getElementById('sh-items-wrap');
+  wrap.innerHTML = '';
+  const items = sh ? (sh.items||[]) : [];
+  if (items.length) items.forEach(it => _addShipItemRow(it));
+  else _addShipItemRow();
+
+  document.getElementById('sh-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+
+function closeShipmentModal() {
+  document.getElementById('sh-modal-bg').style.display = 'none';
+}
+
+function onShipCustomerChange() {
+  const sel = document.getElementById('sh-f-customer');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset.addr) document.getElementById('sh-f-addr').value = opt.dataset.addr;
+}
+
+function addShipItem() { _addShipItemRow(); }
+
+function _addShipItemRow(it) {
+  const wrap = document.getElementById('sh-items-wrap');
+  const div  = document.createElement('div');
+  div.className = 'sh-item-row';
+  div.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end';
+  const prodOpts = _invProducts.map(p =>
+    `<option value="${p.id}" ${it&&it.product_id==p.id?'selected':''}>${escHtml(p.sku)} — ${escHtml(p.name)}</option>`
+  ).join('');
+  div.innerHTML = `
+    <div><label class="form-label" style="font-size:11px">商品</label>
+      <select class="form-input" style="font-size:12px">
+        <option value="">— 選擇商品 —</option>${prodOpts}
+      </select></div>
+    <div><label class="form-label" style="font-size:11px">數量</label>
+      <input class="form-input sh-item-qty" type="number" min="1" step="1" value="${it?it.qty:1}"></div>
+    <div><label class="form-label" style="font-size:11px">單位</label>
+      <input class="form-input sh-item-unit" style="font-size:12px" value="${it?escHtml(it.unit||'個'):'個'}"></div>
+    <div style="padding-bottom:2px"><button onclick="this.closest('.sh-item-row').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--red);line-height:1">✕</button></div>`;
+  wrap.appendChild(div);
+}
+
+async function saveShipment() {
+  const id   = document.getElementById('sh-edit-id').value;
+  const cid  = document.getElementById('sh-f-customer').value;
+  const csel = document.getElementById('sh-f-customer');
+  const cname = cid ? csel.options[csel.selectedIndex].textContent : '';
+  const items = [];
+  document.querySelectorAll('.sh-item-row').forEach(row => {
+    const sel = row.querySelector('select');
+    const pid = sel?.value;
+    const qty = parseFloat(row.querySelector('.sh-item-qty')?.value||0);
+    const unit = row.querySelector('.sh-item-unit')?.value || '個';
+    const prod = _invProducts.find(p => p.id == pid);
+    if (pid && qty > 0) items.push({ product_id: parseInt(pid), sku: prod?.sku||'', name: prod?.name||'', qty, unit });
+  });
+  if (!items.length) { showToast('請至少新增一筆出貨品項', 'error'); return; }
+  const body = {
+    customer_id:   cid ? parseInt(cid) : null,
+    customer_name: cname,
+    warehouse_id:  document.getElementById('sh-f-warehouse').value ? parseInt(document.getElementById('sh-f-warehouse').value) : null,
+    shipping_addr: document.getElementById('sh-f-addr').value.trim(),
+    notes:         document.getElementById('sh-f-notes').value.trim(),
+    items,
+  };
+  const url    = id ? `/api/inventory/shipments/${id}` : '/api/inventory/shipments';
+  const method = id ? 'PUT' : 'POST';
+  const { ok, data } = await api(url, { method, body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast(id ? '出貨單已更新' : `出貨單 ${data?.shipment_no||''} 已建立`, 'success');
+  closeShipmentModal();
+  loadShipmentList(); loadShipmentStats(); loadInvStats();
+}
+
+function openShipModal(id) {
+  document.getElementById('sh-ship-id').value  = id;
+  document.getElementById('sh-ship-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('sh-ship-carrier').value  = '';
+  document.getElementById('sh-ship-tracking').value = '';
+  document.getElementById('sh-ship-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+
+function closeShipModal() {
+  document.getElementById('sh-ship-modal-bg').style.display = 'none';
+}
+
+async function confirmShip() {
+  const id   = parseInt(document.getElementById('sh-ship-id').value);
+  const body = {
+    status:      'shipped',
+    ship_date:   document.getElementById('sh-ship-date').value,
+    carrier:     document.getElementById('sh-ship-carrier').value.trim(),
+    tracking_no: document.getElementById('sh-ship-tracking').value.trim(),
+  };
+  const { ok, data } = await api(`/api/inventory/shipments/${id}/status`, { method:'PUT', body:JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'出貨失敗','error'); return; }
+  showToast('已出貨，庫存已自動扣除', 'success');
+  closeShipModal();
+  loadShipmentList(); loadShipmentStats(); loadInvStats(); loadInvStock();
+}
+
+async function updateShipStatus(id, status) {
+  const labels = { picking:'確認開始備貨？', packed:'確認已打包？', delivered:'確認已送達？' };
+  if (!confirm(labels[status]||`確認更新為 ${status}？`)) return;
+  const { ok, data } = await api(`/api/inventory/shipments/${id}/status`, { method:'PUT', body:JSON.stringify({status}) });
+  if (!ok) { showToast(data?.error||'操作失敗','error'); return; }
+  showToast('狀態已更新', 'success');
+  loadShipmentList(); loadShipmentStats();
 }
 
 // ══════════════════════════════════════════════════════════════

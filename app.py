@@ -16082,3 +16082,304 @@ def api_inv_purchase_stats():
         'pending_receipt': confirmed_cnt + partial_cnt,
         'month_total': float(month_total or 0),
     })
+
+
+# ══════════════════════════════════════════════════════════════
+# 進銷存 Phase 3 — 出貨單
+# ══════════════════════════════════════════════════════════════
+
+def init_shipment_db():
+    migrations = [
+        """CREATE TABLE IF NOT EXISTS inv_shipments (
+            id              SERIAL PRIMARY KEY,
+            shipment_no     TEXT NOT NULL UNIQUE,
+            order_id        INT REFERENCES crm_orders(id) ON DELETE SET NULL,
+            ecom_order_id   INT REFERENCES ecommerce_orders(id) ON DELETE SET NULL,
+            customer_id     INT REFERENCES crm_customers(id) ON DELETE SET NULL,
+            customer_name   TEXT DEFAULT '',
+            warehouse_id    INT REFERENCES inv_warehouses(id) ON DELETE SET NULL,
+            status          TEXT NOT NULL DEFAULT 'pending',
+            ship_date       DATE,
+            carrier         TEXT DEFAULT '',
+            tracking_no     TEXT DEFAULT '',
+            shipping_addr   TEXT DEFAULT '',
+            items           JSONB DEFAULT '[]',
+            notes           TEXT DEFAULT '',
+            created_by      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_inv_shipments_order    ON inv_shipments(order_id)",
+        "CREATE INDEX IF NOT EXISTS idx_inv_shipments_ecom     ON inv_shipments(ecom_order_id)",
+        "CREATE INDEX IF NOT EXISTS idx_inv_shipments_status   ON inv_shipments(status, created_at)",
+        "ALTER TABLE crm_orders ADD COLUMN IF NOT EXISTS shipment_id INT REFERENCES inv_shipments(id) ON DELETE SET NULL",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[shipment_init] {str(e)[:120]}")
+
+init_shipment_db()
+
+
+def _shipment_row(r):
+    return {
+        'id': r['id'], 'shipment_no': r['shipment_no'],
+        'order_id': r['order_id'], 'ecom_order_id': r['ecom_order_id'],
+        'customer_id': r['customer_id'], 'customer_name': r['customer_name'],
+        'warehouse_id': r['warehouse_id'],
+        'warehouse_name': r.get('warehouse_name', ''),
+        'order_no': r.get('order_no', ''),
+        'status': r['status'],
+        'ship_date': str(r['ship_date']) if r['ship_date'] else None,
+        'carrier': r['carrier'], 'tracking_no': r['tracking_no'],
+        'shipping_addr': r['shipping_addr'],
+        'items': r['items'] if isinstance(r['items'], list) else [],
+        'notes': r['notes'], 'created_by': r['created_by'],
+        'created_at': str(r['created_at'])[:19] if r['created_at'] else None,
+        'updated_at': str(r['updated_at'])[:19] if r['updated_at'] else None,
+    }
+
+
+@app.route('/api/inventory/shipments', methods=['GET'])
+@require_module('inventory')
+def api_inv_shipments_list():
+    status   = request.args.get('status', '').strip()
+    order_id = request.args.get('order_id', '').strip()
+    q        = request.args.get('q', '').strip()
+    sql = """
+        SELECT s.*, w.name AS warehouse_name, o.order_no
+        FROM inv_shipments s
+        LEFT JOIN inv_warehouses w ON w.id = s.warehouse_id
+        LEFT JOIN crm_orders o ON o.id = s.order_id
+        WHERE 1=1
+    """
+    params = []
+    if status:
+        sql += " AND s.status=%s"; params.append(status)
+    if order_id:
+        sql += " AND s.order_id=%s"; params.append(int(order_id))
+    if q:
+        sql += " AND (s.shipment_no ILIKE %s OR s.customer_name ILIKE %s OR s.tracking_no ILIKE %s)"
+        params += [f'%{q}%', f'%{q}%', f'%{q}%']
+    sql += " ORDER BY s.created_at DESC LIMIT 200"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return jsonify([_shipment_row(r) for r in rows])
+
+
+@app.route('/api/inventory/shipments', methods=['POST'])
+@require_module('inventory')
+def api_inv_shipment_create():
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    with get_db() as conn:
+        shipment_no = _next_inv_no('SH', 'inv_shipments', 'shipment_no')
+        row = conn.execute(
+            """INSERT INTO inv_shipments
+               (shipment_no, order_id, ecom_order_id, customer_id, customer_name,
+                warehouse_id, status, ship_date, carrier, tracking_no,
+                shipping_addr, items, notes, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s,'pending',%s,%s,%s,%s,%s,%s,%s)
+               RETURNING *""",
+            (shipment_no,
+             d.get('order_id') or None, d.get('ecom_order_id') or None,
+             d.get('customer_id') or None, d.get('customer_name', ''),
+             d.get('warehouse_id') or None,
+             d.get('ship_date') or None,
+             d.get('carrier', ''), d.get('tracking_no', ''),
+             d.get('shipping_addr', ''),
+             __import__('json').dumps(d.get('items', [])),
+             d.get('notes', ''), admin)
+        ).fetchone()
+        # 回寫 crm_orders.shipment_id
+        if d.get('order_id'):
+            conn.execute(
+                "UPDATE crm_orders SET shipment_id=%s, updated_at=NOW() WHERE id=%s",
+                (row['id'], d['order_id'])
+            )
+    return jsonify(_shipment_row(row)), 201
+
+
+@app.route('/api/inventory/shipments/<int:sid>', methods=['GET'])
+@require_module('inventory')
+def api_inv_shipment_get(sid):
+    with get_db() as conn:
+        row = conn.execute(
+            """SELECT s.*, w.name AS warehouse_name, o.order_no
+               FROM inv_shipments s
+               LEFT JOIN inv_warehouses w ON w.id = s.warehouse_id
+               LEFT JOIN crm_orders o ON o.id = s.order_id
+               WHERE s.id=%s""", (sid,)
+        ).fetchone()
+    if not row:
+        return jsonify({'error': '出貨單不存在'}), 404
+    return jsonify(_shipment_row(row))
+
+
+@app.route('/api/inventory/shipments/<int:sid>', methods=['PUT'])
+@require_module('inventory')
+def api_inv_shipment_update(sid):
+    d = request.get_json() or {}
+    with get_db() as conn:
+        sh = conn.execute("SELECT status FROM inv_shipments WHERE id=%s", (sid,)).fetchone()
+        if not sh:
+            return jsonify({'error': '出貨單不存在'}), 404
+        if sh['status'] == 'shipped':
+            return jsonify({'error': '已出貨的出貨單不可編輯品項'}), 400
+        conn.execute(
+            """UPDATE inv_shipments SET
+               customer_id=%s, customer_name=%s, warehouse_id=%s,
+               carrier=%s, tracking_no=%s, shipping_addr=%s,
+               items=%s, notes=%s, updated_at=NOW()
+               WHERE id=%s""",
+            (d.get('customer_id') or None, d.get('customer_name', ''),
+             d.get('warehouse_id') or None,
+             d.get('carrier', ''), d.get('tracking_no', ''),
+             d.get('shipping_addr', ''),
+             __import__('json').dumps(d.get('items', [])),
+             d.get('notes', ''), sid)
+        )
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/shipments/<int:sid>/status', methods=['PUT'])
+@require_module('inventory')
+def api_inv_shipment_status(sid):
+    """狀態流轉；shipped 時自動扣庫存。"""
+    d      = request.get_json() or {}
+    new_st = d.get('status', '').strip()
+    admin  = session.get('admin_display', session.get('admin', ''))
+    valid  = {
+        'pending':  ['picking', 'packed', 'shipped', 'cancelled'],
+        'picking':  ['packed', 'shipped', 'cancelled'],
+        'packed':   ['shipped', 'cancelled'],
+        'shipped':  ['delivered'],
+        'delivered': [],
+        'cancelled': [],
+    }
+    with get_db() as conn:
+        sh = conn.execute(
+            """SELECT s.*, w.name AS warehouse_name
+               FROM inv_shipments s
+               LEFT JOIN inv_warehouses w ON w.id = s.warehouse_id
+               WHERE s.id=%s""", (sid,)
+        ).fetchone()
+        if not sh:
+            return jsonify({'error': '出貨單不存在'}), 404
+        if new_st not in valid.get(sh['status'], []):
+            return jsonify({'error': f'無法從 {sh["status"]} 改為 {new_st}'}), 400
+
+        update_fields = "status=%s, updated_at=NOW()"
+        params = [new_st]
+        if new_st == 'shipped':
+            import datetime
+            ship_date = d.get('ship_date') or str(datetime.date.today())
+            update_fields += ", ship_date=%s"
+            params.append(ship_date)
+            if d.get('carrier'):
+                update_fields += ", carrier=%s"; params.append(d['carrier'])
+            if d.get('tracking_no'):
+                update_fields += ", tracking_no=%s"; params.append(d['tracking_no'])
+
+        params.append(sid)
+        conn.execute(f"UPDATE inv_shipments SET {update_fields} WHERE id=%s", params)
+
+        # shipped → 扣庫存
+        if new_st == 'shipped':
+            wid   = sh['warehouse_id']
+            items = sh['items'] if isinstance(sh['items'], list) else []
+            for it in items:
+                pid = int(it.get('product_id', 0))
+                qty = float(it.get('qty', 0))
+                if pid <= 0 or qty <= 0:
+                    continue
+                conn.execute(
+                    """UPDATE inv_stock
+                       SET qty_on_hand = qty_on_hand - %s, updated_at = NOW()
+                       WHERE product_id=%s AND warehouse_id=%s""",
+                    (qty, pid, wid)
+                )
+                conn.execute(
+                    """INSERT INTO inv_transactions
+                       (product_id, warehouse_id, txn_type, qty, ref_type, ref_id, ref_no, created_by)
+                       VALUES (%s,%s,'sale_out',%s,'shipment',%s,%s,%s)""",
+                    (pid, wid, -qty, sid, sh['shipment_no'], admin)
+                )
+            # 回寫 crm_orders 狀態
+            if sh['order_id']:
+                conn.execute(
+                    "UPDATE crm_orders SET status='shipped', updated_at=NOW() WHERE id=%s",
+                    (sh['order_id'],)
+                )
+
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/shipment-stats', methods=['GET'])
+@require_module('inventory')
+def api_inv_shipment_stats():
+    with get_db() as conn:
+        pending  = conn.execute("SELECT COUNT(*) AS n FROM inv_shipments WHERE status='pending'").fetchone()['n']
+        picking  = conn.execute("SELECT COUNT(*) AS n FROM inv_shipments WHERE status IN ('picking','packed')").fetchone()['n']
+        shipped  = conn.execute("SELECT COUNT(*) AS n FROM inv_shipments WHERE status='shipped'").fetchone()['n']
+        month_shipped = conn.execute(
+            """SELECT COUNT(*) AS n FROM inv_shipments
+               WHERE status IN ('shipped','delivered')
+               AND DATE_TRUNC('month', ship_date) = DATE_TRUNC('month', CURRENT_DATE)"""
+        ).fetchone()['n']
+    return jsonify({
+        'pending': pending, 'picking': picking,
+        'shipped': shipped, 'month_shipped': month_shipped,
+    })
+
+
+# ── 從訂單快速建立出貨單 ──────────────────────────────────────
+
+@app.route('/api/inventory/shipments/from-order/<int:order_id>', methods=['POST'])
+@require_module('inventory')
+def api_inv_shipment_from_order(order_id):
+    admin = session.get('admin_display', session.get('admin', ''))
+    with get_db() as conn:
+        order = conn.execute(
+            "SELECT * FROM crm_orders WHERE id=%s", (order_id,)
+        ).fetchone()
+        if not order:
+            return jsonify({'error': '訂單不存在'}), 404
+        # 檢查是否已有出貨單
+        existing = conn.execute(
+            "SELECT id, shipment_no FROM inv_shipments WHERE order_id=%s AND status != 'cancelled'",
+            (order_id,)
+        ).fetchone()
+        if existing:
+            return jsonify({'error': f'此訂單已有出貨單 {existing["shipment_no"]}'}), 409
+
+        # 轉換訂單品項 → 出貨品項
+        order_items = order['items'] if isinstance(order['items'], list) else []
+        ship_items = [{
+            'product_id': it.get('product_id'),
+            'sku': it.get('sku', ''),
+            'name': it.get('name', ''),
+            'qty': it.get('qty', 0),
+            'unit': it.get('unit', '個'),
+        } for it in order_items if it.get('product_id')]
+
+        shipment_no = _next_inv_no('SH', 'inv_shipments', 'shipment_no')
+        row = conn.execute(
+            """INSERT INTO inv_shipments
+               (shipment_no, order_id, customer_id, customer_name,
+                shipping_addr, items, notes, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+            (shipment_no, order_id,
+             order['customer_id'], order['customer_name'],
+             order['shipping_address'],
+             __import__('json').dumps(ship_items),
+             f'從訂單 {order["order_no"]} 自動建立', admin)
+        ).fetchone()
+        conn.execute(
+            "UPDATE crm_orders SET shipment_id=%s, updated_at=NOW() WHERE id=%s",
+            (row['id'], order_id)
+        )
+    return jsonify({'shipment_no': shipment_no, 'id': row['id']}), 201
