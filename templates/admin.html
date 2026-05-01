@@ -234,6 +234,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <a href="#" class="nav-item"        id="nav-crm"       data-i18n="nav.crm"       onclick="showPage('crm',event)">客戶管理</a>
     <a href="#" class="nav-item"        id="nav-orders"    data-i18n="nav.orders"    onclick="showPage('orders',event)">報價訂單</a>
     <a href="#" class="nav-item"        id="nav-ecommerce" data-i18n="nav.ecommerce" onclick="showPage('ecommerce',event)">電商串接</a>
+    <a href="#" class="nav-item"        id="nav-inventory" data-i18n="nav.inventory" onclick="showPage('inventory',event)">進銷存管理<span class="nav-badge" id="badge-inventory" style="display:none"></span></a>
+    <a href="#" class="nav-item"        id="nav-accounting" data-i18n="nav.accounting" onclick="showPage('accounting',event)">會計記帳</a>
     <a href="#" class="nav-item"        id="nav-adminmgr" data-i18n="nav.adminmgr" onclick="showPage('adminmgr',event)" style="display:none">帳號管理</a>
   </nav>
   <div class="sidebar-bottom">
@@ -2401,6 +2403,166 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div class="card" style="overflow:hidden"><div id="ecom-orders-wrap"></div></div>
   </div><!-- end page-ecommerce -->
 
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 進銷存管理 -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-inventory" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:15px;font-weight:700;color:var(--navy)">進銷存管理</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="inv-header-btns">
+        <button class="btn btn-primary btn-sm" onclick="openInvProductModal()">＋ 新增商品</button>
+      </div>
+    </div>
+    <!-- 統計卡片 -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">商品總數</div><div id="inv-stat-products" style="font-size:26px;font-weight:800;color:var(--navy)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">低庫存警示</div><div id="inv-stat-low" style="font-size:26px;font-weight:800;color:var(--red)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">庫存總值</div><div id="inv-stat-value" style="font-size:20px;font-weight:800;color:var(--green)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">今日異動</div><div id="inv-stat-txn" style="font-size:26px;font-weight:800;color:var(--accent)">—</div></div>
+    </div>
+    <!-- Tab Bar -->
+    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border)">
+      <button id="inv-tab-stock"    onclick="switchInvTab('stock')"    style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid var(--accent);font-weight:700;color:var(--navy)">庫存總覽</button>
+      <button id="inv-tab-products" onclick="switchInvTab('products')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">商品管理</button>
+      <button id="inv-tab-transactions" onclick="switchInvTab('transactions')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">異動記錄</button>
+      <button id="inv-tab-warehouses" onclick="switchInvTab('warehouses')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">倉庫設定</button>
+    </div>
+
+    <!-- 庫存總覽 Panel -->
+    <div id="inv-panel-stock">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="filter-input" id="inv-stock-filter-warehouse" onchange="loadInvStock()" style="min-width:130px">
+          <option value="">全部倉庫</option>
+        </select>
+        <select class="filter-input" id="inv-stock-filter-low" onchange="loadInvStock()" style="min-width:110px">
+          <option value="0">全部商品</option>
+          <option value="1">僅低庫存</option>
+        </select>
+        <input class="filter-input" id="inv-stock-filter-q" placeholder="搜尋 SKU / 商品名稱…" oninput="loadInvStock()" style="flex:1;min-width:180px">
+      </div>
+      <div class="card" style="overflow:hidden"><div id="inv-stock-wrap"></div></div>
+    </div>
+
+    <!-- 商品管理 Panel -->
+    <div id="inv-panel-products" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <input class="filter-input" id="inv-prod-filter-q" placeholder="搜尋 SKU / 商品名稱 / 條碼…" oninput="loadInvProducts()" style="flex:1;min-width:200px">
+        <select class="filter-input" id="inv-prod-filter-active" onchange="loadInvProducts()" style="min-width:100px">
+          <option value="1">啟用中</option>
+          <option value="0">已停用</option>
+          <option value="all">全部</option>
+        </select>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="inv-products-wrap"></div></div>
+    </div>
+
+    <!-- 異動記錄 Panel -->
+    <div id="inv-panel-transactions" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <select class="filter-input" id="inv-txn-filter-type" onchange="loadInvTransactions()" style="min-width:130px">
+          <option value="">全部類型</option>
+          <option value="purchase_in">採購入庫</option>
+          <option value="sale_out">銷售出庫</option>
+          <option value="adjust_in">調整入庫</option>
+          <option value="adjust_out">調整出庫</option>
+          <option value="return_in">退貨入庫</option>
+        </select>
+        <input class="filter-input" id="inv-txn-filter-date-from" type="date" onchange="loadInvTransactions()" style="min-width:130px">
+        <input class="filter-input" id="inv-txn-filter-date-to" type="date" onchange="loadInvTransactions()" style="min-width:130px">
+      </div>
+      <div class="card" style="overflow:hidden"><div id="inv-transactions-wrap"></div></div>
+    </div>
+
+    <!-- 倉庫設定 Panel -->
+    <div id="inv-panel-warehouses" style="display:none">
+      <div style="margin-bottom:12px">
+        <button class="btn btn-primary btn-sm" onclick="openInvWarehouseModal()">＋ 新增倉庫</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="inv-warehouses-wrap"></div></div>
+    </div>
+  </div><!-- end page-inventory -->
+
+  <!-- ── 商品 Modal ── -->
+  <div id="inv-product-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:560px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div id="inv-prod-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">新增商品</div>
+        <button onclick="closeInvProductModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <input type="hidden" id="inv-prod-edit-id">
+      <div style="display:grid;gap:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><label class="form-label">SKU *</label><input class="form-input" id="inv-prod-f-sku" placeholder="例：PROD-001"></div>
+          <div><label class="form-label">商品名稱 *</label><input class="form-input" id="inv-prod-f-name"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><label class="form-label">分類</label><input class="form-input" id="inv-prod-f-category" placeholder="例：電子、服飾、食品"></div>
+          <div><label class="form-label">單位</label><input class="form-input" id="inv-prod-f-unit" value="個" placeholder="個/箱/kg/L"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><label class="form-label">成本價</label><input class="form-input" id="inv-prod-f-cost" type="number" min="0" step="0.01" value="0"></div>
+          <div><label class="form-label">售價</label><input class="form-input" id="inv-prod-f-sell" type="number" min="0" step="0.01" value="0"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><label class="form-label">最低庫存預警</label><input class="form-input" id="inv-prod-f-min" type="number" min="0" value="0"></div>
+          <div><label class="form-label">再訂購點</label><input class="form-input" id="inv-prod-f-reorder" type="number" min="0" value="0"></div>
+        </div>
+        <div><label class="form-label">條碼</label><input class="form-input" id="inv-prod-f-barcode" placeholder="EAN/UPC 條碼（選填）"></div>
+        <div><label class="form-label">備註</label><textarea class="form-input" id="inv-prod-f-notes" rows="2" style="resize:vertical"></textarea></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <button class="btn btn-outline" onclick="closeInvProductModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveInvProduct()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 倉庫 Modal ── -->
+  <div id="inv-warehouse-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:420px;max-width:96vw;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div id="inv-wh-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">新增倉庫</div>
+        <button onclick="closeInvWarehouseModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      </div>
+      <input type="hidden" id="inv-wh-edit-id">
+      <div style="display:grid;gap:12px">
+        <div><label class="form-label">倉庫名稱 *</label><input class="form-input" id="inv-wh-f-name"></div>
+        <div><label class="form-label">代碼（選填）</label><input class="form-input" id="inv-wh-f-code" placeholder="例：WH01"></div>
+        <div><label class="form-label">地址</label><input class="form-input" id="inv-wh-f-address"></div>
+        <div><label class="form-label">負責人</label><input class="form-input" id="inv-wh-f-manager"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+        <button class="btn btn-outline" onclick="closeInvWarehouseModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveInvWarehouse()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 會計記帳 -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-accounting" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:15px;font-weight:700;color:var(--navy)">會計記帳系統</div>
+    </div>
+    <!-- 統計卡片 -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">會計科目數</div><div id="acc-stat-accounts" style="font-size:26px;font-weight:800;color:var(--navy)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">待收（AR）</div><div id="acc-stat-ar" style="font-size:22px;font-weight:800;color:var(--orange)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">待付（AP）</div><div id="acc-stat-ap" style="font-size:22px;font-weight:800;color:var(--red)">—</div></div>
+      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">本月損益</div><div id="acc-stat-pnl" style="font-size:22px;font-weight:800;color:var(--green)">—</div></div>
+    </div>
+    <!-- Tab Bar -->
+    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border)">
+      <button id="acc-tab-accounts" onclick="switchAccTab('accounts')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid var(--accent);font-weight:700;color:var(--navy)">科目設定</button>
+    </div>
+    <!-- 科目設定 Panel -->
+    <div id="acc-panel-accounts">
+      <div class="card" style="overflow:hidden"><div id="acc-accounts-wrap">
+        <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
+      </div></div>
+    </div>
+  </div><!-- end page-accounting -->
 
   <!-- ══════════════════════════════════════════════════════════════ -->
   <!-- 報表中心 -->
@@ -4030,6 +4192,8 @@ const ALL_MODULES = [
   { key:'crm',           label:'客戶管理' },
   { key:'orders',        label:'報價訂單' },
   { key:'ecommerce',     label:'電商串接' },
+  { key:'inventory',     label:'進銷存管理' },
+  { key:'accounting',    label:'會計記帳' },
 ];
 function hasModule(m) { return ADMIN_IS_SUPER || ADMIN_PERMS.includes(m); }
 
@@ -4802,10 +4966,13 @@ const TRANSLATIONS = {
     'module.key.perf':'績效考核','module.key.stores':'門市管理','module.key.training':'教育訓練','module.key.labor-law':'勞基法通知','module.key.insurance':'勞健保明細',
     'module.key.report-center':'報表中心','module.key.hr-analysis':'人力成本分析',
     'module.key.crm':'客戶管理','module.key.orders':'報價訂單','module.key.ecommerce':'電商串接',
+    'module.key.inventory':'進銷存管理','module.key.accounting':'會計記帳',
     'nav.report_center':'報表中心','nav.hr_analysis':'人力成本分析',
     'nav.crm':'客戶管理','nav.orders':'報價訂單','nav.ecommerce':'電商串接',
+    'nav.inventory':'進銷存管理','nav.accounting':'會計記帳',
     'page.report-center':'報表中心','page.hr-analysis':'人力成本分析',
     'page.crm':'CRM 客戶管理','page.orders':'報價／訂單','page.ecommerce':'電商平台串接',
+    'page.inventory':'進銷存管理','page.accounting':'會計記帳',
     'crm.stat.total':'客戶總數','crm.stat.active':'活躍客戶','crm.stat.vip':'VIP 客戶','crm.stat.interactions':'本月互動',
     'crm.col.company':'公司名稱','crm.col.contact':'聯絡人','crm.col.phone':'電話',
     'crm.col.industry':'行業','crm.col.assigned':'負責業務','crm.col.status':'狀態','crm.col.last_contact':'最後聯繫',
@@ -5637,10 +5804,13 @@ const TRANSLATIONS = {
     'module.key.perf':'Performance','module.key.stores':'Stores','module.key.training':'Training','module.key.labor-law':'Labor Law','module.key.insurance':'Insurance Details',
     'module.key.report-center':'Report Center','module.key.hr-analysis':'HR Cost Analysis',
     'module.key.crm':'CRM','module.key.orders':'Quotes/Orders','module.key.ecommerce':'E-Commerce',
+    'module.key.inventory':'Inventory','module.key.accounting':'Accounting',
     'nav.report_center':'Report Center','nav.hr_analysis':'HR Cost Analysis',
     'nav.crm':'CRM','nav.orders':'Quotes/Orders','nav.ecommerce':'E-Commerce',
+    'nav.inventory':'Inventory','nav.accounting':'Accounting',
     'page.report-center':'Report Center','page.hr-analysis':'HR Cost Analysis',
     'page.crm':'CRM','page.orders':'Quotes/Orders','page.ecommerce':'E-Commerce',
+    'page.inventory':'Inventory Management','page.accounting':'Accounting',
     'crm.stat.total':'Total Customers','crm.stat.active':'Active','crm.stat.vip':'VIP','crm.stat.interactions':'Interactions',
     'crm.col.company':'Company','crm.col.contact':'Contact','crm.col.phone':'Phone',
     'crm.col.industry':'Industry','crm.col.assigned':'Assigned To','crm.col.status':'Status','crm.col.last_contact':'Last Contact',
@@ -6466,8 +6636,11 @@ const TRANSLATIONS = {
     'module.key.perf':'人事評価','module.key.stores':'店舗管理','module.key.training':'トレーニング','module.key.labor-law':'労基法通知','module.key.insurance':'労健保明細',
     'module.key.report-center':'レポートセンター','module.key.hr-analysis':'人件費分析',
     'module.key.crm':'顧客管理','module.key.orders':'見積/注文','module.key.ecommerce':'EC連携',
+    'module.key.inventory':'在庫管理','module.key.accounting':'会計',
     'nav.crm':'顧客管理','nav.orders':'見積/注文','nav.ecommerce':'EC連携',
+    'nav.inventory':'在庫管理','nav.accounting':'会計',
     'page.crm':'CRM 顧客管理','page.orders':'見積／注文','page.ecommerce':'ECプラットフォーム',
+    'page.inventory':'在庫管理','page.accounting':'会計システム',
     'crm.stat.total':'顧客総数','crm.stat.active':'アクティブ','crm.stat.vip':'VIP','crm.stat.interactions':'今月のやり取り',
     'crm.col.company':'会社名','crm.col.contact':'担当者','crm.col.phone':'電話',
     'crm.col.industry':'業種','crm.col.assigned':'担当','crm.col.status':'ステータス','crm.col.last_contact':'最終連絡',
@@ -7258,8 +7431,11 @@ const TRANSLATIONS = {
     'module.key.perf':'Đánh giá','module.key.stores':'Cửa hàng','module.key.training':'Đào tạo','module.key.labor-law':'Luật LĐ','module.key.insurance':'Chi tiết BH',
     'module.key.report-center':'Trung tâm báo cáo','module.key.hr-analysis':'Phân tích chi phí NS',
     'module.key.crm':'CRM','module.key.orders':'Báo giá/Đơn','module.key.ecommerce':'TMĐT',
+    'module.key.inventory':'Kho hàng','module.key.accounting':'Kế toán',
     'nav.crm':'CRM','nav.orders':'Báo giá/Đơn','nav.ecommerce':'TMĐT',
+    'nav.inventory':'Kho hàng','nav.accounting':'Kế toán',
     'page.crm':'CRM Khách hàng','page.orders':'Báo giá/Đơn hàng','page.ecommerce':'Nền tảng TMĐT',
+    'page.inventory':'Quản lý kho','page.accounting':'Hệ thống kế toán',
     'crm.stat.total':'Tổng KH','crm.stat.active':'Hoạt động','crm.stat.vip':'VIP','crm.stat.interactions':'Tương tác tháng',
     'crm.col.company':'Công ty','crm.col.contact':'Liên hệ','crm.col.phone':'SĐT',
     'crm.col.industry':'Ngành','crm.col.assigned':'Phụ trách','crm.col.status':'Trạng thái','crm.col.last_contact':'Liên hệ cuối',
@@ -8049,8 +8225,11 @@ const TRANSLATIONS = {
     'module.key.perf':'ประเมินผล','module.key.stores':'สาขา','module.key.training':'ฝึกอบรม','module.key.labor-law':'กฎหมายแรงงาน','module.key.insurance':'รายละเอียดประกัน',
     'module.key.report-center':'ศูนย์รายงาน','module.key.hr-analysis':'วิเคราะห์ต้นทุน HR',
     'module.key.crm':'CRM','module.key.orders':'ใบเสนอราคา','module.key.ecommerce':'อีคอมเมิร์ซ',
+    'module.key.inventory':'คลังสินค้า','module.key.accounting':'บัญชี',
     'nav.crm':'CRM','nav.orders':'ใบเสนอราคา','nav.ecommerce':'อีคอมเมิร์ซ',
+    'nav.inventory':'คลังสินค้า','nav.accounting':'บัญชี',
     'page.crm':'CRM ลูกค้า','page.orders':'ใบเสนอราคา/คำสั่งซื้อ','page.ecommerce':'แพลตฟอร์มอีคอมเมิร์ซ',
+    'page.inventory':'จัดการคลังสินค้า','page.accounting':'ระบบบัญชี',
     'crm.stat.total':'ลูกค้าทั้งหมด','crm.stat.active':'ใช้งาน','crm.stat.vip':'VIP','crm.stat.interactions':'การติดต่อเดือนนี้',
     'crm.col.company':'บริษัท','crm.col.contact':'ผู้ติดต่อ','crm.col.phone':'โทรศัพท์',
     'crm.col.industry':'อุตสาหกรรม','crm.col.assigned':'ผู้รับผิดชอบ','crm.col.status':'สถานะ','crm.col.last_contact':'ติดต่อล่าสุด',
@@ -8867,8 +9046,11 @@ const TRANSLATIONS = {
     'module.key.perf':'绩效考核','module.key.stores':'门店管理','module.key.training':'教育培训','module.key.labor-law':'劳基法通知','module.key.insurance':'劳健保明细',
     'module.key.report-center':'报表中心','module.key.hr-analysis':'人力成本分析',
     'module.key.crm':'客户管理','module.key.orders':'报价/订单','module.key.ecommerce':'电商对接',
+    'module.key.inventory':'进销存管理','module.key.accounting':'会计记账',
     'nav.crm':'客户管理','nav.orders':'报价订单','nav.ecommerce':'电商对接',
+    'nav.inventory':'进销存管理','nav.accounting':'会计记账',
     'page.crm':'CRM 客户管理','page.orders':'报价／订单','page.ecommerce':'电商平台对接',
+    'page.inventory':'进销存管理','page.accounting':'会计记账系统',
     'crm.stat.total':'客户总数','crm.stat.active':'活跃客户','crm.stat.vip':'VIP客户','crm.stat.interactions':'本月互动',
     'crm.col.company':'公司名称','crm.col.contact':'联系人','crm.col.phone':'电话',
     'crm.col.industry':'行业','crm.col.assigned':'负责业务','crm.col.status':'状态','crm.col.last_contact':'最后联系',
@@ -9685,8 +9867,11 @@ const TRANSLATIONS = {
     'module.key.perf':'Penilaian Kinerja','module.key.stores':'Manajemen Toko','module.key.training':'Pelatihan','module.key.labor-law':'Hukum Ketenagakerjaan','module.key.insurance':'Detail Asuransi',
     'module.key.report-center':'Pusat Laporan','module.key.hr-analysis':'Analisis Biaya SDM',
     'module.key.crm':'CRM','module.key.orders':'Penawaran/Pesanan','module.key.ecommerce':'E-Commerce',
+    'module.key.inventory':'Inventaris','module.key.accounting':'Akuntansi',
     'nav.crm':'CRM','nav.orders':'Penawaran/Pesanan','nav.ecommerce':'E-Commerce',
+    'nav.inventory':'Inventaris','nav.accounting':'Akuntansi',
     'page.crm':'CRM Pelanggan','page.orders':'Penawaran/Pesanan','page.ecommerce':'Platform E-Commerce',
+    'page.inventory':'Manajemen Inventaris','page.accounting':'Sistem Akuntansi',
     'crm.stat.total':'Total Pelanggan','crm.stat.active':'Aktif','crm.stat.vip':'VIP','crm.stat.interactions':'Interaksi Bulan Ini',
     'crm.col.company':'Perusahaan','crm.col.contact':'Kontak','crm.col.phone':'Telepon',
     'crm.col.industry':'Industri','crm.col.assigned':'Ditugaskan','crm.col.status':'Status','crm.col.last_contact':'Kontak Terakhir',
@@ -10912,7 +11097,7 @@ function closeSidebar() {
 function showPage(page, e) {
   if (e) e.preventDefault();
   // 權限檢查（儀表板和帳號管理不受模組限制）
-  const moduleGuard = { punch:'punch', sched:'sched', leave:'leave', salary:'salary', ann:'ann', holiday:'holiday', finance:'finance', 'expense-review':'expense-review', perf:'perf', stores:'stores', training:'training', travel:'travel', assets:'assets', 'labor-law':'labor-law', 'insurance':'salary', 'report-center':'report-center', 'hr-analysis':'hr-analysis', 'crm':'crm', 'orders':'orders', 'ecommerce':'ecommerce' };
+  const moduleGuard = { punch:'punch', sched:'sched', leave:'leave', salary:'salary', ann:'ann', holiday:'holiday', finance:'finance', 'expense-review':'expense-review', perf:'perf', stores:'stores', training:'training', travel:'travel', assets:'assets', 'labor-law':'labor-law', 'insurance':'salary', 'report-center':'report-center', 'hr-analysis':'hr-analysis', 'crm':'crm', 'orders':'orders', 'ecommerce':'ecommerce', 'inventory':'inventory', 'accounting':'accounting' };
   if (moduleGuard[page] && !hasModule(moduleGuard[page])) {
     showToast('您沒有此功能的存取權限', 'error'); return;
   }
@@ -10921,7 +11106,7 @@ function showPage(page, e) {
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
   setTimeout(refreshBadges, 600);
-  ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training','travel','assets','labor-law','insurance','report-center','hr-analysis','crm','orders','ecommerce'].forEach(p =>
+  ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training','travel','assets','labor-law','insurance','report-center','hr-analysis','crm','orders','ecommerce','inventory','accounting'].forEach(p =>
     document.getElementById('page-' + p).style.display = p === page ? '' : 'none'
   );
   document.getElementById('page-title').textContent = t('page.' + page) || page;
@@ -10947,6 +11132,8 @@ function showPage(page, e) {
   if (page === 'crm')             initCrm();
   if (page === 'orders')          initOrders();
   if (page === 'ecommerce')       initEcommerce();
+  if (page === 'inventory')       initInventory();
+  if (page === 'accounting')      initAccounting();
 }
 
 // ── Toast ─────────────────────────────────────────────────────
@@ -14142,13 +14329,14 @@ async function toggleAnnPin(id) {
 
 // ── Badges ────────────────────────────────────────────────────
 async function refreshBadges() {
-  const [punchRq, otRq, schedRq1, schedRq2, leaveRq, expenseRq] = await Promise.all([
+  const [punchRq, otRq, schedRq1, schedRq2, leaveRq, expenseRq, invStats] = await Promise.all([
     api('/api/punch/requests?status=pending',                    {}, true),
     api('/api/overtime/requests?status=pending',                 {}, true),
     api('/api/schedule/admin/requests?status=pending',           {}, true),
     api('/api/schedule/admin/requests?status=modified_pending',  {}, true),
     api('/api/leave/requests?status=pending',                    {}, true),
     api('/api/expense/claims?status=pending',                    {}, true),
+    hasModule('inventory') ? api('/api/inventory/stats',         {}, true) : Promise.resolve({ok:false}),
   ]);
 
   const punchRqCnt = punchRq.ok && Array.isArray(punchRq.data) ? punchRq.data.length : 0;
@@ -14157,12 +14345,14 @@ async function refreshBadges() {
                      (schedRq2.ok && Array.isArray(schedRq2.data) ? schedRq2.data.length : 0);
   const leaveCnt   = leaveRq.ok && Array.isArray(leaveRq.data)  ? leaveRq.data.length  : 0;
   const expenseCnt = expenseRq.ok && Array.isArray(expenseRq.data) ? expenseRq.data.length : 0;
+  const lowStockCnt = invStats.ok && invStats.data ? (invStats.data.low_stock_count || 0) : 0;
 
   // ── 左側 nav badge（顯示各模組總待審數）──
   setBadge('badge-punch', punchRqCnt + otCnt);   // 打卡管理 = 補打卡 + 加班
   setBadge('badge-sched', schedCnt);              // 排班管理 = 排休申請
   setBadge('badge-leave', leaveCnt);              // 請假管理 = 請假申請
   setBadge('badge-expense-review', expenseCnt);   // 費用審核 = 待審費用
+  setBadge('badge-inventory', lowStockCnt);        // 進銷存 = 低庫存商品數
 
   // ── Tab 內的小 badge（進入頁面後顯示哪個 tab 有待審）──
   setTabDot('tabdot-punchrq', punchRqCnt);
@@ -18754,6 +18944,321 @@ async function importEcomOrder(id) {
   if (!ok) { showToast(data?.error||'匯入失敗','error'); return; }
   showToast(`${t('ecom.import_done')} ${data.order_no}`,'success');
   loadEcomOrders(); loadEcomStats();
+}
+
+// ══════════════════════════════════════════════════════════════
+// 進銷存管理模組
+// ══════════════════════════════════════════════════════════════
+let _invWarehouses = [];
+let _invProducts   = [];
+let _invCurrentTab = 'stock';
+
+async function initInventory() {
+  await Promise.all([loadInvStats(), loadInvWarehouses()]);
+  switchInvTab(_invCurrentTab);
+}
+
+async function loadInvStats() {
+  const { ok, data } = await api('/api/inventory/stats', {}, true);
+  if (!ok) return;
+  document.getElementById('inv-stat-products').textContent = data.total_products;
+  document.getElementById('inv-stat-low').textContent      = data.low_stock_count;
+  document.getElementById('inv-stat-value').textContent    = 'NT$' + Math.round(data.total_inventory_value).toLocaleString();
+  document.getElementById('inv-stat-txn').textContent      = data.transactions_today;
+}
+
+async function loadInvWarehouses() {
+  const { ok, data } = await api('/api/inventory/warehouses', {}, true);
+  _invWarehouses = ok ? data : [];
+  const sel = document.getElementById('inv-stock-filter-warehouse');
+  if (sel) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">全部倉庫</option>' +
+      _invWarehouses.map(w => `<option value="${w.id}" ${cur==w.id?'selected':''}>${escHtml(w.name)}</option>`).join('');
+  }
+  renderInvWarehousesList();
+}
+
+function switchInvTab(tab) {
+  _invCurrentTab = tab;
+  const tabs = ['stock','products','transactions','warehouses'];
+  tabs.forEach(t => {
+    const btn   = document.getElementById('inv-tab-' + t);
+    const panel = document.getElementById('inv-panel-' + t);
+    if (btn)   { btn.style.borderBottomColor = t === tab ? 'var(--accent)' : 'transparent'; btn.style.fontWeight = t === tab ? '700' : '400'; btn.style.color = t === tab ? 'var(--navy)' : 'var(--muted)'; }
+    if (panel) panel.style.display = t === tab ? '' : 'none';
+  });
+  const addBtn = document.getElementById('inv-header-btns');
+  if (addBtn) addBtn.style.display = tab === 'products' ? '' : 'none';
+  if (tab === 'stock')         loadInvStock();
+  if (tab === 'products')      loadInvProducts();
+  if (tab === 'transactions')  loadInvTransactions();
+}
+
+// ── 庫存總覽 ─────────────────────────────────────────────────
+
+async function loadInvStock() {
+  const wid     = document.getElementById('inv-stock-filter-warehouse')?.value || '';
+  const low     = document.getElementById('inv-stock-filter-low')?.value || '0';
+  const q       = document.getElementById('inv-stock-filter-q')?.value.trim() || '';
+  let url = '/api/inventory/stock?';
+  if (wid) url += `warehouse_id=${wid}&`;
+  if (low === '1') url += 'low_stock=1&';
+  const { ok, data } = await api(url, {}, true);
+  const wrap = document.getElementById('inv-stock-wrap');
+  if (!ok || !data.length) {
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無庫存資料</div>`;
+    return;
+  }
+  const filtered = q ? data.filter(r => r.sku.toLowerCase().includes(q.toLowerCase()) || r.product_name.toLowerCase().includes(q.toLowerCase())) : data;
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>SKU</th><th>商品名稱</th><th>分類</th><th>倉庫</th>
+    <th style="text-align:right">在手庫存</th><th style="text-align:right">預留</th><th style="text-align:right">可用</th>
+    <th style="text-align:right">最低預警</th><th>單位</th><th>狀態</th>
+  </tr></thead><tbody>${filtered.map(r => {
+    const isLow = r.min_stock > 0 && r.qty_on_hand <= r.min_stock;
+    return `<tr style="${isLow ? 'background:rgba(220,53,69,.06)' : ''}">
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(r.sku)}</td>
+      <td style="font-weight:600">${escHtml(r.product_name)}</td>
+      <td style="font-size:12px;color:var(--muted)">${escHtml(r.category||'—')}</td>
+      <td style="font-size:12px">${escHtml(r.warehouse_name)}</td>
+      <td style="text-align:right;font-weight:600">${r.qty_on_hand}</td>
+      <td style="text-align:right;color:var(--muted)">${r.qty_reserved}</td>
+      <td style="text-align:right;font-weight:600;color:${r.qty_available > 0 ? 'var(--green)' : 'var(--red)'}">${r.qty_available}</td>
+      <td style="text-align:right;font-size:12px">${r.min_stock}</td>
+      <td style="font-size:12px">${escHtml(r.unit)}</td>
+      <td>${isLow ? '<span style="background:var(--red);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">低庫存</span>' : '<span style="background:var(--green);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">正常</span>'}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+// ── 商品管理 ─────────────────────────────────────────────────
+
+async function loadInvProducts() {
+  const q      = document.getElementById('inv-prod-filter-q')?.value.trim() || '';
+  const active = document.getElementById('inv-prod-filter-active')?.value || '1';
+  let url = `/api/inventory/products?active=${active}`;
+  if (q) url += `&q=${encodeURIComponent(q)}`;
+  const { ok, data } = await api(url, {}, true);
+  _invProducts = ok ? data : [];
+  const wrap = document.getElementById('inv-products-wrap');
+  if (!_invProducts.length) {
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無商品資料</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>SKU</th><th>商品名稱</th><th>分類</th><th>單位</th>
+    <th style="text-align:right">成本價</th><th style="text-align:right">售價</th>
+    <th style="text-align:right">最低庫存</th><th>條碼</th><th></th>
+  </tr></thead><tbody>${_invProducts.map(r => `<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(r.sku)}</td>
+    <td style="font-weight:600">${escHtml(r.name)}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.category||'—')}</td>
+    <td style="font-size:12px">${escHtml(r.unit)}</td>
+    <td style="text-align:right">NT$${(r.cost_price||0).toLocaleString()}</td>
+    <td style="text-align:right">NT$${(r.sell_price||0).toLocaleString()}</td>
+    <td style="text-align:right;font-size:12px">${r.min_stock}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.barcode||'—')}</td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-outline btn-sm" onclick="openInvProductModal(${r.id})">編輯</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteInvProduct(${r.id})">停用</button>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function openInvProductModal(id) {
+  const p = id ? _invProducts.find(x => x.id === id) : null;
+  document.getElementById('inv-prod-modal-title').textContent = p ? '編輯商品' : '新增商品';
+  document.getElementById('inv-prod-edit-id').value   = p ? p.id : '';
+  document.getElementById('inv-prod-f-sku').value     = p ? p.sku : '';
+  document.getElementById('inv-prod-f-name').value    = p ? p.name : '';
+  document.getElementById('inv-prod-f-category').value= p ? (p.category||'') : '';
+  document.getElementById('inv-prod-f-unit').value    = p ? (p.unit||'個') : '個';
+  document.getElementById('inv-prod-f-cost').value    = p ? (p.cost_price||0) : 0;
+  document.getElementById('inv-prod-f-sell').value    = p ? (p.sell_price||0) : 0;
+  document.getElementById('inv-prod-f-min').value     = p ? (p.min_stock||0) : 0;
+  document.getElementById('inv-prod-f-reorder').value = p ? (p.reorder_point||0) : 0;
+  document.getElementById('inv-prod-f-barcode').value = p ? (p.barcode||'') : '';
+  document.getElementById('inv-prod-f-notes').value   = p ? (p.notes||'') : '';
+  document.getElementById('inv-product-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+
+function closeInvProductModal() {
+  document.getElementById('inv-product-modal-bg').style.display = 'none';
+}
+
+async function saveInvProduct() {
+  const id  = document.getElementById('inv-prod-edit-id').value;
+  const body = {
+    sku:          document.getElementById('inv-prod-f-sku').value.trim(),
+    name:         document.getElementById('inv-prod-f-name').value.trim(),
+    category:     document.getElementById('inv-prod-f-category').value.trim(),
+    unit:         document.getElementById('inv-prod-f-unit').value.trim() || '個',
+    cost_price:   parseFloat(document.getElementById('inv-prod-f-cost').value) || 0,
+    sell_price:   parseFloat(document.getElementById('inv-prod-f-sell').value) || 0,
+    min_stock:    parseInt(document.getElementById('inv-prod-f-min').value) || 0,
+    reorder_point:parseInt(document.getElementById('inv-prod-f-reorder').value) || 0,
+    barcode:      document.getElementById('inv-prod-f-barcode').value.trim(),
+    notes:        document.getElementById('inv-prod-f-notes').value.trim(),
+  };
+  if (!body.sku || !body.name) { showToast('SKU 與商品名稱為必填', 'error'); return; }
+  const url    = id ? `/api/inventory/products/${id}` : '/api/inventory/products';
+  const method = id ? 'PUT' : 'POST';
+  const { ok, data } = await api(url, { method, body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error || '儲存失敗', 'error'); return; }
+  showToast(id ? '商品已更新' : '商品已新增', 'success');
+  closeInvProductModal();
+  loadInvProducts();
+  loadInvStats();
+}
+
+async function deleteInvProduct(id) {
+  if (!confirm('確定停用此商品？')) return;
+  const { ok } = await api(`/api/inventory/products/${id}`, { method:'DELETE' });
+  if (!ok) { showToast('操作失敗','error'); return; }
+  showToast('已停用','success');
+  loadInvProducts(); loadInvStats();
+}
+
+// ── 異動記錄 ─────────────────────────────────────────────────
+
+const INV_TXN_LABEL = {
+  purchase_in:'採購入庫', sale_out:'銷售出庫',
+  adjust_in:'調整入庫', adjust_out:'調整出庫',
+  return_in:'退貨入庫', return_out:'退貨出庫',
+  transfer_in:'調撥入', transfer_out:'調撥出',
+};
+
+async function loadInvTransactions() {
+  const txnType  = document.getElementById('inv-txn-filter-type')?.value || '';
+  const dateFrom = document.getElementById('inv-txn-filter-date-from')?.value || '';
+  const dateTo   = document.getElementById('inv-txn-filter-date-to')?.value || '';
+  let url = '/api/inventory/transactions?';
+  if (txnType)  url += `type=${txnType}&`;
+  if (dateFrom) url += `date_from=${dateFrom}&`;
+  if (dateTo)   url += `date_to=${dateTo}&`;
+  const { ok, data } = await api(url, {}, true);
+  const wrap = document.getElementById('inv-transactions-wrap');
+  if (!ok || !data.length) {
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無異動記錄</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>時間</th><th>SKU</th><th>商品</th><th>倉庫</th><th>類型</th>
+    <th style="text-align:right">數量</th><th style="text-align:right">單位成本</th><th>來源單號</th><th>備註</th>
+  </tr></thead><tbody>${data.map(r => `<tr>
+    <td style="font-size:11px;color:var(--muted)">${(r.created_at||'').slice(0,16).replace('T',' ')}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(r.sku)}</td>
+    <td>${escHtml(r.product_name)}</td>
+    <td style="font-size:12px">${escHtml(r.warehouse_name||'—')}</td>
+    <td><span style="background:${r.qty>0?'var(--green)':'var(--red)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${INV_TXN_LABEL[r.txn_type]||r.txn_type}</span></td>
+    <td style="text-align:right;font-weight:600;color:${r.qty>0?'var(--green)':'var(--red)'}">${r.qty > 0 ? '+' : ''}${r.qty} ${escHtml(r.unit)}</td>
+    <td style="text-align:right;font-size:12px">${r.unit_cost ? 'NT$'+r.unit_cost.toLocaleString() : '—'}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.ref_no||'—')}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.note||'—')}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+// ── 倉庫設定 ─────────────────────────────────────────────────
+
+function renderInvWarehousesList() {
+  const wrap = document.getElementById('inv-warehouses-wrap');
+  if (!wrap) return;
+  if (!_invWarehouses.length) {
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無倉庫資料</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>倉庫名稱</th><th>代碼</th><th>地址</th><th>負責人</th><th>狀態</th>
+  </tr></thead><tbody>${_invWarehouses.map(w => `<tr>
+    <td style="font-weight:600">${escHtml(w.name)}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(w.code||'—')}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(w.address||'—')}</td>
+    <td style="font-size:12px">${escHtml(w.manager||'—')}</td>
+    <td><span style="background:${w.active?'var(--green)':'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${w.active?'啟用':'停用'}</span></td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function openInvWarehouseModal(id) {
+  const w = id ? _invWarehouses.find(x => x.id === id) : null;
+  document.getElementById('inv-wh-modal-title').textContent = w ? '編輯倉庫' : '新增倉庫';
+  document.getElementById('inv-wh-edit-id').value      = w ? w.id : '';
+  document.getElementById('inv-wh-f-name').value       = w ? w.name : '';
+  document.getElementById('inv-wh-f-code').value       = w ? (w.code||'') : '';
+  document.getElementById('inv-wh-f-address').value    = w ? (w.address||'') : '';
+  document.getElementById('inv-wh-f-manager').value    = w ? (w.manager||'') : '';
+  document.getElementById('inv-warehouse-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+}
+
+function closeInvWarehouseModal() {
+  document.getElementById('inv-warehouse-modal-bg').style.display = 'none';
+}
+
+async function saveInvWarehouse() {
+  const id   = document.getElementById('inv-wh-edit-id').value;
+  const body = {
+    name:    document.getElementById('inv-wh-f-name').value.trim(),
+    code:    document.getElementById('inv-wh-f-code').value.trim(),
+    address: document.getElementById('inv-wh-f-address').value.trim(),
+    manager: document.getElementById('inv-wh-f-manager').value.trim(),
+  };
+  if (!body.name) { showToast('倉庫名稱必填', 'error'); return; }
+  const url    = id ? `/api/inventory/warehouses/${id}` : '/api/inventory/warehouses';
+  const method = id ? 'PUT' : 'POST';
+  const { ok, data } = await api(url, { method, body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast(id ? '倉庫已更新' : '倉庫已新增', 'success');
+  closeInvWarehouseModal();
+  loadInvWarehouses();
+}
+
+// ══════════════════════════════════════════════════════════════
+// 會計記帳模組
+// ══════════════════════════════════════════════════════════════
+let _accCurrentTab = 'accounts';
+
+async function initAccounting() {
+  await Promise.all([loadAccStats(), loadAccAccounts()]);
+}
+
+async function loadAccStats() {
+  const { ok, data } = await api('/api/accounting/stats', {}, true);
+  if (!ok) return;
+  document.getElementById('acc-stat-accounts').textContent = data.total_accounts;
+  document.getElementById('acc-stat-ar').textContent       = '—';
+  document.getElementById('acc-stat-ap').textContent       = '—';
+  document.getElementById('acc-stat-pnl').textContent      = '—';
+}
+
+function switchAccTab(tab) {
+  _accCurrentTab = tab;
+  ['accounts'].forEach(t => {
+    const btn   = document.getElementById('acc-tab-' + t);
+    const panel = document.getElementById('acc-panel-' + t);
+    if (btn)   { btn.style.borderBottomColor = t === tab ? 'var(--accent)' : 'transparent'; btn.style.fontWeight = t === tab ? '700' : '400'; btn.style.color = t === tab ? 'var(--navy)' : 'var(--muted)'; }
+    if (panel) panel.style.display = t === tab ? '' : 'none';
+  });
+}
+
+const ACC_TYPE_LABEL  = { asset:'資產', liability:'負債', equity:'股東權益', revenue:'收入', expense:'費用' };
+const ACC_TYPE_COLOR  = { asset:'#2980b9', liability:'#e67e22', equity:'#8e44ad', revenue:'#27ae60', expense:'#c0392b' };
+
+async function loadAccAccounts() {
+  const { ok, data } = await api('/api/accounting/accounts', {}, true);
+  const wrap = document.getElementById('acc-accounts-wrap');
+  if (!ok || !data.length) {
+    wrap.innerHTML = `<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無科目資料</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>科目代號</th><th>科目名稱</th><th>類型</th><th>正常方向</th><th>層級</th>
+  </tr></thead><tbody>${data.map(r => `<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:13px;font-weight:600">${escHtml(r.code)}</td>
+    <td style="${r.level===1?'font-weight:700':'padding-left:'+(r.level*12)+'px'}">${escHtml(r.name)}</td>
+    <td><span style="background:${ACC_TYPE_COLOR[r.account_type]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${ACC_TYPE_LABEL[r.account_type]||r.account_type}</span></td>
+    <td style="font-size:12px">${r.normal_balance === 'debit' ? '借方' : '貸方'}</td>
+    <td style="font-size:12px;color:var(--muted)">${r.level}</td>
+  </tr>`).join('')}</tbody></table>`;
 }
 </script>
 </html>

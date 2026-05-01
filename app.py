@@ -15311,3 +15311,436 @@ def api_ecom_stats():
         """).fetchone()['n']
     return jsonify({'total_orders': total_orders, 'platforms_count': platforms_cnt,
                     'synced_today': synced_today, 'pending_import': pending_import})
+
+
+# ══════════════════════════════════════════════════════════════
+# 進銷存系統 (Inventory Management)
+# ══════════════════════════════════════════════════════════════
+
+def init_inventory_db():
+    migrations = [
+        """CREATE TABLE IF NOT EXISTS inv_warehouses (
+            id          SERIAL PRIMARY KEY,
+            name        TEXT NOT NULL,
+            code        TEXT UNIQUE,
+            address     TEXT DEFAULT '',
+            manager     TEXT DEFAULT '',
+            active      BOOLEAN DEFAULT TRUE,
+            created_at  TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """INSERT INTO inv_warehouses (name, code) VALUES ('預設倉庫', 'DEFAULT')
+           ON CONFLICT (code) DO NOTHING""",
+        """CREATE TABLE IF NOT EXISTS inv_products (
+            id              SERIAL PRIMARY KEY,
+            sku             TEXT NOT NULL UNIQUE,
+            name            TEXT NOT NULL,
+            category        TEXT DEFAULT '',
+            unit            TEXT DEFAULT '個',
+            description     TEXT DEFAULT '',
+            cost_price      NUMERIC(14,4) DEFAULT 0,
+            sell_price      NUMERIC(14,4) DEFAULT 0,
+            min_stock       INT DEFAULT 0,
+            reorder_point   INT DEFAULT 0,
+            barcode         TEXT DEFAULT '',
+            active          BOOLEAN DEFAULT TRUE,
+            notes           TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS inv_stock (
+            id              SERIAL PRIMARY KEY,
+            product_id      INT REFERENCES inv_products(id) ON DELETE CASCADE,
+            warehouse_id    INT REFERENCES inv_warehouses(id) ON DELETE CASCADE,
+            qty_on_hand     NUMERIC(14,4) DEFAULT 0,
+            qty_reserved    NUMERIC(14,4) DEFAULT 0,
+            updated_at      TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(product_id, warehouse_id)
+        )""",
+        """CREATE TABLE IF NOT EXISTS inv_transactions (
+            id              SERIAL PRIMARY KEY,
+            product_id      INT REFERENCES inv_products(id) ON DELETE CASCADE,
+            warehouse_id    INT REFERENCES inv_warehouses(id) ON DELETE SET NULL,
+            txn_type        TEXT NOT NULL,
+            qty             NUMERIC(14,4) NOT NULL,
+            unit_cost       NUMERIC(14,4) DEFAULT 0,
+            ref_type        TEXT DEFAULT '',
+            ref_id          INT,
+            ref_no          TEXT DEFAULT '',
+            note            TEXT DEFAULT '',
+            created_by      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_inv_transactions_product ON inv_transactions(product_id, created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_inv_transactions_ref ON inv_transactions(ref_type, ref_id)",
+        "CREATE INDEX IF NOT EXISTS idx_inv_stock_product ON inv_stock(product_id)",
+        "ALTER TABLE crm_customers ADD COLUMN IF NOT EXISTS customer_type TEXT DEFAULT 'customer'",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[inventory_init] {str(e)[:120]}")
+
+init_inventory_db()
+
+
+def _next_inv_no(prefix: str, table: str, col: str) -> str:
+    import datetime
+    ym = datetime.date.today().strftime('%Y%m')
+    with get_db() as conn:
+        row = conn.execute(
+            f"SELECT {col} FROM {table} WHERE {col} LIKE %s ORDER BY {col} DESC LIMIT 1",
+            (f"{prefix}-{ym}-%",)
+        ).fetchone()
+    if row:
+        try:
+            seq = int(row[0].rsplit('-', 1)[-1]) + 1
+        except Exception:
+            seq = 1
+    else:
+        seq = 1
+    return f"{prefix}-{ym}-{seq:03d}"
+
+
+def _inv_product_row(r):
+    return {
+        'id': r['id'], 'sku': r['sku'], 'name': r['name'],
+        'category': r['category'], 'unit': r['unit'],
+        'description': r['description'],
+        'cost_price': float(r['cost_price'] or 0),
+        'sell_price': float(r['sell_price'] or 0),
+        'min_stock': r['min_stock'], 'reorder_point': r['reorder_point'],
+        'barcode': r['barcode'], 'active': r['active'], 'notes': r['notes'],
+        'created_at': str(r['created_at'])[:10] if r['created_at'] else None,
+    }
+
+
+# ── 倉庫 ─────────────────────────────────────────────────────
+
+@app.route('/api/inventory/warehouses', methods=['GET'])
+@require_module('inventory')
+def api_inv_warehouses_list():
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM inv_warehouses WHERE active=TRUE ORDER BY id"
+        ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/inventory/warehouses', methods=['POST'])
+@require_module('inventory')
+def api_inv_warehouse_create():
+    d = request.get_json() or {}
+    name = (d.get('name') or '').strip()
+    code = (d.get('code') or '').strip().upper() or None
+    if not name:
+        return jsonify({'error': '倉庫名稱必填'}), 400
+    with get_db() as conn:
+        row = conn.execute(
+            "INSERT INTO inv_warehouses (name, code, address, manager) VALUES (%s,%s,%s,%s) RETURNING *",
+            (name, code, d.get('address', ''), d.get('manager', ''))
+        ).fetchone()
+    return jsonify(dict(row)), 201
+
+
+@app.route('/api/inventory/warehouses/<int:wid>', methods=['PUT'])
+@require_module('inventory')
+def api_inv_warehouse_update(wid):
+    d = request.get_json() or {}
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE inv_warehouses SET name=%s, code=%s, address=%s, manager=%s, active=%s WHERE id=%s",
+            (d.get('name', ''), (d.get('code') or '').upper() or None,
+             d.get('address', ''), d.get('manager', ''), d.get('active', True), wid)
+        )
+    return jsonify({'ok': True})
+
+
+# ── 商品主檔 ─────────────────────────────────────────────────
+
+@app.route('/api/inventory/products', methods=['GET'])
+@require_module('inventory')
+def api_inv_products_list():
+    q        = request.args.get('q', '').strip()
+    category = request.args.get('category', '').strip()
+    active   = request.args.get('active', '1')
+    sql = "SELECT * FROM inv_products WHERE 1=1"
+    params = []
+    if active != 'all':
+        sql += " AND active=%s"; params.append(active == '1')
+    if category:
+        sql += " AND category=%s"; params.append(category)
+    if q:
+        sql += " AND (sku ILIKE %s OR name ILIKE %s OR barcode ILIKE %s)"
+        params += [f'%{q}%', f'%{q}%', f'%{q}%']
+    sql += " ORDER BY id DESC"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return jsonify([_inv_product_row(r) for r in rows])
+
+
+@app.route('/api/inventory/products', methods=['POST'])
+@require_module('inventory')
+def api_inv_product_create():
+    d   = request.get_json() or {}
+    sku = (d.get('sku') or '').strip()
+    name = (d.get('name') or '').strip()
+    if not sku or not name:
+        return jsonify({'error': 'SKU 與商品名稱必填'}), 400
+    admin = session.get('admin_display', session.get('admin', ''))
+    with get_db() as conn:
+        try:
+            row = conn.execute(
+                """INSERT INTO inv_products
+                   (sku, name, category, unit, description, cost_price, sell_price,
+                    min_stock, reorder_point, barcode, notes)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+                (sku, name, d.get('category', ''), d.get('unit', '個'),
+                 d.get('description', ''), d.get('cost_price', 0), d.get('sell_price', 0),
+                 d.get('min_stock', 0), d.get('reorder_point', 0),
+                 d.get('barcode', ''), d.get('notes', ''))
+            ).fetchone()
+        except Exception as e:
+            if 'unique' in str(e).lower():
+                return jsonify({'error': f'SKU「{sku}」已存在'}), 409
+            raise
+        # 為每個倉庫建立庫存記錄
+        warehouses = conn.execute("SELECT id FROM inv_warehouses WHERE active=TRUE").fetchall()
+        for w in warehouses:
+            conn.execute(
+                "INSERT INTO inv_stock (product_id, warehouse_id) VALUES (%s,%s) ON CONFLICT DO NOTHING",
+                (row['id'], w['id'])
+            )
+    return jsonify(_inv_product_row(row)), 201
+
+
+@app.route('/api/inventory/products/<int:pid>', methods=['PUT'])
+@require_module('inventory')
+def api_inv_product_update(pid):
+    d = request.get_json() or {}
+    with get_db() as conn:
+        conn.execute(
+            """UPDATE inv_products SET
+               sku=%s, name=%s, category=%s, unit=%s, description=%s,
+               cost_price=%s, sell_price=%s, min_stock=%s, reorder_point=%s,
+               barcode=%s, active=%s, notes=%s, updated_at=NOW()
+               WHERE id=%s""",
+            (d.get('sku', ''), d.get('name', ''), d.get('category', ''),
+             d.get('unit', '個'), d.get('description', ''),
+             d.get('cost_price', 0), d.get('sell_price', 0),
+             d.get('min_stock', 0), d.get('reorder_point', 0),
+             d.get('barcode', ''), d.get('active', True), d.get('notes', ''), pid)
+        )
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/products/<int:pid>', methods=['DELETE'])
+@require_module('inventory')
+def api_inv_product_delete(pid):
+    with get_db() as conn:
+        conn.execute("UPDATE inv_products SET active=FALSE WHERE id=%s", (pid,))
+    return jsonify({'ok': True})
+
+
+# ── 庫存查詢 ─────────────────────────────────────────────────
+
+@app.route('/api/inventory/stock', methods=['GET'])
+@require_module('inventory')
+def api_inv_stock_list():
+    product_id   = request.args.get('product_id', '').strip()
+    warehouse_id = request.args.get('warehouse_id', '').strip()
+    low_stock    = request.args.get('low_stock', '0')
+    sql = """
+        SELECT s.*, p.sku, p.name AS product_name, p.unit, p.min_stock, p.reorder_point,
+               p.cost_price, p.sell_price, p.category, p.active AS product_active,
+               w.name AS warehouse_name, w.code AS warehouse_code,
+               (s.qty_on_hand - s.qty_reserved) AS qty_available
+        FROM inv_stock s
+        JOIN inv_products p ON p.id = s.product_id
+        JOIN inv_warehouses w ON w.id = s.warehouse_id
+        WHERE p.active=TRUE AND w.active=TRUE
+    """
+    params = []
+    if product_id:
+        sql += " AND s.product_id=%s"; params.append(int(product_id))
+    if warehouse_id:
+        sql += " AND s.warehouse_id=%s"; params.append(int(warehouse_id))
+    if low_stock == '1':
+        sql += " AND s.qty_on_hand <= p.min_stock"
+    sql += " ORDER BY p.name, w.name"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        result.append({
+            'id': r['id'], 'product_id': r['product_id'], 'warehouse_id': r['warehouse_id'],
+            'sku': r['sku'], 'product_name': r['product_name'],
+            'unit': r['unit'], 'category': r['category'],
+            'warehouse_name': r['warehouse_name'], 'warehouse_code': r['warehouse_code'],
+            'qty_on_hand': float(r['qty_on_hand'] or 0),
+            'qty_reserved': float(r['qty_reserved'] or 0),
+            'qty_available': float(r['qty_available'] or 0),
+            'min_stock': r['min_stock'], 'reorder_point': r['reorder_point'],
+            'cost_price': float(r['cost_price'] or 0),
+            'sell_price': float(r['sell_price'] or 0),
+            'updated_at': str(r['updated_at'])[:19] if r['updated_at'] else None,
+        })
+    return jsonify(result)
+
+
+@app.route('/api/inventory/transactions', methods=['GET'])
+@require_module('inventory')
+def api_inv_transactions_list():
+    product_id = request.args.get('product_id', '').strip()
+    txn_type   = request.args.get('type', '').strip()
+    date_from  = request.args.get('date_from', '').strip()
+    date_to    = request.args.get('date_to', '').strip()
+    sql = """
+        SELECT t.*, p.sku, p.name AS product_name, p.unit, w.name AS warehouse_name
+        FROM inv_transactions t
+        JOIN inv_products p ON p.id = t.product_id
+        LEFT JOIN inv_warehouses w ON w.id = t.warehouse_id
+        WHERE 1=1
+    """
+    params = []
+    if product_id:
+        sql += " AND t.product_id=%s"; params.append(int(product_id))
+    if txn_type:
+        sql += " AND t.txn_type=%s"; params.append(txn_type)
+    if date_from:
+        sql += " AND t.created_at::date >= %s"; params.append(date_from)
+    if date_to:
+        sql += " AND t.created_at::date <= %s"; params.append(date_to)
+    sql += " ORDER BY t.created_at DESC LIMIT 500"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    result = [{
+        'id': r['id'], 'product_id': r['product_id'], 'warehouse_id': r['warehouse_id'],
+        'sku': r['sku'], 'product_name': r['product_name'], 'unit': r['unit'],
+        'warehouse_name': r['warehouse_name'],
+        'txn_type': r['txn_type'], 'qty': float(r['qty'] or 0),
+        'unit_cost': float(r['unit_cost'] or 0),
+        'ref_type': r['ref_type'], 'ref_no': r['ref_no'], 'note': r['note'],
+        'created_by': r['created_by'],
+        'created_at': str(r['created_at'])[:19] if r['created_at'] else None,
+    } for r in rows]
+    return jsonify(result)
+
+
+@app.route('/api/inventory/stats', methods=['GET'])
+@require_module('inventory')
+def api_inv_stats():
+    with get_db() as conn:
+        total_products = conn.execute(
+            "SELECT COUNT(*) AS n FROM inv_products WHERE active=TRUE"
+        ).fetchone()['n']
+        low_stock_cnt = conn.execute(
+            """SELECT COUNT(DISTINCT s.product_id) AS n
+               FROM inv_stock s JOIN inv_products p ON p.id=s.product_id
+               WHERE p.active=TRUE AND s.qty_on_hand <= p.min_stock AND p.min_stock > 0"""
+        ).fetchone()['n']
+        total_value = conn.execute(
+            """SELECT COALESCE(SUM(s.qty_on_hand * p.cost_price), 0) AS v
+               FROM inv_stock s JOIN inv_products p ON p.id=s.product_id WHERE p.active=TRUE"""
+        ).fetchone()['v']
+        warehouse_cnt = conn.execute(
+            "SELECT COUNT(*) AS n FROM inv_warehouses WHERE active=TRUE"
+        ).fetchone()['n']
+        txn_today = conn.execute(
+            "SELECT COUNT(*) AS n FROM inv_transactions WHERE created_at::date = CURRENT_DATE"
+        ).fetchone()['n']
+    return jsonify({
+        'total_products': total_products,
+        'low_stock_count': low_stock_cnt,
+        'total_inventory_value': float(total_value or 0),
+        'warehouse_count': warehouse_cnt,
+        'transactions_today': txn_today,
+    })
+
+
+# ══════════════════════════════════════════════════════════════
+# 會計記帳系統 (Accounting)
+# ══════════════════════════════════════════════════════════════
+
+def init_accounting_db():
+    migrations = [
+        """CREATE TABLE IF NOT EXISTS acc_accounts (
+            id              SERIAL PRIMARY KEY,
+            code            TEXT NOT NULL UNIQUE,
+            name            TEXT NOT NULL,
+            account_type    TEXT NOT NULL,
+            normal_balance  TEXT NOT NULL DEFAULT 'debit',
+            parent_id       INT REFERENCES acc_accounts(id) ON DELETE SET NULL,
+            level           SMALLINT DEFAULT 1,
+            active          BOOLEAN DEFAULT TRUE,
+            sort_order      INT DEFAULT 0,
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        # 台灣標準會計科目（精簡版）
+        """INSERT INTO acc_accounts (code, name, account_type, normal_balance, level, sort_order) VALUES
+           ('1000','流動資產','asset','debit',1,10),
+           ('1101','現金','asset','debit',2,11),
+           ('1102','銀行存款','asset','debit',2,12),
+           ('1103','應收帳款','asset','debit',2,13),
+           ('1104','存貨','asset','debit',2,14),
+           ('1200','非流動資產','asset','debit',1,20),
+           ('1201','固定資產','asset','debit',2,21),
+           ('1202','累計折舊','asset','credit',2,22),
+           ('2000','流動負債','liability','credit',1,30),
+           ('2101','應付帳款','liability','credit',2,31),
+           ('2102','應付薪資','liability','credit',2,32),
+           ('2103','應付稅款','liability','credit',2,33),
+           ('2200','非流動負債','liability','credit',1,40),
+           ('3000','股東權益','equity','credit',1,50),
+           ('3101','股本','equity','credit',2,51),
+           ('3102','保留盈餘','equity','credit',2,52),
+           ('4000','營業收入','revenue','credit',1,60),
+           ('4101','銷售收入','revenue','credit',2,61),
+           ('4102','服務收入','revenue','credit',2,62),
+           ('4200','其他收入','revenue','credit',1,70),
+           ('5000','營業成本','expense','debit',1,80),
+           ('5101','銷售成本','expense','debit',2,81),
+           ('5102','進貨成本','expense','debit',2,82),
+           ('6000','營業費用','expense','debit',1,90),
+           ('6101','薪資費用','expense','debit',2,91),
+           ('6102','租金費用','expense','debit',2,92),
+           ('6103','差旅費用','expense','debit',2,93),
+           ('6104','廣告費用','expense','debit',2,94),
+           ('6105','水電費用','expense','debit',2,95),
+           ('6106','折舊費用','expense','debit',2,96),
+           ('6200','其他費用','expense','debit',1,100)
+           ON CONFLICT (code) DO NOTHING""",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[accounting_init] {str(e)[:120]}")
+
+init_accounting_db()
+
+
+@app.route('/api/accounting/accounts', methods=['GET'])
+@require_module('accounting')
+def api_acc_accounts_list():
+    acc_type = request.args.get('type', '').strip()
+    sql = "SELECT * FROM acc_accounts WHERE active=TRUE"
+    params = []
+    if acc_type:
+        sql += " AND account_type=%s"; params.append(acc_type)
+    sql += " ORDER BY sort_order, code"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/accounting/stats', methods=['GET'])
+@require_module('accounting')
+def api_acc_stats():
+    with get_db() as conn:
+        total_accounts = conn.execute(
+            "SELECT COUNT(*) AS n FROM acc_accounts WHERE active=TRUE"
+        ).fetchone()['n']
+    return jsonify({'total_accounts': total_accounts})
