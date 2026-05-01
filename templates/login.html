@@ -98,10 +98,12 @@
 <body>
 <select class="lang-select" id="login-lang-btn" onchange="loginSetLang(this.value)">
   <option value="zh-TW">繁體中文</option>
+  <option value="zh-CN">简体中文</option>
   <option value="en">English</option>
   <option value="ja">日本語</option>
   <option value="vi">Tiếng Việt</option>
   <option value="th">ภาษาไทย</option>
+  <option value="id">Bahasa Indonesia</option>
 </select>
 <div class="login-card">
   <div class="brand">
@@ -157,8 +159,16 @@ const LOGIN_I18N = {
              noDevice:'Không tìm thấy thiết bị đã đăng ký', success:'Xác thực thành công, đang chuyển...', cancelled:'Đã hủy hoặc hết giờ', failed:'Xác thực thất bại: ' },
   'th':    { brand:'ระบบจัดการ', bio:'ลายนิ้วมือ / Face ID', orPw:'หรือเข้าสู่ระบบด้วยรหัสผ่าน', userLabel:'ชื่อผู้ใช้',
              userPh:'กรอกชื่อผู้ใช้', pwLabel:'รหัสผ่าน', pwPh:'กรอกรหัสผ่าน', submit:'เข้าสู่ระบบ',
-             footer:'ระบบบันทึกเวลา & ตารางงาน', toggle:'中文', verifying:'กำลังยืนยัน...',
-             noDevice:'ไม่พบอุปกรณ์ที่ลงทะเบียน', success:'ยืนยันสำเร็จ กำลังเปลี่ยนเส้นทาง...', cancelled:'ยกเลิกหรือหมดเวลา', failed:'การยืนยันล้มเหลว: ' }
+             footer:'ระบบบันทึกเวลา & ตารางงาน', toggle:'简体中文', verifying:'กำลังยืนยัน...',
+             noDevice:'ไม่พบอุปกรณ์ที่ลงทะเบียน', success:'ยืนยันสำเร็จ กำลังเปลี่ยนเส้นทาง...', cancelled:'ยกเลิกหรือหมดเวลา', failed:'การยืนยันล้มเหลว: ' },
+  'zh-CN': { brand:'管理后台', bio:'指纹 / Face ID 登录', orPw:'或使用密码登录', userLabel:'管理员账号',
+             userPh:'输入账号', pwLabel:'密码', pwPh:'输入密码', submit:'登录',
+             footer:'打卡 & 排班管理系统', toggle:'Bahasa Indonesia', verifying:'正在验证...',
+             noDevice:'找不到已绑定的设备', success:'验证成功，正在跳转...', cancelled:'已取消或超时', failed:'验证失败：' },
+  'id':    { brand:'Panel Admin', bio:'Sidik Jari / Face ID', orPw:'atau masuk dengan kata sandi', userLabel:'Nama Pengguna',
+             userPh:'Masukkan nama pengguna', pwLabel:'Kata Sandi', pwPh:'Masukkan kata sandi', submit:'Masuk',
+             footer:'Sistem Absensi & Jadwal Kerja', toggle:'繁體中文', verifying:'Memverifikasi...',
+             noDevice:'Perangkat terdaftar tidak ditemukan', success:'Terverifikasi, mengalihkan...', cancelled:'Dibatalkan atau habis waktu', failed:'Verifikasi gagal: ' }
 };
 let _loginLang = localStorage.getItem('adminLang') || 'zh-TW';
 function loginT(k) { return (LOGIN_I18N[_loginLang]||LOGIN_I18N['zh-TW'])[k] || k; }

@@ -7,7 +7,7 @@ import re as _re
 from flask import request as _req
 import json as _json
 
-SUPPORTED_LANGS = {'zh-TW', 'en', 'ja', 'vi', 'th', 'zh-CN'}
+SUPPORTED_LANGS = {'zh-TW', 'en', 'ja', 'vi', 'th', 'zh-CN', 'id'}
 
 
 def get_lang() -> str:
@@ -27,6 +27,8 @@ def get_lang() -> str:
             return 'vi'
         if code.startswith('th'):
             return 'th'
+        if code.startswith('id'):
+            return 'id'
         if code.startswith('en'):
             return 'en'
     return 'zh-TW'
@@ -84,6 +86,7 @@ _EXACT = {
         'vi': 'Vui lòng đăng nhập trước',
         'th': 'กรุณาเข้าสู่ระบบก่อน',
         'zh-CN': '请先登录',
+        'id': 'Silakan masuk terlebih dahulu',
     },
     '需要超級管理員權限': {
         'en': 'Super admin access required',
@@ -91,6 +94,7 @@ _EXACT = {
         'vi': 'Yêu cầu quyền quản trị viên cấp cao',
         'th': 'ต้องการสิทธิ์ผู้ดูแลระบบระดับสูง',
         'zh-CN': '需要超级管理员权限',
+        'id': 'Diperlukan izin super admin',
     },
     '需要管理員權限': {
         'en': 'Admin access required',
@@ -98,6 +102,7 @@ _EXACT = {
         'vi': 'Yêu cầu quyền quản trị viên',
         'th': 'ต้องการสิทธิ์ผู้ดูแลระบบ',
         'zh-CN': '需要管理员权限',
+        'id': 'Diperlukan izin admin',
     },
     '無權限': {
         'en': 'No permission',
@@ -105,6 +110,7 @@ _EXACT = {
         'vi': 'Không có quyền',
         'th': 'ไม่มีสิทธิ์',
         'zh-CN': '无权限',
+        'id': 'Tidak ada izin',
     },
     '未授權': {
         'en': 'Unauthorized',
@@ -112,6 +118,7 @@ _EXACT = {
         'vi': 'Không được ủy quyền',
         'th': 'ไม่ได้รับอนุญาต',
         'zh-CN': '未授权',
+        'id': 'Tidak diotorisasi',
     },
     # Credentials
     '帳號為必填': {
@@ -120,6 +127,7 @@ _EXACT = {
         'vi': 'Tên tài khoản là bắt buộc',
         'th': 'ต้องระบุชื่อผู้ใช้',
         'zh-CN': '账号为必填',
+        'id': 'Nama pengguna wajib diisi',
     },
     '帳號已存在': {
         'en': 'Username already exists',
@@ -127,6 +135,7 @@ _EXACT = {
         'vi': 'Tên tài khoản đã tồn tại',
         'th': 'ชื่อผู้ใช้นี้มีอยู่แล้ว',
         'zh-CN': '账号已存在',
+        'id': 'Nama pengguna sudah ada',
     },
     '帳號不存在或已停用': {
         'en': 'Account not found or disabled',
@@ -134,6 +143,7 @@ _EXACT = {
         'vi': 'Tài khoản không tồn tại hoặc đã bị vô hiệu hóa',
         'th': 'ไม่พบบัญชีหรือบัญชีถูกปิดใช้งาน',
         'zh-CN': '账号不存在或已停用',
+        'id': 'Akun tidak ditemukan atau dinonaktifkan',
     },
     '帳號不存在': {
         'en': 'Account not found',
@@ -141,6 +151,7 @@ _EXACT = {
         'vi': 'Tài khoản không tồn tại',
         'th': 'ไม่พบบัญชีผู้ใช้',
         'zh-CN': '账号不存在',
+        'id': 'Akun tidak ditemukan',
     },
     '帳號或密碼錯誤': {
         'en': 'Incorrect username or password',
@@ -148,6 +159,7 @@ _EXACT = {
         'vi': 'Tên tài khoản hoặc mật khẩu không đúng',
         'th': 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
         'zh-CN': '账号或密码错误',
+        'id': 'Nama pengguna atau kata sandi salah',
     },
     '密碼至少 4 個字元': {
         'en': 'Password must be at least 4 characters',
@@ -155,6 +167,7 @@ _EXACT = {
         'vi': 'Mật khẩu phải có ít nhất 4 ký tự',
         'th': 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร',
         'zh-CN': '密码至少 4 个字符',
+        'id': 'Kata sandi minimal 4 karakter',
     },
     '請輸入帳號及密碼': {
         'en': 'Please enter username and password',
@@ -162,6 +175,7 @@ _EXACT = {
         'vi': 'Vui lòng nhập tên tài khoản và mật khẩu',
         'th': 'กรุณาใส่ชื่อผู้ใช้และรหัสผ่าน',
         'zh-CN': '请输入账号及密码',
+        'id': 'Harap masukkan nama pengguna dan kata sandi',
     },
     '請輸入帳號與密碼': {
         'en': 'Please enter username and password',
@@ -169,6 +183,7 @@ _EXACT = {
         'vi': 'Vui lòng nhập tên tài khoản và mật khẩu',
         'th': 'กรุณาใส่ชื่อผู้ใช้และรหัสผ่าน',
         'zh-CN': '请输入账号与密码',
+        'id': 'Harap masukkan nama pengguna dan kata sandi',
     },
     # Staff / name
     '姓名為必填': {
@@ -177,6 +192,7 @@ _EXACT = {
         'vi': 'Họ tên là bắt buộc',
         'th': 'ต้องระบุชื่อ',
         'zh-CN': '姓名为必填',
+        'id': 'Nama wajib diisi',
     },
     '姓名和帳號為必填': {
         'en': 'Name and username are required',
@@ -184,6 +200,7 @@ _EXACT = {
         'vi': 'Họ tên và tên tài khoản là bắt buộc',
         'th': 'ต้องระบุชื่อและชื่อผู้ใช้',
         'zh-CN': '姓名和账号为必填',
+        'id': 'Nama dan nama pengguna wajib diisi',
     },
     '姓名或帳號已存在，請換一個': {
         'en': 'Name or username already exists, please choose another',
@@ -191,6 +208,7 @@ _EXACT = {
         'vi': 'Họ tên hoặc tên tài khoản đã tồn tại, vui lòng chọn tên khác',
         'th': 'ชื่อหรือชื่อผู้ใช้มีอยู่แล้ว กรุณาเปลี่ยนชื่อ',
         'zh-CN': '姓名或账号已存在，请换一个',
+        'id': 'Nama atau nama pengguna sudah ada, silakan pilih yang lain',
     },
     '不能刪除自己的帳號': {
         'en': 'Cannot delete your own account',
@@ -198,6 +216,7 @@ _EXACT = {
         'vi': 'Không thể xóa tài khoản của chính bạn',
         'th': 'ไม่สามารถลบบัญชีของตัวเองได้',
         'zh-CN': '不能删除自己的账号',
+        'id': 'Tidak dapat menghapus akun sendiri',
     },
     '員工不存在': {
         'en': 'Employee not found',
@@ -205,6 +224,7 @@ _EXACT = {
         'vi': 'Nhân viên không tồn tại',
         'th': 'ไม่พบพนักงาน',
         'zh-CN': '员工不存在',
+        'id': 'Karyawan tidak ditemukan',
     },
     # Required fields
     '店名為必填': {
@@ -213,6 +233,7 @@ _EXACT = {
         'vi': 'Tên cửa hàng là bắt buộc',
         'th': 'ต้องระบุชื่อร้าน',
         'zh-CN': '店名为必填',
+        'id': 'Nama toko wajib diisi',
     },
     '標題為必填': {
         'en': 'Title is required',
@@ -220,6 +241,7 @@ _EXACT = {
         'vi': 'Tiêu đề là bắt buộc',
         'th': 'ต้องระบุหัวข้อ',
         'zh-CN': '标题为必填',
+        'id': 'Judul wajib diisi',
     },
     '日期為必填': {
         'en': 'Date is required',
@@ -227,6 +249,7 @@ _EXACT = {
         'vi': 'Ngày là bắt buộc',
         'th': 'ต้องระบุวันที่',
         'zh-CN': '日期为必填',
+        'id': 'Tanggal wajib diisi',
     },
     '名稱為必填': {
         'en': 'Name is required',
@@ -234,6 +257,7 @@ _EXACT = {
         'vi': 'Tên là bắt buộc',
         'th': 'ต้องระบุชื่อ',
         'zh-CN': '名称为必填',
+        'id': 'Nama wajib diisi',
     },
     '名稱必填': {
         'en': 'Name is required',
@@ -241,6 +265,7 @@ _EXACT = {
         'vi': 'Tên là bắt buộc',
         'th': 'ต้องระบุชื่อ',
         'zh-CN': '名称必填',
+        'id': 'Nama wajib diisi',
     },
     '開始日期為必填': {
         'en': 'Start date is required',
@@ -248,6 +273,7 @@ _EXACT = {
         'vi': 'Ngày bắt đầu là bắt buộc',
         'th': 'ต้องระบุวันที่เริ่มต้น',
         'zh-CN': '开始日期为必填',
+        'id': 'Tanggal mulai wajib diisi',
     },
     '金額必填': {
         'en': 'Amount is required',
@@ -255,6 +281,7 @@ _EXACT = {
         'vi': 'Số tiền là bắt buộc',
         'th': 'ต้องระบุจำนวนเงิน',
         'zh-CN': '金额必填',
+        'id': 'Jumlah wajib diisi',
     },
     '年月為必填': {
         'en': 'Year and month are required',
@@ -262,6 +289,7 @@ _EXACT = {
         'vi': 'Năm và tháng là bắt buộc',
         'th': 'ต้องระบุปีและเดือน',
         'zh-CN': '年月为必填',
+        'id': 'Tahun dan bulan wajib diisi',
     },
     '缺少必填欄位': {
         'en': 'Missing required fields',
@@ -269,6 +297,7 @@ _EXACT = {
         'vi': 'Thiếu các trường bắt buộc',
         'th': 'ขาดข้อมูลที่จำเป็น',
         'zh-CN': '缺少必填字段',
+        'id': 'Bidang wajib tidak lengkap',
     },
     '缺少必要欄位': {
         'en': 'Missing required fields',
@@ -276,6 +305,7 @@ _EXACT = {
         'vi': 'Thiếu các trường bắt buộc',
         'th': 'ขาดข้อมูลที่จำเป็น',
         'zh-CN': '缺少必要字段',
+        'id': 'Bidang yang diperlukan tidak lengkap',
     },
     # Date/time format
     '日期格式錯誤': {
@@ -284,6 +314,7 @@ _EXACT = {
         'vi': 'Định dạng ngày không hợp lệ',
         'th': 'รูปแบบวันที่ไม่ถูกต้อง',
         'zh-CN': '日期格式错误',
+        'id': 'Format tanggal tidak valid',
     },
     '月份格式錯誤': {
         'en': 'Invalid month format',
@@ -291,6 +322,7 @@ _EXACT = {
         'vi': 'Định dạng tháng không hợp lệ',
         'th': 'รูปแบบเดือนไม่ถูกต้อง',
         'zh-CN': '月份格式错误',
+        'id': 'Format bulan tidak valid',
     },
     '時間格式錯誤': {
         'en': 'Invalid time format',
@@ -298,6 +330,7 @@ _EXACT = {
         'vi': 'Định dạng giờ không hợp lệ',
         'th': 'รูปแบบเวลาไม่ถูกต้อง',
         'zh-CN': '时间格式错误',
+        'id': 'Format waktu tidak valid',
     },
     '格式錯誤': {
         'en': 'Invalid format',
@@ -305,6 +338,7 @@ _EXACT = {
         'vi': 'Định dạng không hợp lệ',
         'th': 'รูปแบบไม่ถูกต้อง',
         'zh-CN': '格式错误',
+        'id': 'Format tidak valid',
     },
     # Punch
     '1 分鐘內已打過卡': {
@@ -313,6 +347,7 @@ _EXACT = {
         'vi': 'Đã chấm công trong vòng 1 phút',
         'th': 'ตอกบัตรไปแล้วภายใน 1 นาที',
         'zh-CN': '1 分钟内已打过卡',
+        'id': 'Sudah absen dalam 1 menit',
     },
     '無效的打卡類型': {
         'en': 'Invalid punch type',
@@ -320,6 +355,7 @@ _EXACT = {
         'vi': 'Loại chấm công không hợp lệ',
         'th': 'ประเภทการตอกบัตรไม่ถูกต้อง',
         'zh-CN': '无效的打卡类型',
+        'id': 'Jenis absensi tidak valid',
     },
     '無法取得 GPS，請允許定位權限後重試': {
         'en': 'Unable to get GPS. Please allow location access and try again',
@@ -327,6 +363,7 @@ _EXACT = {
         'vi': 'Không thể lấy GPS. Vui lòng cho phép quyền vị trí và thử lại',
         'th': 'ไม่สามารถรับ GPS ได้ กรุณาอนุญาตการเข้าถึงตำแหน่งแล้วลองใหม่',
         'zh-CN': '无法获取 GPS，请允许定位权限后重试',
+        'id': 'Tidak dapat mengambil GPS. Harap izinkan akses lokasi dan coba lagi',
     },
     '管理員尚未設定任何打卡地點': {
         'en': 'No punch locations have been configured by admin',
@@ -334,6 +371,7 @@ _EXACT = {
         'vi': 'Quản trị viên chưa thiết lập địa điểm chấm công',
         'th': 'ผู้ดูแลระบบยังไม่ได้ตั้งค่าสถานที่ตอกบัตร',
         'zh-CN': '管理员尚未设置任何打卡地点',
+        'id': 'Admin belum mengatur lokasi absensi',
     },
     '此門市需要 GPS 定位才能打卡': {
         'en': 'This store requires GPS location to punch',
@@ -341,6 +379,7 @@ _EXACT = {
         'vi': 'Cửa hàng này yêu cầu GPS để chấm công',
         'th': 'ร้านนี้ต้องการ GPS เพื่อตอกบัตร',
         'zh-CN': '此门店需要 GPS 定位才能打卡',
+        'id': 'Toko ini memerlukan GPS untuk absensi',
     },
     '僅員工可打卡': {
         'en': 'Only employees can punch',
@@ -348,6 +387,7 @@ _EXACT = {
         'vi': 'Chỉ nhân viên mới có thể chấm công',
         'th': 'เฉพาะพนักงานเท่านั้นที่สามารถตอกบัตรได้',
         'zh-CN': '仅员工可打卡',
+        'id': 'Hanya karyawan yang dapat absen',
     },
     '僅員工可查詢': {
         'en': 'Only employees can query records',
@@ -355,6 +395,7 @@ _EXACT = {
         'vi': 'Chỉ nhân viên mới có thể truy vấn',
         'th': 'เฉพาะพนักงานเท่านั้นที่สามารถสอบถามได้',
         'zh-CN': '仅员工可查询',
+        'id': 'Hanya karyawan yang dapat melihat data',
     },
     '僅員工可申請': {
         'en': 'Only employees can submit requests',
@@ -362,6 +403,7 @@ _EXACT = {
         'vi': 'Chỉ nhân viên mới có thể gửi yêu cầu',
         'th': 'เฉพาะพนักงานเท่านั้นที่สามารถยื่นคำขอได้',
         'zh-CN': '仅员工可申请',
+        'id': 'Hanya karyawan yang dapat mengajukan permohonan',
     },
     '請選擇補打時間': {
         'en': 'Please select a punch time',
@@ -369,6 +411,7 @@ _EXACT = {
         'vi': 'Vui lòng chọn thời gian chấm công bù',
         'th': 'กรุณาเลือกเวลาตอกบัตรย้อนหลัง',
         'zh-CN': '请选择补打时间',
+        'id': 'Harap pilih waktu absen susulan',
     },
     # Leave
     '請假天數不合理，請檢查日期': {
@@ -377,6 +420,7 @@ _EXACT = {
         'vi': 'Số ngày nghỉ không hợp lệ, vui lòng kiểm tra ngày',
         'th': 'จำนวนวันลาไม่ถูกต้อง กรุณาตรวจสอบวันที่',
         'zh-CN': '请假天数不合理，请检查日期',
+        'id': 'Jumlah hari cuti tidak valid, harap periksa tanggalnya',
     },
     '找不到特休假類型': {
         'en': 'Leave type not found',
@@ -384,6 +428,7 @@ _EXACT = {
         'vi': 'Không tìm thấy loại nghỉ phép đặc biệt',
         'th': 'ไม่พบประเภทวันหยุดพิเศษ',
         'zh-CN': '找不到特休假类型',
+        'id': 'Jenis cuti tahunan tidak ditemukan',
     },
     '找不到請假申請': {
         'en': 'Leave request not found',
@@ -391,6 +436,7 @@ _EXACT = {
         'vi': 'Không tìm thấy đơn xin nghỉ',
         'th': 'ไม่พบคำขอลา',
         'zh-CN': '找不到请假申请',
+        'id': 'Permohonan cuti tidak ditemukan',
     },
     '申請已審核，不可修改費用': {
         'en': 'Request already reviewed, cannot modify expenses',
@@ -398,6 +444,7 @@ _EXACT = {
         'vi': 'Yêu cầu đã được xem xét, không thể sửa đổi chi phí',
         'th': 'คำขอได้รับการอนุมัติแล้ว ไม่สามารถแก้ไขค่าใช้จ่ายได้',
         'zh-CN': '申请已审核，不可修改费用',
+        'id': 'Permohonan sudah ditinjau, tidak dapat mengubah biaya',
     },
     '請指定月份': {
         'en': 'Please specify a month',
@@ -405,6 +452,7 @@ _EXACT = {
         'vi': 'Vui lòng chỉ định tháng',
         'th': 'กรุณาระบุเดือน',
         'zh-CN': '请指定月份',
+        'id': 'Harap tentukan bulan',
     },
     '請提供月份': {
         'en': 'Please provide a month',
@@ -412,6 +460,7 @@ _EXACT = {
         'vi': 'Vui lòng cung cấp tháng',
         'th': 'กรุณาระบุเดือน',
         'zh-CN': '请提供月份',
+        'id': 'Harap berikan bulan',
     },
     # Schedule
     '下班時間不得早於或等於上班時間': {
@@ -420,6 +469,7 @@ _EXACT = {
         'vi': 'Giờ tan ca phải sau giờ bắt đầu',
         'th': 'เวลาเลิกงานต้องหลังเวลาเริ่มงาน',
         'zh-CN': '下班时间不得早于或等于上班时间',
+        'id': 'Waktu pulang tidak boleh sebelum atau sama dengan waktu masuk',
     },
     '上班時間不得晚於或等於已存在的下班時間': {
         'en': 'Start time must be before the existing end time',
@@ -427,6 +477,7 @@ _EXACT = {
         'vi': 'Giờ bắt đầu phải trước giờ tan ca hiện có',
         'th': 'เวลาเริ่มงานต้องก่อนเวลาเลิกงานที่มีอยู่',
         'zh-CN': '上班时间不得晚于或等于已存在的下班时间',
+        'id': 'Waktu masuk tidak boleh setelah waktu pulang yang sudah ada',
     },
     # Overtime
     '請填寫加班日期及時間': {
@@ -435,6 +486,7 @@ _EXACT = {
         'vi': 'Vui lòng điền ngày và giờ làm thêm',
         'th': 'กรุณากรอกวันที่และเวลาทำงานล่วงเวลา',
         'zh-CN': '请填写加班日期及时间',
+        'id': 'Harap isi tanggal dan waktu lembur',
     },
     '請填寫加班原因': {
         'en': 'Please fill in the overtime reason',
@@ -442,6 +494,7 @@ _EXACT = {
         'vi': 'Vui lòng điền lý do làm thêm giờ',
         'th': 'กรุณากรอกเหตุผลการทำงานล่วงเวลา',
         'zh-CN': '请填写加班原因',
+        'id': 'Harap isi alasan lembur',
     },
     '加班時數不合理（0~12小時）': {
         'en': 'Overtime hours invalid (must be 0–12 hours)',
@@ -449,6 +502,7 @@ _EXACT = {
         'vi': 'Số giờ làm thêm không hợp lệ (phải từ 0–12 giờ)',
         'th': 'ชั่วโมงล่วงเวลาไม่ถูกต้อง (ต้องอยู่ระหว่าง 0–12 ชั่วโมง)',
         'zh-CN': '加班时数不合理（0~12小时）',
+        'id': 'Jam lembur tidak valid (harus 0–12 jam)',
     },
     # File upload
     '檔案大小不能超過 10MB': {
@@ -457,6 +511,7 @@ _EXACT = {
         'vi': 'Kích thước file không được vượt quá 10MB',
         'th': 'ขนาดไฟล์ต้องไม่เกิน 10MB',
         'zh-CN': '文件大小不能超过 10MB',
+        'id': 'Ukuran file tidak boleh melebihi 10MB',
     },
     '請選擇檔案': {
         'en': 'Please select a file',
@@ -464,6 +519,7 @@ _EXACT = {
         'vi': 'Vui lòng chọn file',
         'th': 'กรุณาเลือกไฟล์',
         'zh-CN': '请选择文件',
+        'id': 'Harap pilih file',
     },
     '請上傳 CSV 檔案': {
         'en': 'Please upload a CSV file',
@@ -471,6 +527,7 @@ _EXACT = {
         'vi': 'Vui lòng tải lên file CSV',
         'th': 'กรุณาอัปโหลดไฟล์ CSV',
         'zh-CN': '请上传 CSV 文件',
+        'id': 'Harap upload file CSV',
     },
     '請上傳圖片': {
         'en': 'Please upload an image',
@@ -478,6 +535,7 @@ _EXACT = {
         'vi': 'Vui lòng tải lên hình ảnh',
         'th': 'กรุณาอัปโหลดรูปภาพ',
         'zh-CN': '请上传图片',
+        'id': 'Harap upload gambar',
     },
     '請上傳圖片或 PDF 檔案': {
         'en': 'Please upload an image or PDF file',
@@ -485,6 +543,7 @@ _EXACT = {
         'vi': 'Vui lòng tải lên hình ảnh hoặc file PDF',
         'th': 'กรุณาอัปโหลดรูปภาพหรือไฟล์ PDF',
         'zh-CN': '请上传图片或 PDF 文件',
+        'id': 'Harap upload gambar atau file PDF',
     },
     'CSV 無資料': {
         'en': 'CSV has no data',
@@ -492,6 +551,7 @@ _EXACT = {
         'vi': 'CSV không có dữ liệu',
         'th': 'CSV ไม่มีข้อมูล',
         'zh-CN': 'CSV 无数据',
+        'id': 'CSV tidak memiliki data',
     },
     '檔案內容為空': {
         'en': 'File is empty',
@@ -499,6 +559,7 @@ _EXACT = {
         'vi': 'File rỗng',
         'th': 'ไฟล์ว่างเปล่า',
         'zh-CN': '文件内容为空',
+        'id': 'File kosong',
     },
     '無法解析 CSV 欄位': {
         'en': 'Cannot parse CSV columns',
@@ -506,6 +567,7 @@ _EXACT = {
         'vi': 'Không thể phân tích cột CSV',
         'th': 'ไม่สามารถแยกวิเคราะห์คอลัมน์ CSV ได้',
         'zh-CN': '无法解析 CSV 字段',
+        'id': 'Tidak dapat mengurai kolom CSV',
     },
     '無資料列': {
         'en': 'No data rows',
@@ -513,6 +575,7 @@ _EXACT = {
         'vi': 'Không có dòng dữ liệu',
         'th': 'ไม่มีแถวข้อมูล',
         'zh-CN': '无数据行',
+        'id': 'Tidak ada baris data',
     },
     '檔案缺少「姓名」或「代碼」欄位': {
         'en': 'File is missing the "Name" or "Code" column',
@@ -520,6 +583,7 @@ _EXACT = {
         'vi': 'File thiếu cột "Họ tên" hoặc "Mã nhân viên"',
         'th': 'ไฟล์ขาดคอลัมน์ "ชื่อ" หรือ "รหัส"',
         'zh-CN': '文件缺少"姓名"或"代码"字段',
+        'id': 'File tidak memiliki kolom "Nama" atau "Kode"',
     },
     '檔案缺少「日期」欄位': {
         'en': 'File is missing the "Date" column',
@@ -527,6 +591,7 @@ _EXACT = {
         'vi': 'File thiếu cột "Ngày"',
         'th': 'ไฟล์ขาดคอลัมน์ "วันที่"',
         'zh-CN': '文件缺少"日期"字段',
+        'id': 'File tidak memiliki kolom "Tanggal"',
     },
     '檔案缺少「班別」欄位': {
         'en': 'File is missing the "Shift" column',
@@ -534,6 +599,7 @@ _EXACT = {
         'vi': 'File thiếu cột "Ca làm việc"',
         'th': 'ไฟล์ขาดคอลัมน์ "กะ"',
         'zh-CN': '文件缺少"班别"字段',
+        'id': 'File tidak memiliki kolom "Shift"',
     },
     # Token
     'token 已過期，請重新登入': {
@@ -542,6 +608,7 @@ _EXACT = {
         'vi': 'Token đã hết hạn, vui lòng đăng nhập lại',
         'th': 'โทเค็นหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง',
         'zh-CN': 'token 已过期，请重新登录',
+        'id': 'Token kedaluwarsa, harap masuk kembali',
     },
     'token 無效': {
         'en': 'Invalid token',
@@ -549,6 +616,7 @@ _EXACT = {
         'vi': 'Token không hợp lệ',
         'th': 'โทเค็นไม่ถูกต้อง',
         'zh-CN': 'token 无效',
+        'id': 'Token tidak valid',
     },
     '未設定 Token': {
         'en': 'Token not configured',
@@ -556,6 +624,7 @@ _EXACT = {
         'vi': 'Chưa cấu hình Token',
         'th': 'ยังไม่ได้ตั้งค่า Token',
         'zh-CN': '未设置 Token',
+        'id': 'Token belum dikonfigurasi',
     },
     '請先設定 Channel Access Token': {
         'en': 'Please configure the Channel Access Token first',
@@ -563,6 +632,7 @@ _EXACT = {
         'vi': 'Vui lòng cấu hình Channel Access Token trước',
         'th': 'กรุณาตั้งค่า Channel Access Token ก่อน',
         'zh-CN': '请先设置 Channel Access Token',
+        'id': 'Harap konfigurasikan Channel Access Token terlebih dahulu',
     },
     # System / API
     '尚未設定 ANTHROPIC_API_KEY 環境變數': {
@@ -571,6 +641,7 @@ _EXACT = {
         'vi': 'Biến môi trường ANTHROPIC_API_KEY chưa được thiết lập',
         'th': 'ยังไม่ได้ตั้งค่าตัวแปรสภาพแวดล้อม ANTHROPIC_API_KEY',
         'zh-CN': '尚未设置 ANTHROPIC_API_KEY 环境变量',
+        'id': 'Variabel lingkungan ANTHROPIC_API_KEY belum diatur',
     },
     '尚未設定 ANTHROPIC_API_KEY': {
         'en': 'ANTHROPIC_API_KEY is not set',
@@ -578,6 +649,7 @@ _EXACT = {
         'vi': 'ANTHROPIC_API_KEY chưa được thiết lập',
         'th': 'ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY',
         'zh-CN': '尚未设置 ANTHROPIC_API_KEY',
+        'id': 'ANTHROPIC_API_KEY belum diatur',
     },
     '參數錯誤': {
         'en': 'Invalid parameter',
@@ -585,6 +657,7 @@ _EXACT = {
         'vi': 'Tham số không hợp lệ',
         'th': 'พารามิเตอร์ไม่ถูกต้อง',
         'zh-CN': '参数错误',
+        'id': 'Parameter tidak valid',
     },
     '無效操作': {
         'en': 'Invalid operation',
@@ -592,6 +665,7 @@ _EXACT = {
         'vi': 'Thao tác không hợp lệ',
         'th': 'การดำเนินการไม่ถูกต้อง',
         'zh-CN': '无效操作',
+        'id': 'Operasi tidak valid',
     },
     # Survey / rating
     '期別需為 1-6': {
@@ -600,6 +674,7 @@ _EXACT = {
         'vi': 'Kỳ phải từ 1 đến 6',
         'th': 'ช่วงเวลาต้องอยู่ระหว่าง 1 ถึง 6',
         'zh-CN': '期别需为 1-6',
+        'id': 'Periode harus antara 1 sampai 6',
     },
     '必須有一個評級的門檻設為 0%（作為最低等級）': {
         'en': 'One rating must have a threshold of 0% (as the lowest level)',
@@ -607,6 +682,7 @@ _EXACT = {
         'vi': 'Phải có ít nhất một mức đánh giá với ngưỡng 0% (làm mức thấp nhất)',
         'th': 'ต้องมีระดับการให้คะแนนที่มีเกณฑ์ 0% อย่างน้อยหนึ่งระดับ (เป็นระดับต่ำสุด)',
         'zh-CN': '必须有一个评级的门槛设为 0%（作为最低等级）',
+        'id': 'Harus ada satu penilaian dengan ambang 0% (sebagai level terendah)',
     },
     '請至少設定一個評級': {
         'en': 'Please set at least one rating',
@@ -614,6 +690,7 @@ _EXACT = {
         'vi': 'Vui lòng thiết lập ít nhất một mức đánh giá',
         'th': 'กรุณาตั้งค่าการให้คะแนนอย่างน้อยหนึ่งระดับ',
         'zh-CN': '请至少设置一个评级',
+        'id': 'Harap atur setidaknya satu penilaian',
     },
     '評級代碼與標籤不可為空': {
         'en': 'Rating code and label cannot be empty',
@@ -621,6 +698,7 @@ _EXACT = {
         'vi': 'Mã đánh giá và nhãn không được để trống',
         'th': 'รหัสและป้ายกำกับการให้คะแนนต้องไม่ว่างเปล่า',
         'zh-CN': '评级代码与标签不可为空',
+        'id': 'Kode dan label penilaian tidak boleh kosong',
     },
     '門檻百分比需介於 0~100': {
         'en': 'Threshold percentage must be between 0 and 100',
@@ -628,6 +706,7 @@ _EXACT = {
         'vi': 'Tỷ lệ phần trăm ngưỡng phải từ 0 đến 100',
         'th': 'เปอร์เซ็นต์เกณฑ์ต้องอยู่ระหว่าง 0 ถึง 100',
         'zh-CN': '门槛百分比需介于 0~100',
+        'id': 'Persentase ambang harus antara 0 sampai 100',
     },
     '調薪金額不可為 0': {
         'en': 'Salary adjustment amount cannot be 0',
@@ -635,6 +714,7 @@ _EXACT = {
         'vi': 'Số tiền điều chỉnh lương không được là 0',
         'th': 'จำนวนการปรับเงินเดือนต้องไม่เป็น 0',
         'zh-CN': '调薪金额不可为 0',
+        'id': 'Jumlah penyesuaian gaji tidak boleh 0',
     },
     # Approval
     '找不到或已審核': {
@@ -643,6 +723,7 @@ _EXACT = {
         'vi': 'Không tìm thấy hoặc đã được xem xét',
         'th': 'ไม่พบหรือได้รับการอนุมัติแล้ว',
         'zh-CN': '找不到或已审核',
+        'id': 'Tidak ditemukan atau sudah ditinjau',
     },
     '找不到或已審核，無法修改': {
         'en': 'Not found or already reviewed, cannot edit',
@@ -650,6 +731,7 @@ _EXACT = {
         'vi': 'Không tìm thấy hoặc đã được xem xét, không thể chỉnh sửa',
         'th': 'ไม่พบหรือได้รับการอนุมัติแล้ว ไม่สามารถแก้ไขได้',
         'zh-CN': '找不到或已审核，无法修改',
+        'id': 'Tidak ditemukan atau sudah ditinjau, tidak dapat diedit',
     },
     '找不到或申請已審核，不可刪除費用': {
         'en': 'Not found or request already reviewed, cannot delete expense',
@@ -657,6 +739,7 @@ _EXACT = {
         'vi': 'Không tìm thấy hoặc yêu cầu đã được xem xét, không thể xóa chi phí',
         'th': 'ไม่พบหรือคำขอได้รับการอนุมัติแล้ว ไม่สามารถลบค่าใช้จ่ายได้',
         'zh-CN': '找不到或申请已审核，不可删除费用',
+        'id': 'Tidak ditemukan atau permohonan sudah ditinjau, tidak dapat menghapus biaya',
     },
     '請選擇員工及日期': {
         'en': 'Please select an employee and date',
@@ -664,6 +747,7 @@ _EXACT = {
         'vi': 'Vui lòng chọn nhân viên và ngày',
         'th': 'กรุณาเลือกพนักงานและวันที่',
         'zh-CN': '请选择员工及日期',
+        'id': 'Harap pilih karyawan dan tanggal',
     },
     '請選擇員工、班別及日期': {
         'en': 'Please select an employee, shift, and date',
@@ -671,6 +755,7 @@ _EXACT = {
         'vi': 'Vui lòng chọn nhân viên, ca làm việc và ngày',
         'th': 'กรุณาเลือกพนักงาน กะ และวันที่',
         'zh-CN': '请选择员工、班别及日期',
+        'id': 'Harap pilih karyawan, shift, dan tanggal',
     },
     '請選擇員工及考核期間': {
         'en': 'Please select an employee and review period',
@@ -678,6 +763,7 @@ _EXACT = {
         'vi': 'Vui lòng chọn nhân viên và kỳ đánh giá',
         'th': 'กรุณาเลือกพนักงานและช่วงการประเมิน',
         'zh-CN': '请选择员工及考核期间',
+        'id': 'Harap pilih karyawan dan periode penilaian',
     },
     '請填寫日期和名稱': {
         'en': 'Please fill in the date and name',
@@ -685,6 +771,7 @@ _EXACT = {
         'vi': 'Vui lòng điền ngày và tên',
         'th': 'กรุณากรอกวันที่และชื่อ',
         'zh-CN': '请填写日期和名称',
+        'id': 'Harap isi tanggal dan nama',
     },
     '請填寫公告標題': {
         'en': 'Please fill in the announcement title',
@@ -692,6 +779,7 @@ _EXACT = {
         'vi': 'Vui lòng điền tiêu đề thông báo',
         'th': 'กรุณากรอกชื่อประกาศ',
         'zh-CN': '请填写公告标题',
+        'id': 'Harap isi judul pengumuman',
     },
     '請填寫公告內容': {
         'en': 'Please fill in the announcement content',
@@ -699,6 +787,7 @@ _EXACT = {
         'vi': 'Vui lòng điền nội dung thông báo',
         'th': 'กรุณากรอกเนื้อหาประกาศ',
         'zh-CN': '请填写公告内容',
+        'id': 'Harap isi konten pengumuman',
     },
     '請填寫費用日期': {
         'en': 'Please fill in the expense date',
@@ -706,6 +795,7 @@ _EXACT = {
         'vi': 'Vui lòng điền ngày chi phí',
         'th': 'กรุณากรอกวันที่ค่าใช้จ่าย',
         'zh-CN': '请填写费用日期',
+        'id': 'Harap isi tanggal pengeluaran',
     },
     '請填寫標題': {
         'en': 'Please fill in the title',
@@ -713,6 +803,7 @@ _EXACT = {
         'vi': 'Vui lòng điền tiêu đề',
         'th': 'กรุณากรอกหัวข้อ',
         'zh-CN': '请填写标题',
+        'id': 'Harap isi judul',
     },
     '請填寫範本名稱': {
         'en': 'Please fill in the template name',
@@ -720,6 +811,7 @@ _EXACT = {
         'vi': 'Vui lòng điền tên mẫu',
         'th': 'กรุณากรอกชื่อแม่แบบ',
         'zh-CN': '请填写模板名称',
+        'id': 'Harap isi nama template',
     },
     '請填寫離職日期': {
         'en': 'Please fill in the resignation date',
@@ -727,6 +819,7 @@ _EXACT = {
         'vi': 'Vui lòng điền ngày nghỉ việc',
         'th': 'กรุณากรอกวันที่ลาออก',
         'zh-CN': '请填写离职日期',
+        'id': 'Harap isi tanggal pengunduran diri',
     },
     '請填入有效的緯度和經度': {
         'en': 'Please enter valid latitude and longitude',
@@ -734,6 +827,7 @@ _EXACT = {
         'vi': 'Vui lòng nhập vĩ độ và kinh độ hợp lệ',
         'th': 'กรุณาใส่ละติจูดและลองจิจูดที่ถูกต้อง',
         'zh-CN': '请填入有效的纬度和经度',
+        'id': 'Harap masukkan lintang dan bujur yang valid',
     },
     '請選擇月份': {
         'en': 'Please select a month',
@@ -741,6 +835,7 @@ _EXACT = {
         'vi': 'Vui lòng chọn tháng',
         'th': 'กรุณาเลือกเดือน',
         'zh-CN': '请选择月份',
+        'id': 'Harap pilih bulan',
     },
     # Salary
     '薪資批次正在產生中，請稍後再試': {
@@ -749,6 +844,7 @@ _EXACT = {
         'vi': 'Đang tạo bảng lương, vui lòng thử lại sau',
         'th': 'กำลังสร้างชุดเงินเดือน กรุณาลองใหม่ภายหลัง',
         'zh-CN': '薪资批次正在生成中，请稍后再试',
+        'id': 'Batch gaji sedang dibuat, harap coba lagi nanti',
     },
     '無需同步的薪資記錄': {
         'en': 'No salary records to sync',
@@ -756,6 +852,7 @@ _EXACT = {
         'vi': 'Không có bảng lương cần đồng bộ',
         'th': 'ไม่มีบันทึกเงินเดือนที่ต้องซิงค์',
         'zh-CN': '无需同步的薪资记录',
+        'id': 'Tidak ada catatan gaji yang perlu disinkronkan',
     },
     '稅額為零，無需建立分錄': {
         'en': 'Tax is zero, no entry required',
@@ -763,6 +860,7 @@ _EXACT = {
         'vi': 'Thuế bằng không, không cần tạo bút toán',
         'th': 'ภาษีเป็นศูนย์ ไม่จำเป็นต้องสร้างรายการ',
         'zh-CN': '税额为零，无需建立分录',
+        'id': 'Pajak nol, tidak perlu membuat entri',
     },
     # Assets
     '借用人及日期必填': {
@@ -771,6 +869,7 @@ _EXACT = {
         'vi': 'Người mượn và ngày là bắt buộc',
         'th': 'ต้องระบุผู้ยืมและวันที่',
         'zh-CN': '借用人及日期必填',
+        'id': 'Peminjam dan tanggal wajib diisi',
     },
     '設備及借用日期必填': {
         'en': 'Equipment and loan date are required',
@@ -778,6 +877,7 @@ _EXACT = {
         'vi': 'Thiết bị và ngày mượn là bắt buộc',
         'th': 'ต้องระบุอุปกรณ์และวันที่ยืม',
         'zh-CN': '设备及借用日期必填',
+        'id': 'Peralatan dan tanggal peminjaman wajib diisi',
     },
     '設備不存在': {
         'en': 'Equipment not found',
@@ -785,6 +885,7 @@ _EXACT = {
         'vi': 'Thiết bị không tồn tại',
         'th': 'ไม่พบอุปกรณ์',
         'zh-CN': '设备不存在',
+        'id': 'Peralatan tidak ditemukan',
     },
     '此設備目前已被借出': {
         'en': 'This equipment is currently on loan',
@@ -792,6 +893,7 @@ _EXACT = {
         'vi': 'Thiết bị này hiện đang được mượn',
         'th': 'อุปกรณ์นี้กำลังถูกยืมอยู่',
         'zh-CN': '此设备目前已被借出',
+        'id': 'Peralatan ini sedang dipinjam',
     },
     '此設備目前無法借用': {
         'en': 'This equipment is currently unavailable for loan',
@@ -799,6 +901,7 @@ _EXACT = {
         'vi': 'Thiết bị này hiện không thể mượn',
         'th': 'อุปกรณ์นี้ไม่สามารถยืมได้ในขณะนี้',
         'zh-CN': '此设备目前无法借用',
+        'id': 'Peralatan ini tidak dapat dipinjam saat ini',
     },
     '您已有待審的借用申請': {
         'en': 'You already have a pending loan request',
@@ -806,6 +909,7 @@ _EXACT = {
         'vi': 'Bạn đã có yêu cầu mượn đang chờ xử lý',
         'th': 'คุณมีคำขอยืมที่รอดำเนินการอยู่แล้ว',
         'zh-CN': '您已有待审的借用申请',
+        'id': 'Anda sudah memiliki permohonan peminjaman yang menunggu',
     },
     '僅可歸還借用中的設備': {
         'en': 'Can only return equipment that is currently on loan',
@@ -813,6 +917,7 @@ _EXACT = {
         'vi': 'Chỉ có thể trả lại thiết bị đang được mượn',
         'th': 'สามารถคืนได้เฉพาะอุปกรณ์ที่กำลังถูกยืมอยู่',
         'zh-CN': '仅可归还借用中的设备',
+        'id': 'Hanya dapat mengembalikan peralatan yang sedang dipinjam',
     },
     # LINE messages
     '目前無可用假別，請聯絡管理員。': {
@@ -821,6 +926,7 @@ _EXACT = {
         'vi': 'Hiện không có loại nghỉ phép. Vui lòng liên hệ quản trị viên.',
         'th': 'ไม่มีประเภทการลาที่ใช้ได้ กรุณาติดต่อผู้ดูแลระบบ',
         'zh-CN': '目前无可用假别，请联系管理员。',
+        'id': 'Tidak ada jenis cuti yang tersedia. Harap hubungi admin.',
     },
     '已取消請假申請。': {
         'en': 'Leave request cancelled.',
@@ -828,6 +934,7 @@ _EXACT = {
         'vi': 'Đã hủy đơn xin nghỉ.',
         'th': 'ยกเลิกคำขอลาแล้ว',
         'zh-CN': '已取消请假申请。',
+        'id': 'Permohonan cuti dibatalkan.',
     },
     '已取消加班申請。': {
         'en': 'Overtime request cancelled.',
@@ -835,6 +942,7 @@ _EXACT = {
         'vi': 'Đã hủy đơn xin làm thêm giờ.',
         'th': 'ยกเลิกคำขอล่วงเวลาแล้ว',
         'zh-CN': '已取消加班申请。',
+        'id': 'Permohonan lembur dibatalkan.',
     },
     '⚠️ 結束日期不能早於開始日期': {
         'en': '⚠️ End date cannot be earlier than start date',
@@ -842,6 +950,7 @@ _EXACT = {
         'vi': '⚠️ Ngày kết thúc không được sớm hơn ngày bắt đầu',
         'th': '⚠️ วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น',
         'zh-CN': '⚠️ 结束日期不能早于开始日期',
+        'id': '⚠️ Tanggal selesai tidak boleh sebelum tanggal mulai',
     },
     '此帳號已綁定其他 LINE 帳號，請聯絡管理員。': {
         'en': 'This account is already linked to another LINE account. Please contact admin.',
@@ -849,6 +958,7 @@ _EXACT = {
         'vi': 'Tài khoản này đã được liên kết với LINE khác. Vui lòng liên hệ quản trị viên.',
         'th': 'บัญชีนี้เชื่อมโยงกับ LINE อื่นแล้ว กรุณาติดต่อผู้ดูแลระบบ',
         'zh-CN': '此账号已绑定其他 LINE 账号，请联系管理员。',
+        'id': 'Akun ini sudah terhubung dengan akun LINE lain. Harap hubungi admin.',
     },
     '已解除 LINE 帳號綁定。': {
         'en': 'LINE account unlinked.',
@@ -856,6 +966,7 @@ _EXACT = {
         'vi': 'Đã hủy liên kết tài khoản LINE.',
         'th': 'ยกเลิกการเชื่อมโยงบัญชี LINE แล้ว',
         'zh-CN': '已解除 LINE 账号绑定。',
+        'id': 'Akun LINE telah diputuskan.',
     },
     '日期格式錯誤。': {
         'en': 'Invalid date format.',
@@ -863,6 +974,7 @@ _EXACT = {
         'vi': 'Định dạng ngày không hợp lệ.',
         'th': 'รูปแบบวันที่ไม่ถูกต้อง',
         'zh-CN': '日期格式错误。',
+        'id': 'Format tanggal tidak valid.',
     },
     # Training export — column headers
     '員工代碼': {
@@ -871,6 +983,7 @@ _EXACT = {
         'vi': 'Mã nhân viên',
         'th': 'รหัสพนักงาน',
         'zh-CN': '员工代码',
+        'id': 'Kode Karyawan',
     },
     '姓名': {
         'en': 'Name',
@@ -878,6 +991,7 @@ _EXACT = {
         'vi': 'Họ tên',
         'th': 'ชื่อ',
         'zh-CN': '姓名',
+        'id': 'Nama',
     },
     '部門': {
         'en': 'Department',
@@ -885,6 +999,7 @@ _EXACT = {
         'vi': 'Phòng ban',
         'th': 'แผนก',
         'zh-CN': '部门',
+        'id': 'Departemen',
     },
     '課程名稱': {
         'en': 'Course Name',
@@ -892,6 +1007,7 @@ _EXACT = {
         'vi': 'Tên khóa học',
         'th': 'ชื่อหลักสูตร',
         'zh-CN': '课程名称',
+        'id': 'Nama Kursus',
     },
     '類別': {
         'en': 'Category',
@@ -899,6 +1015,7 @@ _EXACT = {
         'vi': 'Danh mục',
         'th': 'หมวดหมู่',
         'zh-CN': '类别',
+        'id': 'Kategori',
     },
     '完成日期': {
         'en': 'Completion Date',
@@ -906,6 +1023,7 @@ _EXACT = {
         'vi': 'Ngày hoàn thành',
         'th': 'วันที่เสร็จสิ้น',
         'zh-CN': '完成日期',
+        'id': 'Tanggal Selesai',
     },
     '到期日期': {
         'en': 'Expiry Date',
@@ -913,6 +1031,7 @@ _EXACT = {
         'vi': 'Ngày hết hạn',
         'th': 'วันที่หมดอายุ',
         'zh-CN': '到期日期',
+        'id': 'Tanggal Kedaluwarsa',
     },
     '剩餘天數': {
         'en': 'Days Remaining',
@@ -920,6 +1039,7 @@ _EXACT = {
         'vi': 'Số ngày còn lại',
         'th': 'วันที่เหลือ',
         'zh-CN': '剩余天数',
+        'id': 'Sisa Hari',
     },
     '證書號碼': {
         'en': 'Certificate No.',
@@ -927,6 +1047,7 @@ _EXACT = {
         'vi': 'Số chứng chỉ',
         'th': 'หมายเลขใบรับรอง',
         'zh-CN': '证书号码',
+        'id': 'No. Sertifikat',
     },
     '狀態': {
         'en': 'Status',
@@ -934,6 +1055,7 @@ _EXACT = {
         'vi': 'Trạng thái',
         'th': 'สถานะ',
         'zh-CN': '状态',
+        'id': 'Status',
     },
     '備註': {
         'en': 'Notes',
@@ -941,6 +1063,7 @@ _EXACT = {
         'vi': 'Ghi chú',
         'th': 'หมายเหตุ',
         'zh-CN': '备注',
+        'id': 'Catatan',
     },
     '員工': {
         'en': 'Employee',
@@ -948,6 +1071,7 @@ _EXACT = {
         'vi': 'Nhân viên',
         'th': 'พนักงาน',
         'zh-CN': '员工',
+        'id': 'Karyawan',
     },
     '課程': {
         'en': 'Course',
@@ -955,6 +1079,7 @@ _EXACT = {
         'vi': 'Khóa học',
         'th': 'หลักสูตร',
         'zh-CN': '课程',
+        'id': 'Kursus',
     },
     '到期日': {
         'en': 'Expiry Date',
@@ -962,6 +1087,7 @@ _EXACT = {
         'vi': 'Ngày hết hạn',
         'th': 'วันที่หมดอายุ',
         'zh-CN': '到期日',
+        'id': 'Tanggal Kedaluwarsa',
     },
     # Training export — status labels
     '有效': {
@@ -970,6 +1096,7 @@ _EXACT = {
         'vi': 'Còn hiệu lực',
         'th': 'ใช้งานได้',
         'zh-CN': '有效',
+        'id': 'Berlaku',
     },
     '已過期': {
         'en': 'Expired',
@@ -977,6 +1104,7 @@ _EXACT = {
         'vi': 'Đã hết hạn',
         'th': 'หมดอายุแล้ว',
         'zh-CN': '已过期',
+        'id': 'Kedaluwarsa',
     },
     '即將到期': {
         'en': 'Expiring Soon',
@@ -984,6 +1112,7 @@ _EXACT = {
         'vi': 'Sắp hết hạn',
         'th': 'ใกล้หมดอายุ',
         'zh-CN': '即将到期',
+        'id': 'Segera Kedaluwarsa',
     },
     # Training export — sheet titles
     '訓練記錄': {
@@ -992,6 +1121,7 @@ _EXACT = {
         'vi': 'Hồ sơ đào tạo',
         'th': 'บันทึกการฝึกอบรม',
         'zh-CN': '培训记录',
+        'id': 'Catatan Pelatihan',
     },
     '到期摘要': {
         'en': 'Expiry Summary',
@@ -999,6 +1129,7 @@ _EXACT = {
         'vi': 'Tóm tắt hết hạn',
         'th': 'สรุปการหมดอายุ',
         'zh-CN': '到期摘要',
+        'id': 'Ringkasan Kedaluwarsa',
     },
     # Training categories
     '食品安全': {
@@ -1007,6 +1138,7 @@ _EXACT = {
         'vi': 'An toàn thực phẩm',
         'th': 'ความปลอดภัยด้านอาหาร',
         'zh-CN': '食品安全',
+        'id': 'Keamanan Pangan',
     },
     '消防安全': {
         'en': 'Fire Safety',
@@ -1014,6 +1146,7 @@ _EXACT = {
         'vi': 'An toàn phòng cháy',
         'th': 'ความปลอดภัยด้านอัคคีภัย',
         'zh-CN': '消防安全',
+        'id': 'Keselamatan Kebakaran',
     },
     '急救訓練': {
         'en': 'First Aid',
@@ -1021,6 +1154,7 @@ _EXACT = {
         'vi': 'Sơ cứu',
         'th': 'การปฐมพยาบาล',
         'zh-CN': '急救训练',
+        'id': 'Pertolongan Pertama',
     },
     '衛生管理': {
         'en': 'Hygiene Management',
@@ -1028,6 +1162,7 @@ _EXACT = {
         'vi': 'Quản lý vệ sinh',
         'th': 'การจัดการสุขอนามัย',
         'zh-CN': '卫生管理',
+        'id': 'Manajemen Kebersihan',
     },
     '服務禮儀': {
         'en': 'Service Etiquette',
@@ -1035,6 +1170,7 @@ _EXACT = {
         'vi': 'Lễ nghi phục vụ',
         'th': 'มารยาทการให้บริการ',
         'zh-CN': '服务礼仪',
+        'id': 'Etiket Pelayanan',
     },
     '設備操作': {
         'en': 'Equipment Operation',
@@ -1042,6 +1178,7 @@ _EXACT = {
         'vi': 'Vận hành thiết bị',
         'th': 'การใช้งานอุปกรณ์',
         'zh-CN': '设备操作',
+        'id': 'Pengoperasian Peralatan',
     },
     '一般訓練': {
         'en': 'General Training',
@@ -1049,6 +1186,7 @@ _EXACT = {
         'vi': 'Đào tạo chung',
         'th': 'การฝึกอบรมทั่วไป',
         'zh-CN': '一般培训',
+        'id': 'Pelatihan Umum',
     },
     '其他': {
         'en': 'Other',
@@ -1056,6 +1194,7 @@ _EXACT = {
         'vi': 'Khác',
         'th': 'อื่นๆ',
         'zh-CN': '其他',
+        'id': 'Lainnya',
     },
     # WebAuthn
     '找不到已綁定的裝置，請先綁定': {
@@ -1064,6 +1203,7 @@ _EXACT = {
         'vi': 'Không tìm thấy thiết bị đã đăng ký, vui lòng đăng ký trước',
         'th': 'ไม่พบอุปกรณ์ที่ลงทะเบียน กรุณาลงทะเบียนก่อน',
         'zh-CN': '找不到已绑定的设备，请先绑定',
+        'id': 'Perangkat terdaftar tidak ditemukan, harap daftarkan terlebih dahulu',
     },
     '找不到挑戰，請重新開始': {
         'en': 'Challenge not found, please start again',
@@ -1071,6 +1211,7 @@ _EXACT = {
         'vi': 'Không tìm thấy challenge, vui lòng bắt đầu lại',
         'th': 'ไม่พบ challenge กรุณาเริ่มใหม่',
         'zh-CN': '找不到挑战，请重新开始',
+        'id': 'Challenge tidak ditemukan, harap mulai ulang',
     },
     '未知帳號類型': {
         'en': 'Unknown account type',
@@ -1078,6 +1219,7 @@ _EXACT = {
         'vi': 'Loại tài khoản không xác định',
         'th': 'ประเภทบัญชีที่ไม่รู้จัก',
         'zh-CN': '未知账号类型',
+        'id': 'Jenis akun tidak diketahui',
     },
 }
 
@@ -1283,6 +1425,7 @@ _LINE_TMPL = {
         'ja': '従業員打刻システムへようこそ！👋\n\nログインアカウントを入力して連携を完了してください。\n\n✏️ 入力例：\n  連携 mary123\n（mary123をご自身のアカウントに変更してください）\n\nアカウントがわからない場合は管理者にお問い合わせください。',
         'vi': 'Chào mừng đến với Hệ thống Chấm Công Nhân Viên! 👋\n\nVui lòng nhập tài khoản đăng nhập để hoàn tất liên kết.\n\n✏️ Ví dụ:\n  liên kết mary123\n(Thay mary123 bằng tài khoản của bạn)\n\nKhông biết tài khoản? Hỏi quản trị viên.',
         'th': 'ยินดีต้อนรับสู่ระบบตอกบัตรพนักงาน! 👋\n\nกรุณาใส่บัญชีเข้าสู่ระบบเพื่อผูกบัญชี\n\n✏️ ตัวอย่าง:\n  ผูก mary123\n(เปลี่ยน mary123 เป็นบัญชีของคุณ)\n\nไม่รู้บัญชี? ถามผู้ดูแลระบบ',
+        'id': 'Selamat datang di Sistem Absensi Karyawan! 👋\n\nSilakan masukkan akun login Anda untuk menyelesaikan pendaftaran.\n\n✏️ Contoh:\n  daftar mary123\n(Ganti mary123 dengan akun Anda)\n\nTidak tahu akun Anda? Tanya admin.',
     },
     'bind_placeholder_error': {
         'zh-TW': '請輸入您「實際的」登入帳號，而非說明文字。\n\n範例：綁定 mary123',
@@ -1290,6 +1433,7 @@ _LINE_TMPL = {
         'ja': '説明文ではなく、ご自身の実際のログインアカウントを入力してください。\n\n例：連携 mary123',
         'vi': 'Vui lòng nhập tài khoản đăng nhập thực tế của bạn, không phải văn bản ví dụ.\n\nVí dụ: liên kết mary123',
         'th': 'กรุณาใส่บัญชีเข้าสู่ระบบจริงของคุณ ไม่ใช่ข้อความตัวอย่าง\n\nตัวอย่าง: ผูก mary123',
+        'id': 'Harap masukkan akun login Anda yang sebenarnya, bukan teks contoh.\n\nContoh: daftar mary123',
     },
     'bind_account_not_found': {
         'zh-TW': '找不到帳號「{username}」\n\n請確認帳號是否正確，或詢問管理員您的登入帳號。',
@@ -1297,6 +1441,7 @@ _LINE_TMPL = {
         'ja': 'アカウント「{username}」が見つかりません。\n\nアカウントが正しいか確認するか、管理者にログインアカウントをお問い合わせください。',
         'vi': 'Không tìm thấy tài khoản "{username}".\n\nVui lòng xác nhận tài khoản hoặc hỏi quản trị viên về tài khoản đăng nhập của bạn.',
         'th': 'ไม่พบบัญชี "{username}"\n\nกรุณาตรวจสอบบัญชีหรือถามผู้ดูแลระบบ',
+        'id': 'Akun "{username}" tidak ditemukan.\n\nHarap verifikasi akun Anda atau tanya admin untuk akun login Anda.',
     },
     'bind_success': {
         'zh-TW': '✅ 綁定成功！\n歡迎 {name}！\n\n打卡方式：\n📍 傳送位置訊息 → 自動打卡\n💬 或輸入：上班 / 下班 / 休息 / 回來\n\n輸入「狀態」可查看今日打卡記錄。',
@@ -1304,6 +1449,7 @@ _LINE_TMPL = {
         'ja': '✅ 連携完了！\nようこそ {name}！\n\n打刻方法：\n📍 位置情報を送信 → 自動打刻\n💬 または入力：出勤 / 退勤 / 休憩 / 戻る\n\n「状態」と入力すると本日の打刻記録を確認できます。',
         'vi': '✅ Liên kết thành công!\nChào mừng {name}!\n\nCách chấm công:\n📍 Gửi vị trí → Tự động chấm công\n💬 Hoặc nhập: Vào ca / Ra ca / Nghỉ / Trở lại\n\nNhập "Trạng thái" để xem hồ sơ hôm nay.',
         'th': '✅ ผูกบัญชีสำเร็จ!\nยินดีต้อนรับ {name}!\n\nวิธีตอกบัตร:\n📍 ส่งตำแหน่ง → ตอกบัตรอัตโนมัติ\n💬 หรือพิมพ์: เข้างาน / ออกงาน / พัก / กลับมา\n\nพิมพ์ "สถานะ" เพื่อดูบันทึกวันนี้',
+        'id': '✅ Akun berhasil didaftarkan!\nSelamat datang {name}!\n\nCara absen:\n📍 Kirim lokasi → Absen otomatis\n💬 Atau ketik: Masuk / Pulang / Istirahat / Kembali\n\nKetik "Status" untuk melihat catatan hari ini.',
     },
     'bind_not_bound': {
         'zh-TW': '您尚未綁定打卡帳號。\n\n請輸入您的登入帳號：\n  綁定 [您的帳號]\n\n範例：綁定 mary123',
@@ -1311,6 +1457,7 @@ _LINE_TMPL = {
         'ja': 'まだ打刻アカウントが連携されていません。\n\nログインアカウントを入力してください：\n  連携 [あなたのアカウント]\n\n例：連携 mary123',
         'vi': 'Bạn chưa liên kết tài khoản chấm công.\n\nVui lòng nhập tài khoản đăng nhập:\n  liên kết [tài khoản của bạn]\n\nVí dụ: liên kết mary123',
         'th': 'คุณยังไม่ได้ผูกบัญชีตอกบัตร\n\nกรุณาใส่บัญชีเข้าสู่ระบบ:\n  ผูก [บัญชีของคุณ]\n\nตัวอย่าง: ผูก mary123',
+        'id': 'Anda belum mendaftarkan akun absensi.\n\nHarap masukkan akun login Anda:\n  daftar [akun Anda]\n\nContoh: daftar mary123',
     },
     # ── Punch type labels ────────────────────────────────────────────────
     'label_in': {
@@ -1319,6 +1466,7 @@ _LINE_TMPL = {
         'ja': '出勤打刻',
         'vi': 'Vào ca',
         'th': 'เข้างาน',
+        'id': 'Absen Masuk',
     },
     'label_out': {
         'zh-TW': '下班打卡',
@@ -1326,6 +1474,7 @@ _LINE_TMPL = {
         'ja': '退勤打刻',
         'vi': 'Ra ca',
         'th': 'ออกงาน',
+        'id': 'Absen Pulang',
     },
     'label_break_out': {
         'zh-TW': '休息開始',
@@ -1333,6 +1482,7 @@ _LINE_TMPL = {
         'ja': '休憩開始',
         'vi': 'Bắt đầu nghỉ',
         'th': 'เริ่มพัก',
+        'id': 'Mulai Istirahat',
     },
     'label_break_in': {
         'zh-TW': '休息結束',
@@ -1340,6 +1490,7 @@ _LINE_TMPL = {
         'ja': '休憩終了',
         'vi': 'Kết thúc nghỉ',
         'th': 'สิ้นสุดพัก',
+        'id': 'Selesai Istirahat',
     },
     'slabel_in': {
         'zh-TW': '上班',
@@ -1347,6 +1498,7 @@ _LINE_TMPL = {
         'ja': '出勤',
         'vi': 'Vào',
         'th': 'เข้า',
+        'id': 'Masuk',
     },
     'slabel_out': {
         'zh-TW': '下班',
@@ -1354,6 +1506,7 @@ _LINE_TMPL = {
         'ja': '退勤',
         'vi': 'Ra',
         'th': 'ออก',
+        'id': 'Pulang',
     },
     'slabel_break_out': {
         'zh-TW': '休息開始',
@@ -1361,6 +1514,7 @@ _LINE_TMPL = {
         'ja': '休憩開始',
         'vi': 'Nghỉ',
         'th': 'พัก',
+        'id': 'Istirahat',
     },
     'slabel_break_in': {
         'zh-TW': '休息結束',
@@ -1368,6 +1522,7 @@ _LINE_TMPL = {
         'ja': '休憩終了',
         'vi': 'Trở lại',
         'th': 'กลับมา',
+        'id': 'Kembali',
     },
     # ── Punch flow ───────────────────────────────────────────────────────
     'punch_loc_title': {
@@ -1376,6 +1531,7 @@ _LINE_TMPL = {
         'ja': '📍 位置情報が必要です',
         'vi': '📍 Cần Xác Minh Vị Trí',
         'th': '📍 ต้องการการยืนยันตำแหน่ง',
+        'id': '📍 Verifikasi Lokasi Diperlukan',
     },
     'punch_loc_question': {
         'zh-TW': '請傳送您的位置來完成{action}',
@@ -1383,6 +1539,7 @@ _LINE_TMPL = {
         'ja': '{action}を完了するために位置情報を送信してください',
         'vi': 'Vui lòng gửi vị trí của bạn để hoàn tất {action}',
         'th': 'กรุณาส่งตำแหน่งของคุณเพื่อทำ {action} ให้เสร็จ',
+        'id': 'Harap kirim lokasi Anda untuk menyelesaikan {action}',
     },
     'punch_loc_hint': {
         'zh-TW': '點下方「傳送位置」按鈕即可打卡',
@@ -1390,6 +1547,7 @@ _LINE_TMPL = {
         'ja': '下の「位置情報を送信」ボタンをタップして打刻してください',
         'vi': 'Nhấn nút "Gửi vị trí" bên dưới để chấm công',
         'th': 'แตะปุ่ม "ส่งตำแหน่ง" ด้านล่างเพื่อตอกบัตร',
+        'id': 'Ketuk tombol "Kirim Lokasi" di bawah untuk absen',
     },
     'punch_btn_send_loc': {
         'zh-TW': '📍 傳送位置',
@@ -1397,6 +1555,7 @@ _LINE_TMPL = {
         'ja': '📍 位置情報を送信',
         'vi': '📍 Gửi vị trí',
         'th': '📍 ส่งตำแหน่ง',
+        'id': '📍 Kirim Lokasi',
     },
     'punch_already_out': {
         'zh-TW': '⚠️ 您已於 {mins} 分鐘前下班打卡，\n請確認是否要重新上班打卡？\n\n若要繼續，請再次點選「上班」。',
@@ -1404,6 +1563,7 @@ _LINE_TMPL = {
         'ja': '⚠️ {mins}分前に退勤打刻しました。\n再度出勤打刻しますか？\n\n続ける場合は「出勤」をもう一度タップしてください。',
         'vi': '⚠️ Bạn đã ra ca {mins} phút trước.\nBạn có muốn vào ca lại không?\n\nNếu muốn tiếp tục, nhấn "Vào ca" lại.',
         'th': '⚠️ คุณออกงานไป {mins} นาทีที่แล้ว\nต้องการเข้างานอีกครั้งหรือไม่?\n\nหากต้องการดำเนินการต่อ กรุณาแตะ "เข้างาน" อีกครั้ง',
+        'id': '⚠️ Anda sudah absen pulang {mins} menit yang lalu.\nApakah Anda ingin absen masuk kembali?\n\nUntuk melanjutkan, ketuk "Masuk" lagi.',
     },
     'punch_gps_fail': {
         'zh-TW': '❌ {label}失敗\n您距離「{loc}」{dist} 公尺\n超出允許範圍 {radius} 公尺\n\n請確認您在正確地點後重試。',
@@ -1411,6 +1571,7 @@ _LINE_TMPL = {
         'ja': '❌ {label}失敗\n「{loc}」から{dist}メートルの距離にいます\n許容範囲{radius}メートルを超えています\n\n正しい場所にいることを確認して再試行してください。',
         'vi': '❌ {label} thất bại\nBạn cách "{loc}" {dist} mét\nVượt quá phạm vi cho phép {radius} mét\n\nVui lòng xác nhận bạn ở đúng địa điểm và thử lại.',
         'th': '❌ {label} ล้มเหลว\nคุณอยู่ห่างจาก "{loc}" {dist} เมตร\nเกินระยะที่อนุญาต {radius} เมตร\n\nกรุณาตรวจสอบว่าคุณอยู่ในสถานที่ที่ถูกต้องแล้วลองใหม่',
+        'id': '❌ {label} gagal\nAnda berjarak {dist}m dari "{loc}"\nMelebihi jarak yang diizinkan {radius}m\n\nHarap konfirmasi Anda berada di lokasi yang benar dan coba lagi.',
     },
     'punch_success': {
         'zh-TW': '✅ {label}成功\n👤 {name}\n🕐 {time}{gps}',
@@ -1418,6 +1579,7 @@ _LINE_TMPL = {
         'ja': '✅ {label}成功\n👤 {name}\n🕐 {time}{gps}',
         'vi': '✅ {label} thành công\n👤 {name}\n🕐 {time}{gps}',
         'th': '✅ {label} สำเร็จ\n👤 {name}\n🕐 {time}{gps}',
+        'id': '✅ {label} berhasil\n👤 {name}\n🕐 {time}{gps}',
     },
     # ── Status ───────────────────────────────────────────────────────────
     'status_no_records': {
@@ -1426,6 +1588,7 @@ _LINE_TMPL = {
         'ja': '📋 {name} は本日まだ打刻記録がありません。',
         'vi': '📋 {name} chưa có bản ghi chấm công hôm nay.',
         'th': '📋 {name} ยังไม่มีบันทึกตอกบัตรวันนี้',
+        'id': '📋 {name} belum memiliki catatan absen hari ini.',
     },
     'status_header': {
         'zh-TW': '📋 {name} 今日打卡記錄',
@@ -1433,6 +1596,7 @@ _LINE_TMPL = {
         'ja': '📋 {name} 本日の打刻記録',
         'vi': '📋 Bản ghi chấm công hôm nay của {name}',
         'th': '📋 บันทึกตอกบัตรวันนี้ของ {name}',
+        'id': '📋 Catatan Absen {name} Hari Ini',
     },
     'status_manual': {
         'zh-TW': '[補打]',
@@ -1440,6 +1604,7 @@ _LINE_TMPL = {
         'ja': '[補打]',
         'vi': '[Bù]',
         'th': '[แก้ไข]',
+        'id': '[Susulan]',
     },
     # ── Leave flow ───────────────────────────────────────────────────────
     'leave_title': {
@@ -1448,6 +1613,7 @@ _LINE_TMPL = {
         'ja': '📝 休暇申請',
         'vi': '📝 Đơn Xin Nghỉ',
         'th': '📝 คำขอลา',
+        'id': '📝 Permohonan Cuti',
     },
     'leave_select_type': {
         'zh-TW': '請選擇假別（第{page}頁，共{total}種）',
@@ -1455,6 +1621,7 @@ _LINE_TMPL = {
         'ja': '休暇種別を選択してください（{page}ページ目、全{total}種）',
         'vi': 'Chọn loại nghỉ phép (Trang {page}/{total})',
         'th': 'เลือกประเภทการลา (หน้า {page}/{total})',
+        'id': 'Pilih jenis cuti (Halaman {page} dari {total})',
     },
     'leave_select_type_hint': {
         'zh-TW': '點選下方按鈕',
@@ -1462,6 +1629,7 @@ _LINE_TMPL = {
         'ja': '下のボタンをタップしてください',
         'vi': 'Nhấn các nút bên dưới',
         'th': 'แตะปุ่มด้านล่าง',
+        'id': 'Ketuk tombol di bawah',
     },
     'leave_btn_more': {
         'zh-TW': '➡️ 更多',
@@ -1469,6 +1637,7 @@ _LINE_TMPL = {
         'ja': '➡️ 次へ',
         'vi': '➡️ Thêm',
         'th': '➡️ เพิ่มเติม',
+        'id': '➡️ Lainnya',
     },
     'leave_btn_cancel': {
         'zh-TW': '❌ 取消',
@@ -1476,6 +1645,7 @@ _LINE_TMPL = {
         'ja': '❌ キャンセル',
         'vi': '❌ Hủy',
         'th': '❌ ยกเลิก',
+        'id': '❌ Batal',
     },
     'leave_input_start': {
         'zh-TW': '假別：{type}\n\n請輸入開始日期',
@@ -1483,6 +1653,7 @@ _LINE_TMPL = {
         'ja': '休暇種別：{type}\n\n開始日を入力してください',
         'vi': 'Loại nghỉ: {type}\n\nVui lòng nhập ngày bắt đầu',
         'th': 'ประเภทการลา: {type}\n\nกรุณาใส่วันที่เริ่มต้น',
+        'id': 'Jenis cuti: {type}\n\nHarap masukkan tanggal mulai',
     },
     'leave_input_start_hint': {
         'zh-TW': '格式：YYYY-MM-DD，或點選快速選擇',
@@ -1490,6 +1661,7 @@ _LINE_TMPL = {
         'ja': '形式：YYYY-MM-DD、またはクイック選択をタップ',
         'vi': 'Định dạng: YYYY-MM-DD, hoặc nhấn chọn nhanh',
         'th': 'รูปแบบ: YYYY-MM-DD หรือแตะเพื่อเลือกเร็ว',
+        'id': 'Format: YYYY-MM-DD, atau ketuk pilih cepat',
     },
     'leave_btn_today': {
         'zh-TW': '今天 ({date})',
@@ -1497,6 +1669,7 @@ _LINE_TMPL = {
         'ja': '今日 ({date})',
         'vi': 'Hôm nay ({date})',
         'th': 'วันนี้ ({date})',
+        'id': 'Hari ini ({date})',
     },
     'leave_btn_tomorrow': {
         'zh-TW': '明天 ({date})',
@@ -1504,6 +1677,7 @@ _LINE_TMPL = {
         'ja': '明日 ({date})',
         'vi': 'Ngày mai ({date})',
         'th': 'พรุ่งนี้ ({date})',
+        'id': 'Besok ({date})',
     },
     'leave_input_end': {
         'zh-TW': '開始日期：{start}\n\n請輸入結束日期',
@@ -1511,6 +1685,7 @@ _LINE_TMPL = {
         'ja': '開始日：{start}\n\n終了日を入力してください',
         'vi': 'Ngày bắt đầu: {start}\n\nVui lòng nhập ngày kết thúc',
         'th': 'วันที่เริ่มต้น: {start}\n\nกรุณาใส่วันที่สิ้นสุด',
+        'id': 'Tanggal mulai: {start}\n\nHarap masukkan tanggal selesai',
     },
     'leave_input_end_hint': {
         'zh-TW': '單日假點「同一天」，多日請直接輸入',
@@ -1518,6 +1693,7 @@ _LINE_TMPL = {
         'ja': '1日の場合は「同じ日」をタップ、複数日は直接入力してください',
         'vi': 'Nghỉ 1 ngày nhấn "Cùng ngày", nhiều ngày nhập trực tiếp',
         'th': 'วันเดียวแตะ "วันเดียวกัน" หลายวันพิมพ์วันที่โดยตรง',
+        'id': 'Satu hari ketuk "Hari yang sama", beberapa hari ketik langsung',
     },
     'leave_btn_same_day': {
         'zh-TW': '同一天',
@@ -1525,6 +1701,7 @@ _LINE_TMPL = {
         'ja': '同じ日',
         'vi': 'Cùng ngày',
         'th': 'วันเดียวกัน',
+        'id': 'Hari yang sama',
     },
     'leave_input_start_time': {
         'zh-TW': '假別：{type}\n日期：{dates}\n\n請選擇開始時間',
@@ -1532,6 +1709,7 @@ _LINE_TMPL = {
         'ja': '休暇種別：{type}\n日付：{dates}\n\n開始時間を選択してください',
         'vi': 'Loại nghỉ: {type}\nNgày: {dates}\n\nVui lòng chọn giờ bắt đầu',
         'th': 'ประเภทการลา: {type}\nวันที่: {dates}\n\nกรุณาเลือกเวลาเริ่มต้น',
+        'id': 'Jenis cuti: {type}\nTanggal: {dates}\n\nHarap pilih waktu mulai',
     },
     'leave_input_end_time': {
         'zh-TW': '假別：{type}\n日期：{dates}\n開始：{start}\n\n請選擇結束時間',
@@ -1539,6 +1717,7 @@ _LINE_TMPL = {
         'ja': '休暇種別：{type}\n日付：{dates}\n開始：{start}\n\n終了時間を選択してください',
         'vi': 'Loại nghỉ: {type}\nNgày: {dates}\nBắt đầu: {start}\n\nVui lòng chọn giờ kết thúc',
         'th': 'ประเภทการลา: {type}\nวันที่: {dates}\nเริ่ม: {start}\n\nกรุณาเลือกเวลาสิ้นสุด',
+        'id': 'Jenis cuti: {type}\nTanggal: {dates}\nMulai: {start}\n\nHarap pilih waktu selesai',
     },
     'leave_time_page_hint': {
         'zh-TW': '{page_label}　或直接輸入 HH:MM',
@@ -1546,6 +1725,7 @@ _LINE_TMPL = {
         'ja': '{page_label}　またはHH:MMを直接入力',
         'vi': '{page_label}  hoặc nhập HH:MM trực tiếp',
         'th': '{page_label}  หรือพิมพ์ HH:MM โดยตรง',
+        'id': '{page_label}  atau ketik HH:MM langsung',
     },
     'leave_input_reason': {
         'zh-TW': '假別：{type}\n日期：{dates}\n時間：{start} ～ {end}\n\n請輸入請假原因',
@@ -1553,6 +1733,7 @@ _LINE_TMPL = {
         'ja': '休暇種別：{type}\n日付：{dates}\n時間：{start} ～ {end}\n\n休暇理由を入力してください',
         'vi': 'Loại nghỉ: {type}\nNgày: {dates}\nGiờ: {start} - {end}\n\nVui lòng nhập lý do nghỉ',
         'th': 'ประเภทการลา: {type}\nวันที่: {dates}\nเวลา: {start} - {end}\n\nกรุณาใส่เหตุผลการลา',
+        'id': 'Jenis cuti: {type}\nTanggal: {dates}\nWaktu: {start} - {end}\n\nHarap masukkan alasan cuti',
     },
     'leave_input_reason_hint': {
         'zh-TW': '或點「跳過」',
@@ -1560,6 +1741,7 @@ _LINE_TMPL = {
         'ja': 'または「スキップ」をタップ',
         'vi': 'Hoặc nhấn "Bỏ qua"',
         'th': 'หรือแตะ "ข้าม"',
+        'id': 'Atau ketuk "Lewati"',
     },
     'leave_btn_skip': {
         'zh-TW': '跳過',
@@ -1567,6 +1749,7 @@ _LINE_TMPL = {
         'ja': 'スキップ',
         'vi': 'Bỏ qua',
         'th': 'ข้าม',
+        'id': 'Lewati',
     },
     'leave_insufficient_balance': {
         'zh-TW': '⚠️ {type} 餘額不足\n剩餘 {remain} 天，申請 {days} 天\n\n請至員工系統調整後再申請。',
@@ -1574,6 +1757,7 @@ _LINE_TMPL = {
         'ja': '⚠️ {type}の残日数が不足しています\n残り{remain}日、申請{days}日\n\n従業員システムで調整してから申請してください。',
         'vi': '⚠️ Số dư {type} không đủ\nCòn {remain} ngày, yêu cầu {days} ngày\n\nVui lòng điều chỉnh trong hệ thống trước khi nộp đơn.',
         'th': '⚠️ ยอดคงเหลือ {type} ไม่เพียงพอ\nเหลือ {remain} วัน ขอ {days} วัน\n\nกรุณาปรับในระบบพนักงานก่อนยื่นคำขอ',
+        'id': '⚠️ Saldo {type} tidak cukup\nSisa {remain} hari, diminta {days} hari\n\nHarap sesuaikan di sistem karyawan sebelum mengajukan.',
     },
     'leave_submitted': {
         'zh-TW': '✅ 請假申請已送出\n\n假別：{type}{bal}\n日期：{dates}\n{time}天數：{days} 天\n{reason}申請號：#{id}，等待管理員審核。',
@@ -1581,6 +1765,7 @@ _LINE_TMPL = {
         'ja': '✅ 休暇申請を送信しました\n\n種別：{type}{bal}\n日付：{dates}\n{time}日数：{days}日\n{reason}申請番号：#{id}、管理者の承認をお待ちください。',
         'vi': '✅ Đã gửi đơn xin nghỉ\n\nLoại: {type}{bal}\nNgày: {dates}\n{time}Số ngày: {days}\n{reason}Số đơn: #{id}, chờ quản trị viên duyệt.',
         'th': '✅ ส่งคำขอลาแล้ว\n\nประเภท: {type}{bal}\nวันที่: {dates}\n{time}จำนวนวัน: {days}\n{reason}เลขที่: #{id} รอผู้ดูแลอนุมัติ',
+        'id': '✅ Permohonan cuti telah dikirim\n\nJenis: {type}{bal}\nTanggal: {dates}\n{time}Jumlah hari: {days}\n{reason}No. Permohonan: #{id}, menunggu persetujuan admin.',
     },
     'leave_bal_suffix': {
         'zh-TW': '（剩餘 {remain} 天）',
@@ -1588,6 +1773,7 @@ _LINE_TMPL = {
         'ja': '（残り{remain}日）',
         'vi': ' (Còn lại: {remain} ngày)',
         'th': ' (เหลือ: {remain} วัน)',
+        'id': ' (Sisa: {remain} hari)',
     },
     'leave_time_line': {
         'zh-TW': '時間：{time}\n',
@@ -1595,6 +1781,7 @@ _LINE_TMPL = {
         'ja': '時間：{time}\n',
         'vi': 'Giờ: {time}\n',
         'th': 'เวลา: {time}\n',
+        'id': 'Waktu: {time}\n',
     },
     'leave_reason_line': {
         'zh-TW': '原因：{reason}\n',
@@ -1602,6 +1789,7 @@ _LINE_TMPL = {
         'ja': '理由：{reason}\n',
         'vi': 'Lý do: {reason}\n',
         'th': 'เหตุผล: {reason}\n',
+        'id': 'Alasan: {reason}\n',
     },
     'leave_not_found_with_avail': {
         'zh-TW': '找不到假別「{type}」\n可用：{avail}',
@@ -1609,6 +1797,7 @@ _LINE_TMPL = {
         'ja': '休暇種別「{type}」が見つかりません\n利用可能：{avail}',
         'vi': 'Không tìm thấy loại nghỉ "{type}"\nCó sẵn: {avail}',
         'th': 'ไม่พบประเภทการลา "{type}"\nที่มี: {avail}',
+        'id': 'Jenis cuti "{type}" tidak ditemukan\nTersedia: {avail}',
     },
     'leave_type_not_found_names': {
         'zh-TW': '找不到假別「{type}」\n\n可用假別：{names}',
@@ -1616,6 +1805,7 @@ _LINE_TMPL = {
         'ja': '休暇種別「{type}」が見つかりません\n\n利用可能な種別：{names}',
         'vi': 'Không tìm thấy loại nghỉ "{type}"\n\nCác loại có sẵn: {names}',
         'th': 'ไม่พบประเภทการลา "{type}"\n\nประเภทที่มี: {names}',
+        'id': 'Jenis cuti "{type}" tidak ditemukan\n\nJenis yang tersedia: {names}',
     },
     'leave_format_help': {
         'zh-TW': '請假格式：\n請假 [假別] [日期]\n\n範例：\n請假 特休 2026-04-01\n請假 事假 2026-04-01 2026-04-02 家庭事務\n\n輸入「假別」查看可用假別。',
@@ -1623,6 +1813,7 @@ _LINE_TMPL = {
         'ja': '休暇申請の形式：\n休暇 [種別] [日付]\n\n例：\n休暇 特別休暇 2026-04-01\n休暇 私事 2026-04-01 2026-04-02 家庭の用事\n\n「休暇種別」と入力すると利用可能な種別を確認できます。',
         'vi': 'Định dạng nghỉ phép:\nnghỉ [loại] [ngày]\n\nVí dụ:\nnghỉ phép năm 2026-04-01\nnghỉ việc riêng 2026-04-01 2026-04-02 Việc gia đình\n\nNhập "loại nghỉ" để xem các loại có sẵn.',
         'th': 'รูปแบบการลา:\nลา [ประเภท] [วันที่]\n\nตัวอย่าง:\nลา พักร้อน 2026-04-01\nลา กิจส่วนตัว 2026-04-01 2026-04-02 ธุระครอบครัว\n\nพิมพ์ "ประเภทการลา" เพื่อดูประเภทที่มี',
+        'id': 'Format cuti:\ncuti [jenis] [tanggal]\n\nContoh:\ncuti tahunan 2026-04-01\ncuti pribadi 2026-04-01 2026-04-02 Urusan keluarga\n\nKetik "jenis cuti" untuk melihat jenis yang tersedia.',
     },
     'leave_date_format_error': {
         'zh-TW': '日期格式錯誤，請使用 YYYY-MM-DD，例：{today}',
@@ -1630,6 +1821,7 @@ _LINE_TMPL = {
         'ja': '日付の形式が正しくありません。YYYY-MM-DD形式を使用してください。例：{today}',
         'vi': 'Định dạng ngày không hợp lệ. Vui lòng dùng YYYY-MM-DD, ví dụ: {today}',
         'th': 'รูปแบบวันที่ไม่ถูกต้อง กรุณาใช้ YYYY-MM-DD เช่น: {today}',
+        'id': 'Format tanggal tidak valid. Harap gunakan YYYY-MM-DD, contoh: {today}',
     },
     # ── Overtime flow ────────────────────────────────────────────────────
     'ot_title': {
@@ -1638,6 +1830,7 @@ _LINE_TMPL = {
         'ja': '⏰ 残業申請',
         'vi': '⏰ Đơn Làm Thêm Giờ',
         'th': '⏰ คำขอล่วงเวลา',
+        'id': '⏰ Permohonan Lembur',
     },
     'ot_select_date': {
         'zh-TW': '請選擇加班日期',
@@ -1645,6 +1838,7 @@ _LINE_TMPL = {
         'ja': '残業日を選択してください',
         'vi': 'Vui lòng chọn ngày làm thêm',
         'th': 'กรุณาเลือกวันที่ทำงานล่วงเวลา',
+        'id': 'Harap pilih tanggal lembur',
     },
     'ot_select_date_hint': {
         'zh-TW': '或直接輸入 YYYY-MM-DD',
@@ -1652,6 +1846,7 @@ _LINE_TMPL = {
         'ja': 'またはYYYY-MM-DDを直接入力',
         'vi': 'Hoặc nhập YYYY-MM-DD trực tiếp',
         'th': 'หรือพิมพ์ YYYY-MM-DD โดยตรง',
+        'id': 'Atau ketik YYYY-MM-DD langsung',
     },
     'ot_select_start_time': {
         'zh-TW': '加班日期：{date}\n\n請選擇或輸入開始時間',
@@ -1659,6 +1854,7 @@ _LINE_TMPL = {
         'ja': '残業日：{date}\n\n開始時間を選択または入力してください',
         'vi': 'Ngày làm thêm: {date}\n\nVui lòng chọn hoặc nhập giờ bắt đầu',
         'th': 'วันที่ทำงานล่วงเวลา: {date}\n\nกรุณาเลือกหรือใส่เวลาเริ่มต้น',
+        'id': 'Tanggal lembur: {date}\n\nHarap pilih atau masukkan waktu mulai',
     },
     'ot_select_start_time_hint': {
         'zh-TW': '格式：HH:MM，例：18:00',
@@ -1666,6 +1862,7 @@ _LINE_TMPL = {
         'ja': '形式：HH:MM、例：18:00',
         'vi': 'Định dạng: HH:MM, ví dụ: 18:00',
         'th': 'รูปแบบ: HH:MM เช่น: 18:00',
+        'id': 'Format: HH:MM, contoh: 18:00',
     },
     'ot_select_end_time': {
         'zh-TW': '加班日期：{date}\n開始：{start}\n\n請選擇或輸入結束時間',
@@ -1673,6 +1870,7 @@ _LINE_TMPL = {
         'ja': '残業日：{date}\n開始：{start}\n\n終了時間を選択または入力してください',
         'vi': 'Ngày làm thêm: {date}\nBắt đầu: {start}\n\nVui lòng chọn hoặc nhập giờ kết thúc',
         'th': 'วันที่ทำงานล่วงเวลา: {date}\nเริ่ม: {start}\n\nกรุณาเลือกหรือใส่เวลาสิ้นสุด',
+        'id': 'Tanggal lembur: {date}\nMulai: {start}\n\nHarap pilih atau masukkan waktu selesai',
     },
     'ot_select_end_time_hint': {
         'zh-TW': '格式：HH:MM',
@@ -1680,6 +1878,7 @@ _LINE_TMPL = {
         'ja': '形式：HH:MM',
         'vi': 'Định dạng: HH:MM',
         'th': 'รูปแบบ: HH:MM',
+        'id': 'Format: HH:MM',
     },
     'ot_input_reason': {
         'zh-TW': '加班日期：{date}\n時間：{start} ～ {end}\n時數：{hrs}h\n\n請輸入加班原因',
@@ -1687,6 +1886,7 @@ _LINE_TMPL = {
         'ja': '残業日：{date}\n時間：{start} ～ {end}\n時数：{hrs}h\n\n残業理由を入力してください',
         'vi': 'Ngày làm thêm: {date}\nGiờ: {start} - {end}\nSố giờ: {hrs}h\n\nVui lòng nhập lý do làm thêm',
         'th': 'วันที่ทำงานล่วงเวลา: {date}\nเวลา: {start} - {end}\nชั่วโมง: {hrs}h\n\nกรุณาใส่เหตุผลการทำงานล่วงเวลา',
+        'id': 'Tanggal lembur: {date}\nWaktu: {start} - {end}\nJam: {hrs}h\n\nHarap masukkan alasan lembur',
     },
     'ot_input_reason_hint': {
         'zh-TW': '或點「跳過」',
@@ -1694,6 +1894,7 @@ _LINE_TMPL = {
         'ja': 'または「スキップ」をタップ',
         'vi': 'Hoặc nhấn "Bỏ qua"',
         'th': 'หรือแตะ "ข้าม"',
+        'id': 'Atau ketuk "Lewati"',
     },
     'ot_btn_skip': {
         'zh-TW': '跳過',
@@ -1701,6 +1902,7 @@ _LINE_TMPL = {
         'ja': 'スキップ',
         'vi': 'Bỏ qua',
         'th': 'ข้าม',
+        'id': 'Lewati',
     },
     'ot_submitted': {
         'zh-TW': '✅ 加班申請已送出\n\n日期：{date}\n時間：{start} ～ {end}\n時數：{hrs}h\n{reason}申請編號：#{id}\n\n請等候管理員審核，審核結果將通知您。',
@@ -1708,6 +1910,7 @@ _LINE_TMPL = {
         'ja': '✅ 残業申請を送信しました\n\n日付：{date}\n時間：{start} ～ {end}\n時数：{hrs}h\n{reason}申請番号：#{id}\n\n管理者の審査をお待ちください。審査結果はお知らせします。',
         'vi': '✅ Đã gửi đơn làm thêm giờ\n\nNgày: {date}\nGiờ: {start} - {end}\nSố giờ: {hrs}h\n{reason}Số đơn: #{id}\n\nVui lòng chờ quản trị viên xét duyệt. Bạn sẽ được thông báo kết quả.',
         'th': '✅ ส่งคำขอล่วงเวลาแล้ว\n\nวันที่: {date}\nเวลา: {start} - {end}\nชั่วโมง: {hrs}h\n{reason}เลขที่: #{id}\n\nกรุณารอผู้ดูแลตรวจสอบ คุณจะได้รับการแจ้งเตือนผล',
+        'id': '✅ Permohonan lembur telah dikirim\n\nTanggal: {date}\nWaktu: {start} - {end}\nJam: {hrs}h\n{reason}No. Permohonan: #{id}\n\nHarap tunggu tinjauan admin. Anda akan diberitahu hasilnya.',
     },
     'ot_reason_line': {
         'zh-TW': '原因：{reason}\n',
@@ -1715,6 +1918,7 @@ _LINE_TMPL = {
         'ja': '理由：{reason}\n',
         'vi': 'Lý do: {reason}\n',
         'th': 'เหตุผล: {reason}\n',
+        'id': 'Alasan: {reason}\n',
     },
     'ot_format_help': {
         'zh-TW': '加班申請格式：\n加班 [日期] [時數] [原因]\n\n範例：加班 2026-04-05 3 業績衝刺\n（時數可用小數，如 1.5）',
@@ -1722,6 +1926,7 @@ _LINE_TMPL = {
         'ja': '残業申請の形式：\n残業 [日付] [時間] [理由]\n\n例：残業 2026-04-05 3 業績向上\n（時間は小数可、例：1.5）',
         'vi': 'Định dạng làm thêm:\nlàm thêm [ngày] [giờ] [lý do]\n\nVí dụ: làm thêm 2026-04-05 3 Đẩy doanh số\n(Giờ có thể là số thập phân, ví dụ 1.5)',
         'th': 'รูปแบบล่วงเวลา:\nล่วงเวลา [วันที่] [ชั่วโมง] [เหตุผล]\n\nตัวอย่าง: ล่วงเวลา 2026-04-05 3 ดันยอดขาย\n(ชั่วโมงเป็นทศนิยมได้ เช่น 1.5)',
+        'id': 'Format lembur:\nlembur [tanggal] [jam] [alasan]\n\nContoh: lembur 2026-04-05 3 Target penjualan\n(Jam bisa desimal, misal 1.5)',
     },
     'ot_invalid_hours': {
         'zh-TW': '加班時數需為 0.5～24 之間的數字',
@@ -1729,6 +1934,7 @@ _LINE_TMPL = {
         'ja': '残業時間は0.5〜24の数字である必要があります',
         'vi': 'Số giờ làm thêm phải là số từ 0.5 đến 24',
         'th': 'ชั่วโมงล่วงเวลาต้องเป็นตัวเลขระหว่าง 0.5 ถึง 24',
+        'id': 'Jam lembur harus angka antara 0.5 sampai 24',
     },
     # ── Leave balance query ───────────────────────────────────────────────
     'bal_error': {
@@ -1737,6 +1943,7 @@ _LINE_TMPL = {
         'ja': '照会に失敗しました：{e}',
         'vi': 'Truy vấn thất bại: {e}',
         'th': 'การค้นหาล้มเหลว: {e}',
+        'id': 'Kueri gagal: {e}',
     },
     'bal_no_records': {
         'zh-TW': '📋 {name} {year} 年\n尚無假期餘額記錄，請聯絡管理員。',
@@ -1744,6 +1951,7 @@ _LINE_TMPL = {
         'ja': '📋 {name} {year}年\n休暇残日数の記録がありません。管理者にお問い合わせください。',
         'vi': '📋 {name} {year}\nChưa có bản ghi số dư nghỉ phép. Vui lòng liên hệ quản trị viên.',
         'th': '📋 {name} {year}\nไม่มีบันทึกยอดคงเหลือวันลา กรุณาติดต่อผู้ดูแลระบบ',
+        'id': '📋 {name} {year}\nTidak ada catatan saldo cuti. Harap hubungi admin.',
     },
     'bal_header': {
         'zh-TW': '📋 {name} {year} 年假期餘額',
@@ -1751,6 +1959,7 @@ _LINE_TMPL = {
         'ja': '📋 {name} {year}年 休暇残日数',
         'vi': '📋 Số dư nghỉ phép {year} của {name}',
         'th': '📋 ยอดคงเหลือวันลาปี {year} ของ {name}',
+        'id': '📋 Saldo Cuti {year} untuk {name}',
     },
     'bal_row': {
         'zh-TW': '\n【{type}】\n  剩餘 {remain} 天 / 共 {total} 天\n  {bar}',
@@ -1758,6 +1967,7 @@ _LINE_TMPL = {
         'ja': '\n【{type}】\n  残り{remain}日 / 合計{total}日\n  {bar}',
         'vi': '\n[{type}]\n  Còn lại {remain} / Tổng {total} ngày\n  {bar}',
         'th': '\n[{type}]\n  เหลือ {remain} / รวม {total} วัน\n  {bar}',
+        'id': '\n[{type}]\n  Sisa {remain} / Total {total} hari\n  {bar}',
     },
     # ── Salary query ─────────────────────────────────────────────────────
     'salary_error': {
@@ -1766,6 +1976,7 @@ _LINE_TMPL = {
         'ja': '照会に失敗しました：{e}',
         'vi': 'Truy vấn thất bại: {e}',
         'th': 'การค้นหาล้มเหลว: {e}',
+        'id': 'Kueri gagal: {e}',
     },
     'salary_no_records': {
         'zh-TW': '📊 {name}\n尚無薪資記錄。',
@@ -1773,6 +1984,7 @@ _LINE_TMPL = {
         'ja': '📊 {name}\n給与記録がありません。',
         'vi': '📊 {name}\nChưa có bản ghi lương.',
         'th': '📊 {name}\nไม่มีบันทึกเงินเดือน',
+        'id': '📊 {name}\nTidak ada catatan gaji.',
     },
     'salary_body': {
         'zh-TW': '📊 {name} {month} 薪資\n\n底薪：NT$ {base:,.0f}\n津貼：NT$ {allow:,.0f}\n加班費：NT$ {ot:,.0f}\n扣除：NT$ {ded:,.0f}\n━━━━━━━━━━━━\n實領：NT$ {net:,.0f}\n出勤：{actual}/{work} 天\n狀態：{status}{comp}\n\n詳細資訊請至員工系統薪資單查看。',
@@ -1780,6 +1992,7 @@ _LINE_TMPL = {
         'ja': '📊 {name} {month} 給与\n\n基本給：NT$ {base:,.0f}\n手当：NT$ {allow:,.0f}\n残業代：NT$ {ot:,.0f}\n控除：NT$ {ded:,.0f}\n━━━━━━━━━━━━\n手取り：NT$ {net:,.0f}\n出勤：{actual}/{work}日\n状態：{status}{comp}\n\n詳細は従業員システムの給与明細をご確認ください。',
         'vi': '📊 Lương {month} của {name}\n\nLương cơ bản: NT$ {base:,.0f}\nPhụ cấp: NT$ {allow:,.0f}\nThêm giờ: NT$ {ot:,.0f}\nKhấu trừ: NT$ {ded:,.0f}\n━━━━━━━━━━━━\nThực lĩnh: NT$ {net:,.0f}\nChuyên cần: {actual}/{work} ngày\nTrạng thái: {status}{comp}\n\nXem chi tiết trong phiếu lương trên hệ thống.',
         'th': '📊 เงินเดือน {month} ของ {name}\n\nเงินเดือนพื้นฐาน: NT$ {base:,.0f}\nเบี้ยเลี้ยง: NT$ {allow:,.0f}\nค่าล่วงเวลา: NT$ {ot:,.0f}\nหักออก: NT$ {ded:,.0f}\n━━━━━━━━━━━━\nรับจริง: NT$ {net:,.0f}\nเข้างาน: {actual}/{work} วัน\nสถานะ: {status}{comp}\n\nดูรายละเอียดในสลิปเงินเดือนในระบบพนักงาน',
+        'id': '📊 Gaji {month} untuk {name}\n\nGaji Pokok: NT$ {base:,.0f}\nTunjangan: NT$ {allow:,.0f}\nLembur: NT$ {ot:,.0f}\nPotongan: NT$ {ded:,.0f}\n━━━━━━━━━━━━\nGaji Bersih: NT$ {net:,.0f}\nKehadiran: {actual}/{work} hari\nStatus: {status}{comp}\n\nUntuk detail, lihat slip gaji di sistem karyawan.',
     },
     'salary_comp_bal': {
         'zh-TW': '\n補休餘額：{remain} 天（{year}年）',
@@ -1787,6 +2000,7 @@ _LINE_TMPL = {
         'ja': '\n振替休日残日数：{remain}日（{year}年）',
         'vi': '\nSố dư nghỉ bù: {remain} ngày ({year})',
         'th': '\nยอดวันหยุดชดเชย: {remain} วัน ({year})',
+        'id': '\nSaldo Cuti Pengganti: {remain} hari ({year})',
     },
     'salary_status_draft': {
         'zh-TW': '草稿',
@@ -1794,6 +2008,7 @@ _LINE_TMPL = {
         'ja': '草稿',
         'vi': 'Bản nháp',
         'th': 'ร่าง',
+        'id': 'Draf',
     },
     'salary_status_confirmed': {
         'zh-TW': '已確認',
@@ -1801,6 +2016,7 @@ _LINE_TMPL = {
         'ja': '確認済み',
         'vi': 'Đã xác nhận',
         'th': 'ยืนยันแล้ว',
+        'id': 'Dikonfirmasi',
     },
     'salary_status_paid': {
         'zh-TW': '已發放',
@@ -1808,6 +2024,7 @@ _LINE_TMPL = {
         'ja': '支払済み',
         'vi': 'Đã trả',
         'th': 'จ่ายแล้ว',
+        'id': 'Dibayar',
     },
     # ── Performance query ─────────────────────────────────────────────────
     'perf_no_records': {
@@ -1816,6 +2033,7 @@ _LINE_TMPL = {
         'ja': '{name}\n人事考課記録がありません。',
         'vi': '{name}\nChưa có hồ sơ đánh giá hiệu suất.',
         'th': '{name}\nไม่มีบันทึกการประเมินผลงาน',
+        'id': '{name}\nTidak ada catatan penilaian kinerja.',
     },
     'perf_body': {
         'zh-TW': '{name} 最近考核\n\n期間：{period}\n範本：{tpl}\n得分：{score} / {max}（{pct}%）\n評級：{grade} {grade_label}{adj}\n{comments}考核日：{reviewed}',
@@ -1823,6 +2041,7 @@ _LINE_TMPL = {
         'ja': '{name} 最新考課\n\n期間：{period}\nテンプレート：{tpl}\n得点：{score} / {max}（{pct}%）\n評価：{grade} {grade_label}{adj}\n{comments}考課日：{reviewed}',
         'vi': 'Đánh giá gần nhất của {name}\n\nKỳ: {period}\nMẫu: {tpl}\nĐiểm: {score} / {max} ({pct}%)\nXếp loại: {grade} {grade_label}{adj}\n{comments}Ngày đánh giá: {reviewed}',
         'th': 'การประเมินล่าสุดของ {name}\n\nช่วงเวลา: {period}\nแม่แบบ: {tpl}\nคะแนน: {score} / {max} ({pct}%)\nเกรด: {grade} {grade_label}{adj}\n{comments}วันที่ประเมิน: {reviewed}',
+        'id': 'Penilaian Terbaru {name}\n\nPeriode: {period}\nTemplate: {tpl}\nNilai: {score} / {max} ({pct}%)\nGrade: {grade} {grade_label}{adj}\n{comments}Tanggal penilaian: {reviewed}',
     },
     'perf_adj': {
         'zh-TW': '\n薪資調整：NT$ {delta:+,.0f}',
@@ -1830,6 +2049,7 @@ _LINE_TMPL = {
         'ja': '\n給与調整：NT$ {delta:+,.0f}',
         'vi': '\nĐiều chỉnh lương: NT$ {delta:+,.0f}',
         'th': '\nปรับเงินเดือน: NT$ {delta:+,.0f}',
+        'id': '\nPenyesuaian gaji: NT$ {delta:+,.0f}',
     },
     'perf_comments': {
         'zh-TW': '備注：{text}\n',
@@ -1837,6 +2057,7 @@ _LINE_TMPL = {
         'ja': '備考：{text}\n',
         'vi': 'Nhận xét: {text}\n',
         'th': 'ความคิดเห็น: {text}\n',
+        'id': 'Komentar: {text}\n',
     },
     # ── Monthly records ───────────────────────────────────────────────────
     'monthly_no_records': {
@@ -1845,6 +2066,7 @@ _LINE_TMPL = {
         'ja': '📋 {name} {month}\nこの月の打刻記録はありません。',
         'vi': '📋 {name} {month}\nKhông có bản ghi chấm công tháng này.',
         'th': '📋 {name} {month}\nไม่มีบันทึกตอกบัตรเดือนนี้',
+        'id': '📋 {name} {month}\nTidak ada catatan absen bulan ini.',
     },
     'monthly_header': {
         'zh-TW': '📋 {name} {month} 出勤\n出勤 {days} 天｜工時 {total}{anomaly}',
@@ -1852,6 +2074,7 @@ _LINE_TMPL = {
         'ja': '📋 {name} {month} 出勤\n出勤{days}日｜労働時間{total}{anomaly}',
         'vi': '📋 Chuyên cần {month} của {name}\n{days} ngày｜Giờ làm {total}{anomaly}',
         'th': '📋 การเข้างาน {month} ของ {name}\n{days} วัน｜ชั่วโมงงาน {total}{anomaly}',
+        'id': '📋 Kehadiran {month} {name}\n{days} hari｜Jam kerja {total}{anomaly}',
     },
     'monthly_anomaly': {
         'zh-TW': '｜異常 {n} 天',
@@ -1859,6 +2082,7 @@ _LINE_TMPL = {
         'ja': '｜異常{n}日',
         'vi': '｜{n} ngày bất thường',
         'th': '｜{n} วันผิดปกติ',
+        'id': '｜{n} hari anomali',
     },
     'monthly_missing_out': {
         'zh-TW': '⚠️缺下班',
@@ -1866,6 +2090,7 @@ _LINE_TMPL = {
         'ja': '⚠️退勤なし',
         'vi': '⚠️Thiếu ra ca',
         'th': '⚠️ไม่มีออกงาน',
+        'id': '⚠️Tidak ada absen pulang',
     },
     'monthly_missing_in': {
         'zh-TW': '⚠️缺上班',
@@ -1873,6 +2098,7 @@ _LINE_TMPL = {
         'ja': '⚠️出勤なし',
         'vi': '⚠️Thiếu vào ca',
         'th': '⚠️ไม่มีเข้างาน',
+        'id': '⚠️Tidak ada absen masuk',
     },
     'monthly_manual': {
         'zh-TW': '【補】',
@@ -1880,6 +2106,7 @@ _LINE_TMPL = {
         'ja': '【補】',
         'vi': '[Bù]',
         'th': '[แก้]',
+        'id': '[Susulan]',
     },
     # ── Leave types list ──────────────────────────────────────────────────
     'leave_types_empty': {
@@ -1888,6 +2115,7 @@ _LINE_TMPL = {
         'ja': '利用可能な休暇種別がありません。',
         'vi': 'Hiện không có loại nghỉ phép.',
         'th': 'ไม่มีประเภทการลาที่ใช้ได้',
+        'id': 'Tidak ada jenis cuti yang tersedia.',
     },
     'leave_types_header': {
         'zh-TW': '🗂️ 可用假別清單\n',
@@ -1895,6 +2123,7 @@ _LINE_TMPL = {
         'ja': '🗂️ 利用可能な休暇種別\n',
         'vi': '🗂️ Danh Sách Loại Nghỉ Phép\n',
         'th': '🗂️ รายการประเภทการลา\n',
+        'id': '🗂️ Daftar Jenis Cuti\n',
     },
     'leave_types_limit': {
         'zh-TW': '（年限 {days} 天）',
@@ -1902,6 +2131,7 @@ _LINE_TMPL = {
         'ja': '（年間上限{days}日）',
         'vi': '(Hạn mức năm: {days} ngày)',
         'th': '(จำกัดต่อปี: {days} วัน)',
+        'id': '(Batas tahunan: {days} hari)',
     },
     'leave_types_footer': {
         'zh-TW': '\n申請方式：請假 [假別] [日期]',
@@ -1909,6 +2139,7 @@ _LINE_TMPL = {
         'ja': '\n申請方法：休暇 [種別] [日付]',
         'vi': '\nCách nộp đơn: nghỉ [loại] [ngày]',
         'th': '\nวิธียื่นคำขอ: ลา [ประเภท] [วันที่]',
+        'id': '\nCara mengajukan: cuti [jenis] [tanggal]',
     },
     # ── Help ─────────────────────────────────────────────────────────────
     'help_body': {
@@ -2017,6 +2248,7 @@ _LINE_TMPL = {
             '─── อื่นๆ ───\n'
             '🔓 ยกเลิกการผูกบัญชี'
         ),
+        'id': 'Halo {name}! Berikut perintah yang tersedia:\n\n─── Absensi ───\n📍 Kirim Lokasi → Absen otomatis\n💬 Masuk / Pulang\n📋 Status → Catatan hari ini\n\n─── Kueri ───\n🌿 Saldo Cuti → Saldo cuti tahunan\n💰 Gaji → Slip gaji terbaru\n📊 Kehadiran → Detail bulan ini\n   Kehadiran 2026-03 → Bulan tertentu\nKinerja → Penilaian terbaru\n\n─── Ajukan ───\n📝 Cuti [jenis] [tanggal] → Ajukan cuti\n   Contoh: Cuti tahunan 2026-04-01\n⏰ Lembur [tanggal] [jam] → Ajukan lembur\n   Contoh: Lembur 2026-04-05 3\n🗂️ Jenis Cuti → Lihat daftar jenis cuti\n\n─── Lainnya ───\n🔓 Putuskan Akun',
     },
     # ── Time page labels ──────────────────────────────────────────────────
     'time_page_0': {
@@ -2025,6 +2257,7 @@ _LINE_TMPL = {
         'ja': '深夜(00-05)',
         'vi': 'Đêm khuya(00-05)',
         'th': 'กลางคืน(00-05)',
+        'id': 'Dini hari(00-05)',
     },
     'time_page_1': {
         'zh-TW': '上午(06-11)',
@@ -2032,6 +2265,7 @@ _LINE_TMPL = {
         'ja': '午前(06-11)',
         'vi': 'Sáng(06-11)',
         'th': 'เช้า(06-11)',
+        'id': 'Pagi(06-11)',
     },
     'time_page_2': {
         'zh-TW': '下午(12-17)',
@@ -2039,6 +2273,7 @@ _LINE_TMPL = {
         'ja': '午後(12-17)',
         'vi': 'Chiều(12-17)',
         'th': 'บ่าย(12-17)',
+        'id': 'Siang(12-17)',
     },
     'time_page_3': {
         'zh-TW': '晚上(18-23)',
@@ -2046,6 +2281,7 @@ _LINE_TMPL = {
         'ja': '夜(18-23)',
         'vi': 'Tối(18-23)',
         'th': 'เย็น(18-23)',
+        'id': 'Malam(18-23)',
     },
     # ── Errors / misc ────────────────────────────────────────────────────
     'leave_no_types_admin': {
@@ -2054,6 +2290,7 @@ _LINE_TMPL = {
         'ja': '利用可能な休暇種別がありません。管理者にお問い合わせください。',
         'vi': 'Hiện không có loại nghỉ phép. Vui lòng liên hệ quản trị viên.',
         'th': 'ไม่มีประเภทการลาที่ใช้ได้ กรุณาติดต่อผู้ดูแลระบบ',
+        'id': 'Tidak ada jenis cuti yang tersedia. Harap hubungi admin Anda.',
     },
     'leave_type_not_found_btn': {
         'zh-TW': '找不到假別「{type}」，請點選按鈕選擇。',
@@ -2061,6 +2298,7 @@ _LINE_TMPL = {
         'ja': '休暇種別「{type}」が見つかりません。ボタンをタップして選択してください。',
         'vi': 'Không tìm thấy loại nghỉ "{type}". Vui lòng nhấn nút để chọn.',
         'th': 'ไม่พบประเภทการลา "{type}" กรุณาแตะปุ่มเพื่อเลือก',
+        'id': 'Jenis cuti "{type}" tidak ditemukan. Harap ketuk tombol untuk memilih.',
     },
     'date_end_before_start': {
         'zh-TW': '⚠️ 結束日期不能早於開始日期',
@@ -2068,6 +2306,7 @@ _LINE_TMPL = {
         'ja': '⚠️ 終了日は開始日より前にできません',
         'vi': '⚠️ Ngày kết thúc không thể trước ngày bắt đầu',
         'th': '⚠️ วันที่สิ้นสุดไม่สามารถก่อนวันที่เริ่มต้น',
+        'id': '⚠️ Tanggal selesai tidak boleh sebelum tanggal mulai',
     },
     'time_format_error': {
         'zh-TW': '⚠️ 時間格式錯誤，請輸入 HH:MM，例：{example}',
@@ -2075,6 +2314,7 @@ _LINE_TMPL = {
         'ja': '⚠️ 時間の形式が正しくありません。HH:MMで入力してください。例：{example}',
         'vi': '⚠️ Định dạng giờ không hợp lệ. Vui lòng nhập HH:MM, ví dụ: {example}',
         'th': '⚠️ รูปแบบเวลาไม่ถูกต้อง กรุณาใส่ HH:MM เช่น: {example}',
+        'id': '⚠️ Format waktu tidak valid. Harap masukkan HH:MM, contoh: {example}',
     },
     'time_end_before_start': {
         'zh-TW': '⚠️ 結束時間須晚於開始時間（{start}），請重新選擇。',
@@ -2082,6 +2322,7 @@ _LINE_TMPL = {
         'ja': '⚠️ 終了時間は開始時間（{start}）より後にしてください。再選択してください。',
         'vi': '⚠️ Giờ kết thúc phải sau giờ bắt đầu ({start}). Vui lòng chọn lại.',
         'th': '⚠️ เวลาสิ้นสุดต้องหลังเวลาเริ่มต้น ({start}) กรุณาเลือกใหม่',
+        'id': '⚠️ Waktu selesai harus setelah waktu mulai ({start}). Harap pilih ulang.',
     },
     'leave_cancelled': {
         'zh-TW': '已取消請假申請。',
@@ -2089,6 +2330,7 @@ _LINE_TMPL = {
         'ja': '休暇申請をキャンセルしました。',
         'vi': 'Đã hủy đơn xin nghỉ.',
         'th': 'ยกเลิกคำขอลาแล้ว',
+        'id': 'Permohonan cuti dibatalkan.',
     },
     'ot_cancelled': {
         'zh-TW': '已取消加班申請。',
@@ -2096,6 +2338,7 @@ _LINE_TMPL = {
         'ja': '残業申請をキャンセルしました。',
         'vi': 'Đã hủy đơn làm thêm giờ.',
         'th': 'ยกเลิกคำขอล่วงเวลาแล้ว',
+        'id': 'Permohonan lembur dibatalkan.',
     },
     'ot_hours_anomaly': {
         'zh-TW': '⚠️ 加班時數異常（{hrs}h），請重新確認時間。',
@@ -2103,6 +2346,7 @@ _LINE_TMPL = {
         'ja': '⚠️ 残業時間が異常です（{hrs}h）。時間を再確認してください。',
         'vi': '⚠️ Số giờ làm thêm bất thường ({hrs}h). Vui lòng kiểm tra lại giờ.',
         'th': '⚠️ ชั่วโมงล่วงเวลาผิดปกติ ({hrs}h) กรุณาตรวจสอบเวลาอีกครั้ง',
+        'id': '⚠️ Jam lembur tidak wajar ({hrs}h). Harap periksa kembali waktu.',
     },
     'date_format_error': {
         'zh-TW': '日期格式錯誤。',
@@ -2110,6 +2354,7 @@ _LINE_TMPL = {
         'ja': '日付の形式が正しくありません。',
         'vi': 'Định dạng ngày không hợp lệ.',
         'th': 'รูปแบบวันที่ไม่ถูกต้อง',
+        'id': 'Format tanggal tidak valid.',
     },
     'bind_account_conflict': {
         'zh-TW': '此帳號已綁定其他 LINE 帳號，請聯絡管理員。',
@@ -2117,6 +2362,7 @@ _LINE_TMPL = {
         'ja': 'このアカウントは既に別のLINEアカウントに連携されています。管理者にお問い合わせください。',
         'vi': 'Tài khoản này đã được liên kết với tài khoản LINE khác. Vui lòng liên hệ quản trị viên.',
         'th': 'บัญชีนี้ผูกกับ LINE บัญชีอื่นแล้ว กรุณาติดต่อผู้ดูแลระบบ',
+        'id': 'Akun ini sudah terhubung dengan akun LINE lain. Harap hubungi admin.',
     },
     'unbind_success': {
         'zh-TW': '已解除 LINE 帳號綁定。',
@@ -2124,6 +2370,7 @@ _LINE_TMPL = {
         'ja': 'LINEアカウントの連携を解除しました。',
         'vi': 'Đã hủy liên kết tài khoản LINE.',
         'th': 'ยกเลิกการผูกบัญชี LINE แล้ว',
+        'id': 'Akun LINE telah diputuskan.',
     },
     'punch_duplicate': {
         'zh-TW': '⚠️ 1 分鐘內已打過{label}，請勿重複打卡。',
@@ -2131,6 +2378,7 @@ _LINE_TMPL = {
         'ja': '⚠️ 1分以内に{label}を打刻済みです。重複打刻はご遠慮ください。',
         'vi': '⚠️ Bạn đã {label} trong vòng 1 phút qua. Vui lòng không chấm công lại.',
         'th': '⚠️ คุณตอกบัตร {label} ไปแล้วภายใน 1 นาที กรุณาอย่าตอกบัตรซ้ำ',
+        'id': '⚠️ Anda sudah absen {label} dalam 1 menit terakhir. Jangan absen berulang.',
     },
     'ot_submitted_direct': {
         'zh-TW': '✅ 加班申請已送出\n\n日期：{date}\n時數：{hrs} 小時\n原因：{reason}\n申請編號：#{id}\n\n請等候管理員審核，審核結果將通知您。',
@@ -2138,6 +2386,7 @@ _LINE_TMPL = {
         'ja': '✅ 残業申請を送信しました\n\n日付：{date}\n時数：{hrs}時間\n理由：{reason}\n申請番号：#{id}\n\n管理者の審査をお待ちください。審査結果はお知らせします。',
         'vi': '✅ Đã gửi đơn làm thêm giờ\n\nNgày: {date}\nSố giờ: {hrs} giờ\nLý do: {reason}\nSố đơn: #{id}\n\nVui lòng chờ quản trị viên xét duyệt. Bạn sẽ được thông báo kết quả.',
         'th': '✅ ส่งคำขอล่วงเวลาแล้ว\n\nวันที่: {date}\nชั่วโมง: {hrs} ชั่วโมง\nเหตุผล: {reason}\nเลขที่: #{id}\n\nกรุณารอผู้ดูแลตรวจสอบ คุณจะได้รับการแจ้งเตือนผล',
+        'id': '✅ Permohonan lembur telah dikirim\n\nTanggal: {date}\nJam: {hrs} jam\nAlasan: {reason}\nNo. Permohonan: #{id}\n\nHarap tunggu tinjauan admin. Anda akan diberitahu hasilnya.',
     },
 }
 
@@ -2148,4 +2397,5 @@ WDAY_ABBR = {
     'ja':    ['月', '火', '水', '木', '金', '土', '日'],
     'vi':    ['Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy', 'CN'],
     'th':    ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'],
+    'id':    ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
 }
