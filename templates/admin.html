@@ -2871,7 +2871,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         </select>
         <select class="filter-input" id="inv-filter-status" onchange="loadInvoices()" style="min-width:110px">
           <option value="">全部狀態</option>
-          <option value="valid">有效</option>
+          <option value="issued">有效</option>
           <option value="void">作廢</option>
         </select>
         <input class="filter-input" id="inv-filter-month" type="month" onchange="loadInvoices()" style="min-width:130px" placeholder="年月">
@@ -3153,16 +3153,12 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <input class="form-input" type="date" id="inv-modal-date">
         </div>
         <div>
-          <label class="form-label">申報期間</label>
-          <input class="form-input" type="month" id="inv-modal-period" placeholder="YYYY-MM">
-        </div>
-        <div>
           <label class="form-label">買方名稱</label>
           <input class="form-input" id="inv-modal-buyer-name" placeholder="公司名稱">
         </div>
         <div>
-          <label class="form-label">買方統編</label>
-          <input class="form-input" id="inv-modal-buyer-tin" placeholder="統一編號">
+          <label class="form-label">買方統編（buyer_ban）</label>
+          <input class="form-input" id="inv-modal-buyer-ban" placeholder="統一編號">
         </div>
         <div>
           <label class="form-label">稅前金額 *</label>
@@ -20741,8 +20737,8 @@ function renderAccAccountsTable() {
 
 // ── 發票管理 ─────────────────────────────────────────────────
 
-const INV_TYPE_LABEL  = { sales:'銷項', purchase:'進項' };
-const INV_STATUS_LABEL = { valid:'有效', void:'作廢' };
+const INV_TYPE_LABEL   = { sales:'銷項', purchase:'進項' };
+const INV_STATUS_LABEL = { issued:'有效', void:'作廢' };
 
 async function loadInvoices() {
   const type   = document.getElementById('inv-filter-type')?.value   || '';
@@ -20754,23 +20750,23 @@ async function loadInvoices() {
   wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">載入中…</div>';
 
   let url = '/api/accounting/invoices?limit=200';
-  if (type)   url += '&invoice_type=' + encodeURIComponent(type);
-  if (status) url += '&status='       + encodeURIComponent(status);
-  if (month)  url += '&month='        + encodeURIComponent(month);
-  if (q)      url += '&q='            + encodeURIComponent(q);
+  if (type)   url += '&type='   + encodeURIComponent(type);
+  if (status) url += '&status=' + encodeURIComponent(status);
+  if (month)  url += '&month='  + encodeURIComponent(month);
+  if (q)      url += '&q='      + encodeURIComponent(q);
 
   const { ok, data } = await api(url, {}, true);
   if (!ok) { wrap.innerHTML = '<div style="padding:24px;color:var(--red)">載入失敗</div>'; return; }
 
-  // stat cards
-  const salesTax = data.reduce((s,r)=> r.invoice_type==='sales'  && r.status==='valid' ? s+parseFloat(r.tax_amount||0) : s, 0);
-  const purTax   = data.reduce((s,r)=> r.invoice_type==='purchase'&& r.status==='valid' ? s+parseFloat(r.tax_amount||0) : s, 0);
+  // stat cards (only issued invoices)
+  const salesTax = data.reduce((s,r)=> r.invoice_type==='sales'   && r.status==='issued' ? s+parseFloat(r.tax_amount||0) : s, 0);
+  const purTax   = data.reduce((s,r)=> r.invoice_type==='purchase' && r.status==='issued' ? s+parseFloat(r.tax_amount||0) : s, 0);
   const netTax   = salesTax - purTax;
   const el = id => document.getElementById(id);
   if (el('inv-stat-sales-tax')) el('inv-stat-sales-tax').textContent = 'NT$'+Math.round(salesTax).toLocaleString();
   if (el('inv-stat-pur-tax'))   el('inv-stat-pur-tax').textContent   = 'NT$'+Math.round(purTax).toLocaleString();
   if (el('inv-stat-net-tax'))   el('inv-stat-net-tax').textContent   = 'NT$'+Math.round(netTax).toLocaleString();
-  if (el('inv-stat-count'))     el('inv-stat-count').textContent     = data.filter(r=>r.status==='valid').length;
+  if (el('inv-stat-count'))     el('inv-stat-count').textContent     = data.filter(r=>r.status==='issued').length;
 
   if (!data.length) {
     wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無發票資料</div>'; return;
@@ -20786,10 +20782,10 @@ async function loadInvoices() {
       <td><span style="background:${r.invoice_type==='sales'?'var(--green)':'var(--navy)'};color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">${INV_TYPE_LABEL[r.invoice_type]||r.invoice_type}</span></td>
       <td style="font-size:12px">${r.invoice_date||'—'}</td>
       <td style="font-size:12px">${escHtml(r.buyer_name||'—')}</td>
-      <td style="font-size:12px;font-family:'DM Mono',monospace">${escHtml(r.buyer_tin||'—')}</td>
+      <td style="font-size:12px;font-family:'DM Mono',monospace">${escHtml(r.buyer_ban||'—')}</td>
       <td style="text-align:right;font-size:12px">NT$${Math.round(r.subtotal||0).toLocaleString()}</td>
       <td style="text-align:right;font-size:12px">NT$${Math.round(r.tax_amount||0).toLocaleString()}</td>
-      <td style="text-align:right;font-size:12px;font-weight:600">NT$${Math.round(r.total_amount||0).toLocaleString()}</td>
+      <td style="text-align:right;font-size:12px;font-weight:600">NT$${Math.round(r.total||0).toLocaleString()}</td>
       <td><span style="background:${isVoid?'var(--muted)':'var(--green)'};color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">${INV_STATUS_LABEL[r.status]||r.status}</span></td>
       <td style="white-space:nowrap">
         ${!isVoid ? `<button class="btn btn-outline btn-sm" onclick="openInvoiceModal(${r.id})">編輯</button>
@@ -20800,14 +20796,13 @@ async function loadInvoices() {
 }
 
 function openInvoiceModal(id) {
-  document.getElementById('inv-modal-id').value   = id || '';
+  document.getElementById('inv-modal-id').value          = id || '';
   document.getElementById('inv-modal-title').textContent = id ? '編輯發票' : '新增發票';
   document.getElementById('inv-modal-no').value          = '';
   document.getElementById('inv-modal-type').value        = 'sales';
   document.getElementById('inv-modal-date').value        = new Date().toISOString().slice(0,10);
-  document.getElementById('inv-modal-period').value      = new Date().toISOString().slice(0,7);
   document.getElementById('inv-modal-buyer-name').value  = '';
-  document.getElementById('inv-modal-buyer-tin').value   = '';
+  document.getElementById('inv-modal-buyer-ban').value   = '';
   document.getElementById('inv-modal-subtotal').value    = '';
   document.getElementById('inv-modal-tax-rate').value    = '5';
   document.getElementById('inv-modal-tax-amount').value  = '';
@@ -20820,14 +20815,13 @@ function openInvoiceModal(id) {
       document.getElementById('inv-modal-no').value         = data.invoice_no   || '';
       document.getElementById('inv-modal-type').value       = data.invoice_type || 'sales';
       document.getElementById('inv-modal-date').value       = data.invoice_date || '';
-      document.getElementById('inv-modal-period').value     = data.period_month || '';
       document.getElementById('inv-modal-buyer-name').value = data.buyer_name   || '';
-      document.getElementById('inv-modal-buyer-tin').value  = data.buyer_tin    || '';
+      document.getElementById('inv-modal-buyer-ban').value  = data.buyer_ban    || '';
       document.getElementById('inv-modal-subtotal').value   = data.subtotal     || '';
       document.getElementById('inv-modal-tax-rate').value   = data.tax_rate != null ? data.tax_rate : '5';
       document.getElementById('inv-modal-tax-amount').value = data.tax_amount   || '';
-      document.getElementById('inv-modal-total').value      = data.total_amount || '';
-      document.getElementById('inv-modal-note').value       = data.note         || '';
+      document.getElementById('inv-modal-total').value      = data.total        || '';
+      document.getElementById('inv-modal-note').value       = data.notes        || '';
     });
   }
   document.getElementById('inv-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
@@ -20846,21 +20840,17 @@ async function saveInvoice() {
   const id      = document.getElementById('inv-modal-id').value;
   const no      = document.getElementById('inv-modal-no').value.trim();
   const subtotal= parseFloat(document.getElementById('inv-modal-subtotal').value);
-  if (!no)             { showToast('請填寫發票號碼','warning'); return; }
   if (isNaN(subtotal)) { showToast('請填寫稅前金額','warning'); return; }
 
   const payload = {
     invoice_no:   no,
     invoice_type: document.getElementById('inv-modal-type').value,
     invoice_date: document.getElementById('inv-modal-date').value,
-    period_month: document.getElementById('inv-modal-period').value,
     buyer_name:   document.getElementById('inv-modal-buyer-name').value.trim(),
-    buyer_tin:    document.getElementById('inv-modal-buyer-tin').value.trim(),
+    buyer_ban:    document.getElementById('inv-modal-buyer-ban').value.trim(),
     subtotal,
     tax_rate:     parseFloat(document.getElementById('inv-modal-tax-rate').value)||0,
-    tax_amount:   parseFloat(document.getElementById('inv-modal-tax-amount').value)||0,
-    total_amount: parseFloat(document.getElementById('inv-modal-total').value)||0,
-    note:         document.getElementById('inv-modal-note').value.trim(),
+    notes:        document.getElementById('inv-modal-note').value.trim(),
   };
 
   const url    = id ? `/api/accounting/invoices/${id}` : '/api/accounting/invoices';
@@ -20874,7 +20864,7 @@ async function saveInvoice() {
 
 async function voidInvoice(id, no) {
   if (!confirm(`確定要作廢發票 ${no}？此操作無法還原。`)) return;
-  const { ok, data } = await api(`/api/accounting/invoices/${id}/void`, { method:'POST' });
+  const { ok, data } = await api(`/api/accounting/invoices/${id}/void`, { method:'PUT' });
   if (!ok) { showToast(data?.error||'作廢失敗','error'); return; }
   showToast('發票已作廢','success');
   loadInvoices();
