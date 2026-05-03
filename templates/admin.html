@@ -20233,7 +20233,7 @@ async function updateShipStatus(id, status) {
 let _accCurrentTab = 'dashboard';
 let _accAccounts   = [];
 let _arList        = [];
-let _apList        = [];
+let _accApList     = [];
 let _voucherList   = [];
 
 async function initAccounting() {
@@ -20568,8 +20568,8 @@ async function loadAPList() {
   if (status)  url += `status=${status}&`;
   if (overdue) url += `overdue=1&`;
   const { ok, data } = await api(url, {}, true);
-  _apList = ok ? data : [];
-  const filtered = q ? _apList.filter(r => r.vendor_name.includes(q)) : _apList;
+  _accApList = ok ? data : [];
+  const filtered = q ? _accApList.filter(r => r.vendor_name.includes(q)) : _accApList;
   const wrap = document.getElementById('acc-ap-wrap');
   if (!filtered.length) {
     wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無應付帳款資料</div>'; return;
@@ -20625,7 +20625,7 @@ async function saveAP() {
 }
 
 function openAPPayModal(id) {
-  const ap = _apList.find(x => x.id === id);
+  const ap = _accApList.find(x => x.id === id);
   if (!ap) return;
   document.getElementById('ap-pay-id').value = id;
   document.getElementById('ap-pay-date').value = new Date().toISOString().slice(0,10);
