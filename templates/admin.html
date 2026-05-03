@@ -3692,7 +3692,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 <!-- Salary Preview Modal -->
 <!-- ── 生物辨識 Modal ── -->
 <div class="modal-overlay" id="bio-panel-modal" style="display:none">
-  <div class="modal" style="max-width:480px;width:95vw">
+  <div class="modal modal-md">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.biometric">生物辨識綁定管理</span>
       <button class="modal-close" onclick="document.getElementById('bio-panel-modal').style.display='none'">&times;</button>
@@ -3718,39 +3718,37 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- 預支薪資 Modal -->
 <div class="modal-overlay" id="advance-modal" style="display:none">
-  <div class="modal" style="max-width:480px;width:95vw">
+  <div class="modal modal-md">
     <div class="modal-header">
       <span class="modal-title" data-i18n="adv.modal_add" id="adv-modal-title">新增預支記錄</span>
       <button class="modal-close" onclick="closeAdvanceModal()">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="adv-edit-id">
-      <div style="display:grid;gap:12px">
-        <div>
+      <div class="form-grid">
+        <div class="form-group full-width">
           <label class="form-label">員工 <span style="color:var(--red)">*</span></label>
-          <select class="form-input" id="adv-staff" style="width:100%"></select>
+          <select class="form-input" id="adv-staff"></select>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div>
-            <label class="form-label">預支日期 <span style="color:var(--red)">*</span></label>
-            <input type="date" class="form-input" id="adv-date" style="width:100%">
-          </div>
-          <div>
-            <label class="form-label">扣款月份 <span style="color:var(--red)">*</span></label>
-            <input type="month" class="form-input" id="adv-month" style="width:100%">
-          </div>
+        <div class="form-group">
+          <label class="form-label">預支日期 <span style="color:var(--red)">*</span></label>
+          <input type="date" class="form-input" id="adv-date">
         </div>
-        <div>
+        <div class="form-group">
+          <label class="form-label">扣款月份 <span style="color:var(--red)">*</span></label>
+          <input type="month" class="form-input" id="adv-month">
+        </div>
+        <div class="form-group full-width">
           <label class="form-label">預支金額 <span style="color:var(--red)">*</span></label>
-          <input type="number" class="form-input" id="adv-amount" min="0" step="1" placeholder="例：5000" style="width:100%">
+          <input type="number" class="form-input" id="adv-amount" min="0" step="1" placeholder="例：5000">
         </div>
-        <div>
+        <div class="form-group full-width">
           <label class="form-label">備註</label>
-          <input type="text" class="form-input" id="adv-note" placeholder="說明預支原因（選填）" style="width:100%">
+          <input type="text" class="form-input" id="adv-note" placeholder="說明預支原因（選填）">
         </div>
-        <div id="adv-status-row" style="display:none">
+        <div id="adv-status-row" class="form-group full-width" style="display:none">
           <label class="form-label">狀態</label>
-          <select class="form-input" id="adv-status" style="width:100%">
+          <select class="form-input" id="adv-status">
             <option value="pending">待扣款</option>
             <option value="deducted">已扣款</option>
             <option value="cancelled">已取消</option>
@@ -3766,7 +3764,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 </div>
 
 <div class="modal-overlay" id="salary-preview-modal" style="display:none">
-  <div class="modal" style="max-width:900px;width:95vw">
+  <div class="modal modal-xl">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.salary_preview" id="salary-preview-title">薪資計算預覽</span>
       <button class="modal-close" onclick="document.getElementById('salary-preview-modal').style.display='none'">&times;</button>
@@ -3799,19 +3797,19 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Training Record Modal -->
 <div class="modal-overlay" id="training-modal" style="display:none">
-  <div class="modal" style="max-width:500px">
+  <div class="modal modal-md">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.add_training" id="training-modal-title">新增訓練記錄</span>
       <button class="modal-close" onclick="document.getElementById('training-modal').style.display='none'">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="tm-id">
-      <div class="form-row">
-        <div>
+      <div class="form-grid">
+        <div class="form-group">
           <label class="form-label">員工 *</label>
-          <select class="form-input" id="tm-staff" style="width:100%"></select>
+          <select class="form-input" id="tm-staff"></select>
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">類別 *</label>
           <select class="form-input" id="tm-category">
             <option value="food_safety" data-i18n="training.cat.food_safety">食品安全</option>
@@ -3824,28 +3822,26 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
             <option value="other" data-i18n="training.cat.other">其他</option>
           </select>
         </div>
-      </div>
-      <div style="margin-bottom:12px">
-        <label class="form-label">課程名稱 *</label>
-        <input class="form-input" id="tm-course" placeholder="例：食品安全衛生管理人員訓練" style="width:100%">
-      </div>
-      <div class="form-row">
-        <div>
+        <div class="form-group full-width">
+          <label class="form-label">課程名稱 *</label>
+          <input class="form-input" id="tm-course" placeholder="例：食品安全衛生管理人員訓練">
+        </div>
+        <div class="form-group">
           <label class="form-label">完成日期</label>
-          <input type="date" class="form-input" id="tm-completed" style="width:100%">
+          <input type="date" class="form-input" id="tm-completed">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">到期日期</label>
-          <input type="date" class="form-input" id="tm-expiry" style="width:100%">
+          <input type="date" class="form-input" id="tm-expiry">
         </div>
-      </div>
-      <div style="margin-bottom:12px">
-        <label class="form-label">證書號碼</label>
-        <input class="form-input" id="tm-cert" placeholder="選填" style="width:100%">
-      </div>
-      <div>
-        <label class="form-label">備註</label>
-        <textarea class="form-input" id="tm-note" rows="2" style="width:100%"></textarea>
+        <div class="form-group">
+          <label class="form-label">證書號碼</label>
+          <input class="form-input" id="tm-cert" placeholder="選填">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">備註</label>
+          <textarea class="form-input" id="tm-note" rows="2"></textarea>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -3857,14 +3853,32 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Store Modal -->
 <div class="modal-overlay" id="store-modal" style="display:none">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_store" id="store-modal-title">新增門市</span><button class="modal-close" onclick="document.getElementById('store-modal').style.display='none'">&times;</button></div>
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.add_store" id="store-modal-title">新增門市</span>
+      <button class="modal-close" onclick="document.getElementById('store-modal').style.display='none'">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="store-modal-id">
-      <div style="margin-bottom:12px"><label class="form-label">門市名稱 *</label><input class="form-input" id="store-modal-name" placeholder="例：信義店" style="width:100%"></div>
-      <div style="margin-bottom:12px"><label class="form-label">代碼</label><input class="form-input" id="store-modal-code" placeholder="例：xinyi" style="width:100%"></div>
-      <div style="margin-bottom:12px"><label class="form-label">地址</label><input class="form-input" id="store-modal-addr" placeholder="門市地址" style="width:100%"></div>
-      <div style="margin-bottom:12px"><label class="form-label"><input type="checkbox" id="store-modal-active" checked style="margin-right:6px">營業中</label></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">門市名稱 *</label>
+          <input class="form-input" id="store-modal-name" placeholder="例：信義店">
+        </div>
+        <div class="form-group">
+          <label class="form-label">代碼</label>
+          <input class="form-input mono" id="store-modal-code" placeholder="例：xinyi">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">地址</label>
+          <input class="form-input" id="store-modal-addr" placeholder="門市地址">
+        </div>
+        <div class="form-group full-width">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="store-modal-active" checked> 營業中
+          </label>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="document.getElementById('store-modal').style.display='none'">取消</button>
@@ -3984,63 +3998,131 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Punch Record Edit Modal -->
 <div class="modal-overlay" id="punch-rec-modal" style="display:none">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.edit_punch">編輯打卡記錄</span><button class="modal-close" onclick="closePunchRecModal()">&times;</button></div>
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.edit_punch">編輯打卡記錄</span>
+      <button class="modal-close" onclick="closePunchRecModal()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="prm-id">
-      <div style="margin-bottom:12px"><label class="form-label">打卡類型</label><select class="form-input" id="prm-type" style="width:100%"><option value="in">上班打卡</option><option value="out">下班打卡</option><option value="break_out">休息開始</option><option value="break_in">休息結束</option></select></div>
-      <div style="margin-bottom:12px"><label class="form-label">打卡時間</label><input class="form-input" type="datetime-local" id="prm-time" style="width:100%"></div>
-      <div style="margin-bottom:12px"><label class="form-label">操作人員</label><input class="form-input" id="prm-by" placeholder="管理員姓名" style="width:100%"></div>
-      <div><label class="form-label">備註</label><input class="form-input" id="prm-note" style="width:100%"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">打卡類型</label>
+          <select class="form-input" id="prm-type">
+            <option value="in">上班打卡</option>
+            <option value="out">下班打卡</option>
+            <option value="break_out">休息開始</option>
+            <option value="break_in">休息結束</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">打卡時間</label>
+          <input class="form-input" type="datetime-local" id="prm-time">
+        </div>
+        <div class="form-group">
+          <label class="form-label">操作人員</label>
+          <input class="form-input" id="prm-by" placeholder="管理員姓名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">備註</label>
+          <input class="form-input" id="prm-note">
+        </div>
+      </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closePunchRecModal()">取消</button><button class="btn btn-primary" onclick="savePunchRec()">儲存</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closePunchRecModal()">取消</button>
+      <button class="btn btn-primary" onclick="savePunchRec()">儲存</button>
+    </div>
   </div>
 </div>
 
 <!-- GPS Location Modal -->
 <div class="modal-overlay" id="gps-loc-modal" style="display:none">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_location" id="glm-title">新增打卡地點</span><button class="modal-close" onclick="closeLocModal()">&times;</button></div>
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.add_location" id="glm-title">新增打卡地點</span>
+      <button class="modal-close" onclick="closeLocModal()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="glm-id">
-      <div style="margin-bottom:14px"><label class="form-label">地點名稱 *</label><input class="form-input" id="glm-name" placeholder="例：公司門口" style="width:100%"></div>
-      <div id="glm-search-wrap" style="margin-bottom:14px;display:none">
-        <label class="form-label">搜尋地點（Google）</label>
-        <div style="position:relative">
-          <input class="form-input" id="glm-search" placeholder="輸入地址或地點名稱…" autocomplete="off" style="width:100%;padding-right:36px">
-          <span id="glm-search-clear" onclick="clearPlaceSearch()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:16px">&times;</span>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">地點名稱 *</label>
+          <input class="form-input" id="glm-name" placeholder="例：公司門口">
+        </div>
+        <div id="glm-search-wrap" class="form-group full-width" style="display:none">
+          <label class="form-label">搜尋地點（Google）</label>
+          <div style="position:relative">
+            <input class="form-input" id="glm-search" placeholder="輸入地址或地點名稱…" autocomplete="off" style="padding-right:36px">
+            <span id="glm-search-clear" onclick="clearPlaceSearch()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:16px">&times;</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">緯度</label>
+          <input class="form-input" id="glm-lat" placeholder="例：25.033964" type="number" step="0.000001">
+        </div>
+        <div class="form-group">
+          <label class="form-label">經度</label>
+          <input class="form-input" id="glm-lng" placeholder="例：121.564468" type="number" step="0.000001">
+        </div>
+        <div class="form-group">
+          <label class="form-label">允許範圍（公尺）</label>
+          <input class="form-input" id="glm-radius" type="number" min="10" max="5000" value="100">
+          <span class="form-hint">超出此距離即視為不在範圍內</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">狀態</label>
+          <select class="form-input" id="glm-active"><option value="1">啟用</option><option value="0">停用</option></select>
+        </div>
+        <div class="form-group full-width">
+          <button class="btn btn-outline btn-sm" onclick="getLocGPS()">取得目前位置</button>
+          <span id="glm-gps-msg" class="form-hint"></span>
         </div>
       </div>
-      <div class="form-row">
-        <div><label class="form-label">緯度</label><input class="form-input" id="glm-lat" placeholder="例：25.033964" type="number" step="0.000001"></div>
-        <div><label class="form-label">經度</label><input class="form-input" id="glm-lng" placeholder="例：121.564468" type="number" step="0.000001"></div>
-      </div>
-      <div style="margin-bottom:14px"><label class="form-label">允許範圍（公尺）</label><input class="form-input" id="glm-radius" type="number" min="10" max="5000" value="100" style="width:140px"><span style="font-size:12px;color:var(--muted);margin-left:10px">超出此距離即視為不在範圍內</span></div>
-      <div style="margin-bottom:6px"><label class="form-label">狀態</label><select class="form-input" id="glm-active" style="width:auto"><option value="1">啟用</option><option value="0">停用</option></select></div>
-      <div style="margin-top:14px"><button class="btn btn-outline btn-sm" onclick="getLocGPS()">取得目前位置</button><span id="glm-gps-msg" style="font-size:12px;color:var(--muted);margin-left:10px"></span></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeLocModal()">取消</button><button class="btn btn-primary" onclick="saveLocation()">儲存</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeLocModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveLocation()">儲存</button>
+    </div>
   </div>
 </div>
 
 <!-- Punch Request Review Modal -->
 <div class="modal-overlay" id="preq-modal" style="display:none">
-  <div class="modal" style="max-width:440px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.review_punch" id="preq-modal-title">審核補打卡申請</span><button class="modal-close" onclick="closePreqModal()">&times;</button></div>
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.review_punch" id="preq-modal-title">審核補打卡申請</span>
+      <button class="modal-close" onclick="closePreqModal()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="preq-id">
       <div id="preq-info" style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:14px;font-size:13px"></div>
-      <div style="margin-bottom:12px"><label class="form-label">審核人員</label><input class="form-input" id="preq-by" placeholder="管理員姓名" style="width:100%"></div>
-      <div><label class="form-label">審核意見（選填）</label><input class="form-input" id="preq-note" placeholder="退回原因或備註" style="width:100%"></div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">審核人員</label>
+          <input class="form-input" id="preq-by" placeholder="管理員姓名">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">審核意見（選填）</label>
+          <input class="form-input" id="preq-note" placeholder="退回原因或備註">
+        </div>
+      </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closePreqModal()">取消</button><button class="btn btn-danger" onclick="reviewPunchReq('reject')">退回</button><button class="btn btn-primary" style="background:var(--green)" onclick="reviewPunchReq('approve')">核准並補打</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closePreqModal()">取消</button>
+      <button class="btn btn-danger" onclick="reviewPunchReq('reject')">退回</button>
+      <button class="btn btn-primary" style="background:var(--green)" onclick="reviewPunchReq('approve')">核准並補打</button>
+    </div>
   </div>
 </div>
 
 <!-- Overtime Review Modal -->
 <div class="modal-overlay" id="ot-review-modal" style="display:none">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.review_ot" id="otrm-title">審核加班申請</span><button class="modal-close" onclick="closeOTReview()">&times;</button></div>
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.review_ot" id="otrm-title">審核加班申請</span>
+      <button class="modal-close" onclick="closeOTReview()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="otrm-id">
       <div id="otrm-info" style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:14px;font-size:13px"></div>
@@ -4049,67 +4131,129 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div id="otrm-pay-detail"></div>
         <div style="font-size:18px;font-weight:700;color:var(--green);margin-top:6px">加班費：<span id="otrm-pay-amount">$0</span></div>
       </div>
-      <div style="margin-bottom:12px"><label class="form-label">審核人員 *</label><input class="form-input" id="otrm-by" placeholder="管理員姓名" style="width:100%"></div>
-      <div><label class="form-label">審核意見（選填）</label><input class="form-input" id="otrm-note" placeholder="退回原因或備註" style="width:100%"></div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">審核人員 *</label>
+          <input class="form-input" id="otrm-by" placeholder="管理員姓名">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">審核意見（選填）</label>
+          <input class="form-input" id="otrm-note" placeholder="退回原因或備註">
+        </div>
+      </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeOTReview()">取消</button><button class="btn btn-danger" onclick="reviewOTRequest('reject')">退回</button><button class="btn btn-primary" style="background:var(--green)" onclick="reviewOTRequest('approve')">核准</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeOTReview()">取消</button>
+      <button class="btn btn-danger" onclick="reviewOTRequest('reject')">退回</button>
+      <button class="btn btn-primary" style="background:var(--green)" onclick="reviewOTRequest('approve')">核准</button>
+    </div>
   </div>
 </div>
 
 <!-- Schedule Review Modal -->
 <div class="modal-overlay" id="sched-review-modal" style="display:none">
-  <div class="modal" style="max-width:460px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.review_sched" id="srm-title">審核排休申請</span><button class="modal-close" onclick="closeSchedReview()">&times;</button></div>
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.review_sched" id="srm-title">審核排休申請</span>
+      <button class="modal-close" onclick="closeSchedReview()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="srm-id">
       <div id="srm-info" style="margin-bottom:16px;padding:12px;background:var(--bg);border-radius:8px;font-size:13px"></div>
-      <div style="margin-bottom:12px"><label class="form-label">審核人員</label><input class="form-input" id="srm-by" placeholder="管理員姓名" style="width:100%"></div>
-      <div><label class="form-label">審核意見（選填）</label><input class="form-input" id="srm-note" placeholder="退回原因或備注" style="width:100%"></div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">審核人員</label>
+          <input class="form-input" id="srm-by" placeholder="管理員姓名">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">審核意見（選填）</label>
+          <input class="form-input" id="srm-note" placeholder="退回原因或備注">
+        </div>
+      </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeSchedReview()">取消</button><button class="btn btn-danger" onclick="reviewRequest('reject')">退回</button><button class="btn btn-primary" style="background:var(--green)" onclick="reviewRequest('approve')">核准</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeSchedReview()">取消</button>
+      <button class="btn btn-danger" onclick="reviewRequest('reject')">退回</button>
+      <button class="btn btn-primary" style="background:var(--green)" onclick="reviewRequest('approve')">核准</button>
+    </div>
   </div>
 </div>
 
 <!-- Shift Type Modal -->
 <div class="modal-overlay" id="shift-type-modal" style="display:none">
-  <div class="modal" style="max-width:440px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_shift" id="stm-title">新增班別</span><button class="modal-close" onclick="closeShiftTypeModal()">&times;</button></div>
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.add_shift" id="stm-title">新增班別</span>
+      <button class="modal-close" onclick="closeShiftTypeModal()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="stm-id">
-      <div class="form-row">
-        <div><label class="form-label">班別名稱 *</label><input class="form-input" id="stm-name" placeholder="例：外場A班"></div>
-        <div><label class="form-label">顏色</label><input type="color" id="stm-color" value="#4a7bda" style="width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">班別名稱 *</label>
+          <input class="form-input" id="stm-name" placeholder="例：外場A班">
+        </div>
+        <div class="form-group">
+          <label class="form-label">顏色</label>
+          <input type="color" id="stm-color" value="#4a7bda" style="height:38px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer">
+        </div>
+        <div class="form-group">
+          <label class="form-label">上班時間</label>
+          <input class="form-input" type="time" id="stm-start" value="09:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">下班時間</label>
+          <input class="form-input" type="time" id="stm-end" value="17:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">適用部門（選填）</label>
+          <input class="form-input" id="stm-dept" placeholder="例：外場、廚房">
+        </div>
+        <div class="form-group">
+          <label class="form-label">排序</label>
+          <input class="form-input" type="number" id="stm-sort" value="0" min="0">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">狀態</label>
+          <select class="form-input" id="stm-active"><option value="1">啟用</option><option value="0">停用</option></select>
+        </div>
       </div>
-      <div class="form-row">
-        <div><label class="form-label">上班時間</label><input class="form-input" type="time" id="stm-start" value="09:00"></div>
-        <div><label class="form-label">下班時間</label><input class="form-input" type="time" id="stm-end" value="17:00"></div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">適用部門（選填）</label><input class="form-input" id="stm-dept" placeholder="例：外場、廚房"></div>
-        <div><label class="form-label">排序</label><input class="form-input" type="number" id="stm-sort" value="0" min="0"></div>
-      </div>
-      <div><label class="form-label">狀態</label><select class="form-input" id="stm-active" style="width:auto"><option value="1">啟用</option><option value="0">停用</option></select></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeShiftTypeModal()">取消</button><button class="btn btn-primary" onclick="saveShiftType()">儲存</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeShiftTypeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveShiftType()">儲存</button>
+    </div>
   </div>
 </div>
 
 <!-- Shift Assign Modal -->
 <div class="modal-overlay" id="shift-assign-modal" style="display:none">
-  <div class="modal" style="max-width:560px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.assign_shift">指派班別</span><button class="modal-close" onclick="closeShiftAssignModal()">&times;</button></div>
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.assign_shift">指派班別</span>
+      <button class="modal-close" onclick="closeShiftAssignModal()">&times;</button>
+    </div>
     <div class="modal-body">
-      <div style="margin-bottom:14px"><label class="form-label">選擇員工（可多選）</label><div id="sam-staff-list" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;border:1.5px solid var(--border);border-radius:8px;min-height:44px"></div></div>
-      <div class="form-row">
-        <div><label class="form-label">班別</label><select class="form-input" id="sam-shift-type" style="width:100%"></select></div>
-        <div><label class="form-label">備註</label><input class="form-input" id="sam-note" placeholder="選填"></div>
-      </div>
-      <div style="margin-bottom:4px">
-        <label class="form-label">選擇日期（可多選）</label>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">點擊月曆格子選取日期</div>
-        <input type="month" class="filter-input" id="sam-month" onchange="renderSamCalendar()" style="margin-bottom:10px">
-        <div id="sam-calendar"></div>
-        <div id="sam-selected-dates" style="font-size:12px;color:var(--muted);margin-top:8px;min-height:16px"></div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">選擇員工（可多選）</label>
+          <div id="sam-staff-list" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;border:1.5px solid var(--border);border-radius:8px;min-height:44px"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">班別</label>
+          <select class="form-input" id="sam-shift-type"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">備註</label>
+          <input class="form-input" id="sam-note" placeholder="選填">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">選擇日期（可多選）</label>
+          <span class="form-hint">點擊月曆格子選取日期</span>
+          <input type="month" class="filter-input" id="sam-month" onchange="renderSamCalendar()" style="margin-bottom:10px">
+          <div id="sam-calendar"></div>
+          <div id="sam-selected-dates" style="font-size:12px;color:var(--muted);margin-top:8px;min-height:16px"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -4123,7 +4267,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Shift Import Modal -->
 <div class="modal-overlay" id="shift-import-modal" style="display:none">
-  <div class="modal" style="max-width:620px">
+  <div class="modal modal-lg">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.import_sched">匯入班表</span>
       <button class="modal-close" onclick="closeShiftImportModal()">&times;</button>
@@ -4170,24 +4314,35 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Holiday Modal -->
 <div class="modal-overlay" id="holiday-modal" style="display:none">
-  <div class="modal" style="max-width:400px">
+  <div class="modal modal-sm">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.add_holiday" id="hm-title">新增國定假日</span>
       <button class="modal-close" onclick="closeHolidayModal()">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="hm-id">
-      <div style="margin-bottom:12px"><label class="form-label" data-i18n="label.date">日期 *</label><input class="form-input" type="date" id="hm-date" style="width:100%"></div>
-      <div style="margin-bottom:12px"><label class="form-label" data-i18n="th.name_col">名稱 *</label><input class="form-input" id="hm-name" placeholder="例：國慶日" style="width:100%"></div>
-      <div style="margin-bottom:12px">
-        <label class="form-label" data-i18n="label.type">類型</label>
-        <select class="form-input" id="hm-type" style="width:100%">
-          <option value="national" data-i18n="holiday.type_national">國定假日（加班×2）</option>
-          <option value="special" data-i18n="holiday.type_special">例假日（加班×2）</option>
-          <option value="makeup" data-i18n="holiday.type_makeup">補班日</option>
-        </select>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" data-i18n="label.date">日期 *</label>
+          <input class="form-input" type="date" id="hm-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="th.name_col">名稱 *</label>
+          <input class="form-input" id="hm-name" placeholder="例：國慶日">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label" data-i18n="label.type">類型</label>
+          <select class="form-input" id="hm-type">
+            <option value="national" data-i18n="holiday.type_national">國定假日（加班×2）</option>
+            <option value="special" data-i18n="holiday.type_special">例假日（加班×2）</option>
+            <option value="makeup" data-i18n="holiday.type_makeup">補班日</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label" data-i18n="label.remark">備註</label>
+          <input class="form-input" id="hm-note">
+        </div>
       </div>
-      <div><label class="form-label" data-i18n="label.remark">備註</label><input class="form-input" id="hm-note" style="width:100%"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeHolidayModal()">取消</button>
@@ -4198,21 +4353,21 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Announcement Modal -->
 <div class="modal-overlay" id="ann-modal" style="display:none">
-  <div class="modal" style="max-width:640px">
+  <div class="modal modal-lg">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.add_ann" id="ann-modal-title">新增公告</span>
       <button class="modal-close" onclick="closeAnnModal()">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="ann-id">
-      <div style="margin-bottom:14px">
-        <label class="form-label">標題 *</label>
-        <input class="form-input" id="ann-title" placeholder="公告標題" style="width:100%">
-      </div>
-      <div class="form-row" style="margin-bottom:14px">
-        <div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">標題 *</label>
+          <input class="form-input" id="ann-title" placeholder="公告標題">
+        </div>
+        <div class="form-group">
           <label class="form-label">類別</label>
-          <select class="form-input" id="ann-cat" style="width:100%">
+          <select class="form-input" id="ann-cat">
             <option value="general">一般公告</option>
             <option value="hr">人事公告</option>
             <option value="event">活動通知</option>
@@ -4220,38 +4375,36 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
             <option value="policy">制度政策</option>
           </select>
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">優先度</label>
-          <select class="form-input" id="ann-priority" style="width:100%">
+          <select class="form-input" id="ann-priority">
             <option value="normal">一般</option>
             <option value="important">重要</option>
             <option value="urgent">緊急</option>
           </select>
         </div>
-      </div>
-      <div style="margin-bottom:14px">
-        <label class="form-label">內容 *</label>
-        <textarea class="form-input" id="ann-content" rows="6"
-          style="width:100%;resize:vertical;min-height:120px;font-family:'Noto Sans TC',sans-serif;font-size:14px;line-height:1.7"
-          placeholder="公告內容…"></textarea>
-      </div>
-      <div class="form-row" style="margin-bottom:14px">
-        <div>
+        <div class="form-group full-width">
+          <label class="form-label">內容 *</label>
+          <textarea class="form-input" id="ann-content" rows="6"
+            style="resize:vertical;min-height:120px;line-height:1.7"
+            placeholder="公告內容…"></textarea>
+        </div>
+        <div class="form-group">
           <label class="form-label">發布人</label>
-          <input class="form-input" id="ann-author" placeholder="管理員" style="width:100%">
+          <input class="form-input" id="ann-author" placeholder="管理員">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">到期日（留空=永不過期）</label>
-          <input class="form-input" type="datetime-local" id="ann-expires" style="width:100%">
+          <input class="form-input" type="datetime-local" id="ann-expires">
         </div>
-      </div>
-      <div style="display:flex;gap:20px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-          <input type="checkbox" id="ann-pinned"> 置頂公告
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-          <input type="checkbox" id="ann-active" checked> 立即上架
-        </label>
+        <div class="form-group full-width" style="flex-direction:row;gap:20px;flex-wrap:wrap;align-items:center">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="ann-pinned"> 置頂公告
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="ann-active" checked> 立即上架
+          </label>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -4263,75 +4416,149 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Leave Admin Modal -->
 <div class="modal-overlay" id="leave-admin-modal" style="display:none">
-  <div class="modal" style="max-width:520px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.leave_admin" id="lam-title">管理員代填請假</span><button class="modal-close" onclick="closeLeaveAdminModal()">&times;</button></div>
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.leave_admin" id="lam-title">管理員代填請假</span>
+      <button class="modal-close" onclick="closeLeaveAdminModal()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="lam-id">
-      <div class="form-row">
-        <div><label class="form-label">員工 *</label><select class="form-input" id="lam-staff" style="width:100%"></select></div>
-        <div><label class="form-label">假別 *</label><select class="form-input" id="lam-type" style="width:100%"></select></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">員工 *</label>
+          <select class="form-input" id="lam-staff"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">假別 *</label>
+          <select class="form-input" id="lam-type"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">開始日期 *</label>
+          <input class="form-input" type="date" id="lam-start">
+        </div>
+        <div class="form-group">
+          <label class="form-label">結束日期 *</label>
+          <input class="form-input" type="date" id="lam-end">
+        </div>
+        <div class="form-group">
+          <label class="form-label">開始時間（選填）</label>
+          <input class="form-input" type="time" id="lam-start-time" step="1800" placeholder="09:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">結束時間（選填）</label>
+          <input class="form-input" type="time" id="lam-end-time" step="1800" placeholder="18:00">
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;cursor:pointer">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="lam-start-half"> 開始日半天
+          </label>
+        </div>
+        <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;cursor:pointer">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="lam-end-half"> 結束日半天
+          </label>
+        </div>
+        <div id="lam-days-preview" class="form-group full-width" style="font-size:13px;color:var(--accent);min-height:18px"></div>
+        <div class="form-group">
+          <label class="form-label">狀態</label>
+          <select class="form-input" id="lam-status">
+            <option value="approved" data-i18n="status.direct_approve">直接核准</option>
+            <option value="pending" data-i18n="req.status.pending">待審核</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">原因/備註</label>
+          <input class="form-input" id="lam-reason" placeholder="選填">
+        </div>
       </div>
-      <div class="form-row">
-        <div><label class="form-label">開始日期 *</label><input class="form-input" type="date" id="lam-start"></div>
-        <div><label class="form-label">結束日期 *</label><input class="form-input" type="date" id="lam-end"></div>
-      </div>
-      <div class="form-row" style="margin-bottom:8px">
-        <div><label class="form-label">開始時間（選填）</label><input class="form-input" type="time" id="lam-start-time" step="1800" placeholder="09:00"></div>
-        <div><label class="form-label">結束時間（選填）</label><input class="form-input" type="time" id="lam-end-time" step="1800" placeholder="18:00"></div>
-      </div>
-      <div class="form-row" style="margin-bottom:8px">
-        <div><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="lam-start-half"> <span class="form-label" style="margin:0">開始日半天</span></label></div>
-        <div><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="lam-end-half"> <span class="form-label" style="margin:0">結束日半天</span></label></div>
-      </div>
-      <div id="lam-days-preview" style="font-size:13px;color:var(--accent);margin-bottom:12px;min-height:18px"></div>
-      <div style="margin-bottom:12px"><label class="form-label">狀態</label><select class="form-input" id="lam-status" style="width:auto"><option value="approved" data-i18n="status.direct_approve">直接核准</option><option value="pending" data-i18n="req.status.pending">待審核</option></select></div>
-      <div><label class="form-label">原因/備註</label><input class="form-input" id="lam-reason" placeholder="選填" style="width:100%"></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeLeaveAdminModal()">取消</button><button class="btn btn-primary" onclick="saveLeaveAdmin()">儲存</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeLeaveAdminModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveLeaveAdmin()">儲存</button>
+    </div>
   </div>
 </div>
 
 <!-- Leave Review Modal -->
 <div class="modal-overlay" id="leave-review-modal" style="display:none">
-  <div class="modal" style="max-width:440px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.review_leave" id="lrm-title">審核請假申請</span><button class="modal-close" onclick="closeLeaveReview()">&times;</button></div>
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.review_leave" id="lrm-title">審核請假申請</span>
+      <button class="modal-close" onclick="closeLeaveReview()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="lrm-id">
       <div id="lrm-info" style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:14px;font-size:13px"></div>
-      <div style="margin-bottom:12px"><label class="form-label">審核人員 *</label><input class="form-input" id="lrm-by" placeholder="管理員姓名" style="width:100%"></div>
-      <div><label class="form-label">審核意見（選填）</label><input class="form-input" id="lrm-note" placeholder="退回原因或備註" style="width:100%"></div>
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">審核人員 *</label>
+          <input class="form-input" id="lrm-by" placeholder="管理員姓名">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">審核意見（選填）</label>
+          <input class="form-input" id="lrm-note" placeholder="退回原因或備註">
+        </div>
+      </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeLeaveReview()">取消</button><button class="btn btn-danger" onclick="reviewLeave('reject')">退回</button><button class="btn btn-primary" style="background:var(--green)" onclick="reviewLeave('approve')">核准</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeLeaveReview()">取消</button>
+      <button class="btn btn-danger" onclick="reviewLeave('reject')">退回</button>
+      <button class="btn btn-primary" style="background:var(--green)" onclick="reviewLeave('approve')">核准</button>
+    </div>
   </div>
 </div>
 
 <!-- Leave Type Modal -->
 <div class="modal-overlay" id="leave-type-modal" style="display:none">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_leave_type" id="ltm-title">新增假別</span><button class="modal-close" onclick="closeLeaveTypeModal()">&times;</button></div>
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.add_leave_type" id="ltm-title">新增假別</span>
+      <button class="modal-close" onclick="closeLeaveTypeModal()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="ltm-id">
-      <div class="form-row">
-        <div><label class="form-label">假別名稱 *</label><input class="form-input" id="ltm-name" placeholder="例：特休假"></div>
-        <div><label class="form-label">代碼 *</label><input class="form-input" id="ltm-code" placeholder="例：annual" autocapitalize="none"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">假別名稱 *</label>
+          <input class="form-input" id="ltm-name" placeholder="例：特休假">
+        </div>
+        <div class="form-group">
+          <label class="form-label">代碼 *</label>
+          <input class="form-input mono" id="ltm-code" placeholder="例：annual" autocapitalize="none">
+        </div>
+        <div class="form-group">
+          <label class="form-label">薪資倍率</label>
+          <input class="form-input" type="number" id="ltm-pay" min="0" max="2" step="0.1" value="1.0">
+          <span class="form-hint">0=無薪、0.5=半薪、1=全薪</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">年度上限（天）</label>
+          <input class="form-input" type="number" id="ltm-max" min="0" placeholder="空白=無限制">
+        </div>
+        <div class="form-group">
+          <label class="form-label">顏色</label>
+          <input type="color" id="ltm-color" value="#4a7bda" style="height:38px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer">
+        </div>
+        <div class="form-group">
+          <label class="form-label">狀態</label>
+          <select class="form-input" id="ltm-active"><option value="1">啟用</option><option value="0">停用</option></select>
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">說明（選填）</label>
+          <input class="form-input" id="ltm-desc">
+        </div>
       </div>
-      <div class="form-row">
-        <div><label class="form-label">薪資倍率</label><input class="form-input" type="number" id="ltm-pay" min="0" max="2" step="0.1" value="1.0"><div style="font-size:11px;color:var(--muted);margin-top:3px">0=無薪、0.5=半薪、1=全薪</div></div>
-        <div><label class="form-label">年度上限（天）</label><input class="form-input" type="number" id="ltm-max" min="0" placeholder="空白=無限制"></div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">顏色</label><input type="color" id="ltm-color" value="#4a7bda" style="width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer"></div>
-        <div><label class="form-label">狀態</label><select class="form-input" id="ltm-active"><option value="1">啟用</option><option value="0">停用</option></select></div>
-      </div>
-      <div><label class="form-label">說明（選填）</label><input class="form-input" id="ltm-desc" style="width:100%"></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeLeaveTypeModal()">取消</button><button class="btn btn-primary" onclick="saveLeaveType()">儲存</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeLeaveTypeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveLeaveType()">儲存</button>
+    </div>
   </div>
 </div>
 
 <!-- Salary Staff Modal -->
 <div class="modal-overlay" id="sal-staff-modal" style="display:none">
-  <div class="modal" style="max-width:600px">
+  <div class="modal modal-md">
     <div class="modal-header"><span class="modal-title" data-i18n="modal.salary_settings" id="ssm-title">薪資設定</span><button class="modal-close" onclick="closeSalStaffModal()">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="ssm-id">
@@ -4368,34 +4595,60 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Salary Item Modal -->
 <div class="modal-overlay" id="sal-item-modal" style="display:none">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_salary_item" id="sim-title">新增薪資項目</span><button class="modal-close" onclick="closeSalaryItemModal()">&times;</button></div>
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.add_salary_item" id="sim-title">新增薪資項目</span>
+      <button class="modal-close" onclick="closeSalaryItemModal()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="sim-id">
-      <div class="form-row">
-        <div><label class="form-label">項目名稱 *</label><input class="form-input" id="sim-name" placeholder="例：職務加給"></div>
-        <div><label class="form-label">類型</label><select class="form-input" id="sim-type"><option value="allowance">津貼（加項）</option><option value="deduction">扣除（減項）</option></select></div>
-      </div>
-      <div style="margin-bottom:12px"><label class="form-label">計算公式（優先）</label><div style="display:flex;gap:6px">
-          <input class="form-input" id="sim-formula" placeholder="例：insured_salary*0.105*0.2　留空則用固定金額" style="flex:1">
-          <button class="btn btn-outline btn-sm" type="button" onclick="openFormulaEditor('sim-formula',document.getElementById('sim-formula').value)">編輯器</button>
-        </div></div>
-      <div class="form-row">
-        <div><label class="form-label">固定金額（公式為空時用）</label><input class="form-input" type="number" id="sim-amount" value="0"></div>
-        <div><label class="form-label">顏色</label><input type="color" id="sim-color" value="#4a7bda" style="width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer"></div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">排序</label><input class="form-input" type="number" id="sim-sort" value="0"></div>
-        <div><label class="form-label">狀態</label><select class="form-input" id="sim-active"><option value="1">啟用</option><option value="0">停用</option></select></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">項目名稱 *</label>
+          <input class="form-input" id="sim-name" placeholder="例：職務加給">
+        </div>
+        <div class="form-group">
+          <label class="form-label">類型</label>
+          <select class="form-input" id="sim-type">
+            <option value="allowance">津貼（加項）</option>
+            <option value="deduction">扣除（減項）</option>
+          </select>
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">計算公式（優先）</label>
+          <div style="display:flex;gap:6px">
+            <input class="form-input mono" id="sim-formula" placeholder="例：insured_salary*0.105*0.2　留空則用固定金額" style="flex:1">
+            <button class="btn btn-outline btn-sm" type="button" onclick="openFormulaEditor('sim-formula',document.getElementById('sim-formula').value)">編輯器</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">固定金額（公式為空時用）</label>
+          <input class="form-input" type="number" id="sim-amount" value="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">顏色</label>
+          <input type="color" id="sim-color" value="#4a7bda" style="height:38px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer">
+        </div>
+        <div class="form-group">
+          <label class="form-label">排序</label>
+          <input class="form-input" type="number" id="sim-sort" value="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">狀態</label>
+          <select class="form-input" id="sim-active"><option value="1">啟用</option><option value="0">停用</option></select>
+        </div>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closeSalaryItemModal()">取消</button><button class="btn btn-primary" onclick="saveSalaryItem()">儲存</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeSalaryItemModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveSalaryItem()">儲存</button>
+    </div>
   </div>
 </div>
 
 <!-- Salary Detail Modal (薪資單) -->
 <div class="modal-overlay" id="sal-detail-modal" style="display:none">
-  <div class="modal" style="max-width:680px">
+  <div class="modal modal-lg">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.salary_detail" id="sdm-title">薪資明細</span>
       <div style="display:flex;gap:8px">
@@ -4426,32 +4679,53 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Finance Record Modal -->
 <div class="modal-overlay" id="fin-rec-modal" style="display:none">
-  <div class="modal" style="max-width:560px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_fin_record" id="frm-title">新增收支記錄</span><button class="modal-close" onclick="closeFinRecModal()">&times;</button></div>
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.add_fin_record" id="frm-title">新增收支記錄</span>
+      <button class="modal-close" onclick="closeFinRecModal()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="frm-id">
-      <div class="form-row">
-        <div><label class="form-label">日期 *</label><input class="form-input" type="date" id="frm-date"></div>
-        <div><label class="form-label">類型</label>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">日期 *</label>
+          <input class="form-input" type="date" id="frm-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">類型</label>
           <select class="form-input" id="frm-type" onchange="renderFinCatOptions()">
-            <option value="income">收入</option><option value="expense">支出</option>
+            <option value="income">收入</option>
+            <option value="expense">支出</option>
           </select>
         </div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">類別</label><select class="form-input" id="frm-cat"></select></div>
-        <div><label class="form-label">金額 *</label><input class="form-input" type="number" id="frm-amount" min="0" step="1" placeholder="0"></div>
-      </div>
-      <div class="form-row">
-        <div class="full-width"><label class="form-label">標題 *</label><input class="form-input" id="frm-title-input" placeholder="例：食材採購、客桌消費"></div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">廠商/店家</label><input class="form-input" id="frm-vendor" placeholder="選填"></div>
-        <div><label class="form-label">發票/單據號碼</label><input class="form-input" id="frm-invoice" placeholder="選填"></div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">稅額</label><input class="form-input" type="number" id="frm-tax" min="0" step="1" value="0"></div>
-        <div><label class="form-label">備註</label><input class="form-input" id="frm-note" placeholder="選填"></div>
+        <div class="form-group">
+          <label class="form-label">類別</label>
+          <select class="form-input" id="frm-cat"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">金額 *</label>
+          <input class="form-input" type="number" id="frm-amount" min="0" step="1" placeholder="0">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">標題 *</label>
+          <input class="form-input" id="frm-title-input" placeholder="例：食材採購、客桌消費">
+        </div>
+        <div class="form-group">
+          <label class="form-label">廠商/店家</label>
+          <input class="form-input" id="frm-vendor" placeholder="選填">
+        </div>
+        <div class="form-group">
+          <label class="form-label">發票/單據號碼</label>
+          <input class="form-input" id="frm-invoice" placeholder="選填">
+        </div>
+        <div class="form-group">
+          <label class="form-label">稅額</label>
+          <input class="form-input" type="number" id="frm-tax" min="0" step="1" value="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">備註</label>
+          <input class="form-input" id="frm-note" placeholder="選填">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -4463,32 +4737,51 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Finance Category Modal -->
 <div class="modal-overlay" id="fin-cat-modal" style="display:none">
-  <div class="modal" style="max-width:400px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_fin_cat" id="fcm-title">新增類別</span><button class="modal-close" onclick="closeFinCatModal()">&times;</button></div>
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.add_fin_cat" id="fcm-title">新增類別</span>
+      <button class="modal-close" onclick="closeFinCatModal()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="fcm-id">
-      <div class="form-row">
-        <div><label class="form-label">名稱 *</label><input class="form-input" id="fcm-name" placeholder="例：食材成本"></div>
-        <div><label class="form-label">類型</label><select class="form-input" id="fcm-type"><option value="income">收入</option><option value="expense">支出</option></select></div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">顏色</label><input type="color" id="fcm-color" value="#4a7bda" style="width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer"></div>
-        <div><label class="form-label">排序</label><input class="form-input" type="number" id="fcm-sort" value="0"></div>
-      </div>
-      <div><label class="form-label">狀態</label><select class="form-input" id="fcm-active"><option value="1">啟用</option><option value="0">停用</option></select></div>
-      <div>
-        <label class="form-label">報表科目 <span style="font-size:11px;font-weight:400;color:var(--muted)">（影響三大財務報表）</span></label>
-        <select class="form-input" id="fcm-section">
-          <optgroup label="── 收入 ──">
-            <option value="operating_revenue">營業收入</option>
-            <option value="other_revenue">營業外收入</option>
-          </optgroup>
-          <optgroup label="── 支出 ──">
-            <option value="cogs">營業成本</option>
-            <option value="operating_expense">營業費用</option>
-            <option value="other_expense">營業外費用</option>
-          </optgroup>
-        </select>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">名稱 *</label>
+          <input class="form-input" id="fcm-name" placeholder="例：食材成本">
+        </div>
+        <div class="form-group">
+          <label class="form-label">類型</label>
+          <select class="form-input" id="fcm-type">
+            <option value="income">收入</option>
+            <option value="expense">支出</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">顏色</label>
+          <input type="color" id="fcm-color" value="#4a7bda" style="height:38px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer">
+        </div>
+        <div class="form-group">
+          <label class="form-label">排序</label>
+          <input class="form-input" type="number" id="fcm-sort" value="0">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">狀態</label>
+          <select class="form-input" id="fcm-active"><option value="1">啟用</option><option value="0">停用</option></select>
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">報表科目 <span style="font-size:11px;font-weight:400;color:var(--muted)">（影響三大財務報表）</span></label>
+          <select class="form-input" id="fcm-section">
+            <optgroup label="── 收入 ──">
+              <option value="operating_revenue">營業收入</option>
+              <option value="other_revenue">營業外收入</option>
+            </optgroup>
+            <optgroup label="── 支出 ──">
+              <option value="cogs">營業成本</option>
+              <option value="operating_expense">營業費用</option>
+              <option value="other_expense">營業外費用</option>
+            </optgroup>
+          </select>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -4500,57 +4793,53 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- OCR Edit Modal -->
 <div class="modal-overlay" id="ocr-edit-modal" style="display:none">
-  <div class="modal" style="max-width:560px">
+  <div class="modal modal-md">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.edit_ocr">編輯辨識結果</span>
       <button class="modal-close" onclick="closeOcrEditModal()">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="oem-idx">
-      <div class="form-row">
-        <div>
+      <div class="form-grid">
+        <div class="form-group">
           <label class="form-label">收支類型 *</label>
           <select class="form-input" id="oem-type" onchange="updateOemCatOpts()">
             <option value="expense">支出</option>
             <option value="income">收入</option>
           </select>
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">類別</label>
           <select class="form-input" id="oem-category"></select>
         </div>
-      </div>
-      <div class="form-row">
-        <div>
+        <div class="form-group">
           <label class="form-label">日期 *</label>
           <input class="form-input" type="date" id="oem-date">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">含稅金額 *</label>
           <input class="form-input" type="number" min="0" step="1" id="oem-amount">
         </div>
-      </div>
-      <div class="form-row">
-        <div>
+        <div class="form-group">
           <label class="form-label">稅額</label>
           <input class="form-input" type="number" min="0" step="1" id="oem-tax">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">廠商 / 對象</label>
           <input class="form-input" id="oem-vendor">
         </div>
-      </div>
-      <div>
-        <label class="form-label">標題 *</label>
-        <input class="form-input" id="oem-title">
-      </div>
-      <div style="margin-top:10px">
-        <label class="form-label">發票 / 單據號碼</label>
-        <input class="form-input" id="oem-invoice_no">
-      </div>
-      <div style="margin-top:10px">
-        <label class="form-label">備註</label>
-        <input class="form-input" id="oem-note">
+        <div class="form-group full-width">
+          <label class="form-label">標題 *</label>
+          <input class="form-input" id="oem-title">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">發票 / 單據號碼</label>
+          <input class="form-input" id="oem-invoice_no">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">備註</label>
+          <input class="form-input" id="oem-note">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -4562,7 +4851,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Tax Sync Modal -->
 <div class="modal-overlay" id="tax-sync-modal" style="display:none">
-  <div class="modal" style="max-width:480px">
+  <div class="modal modal-md">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.tax_integrate">整合稅務分錄至財務報表</span>
       <button class="modal-close" onclick="closeTaxSyncModal()">&times;</button>
@@ -4586,53 +4875,53 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- AP Entry Modal -->
 <div class="modal-overlay" id="ap-modal" style="display:none">
-  <div class="modal" style="max-width:500px">
+  <div class="modal modal-md">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.add_ap" id="apm-title">新增應付帳款</span>
       <button class="modal-close" onclick="closeApModal()">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="apm-id">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div>
+      <div class="form-grid">
+        <div class="form-group">
           <label class="form-label">類型</label>
           <select class="form-input" id="apm-type">
             <option value="payable">應付帳款</option>
             <option value="receivable">應收帳款</option>
           </select>
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">狀態</label>
           <select class="form-input" id="apm-status">
             <option value="open">未結清</option>
             <option value="paid">已結清</option>
           </select>
         </div>
-        <div style="grid-column:1/-1">
+        <div class="form-group full-width">
           <label class="form-label">標題 *</label>
           <input class="form-input" id="apm-title-input" placeholder="例：3月份水電費">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">往來對象</label>
           <input class="form-input" id="apm-party" placeholder="廠商 / 客戶名稱">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">發票號碼</label>
           <input class="form-input" id="apm-invoice">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">金額 *</label>
           <input class="form-input" id="apm-amount" type="number" min="0" placeholder="0">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">到期日</label>
           <input class="form-input" id="apm-due" type="date">
         </div>
-        <div id="apm-paid-date-wrap">
+        <div id="apm-paid-date-wrap" class="form-group full-width">
           <label class="form-label">結清日期</label>
           <input class="form-input" id="apm-paid" type="date">
         </div>
-        <div style="grid-column:1/-1">
+        <div class="form-group full-width">
           <label class="form-label">備註</label>
           <input class="form-input" id="apm-note" placeholder="備註">
         </div>
@@ -4647,7 +4936,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Budget Edit Modal -->
 <div class="modal-overlay" id="budget-modal" style="display:none">
-  <div class="modal" style="max-width:560px">
+  <div class="modal modal-md">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.set_budget" id="bdm-title">設定月度預算</span>
       <button class="modal-close" onclick="closeBudgetModal()">&times;</button>
@@ -4664,42 +4953,42 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Recurring Entry Modal -->
 <div class="modal-overlay" id="recurring-modal" style="display:none">
-  <div class="modal" style="max-width:520px">
+  <div class="modal modal-md">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.add_recurring" id="rm-title">新增定期分錄</span>
       <button class="modal-close" onclick="closeRecurringModal()">&times;</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="rm-id">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div style="grid-column:1/-1">
+      <div class="form-grid">
+        <div class="form-group full-width">
           <label class="form-label">標題 *</label>
           <input class="form-input" id="rm-title-input" placeholder="例：月租金">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">類型</label>
           <select class="form-input" id="rm-type" onchange="renderRecurringCatOptions()">
             <option value="expense">支出</option>
             <option value="income">收入</option>
           </select>
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">類別</label>
           <select class="form-input" id="rm-cat"><option value="">未分類</option></select>
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">金額 *</label>
           <input class="form-input" id="rm-amount" type="number" min="0" placeholder="0">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">稅額</label>
           <input class="form-input" id="rm-tax" type="number" min="0" placeholder="0">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">廠商</label>
           <input class="form-input" id="rm-vendor" placeholder="廠商名稱">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">頻率</label>
           <select class="form-input" id="rm-frequency">
             <option value="monthly">每月</option>
@@ -4707,19 +4996,19 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
             <option value="yearly">每年</option>
           </select>
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">每次產生日（幾號）</label>
           <input class="form-input" id="rm-day" type="number" min="1" max="28" value="1">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">開始日期 *</label>
           <input class="form-input" id="rm-start" type="date">
         </div>
-        <div>
+        <div class="form-group">
           <label class="form-label">結束日期（選填）</label>
           <input class="form-input" id="rm-end" type="date">
         </div>
-        <div style="grid-column:1/-1">
+        <div class="form-group full-width">
           <label class="form-label">備註</label>
           <input class="form-input" id="rm-note" placeholder="備註">
         </div>
@@ -4734,7 +5023,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Bank Match Modal -->
 <div class="modal-overlay" id="bank-match-modal" style="display:none">
-  <div class="modal" style="max-width:600px">
+  <div class="modal modal-md">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.manual_match">手動配對收支記錄</span>
       <button class="modal-close" onclick="closeBankMatchModal()">&times;</button>
@@ -4752,7 +5041,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- OCR Raw Detail Modal -->
 <div class="modal-overlay" id="ocr-raw-modal" style="display:none">
-  <div class="modal" style="max-width:600px">
+  <div class="modal modal-md">
     <div class="modal-header">
       <span class="modal-title" data-i18n="modal.ocr_raw" id="orm-title">OCR 辨識原始資料</span>
       <button class="modal-close" onclick="closeOcrRawModal()">&times;</button>
@@ -4766,28 +5055,42 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Admin Account Modal -->
 <div class="modal-overlay" id="adminacc-modal" style="display:none">
-  <div class="modal" style="max-width:520px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_account" id="aam-title">新增帳號</span><button class="modal-close" onclick="closeAdminAccModal()">&times;</button></div>
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.add_account" id="aam-title">新增帳號</span>
+      <button class="modal-close" onclick="closeAdminAccModal()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="aam-id">
-      <div class="form-row">
-        <div><label class="form-label">帳號 *</label><input class="form-input" id="aam-username" placeholder="英文/數字" autocapitalize="none"></div>
-        <div><label class="form-label">顯示名稱</label><input class="form-input" id="aam-display" placeholder="選填"></div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">密碼</label><input class="form-input" type="text" id="aam-password" placeholder="新增必填，編輯留空不改" autocomplete="off"><div style="font-size:11px;color:var(--muted);margin-top:3px" id="aam-pw-hint"></div></div>
-        <div><label class="form-label">狀態</label><select class="form-input" id="aam-active"><option value="1">啟用</option><option value="0">停用</option></select></div>
-      </div>
-      <div style="margin-bottom:14px">
-        <label class="form-label" style="margin-bottom:4px">帳號類型</label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
-          <input type="checkbox" id="aam-is-super" style="width:15px;height:15px;accent-color:var(--green)">
-          超級管理員（可存取全部模組 + 管理其他帳號）
-        </label>
-      </div>
-      <div id="aam-perms-wrap">
-        <label class="form-label" style="margin-bottom:8px;display:block">可存取的模組 <span style="font-weight:400;color:var(--muted);font-size:12px">（超級管理員不受此限）</span></label>
-        <div style="display:flex;flex-wrap:wrap;gap:8px 20px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px" id="aam-perms-list"></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">帳號 *</label>
+          <input class="form-input mono" id="aam-username" placeholder="英文/數字" autocapitalize="none">
+        </div>
+        <div class="form-group">
+          <label class="form-label">顯示名稱</label>
+          <input class="form-input" id="aam-display" placeholder="選填">
+        </div>
+        <div class="form-group">
+          <label class="form-label">密碼</label>
+          <input class="form-input" type="text" id="aam-password" placeholder="新增必填，編輯留空不改" autocomplete="off">
+          <span class="form-hint" id="aam-pw-hint"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">狀態</label>
+          <select class="form-input" id="aam-active"><option value="1">啟用</option><option value="0">停用</option></select>
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">帳號類型</label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="aam-is-super" style="width:15px;height:15px;accent-color:var(--green)">
+            超級管理員（可存取全部模組 + 管理其他帳號）
+          </label>
+        </div>
+        <div id="aam-perms-wrap" class="form-group full-width">
+          <label class="form-label">可存取的模組 <span style="font-weight:400;color:var(--muted);font-size:12px">（超級管理員不受此限）</span></label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px 20px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px" id="aam-perms-list"></div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
