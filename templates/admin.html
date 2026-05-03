@@ -17,6 +17,7 @@
   --accent: #4a7bda; --accent-light: #eef3fd; --gold: #c8a96e;
   --bg: #f0f2f8; --surface: #ffffff; --text: #1e2a45; --muted: #8892a4; --border: #dde3ef;
   --red: #d64242; --red-light: #fdf0f0; --green: #2e9e6b; --green-light: #edfaf4;
+  --orange: #e07d30; --orange-light: #fef3ec;
   --sidebar-w: 220px;
 }
 html, body { height: 100%; }
@@ -89,10 +90,29 @@ body { font-family: 'Noto Sans TC', 'Noto Sans Thai', sans-serif; background: va
 /* Stats */
 .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 .stat-card { background: var(--surface); border-radius: 10px; padding: 20px 24px; border: 1px solid var(--border); }
-.stat-label { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
-.stat-value { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 500; color: var(--navy); }
-.stat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.stat-label { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; font-family: 'Noto Sans TC', sans-serif; }
+.stat-value { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 700; color: var(--navy); line-height: 1.1; }
+.stat-sub { font-size: 11px; color: var(--muted); margin-top: 6px; font-family: 'Noto Sans TC', sans-serif; }
 .stat-value.positive { color: var(--green); }
+.stat-value.negative { color: var(--red); }
+.stat-value.warning  { color: var(--orange); }
+.stat-value.accent   { color: var(--accent); }
+
+/* Page & Section headings */
+.page-title { font-size: 15px; font-weight: 700; color: var(--navy); letter-spacing: 0.02em; }
+.section-title { font-size: 13px; font-weight: 700; color: var(--navy); letter-spacing: 0.02em; }
+
+/* KPI grid (3 or 4 col stat row) */
+.kpi-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 20px; }
+.kpi-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 20px; }
+@media (max-width:768px) { .kpi-grid-3, .kpi-grid-4 { grid-template-columns: repeat(2,1fr); gap: 10px; } }
+
+/* Filter row (lightweight filter bar, no card background) */
+.filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+
+/* Panel action bar (title + action buttons on same line) */
+.panel-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.panel-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
 /* Card & Table */
 .card { background: var(--surface); border-radius: 10px; border: 1px solid var(--border); overflow: hidden; }
@@ -109,12 +129,16 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 .action-btns { display: flex; gap: 6px; }
 
 /* Modal */
-.modal-overlay { position: fixed; inset: 0; background: rgba(10,20,45,0.55); backdrop-filter: blur(2px); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(10,20,45,0.55); backdrop-filter: blur(3px); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
 .modal-overlay.open { display: flex; }
-.modal { background: var(--surface); border-radius: 12px; width: 100%; max-width: 680px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 24px 80px rgba(0,0,0,0.25); overflow: hidden; }
-.modal-header { padding: 20px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-.modal-title { font-size: 16px; font-weight: 700; color: var(--navy); }
-.modal-close { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 6px; color: var(--muted); font-size: 18px; font-weight: 300; transition: all 0.15s; background: none; border: none; }
+.modal { background: var(--surface); border-radius: 14px; width: 100%; max-width: 680px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 32px 96px rgba(0,0,0,0.28); overflow: hidden; }
+.modal-sm  { max-width: 440px; }
+.modal-md  { max-width: 600px; }
+.modal-lg  { max-width: 780px; }
+.modal-xl  { max-width: 880px; }
+.modal-header { padding: 20px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: var(--surface); }
+.modal-title { font-size: 16px; font-weight: 700; color: var(--navy); letter-spacing: 0.01em; }
+.modal-close { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 7px; color: var(--muted); font-size: 18px; font-weight: 300; transition: all 0.15s; background: none; border: none; line-height: 1; }
 .modal-close:hover { background: var(--bg); color: var(--text); }
 .modal-body { padding: 24px 28px; overflow-y: auto; flex: 1; }
 .modal-footer { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; background: #fafbfd; }
@@ -123,10 +147,15 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group.full-width { grid-column: 1 / -1; }
-.form-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
-.form-input { padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 7px; font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+.form-group.col-3 { grid-column: span 3; }
+.form-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'Noto Sans TC', sans-serif; }
+.form-input { padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 7px; font-family: 'Noto Sans TC', sans-serif; font-size: 13px; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
+.form-input[type="number"], .form-input.mono { font-family: 'DM Mono', monospace; font-size: 14px; }
 .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(74,123,218,0.1); background: var(--surface); }
+.form-input[readonly] { background: #f5f7fb; color: var(--muted); cursor: default; }
 .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.form-section-title { font-size: 12px; font-weight: 700; color: var(--navy); letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 0 8px; border-bottom: 1px solid var(--border); margin-bottom: 12px; grid-column: 1 / -1; font-family: 'Noto Sans TC', sans-serif; }
+.form-hint { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: 'Noto Sans TC', sans-serif; }
 
 /* Toast */
 .toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
@@ -2407,32 +2436,32 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- 進銷存管理 -->
   <!-- ══════════════════════════════════════════════════════════════ -->
   <div class="page" id="page-inventory" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-      <div style="font-size:15px;font-weight:700;color:var(--navy)">進銷存管理</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap" id="inv-header-btns">
+    <div class="panel-bar" style="margin-bottom:20px">
+      <span class="page-title">進銷存管理</span>
+      <div class="panel-bar-actions" id="inv-header-btns">
         <button class="btn btn-primary btn-sm" onclick="openInvProductModal()">＋ 新增商品</button>
       </div>
     </div>
     <!-- 統計卡片 -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">商品總數</div><div id="inv-stat-products" style="font-size:26px;font-weight:800;color:var(--navy)">—</div></div>
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">低庫存警示</div><div id="inv-stat-low" style="font-size:26px;font-weight:800;color:var(--red)">—</div></div>
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">庫存總值</div><div id="inv-stat-value" style="font-size:20px;font-weight:800;color:var(--green)">—</div></div>
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">今日異動</div><div id="inv-stat-txn" style="font-size:26px;font-weight:800;color:var(--accent)">—</div></div>
+    <div class="kpi-grid-4">
+      <div class="stat-card"><div class="stat-label">商品總數</div><div class="stat-value" id="inv-stat-products">—</div></div>
+      <div class="stat-card"><div class="stat-label">低庫存警示</div><div class="stat-value negative" id="inv-stat-low">—</div></div>
+      <div class="stat-card"><div class="stat-label">庫存總值</div><div class="stat-value positive" id="inv-stat-value">—</div></div>
+      <div class="stat-card"><div class="stat-label">今日異動</div><div class="stat-value accent" id="inv-stat-txn">—</div></div>
     </div>
     <!-- Tab Bar -->
-    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border)">
-      <button id="inv-tab-stock"        onclick="switchInvTab('stock')"        style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid var(--accent);font-weight:700;color:var(--navy)">庫存總覽</button>
-      <button id="inv-tab-products"     onclick="switchInvTab('products')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">商品管理</button>
-      <button id="inv-tab-purchase"     onclick="switchInvTab('purchase')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">採購管理<span class="nav-badge" id="badge-inv-purchase" style="display:none;margin-left:4px"></span></button>
-      <button id="inv-tab-shipments"    onclick="switchInvTab('shipments')"    style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">出貨管理<span class="nav-badge" id="badge-inv-shipments" style="display:none;margin-left:4px"></span></button>
-      <button id="inv-tab-transactions" onclick="switchInvTab('transactions')" style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">異動記錄</button>
-      <button id="inv-tab-warehouses"   onclick="switchInvTab('warehouses')"   style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted)">倉庫設定</button>
+    <div class="inv-tab-bar">
+      <button class="inv-tab active" id="inv-tab-stock"        onclick="switchInvTab('stock')">庫存總覽</button>
+      <button class="inv-tab"        id="inv-tab-products"     onclick="switchInvTab('products')">商品管理</button>
+      <button class="inv-tab"        id="inv-tab-purchase"     onclick="switchInvTab('purchase')">採購管理<span class="tab-badge" id="badge-inv-purchase" style="display:none"></span></button>
+      <button class="inv-tab"        id="inv-tab-shipments"    onclick="switchInvTab('shipments')">出貨管理<span class="tab-badge" id="badge-inv-shipments" style="display:none"></span></button>
+      <button class="inv-tab"        id="inv-tab-transactions" onclick="switchInvTab('transactions')">異動記錄</button>
+      <button class="inv-tab"        id="inv-tab-warehouses"   onclick="switchInvTab('warehouses')">倉庫設定</button>
     </div>
 
     <!-- 庫存總覽 Panel -->
     <div id="inv-panel-stock">
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="filter-row">
         <select class="filter-input" id="inv-stock-filter-warehouse" onchange="loadInvStock()" style="min-width:130px">
           <option value="">全部倉庫</option>
         </select>
@@ -2442,12 +2471,12 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         </select>
         <input class="filter-input" id="inv-stock-filter-q" placeholder="搜尋 SKU / 商品名稱…" oninput="loadInvStock()" style="flex:1;min-width:180px">
       </div>
-      <div class="card" style="overflow:hidden"><div id="inv-stock-wrap"></div></div>
+      <div class="card"><div id="inv-stock-wrap"></div></div>
     </div>
 
     <!-- 商品管理 Panel -->
     <div id="inv-panel-products" style="display:none">
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="filter-row">
         <input class="filter-input" id="inv-prod-filter-q" placeholder="搜尋 SKU / 商品名稱 / 條碼…" oninput="loadInvProducts()" style="flex:1;min-width:200px">
         <select class="filter-input" id="inv-prod-filter-active" onchange="loadInvProducts()" style="min-width:100px">
           <option value="1">啟用中</option>
@@ -2455,19 +2484,18 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <option value="all">全部</option>
         </select>
       </div>
-      <div class="card" style="overflow:hidden"><div id="inv-products-wrap"></div></div>
+      <div class="card"><div id="inv-products-wrap"></div></div>
     </div>
 
     <!-- 採購管理 Panel -->
     <div id="inv-panel-purchase" style="display:none">
-      <!-- 採購統計卡 -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px">
-        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">草稿</div><div id="po-stat-draft" style="font-size:22px;font-weight:800;color:var(--muted)">—</div></div>
-        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">待入庫</div><div id="po-stat-pending" style="font-size:22px;font-weight:800;color:var(--orange)">—</div></div>
-        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">部分入庫</div><div id="po-stat-partial" style="font-size:22px;font-weight:800;color:var(--accent)">—</div></div>
-        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">本月採購額</div><div id="po-stat-month" style="font-size:16px;font-weight:800;color:var(--green)">—</div></div>
+      <div class="kpi-grid-4">
+        <div class="stat-card"><div class="stat-label">草稿</div><div class="stat-value" id="po-stat-draft">—</div></div>
+        <div class="stat-card"><div class="stat-label">待入庫</div><div class="stat-value warning" id="po-stat-pending">—</div></div>
+        <div class="stat-card"><div class="stat-label">部分入庫</div><div class="stat-value accent" id="po-stat-partial">—</div></div>
+        <div class="stat-card"><div class="stat-label">本月採購額</div><div class="stat-value positive" id="po-stat-month">—</div></div>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="filter-row">
         <select class="filter-input" id="po-filter-status" onchange="loadPOList()" style="min-width:120px">
           <option value="">全部狀態</option>
           <option value="draft">草稿</option>
@@ -2479,18 +2507,18 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <input class="filter-input" id="po-filter-q" placeholder="搜尋單號 / 供應商…" oninput="loadPOList()" style="flex:1;min-width:180px">
         <button class="btn btn-primary btn-sm" onclick="openPOModal()">＋ 新增採購單</button>
       </div>
-      <div class="card" style="overflow:hidden"><div id="po-list-wrap"></div></div>
+      <div class="card"><div id="po-list-wrap"></div></div>
     </div>
 
     <!-- 出貨管理 Panel -->
     <div id="inv-panel-shipments" style="display:none">
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px">
-        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">待出貨</div><div id="sh-stat-pending" style="font-size:22px;font-weight:800;color:var(--orange)">—</div></div>
-        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">備貨中</div><div id="sh-stat-picking" style="font-size:22px;font-weight:800;color:var(--accent)">—</div></div>
-        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">已出貨</div><div id="sh-stat-shipped" style="font-size:22px;font-weight:800;color:var(--green)">—</div></div>
-        <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">本月出貨</div><div id="sh-stat-month" style="font-size:22px;font-weight:800;color:var(--navy)">—</div></div>
+      <div class="kpi-grid-4">
+        <div class="stat-card"><div class="stat-label">待出貨</div><div class="stat-value warning" id="sh-stat-pending">—</div></div>
+        <div class="stat-card"><div class="stat-label">備貨中</div><div class="stat-value accent" id="sh-stat-picking">—</div></div>
+        <div class="stat-card"><div class="stat-label">已出貨</div><div class="stat-value positive" id="sh-stat-shipped">—</div></div>
+        <div class="stat-card"><div class="stat-label">本月出貨</div><div class="stat-value" id="sh-stat-month">—</div></div>
       </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="filter-row">
         <select class="filter-input" id="sh-filter-status" onchange="loadShipmentList()" style="min-width:120px">
           <option value="">全部狀態</option>
           <option value="pending">待出貨</option>
@@ -2503,12 +2531,12 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <input class="filter-input" id="sh-filter-q" placeholder="搜尋出貨單號 / 客戶 / 追蹤號…" oninput="loadShipmentList()" style="flex:1;min-width:180px">
         <button class="btn btn-primary btn-sm" onclick="openShipmentModal()">＋ 新增出貨單</button>
       </div>
-      <div class="card" style="overflow:hidden"><div id="sh-list-wrap"></div></div>
+      <div class="card"><div id="sh-list-wrap"></div></div>
     </div>
 
     <!-- 異動記錄 Panel -->
     <div id="inv-panel-transactions" style="display:none">
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="filter-row">
         <select class="filter-input" id="inv-txn-filter-type" onchange="loadInvTransactions()" style="min-width:130px">
           <option value="">全部類型</option>
           <option value="purchase_in">採購入庫</option>
@@ -2518,49 +2546,44 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <option value="return_in">退貨入庫</option>
         </select>
         <input class="filter-input" id="inv-txn-filter-date-from" type="date" onchange="loadInvTransactions()" style="min-width:130px">
+        <span style="color:var(--muted);font-size:13px">—</span>
         <input class="filter-input" id="inv-txn-filter-date-to" type="date" onchange="loadInvTransactions()" style="min-width:130px">
       </div>
-      <div class="card" style="overflow:hidden"><div id="inv-transactions-wrap"></div></div>
+      <div class="card"><div id="inv-transactions-wrap"></div></div>
     </div>
 
     <!-- 倉庫設定 Panel -->
     <div id="inv-panel-warehouses" style="display:none">
-      <div style="margin-bottom:12px">
+      <div class="filter-row">
         <button class="btn btn-primary btn-sm" onclick="openInvWarehouseModal()">＋ 新增倉庫</button>
       </div>
-      <div class="card" style="overflow:hidden"><div id="inv-warehouses-wrap"></div></div>
+      <div class="card"><div id="inv-warehouses-wrap"></div></div>
     </div>
   </div><!-- end page-inventory -->
 
   <!-- ── 商品 Modal ── -->
-  <div id="inv-product-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:560px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div id="inv-prod-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">新增商品</div>
-        <button onclick="closeInvProductModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="inv-product-modal-bg" class="modal-overlay">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <span class="modal-title" id="inv-prod-modal-title">新增商品</span>
+        <button class="modal-close" onclick="closeInvProductModal()">✕</button>
       </div>
-      <input type="hidden" id="inv-prod-edit-id">
-      <div style="display:grid;gap:14px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div><label class="form-label">SKU *</label><input class="form-input" id="inv-prod-f-sku" placeholder="例：PROD-001"></div>
-          <div><label class="form-label">商品名稱 *</label><input class="form-input" id="inv-prod-f-name"></div>
+      <div class="modal-body">
+        <input type="hidden" id="inv-prod-edit-id">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">SKU *</label><input class="form-input mono" id="inv-prod-f-sku" placeholder="例：PROD-001"></div>
+          <div class="form-group"><label class="form-label">商品名稱 *</label><input class="form-input" id="inv-prod-f-name"></div>
+          <div class="form-group"><label class="form-label">分類</label><input class="form-input" id="inv-prod-f-category" placeholder="電子、服飾、食品"></div>
+          <div class="form-group"><label class="form-label">單位</label><input class="form-input" id="inv-prod-f-unit" value="個" placeholder="個/箱/kg/L"></div>
+          <div class="form-group"><label class="form-label">成本價</label><input class="form-input" id="inv-prod-f-cost" type="number" min="0" step="0.01" value="0"></div>
+          <div class="form-group"><label class="form-label">售價</label><input class="form-input" id="inv-prod-f-sell" type="number" min="0" step="0.01" value="0"></div>
+          <div class="form-group"><label class="form-label">最低庫存預警</label><input class="form-input" id="inv-prod-f-min" type="number" min="0" value="0"></div>
+          <div class="form-group"><label class="form-label">再訂購點</label><input class="form-input" id="inv-prod-f-reorder" type="number" min="0" value="0"></div>
+          <div class="form-group full-width"><label class="form-label">條碼</label><input class="form-input mono" id="inv-prod-f-barcode" placeholder="EAN/UPC 條碼（選填）"></div>
+          <div class="form-group full-width"><label class="form-label">備註</label><textarea class="form-input" id="inv-prod-f-notes" rows="2" style="resize:vertical"></textarea></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div><label class="form-label">分類</label><input class="form-input" id="inv-prod-f-category" placeholder="例：電子、服飾、食品"></div>
-          <div><label class="form-label">單位</label><input class="form-input" id="inv-prod-f-unit" value="個" placeholder="個/箱/kg/L"></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div><label class="form-label">成本價</label><input class="form-input" id="inv-prod-f-cost" type="number" min="0" step="0.01" value="0"></div>
-          <div><label class="form-label">售價</label><input class="form-input" id="inv-prod-f-sell" type="number" min="0" step="0.01" value="0"></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div><label class="form-label">最低庫存預警</label><input class="form-input" id="inv-prod-f-min" type="number" min="0" value="0"></div>
-          <div><label class="form-label">再訂購點</label><input class="form-input" id="inv-prod-f-reorder" type="number" min="0" value="0"></div>
-        </div>
-        <div><label class="form-label">條碼</label><input class="form-input" id="inv-prod-f-barcode" placeholder="EAN/UPC 條碼（選填）"></div>
-        <div><label class="form-label">備註</label><textarea class="form-input" id="inv-prod-f-notes" rows="2" style="resize:vertical"></textarea></div>
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeInvProductModal()">取消</button>
         <button class="btn btn-primary" onclick="saveInvProduct()">儲存</button>
       </div>
@@ -2568,20 +2591,22 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div>
 
   <!-- ── 倉庫 Modal ── -->
-  <div id="inv-warehouse-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:420px;max-width:96vw;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div id="inv-wh-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">新增倉庫</div>
-        <button onclick="closeInvWarehouseModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="inv-warehouse-modal-bg" class="modal-overlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <span class="modal-title" id="inv-wh-modal-title">新增倉庫</span>
+        <button class="modal-close" onclick="closeInvWarehouseModal()">✕</button>
       </div>
-      <input type="hidden" id="inv-wh-edit-id">
-      <div style="display:grid;gap:12px">
-        <div><label class="form-label">倉庫名稱 *</label><input class="form-input" id="inv-wh-f-name"></div>
-        <div><label class="form-label">代碼（選填）</label><input class="form-input" id="inv-wh-f-code" placeholder="例：WH01"></div>
-        <div><label class="form-label">地址</label><input class="form-input" id="inv-wh-f-address"></div>
-        <div><label class="form-label">負責人</label><input class="form-input" id="inv-wh-f-manager"></div>
+      <div class="modal-body">
+        <input type="hidden" id="inv-wh-edit-id">
+        <div class="form-grid">
+          <div class="form-group full-width"><label class="form-label">倉庫名稱 *</label><input class="form-input" id="inv-wh-f-name"></div>
+          <div class="form-group"><label class="form-label">代碼（選填）</label><input class="form-input mono" id="inv-wh-f-code" placeholder="例：WH01"></div>
+          <div class="form-group"><label class="form-label">負責人</label><input class="form-input" id="inv-wh-f-manager"></div>
+          <div class="form-group full-width"><label class="form-label">地址</label><input class="form-input" id="inv-wh-f-address"></div>
+        </div>
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeInvWarehouseModal()">取消</button>
         <button class="btn btn-primary" onclick="saveInvWarehouse()">儲存</button>
       </div>
@@ -2589,50 +2614,34 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div>
 
   <!-- ── 採購單 Modal ── -->
-  <div id="po-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:720px;max-width:96vw;max-height:92vh;overflow-y:auto;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div id="po-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">新增採購單</div>
-        <button onclick="closePOModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="po-modal-bg" class="modal-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <span class="modal-title" id="po-modal-title">新增採購單</span>
+        <button class="modal-close" onclick="closePOModal()">✕</button>
       </div>
-      <input type="hidden" id="po-edit-id">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-        <div>
-          <label class="form-label">供應商</label>
-          <select class="form-input" id="po-f-vendor">
-            <option value="">— 選擇供應商 —</option>
-          </select>
+      <div class="modal-body">
+        <input type="hidden" id="po-edit-id">
+        <div class="form-grid" style="margin-bottom:20px">
+          <div class="form-group"><label class="form-label">供應商</label><select class="form-input" id="po-f-vendor"><option value="">— 選擇供應商 —</option></select></div>
+          <div class="form-group"><label class="form-label">倉庫</label><select class="form-input" id="po-f-warehouse"><option value="">— 選擇倉庫 —</option></select></div>
+          <div class="form-group"><label class="form-label">採購日期</label><input class="form-input" type="date" id="po-f-date"></div>
+          <div class="form-group"><label class="form-label">預計到貨日</label><input class="form-input" type="date" id="po-f-expected"></div>
         </div>
-        <div>
-          <label class="form-label">倉庫</label>
-          <select class="form-input" id="po-f-warehouse">
-            <option value="">— 選擇倉庫 —</option>
-          </select>
-        </div>
-        <div>
-          <label class="form-label">採購日期</label>
-          <input class="form-input" type="date" id="po-f-date">
-        </div>
-        <div>
-          <label class="form-label">預計到貨日</label>
-          <input class="form-input" type="date" id="po-f-expected">
+        <div class="form-section-title" style="grid-column:unset;border:none;padding:0;margin-bottom:10px">採購品項</div>
+        <div id="po-items-wrap" style="margin-bottom:10px"></div>
+        <button class="btn btn-outline btn-sm" onclick="addPOItem()" style="margin-bottom:20px">＋ 新增品項</button>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">稅率 (%)</label><input class="form-input" type="number" id="po-f-taxrate" value="5" min="0" max="100" step="0.1" oninput="recalcPO()"></div>
+          <div class="form-group" style="justify-content:flex-end">
+            <div style="background:var(--bg);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--muted);margin-top:auto">
+              小計：<span id="po-subtotal" style="color:var(--text)">NT$0</span> &nbsp;稅：<span id="po-taxamt" style="color:var(--text)">NT$0</span> &nbsp;<strong style="color:var(--navy)">總計：<span id="po-total">NT$0</span></strong>
+            </div>
+          </div>
+          <div class="form-group full-width"><label class="form-label">備註</label><textarea class="form-input" id="po-f-notes" rows="2" style="resize:vertical"></textarea></div>
         </div>
       </div>
-      <!-- 採購明細 -->
-      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">採購品項</div>
-      <div id="po-items-wrap" style="margin-bottom:10px"></div>
-      <button class="btn btn-outline btn-sm" onclick="addPOItem()" style="margin-bottom:16px">＋ 新增品項</button>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-        <div>
-          <label class="form-label">稅率 (%)</label>
-          <input class="form-input" type="number" id="po-f-taxrate" value="5" min="0" max="100" step="0.1" oninput="recalcPO()">
-        </div>
-        <div style="padding-top:22px">
-          <div style="font-size:12px;color:var(--muted)">小計：<span id="po-subtotal">NT$0</span>　稅額：<span id="po-taxamt">NT$0</span>　<strong>總計：<span id="po-total" style="color:var(--navy)">NT$0</span></strong></div>
-        </div>
-      </div>
-      <div><label class="form-label">備註</label><textarea class="form-input" id="po-f-notes" rows="2" style="resize:vertical"></textarea></div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closePOModal()">取消</button>
         <button class="btn btn-primary" onclick="savePO()">儲存草稿</button>
       </div>
@@ -2640,36 +2649,25 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div>
 
   <!-- ── 出貨單 Modal ── -->
-  <div id="sh-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:700px;max-width:96vw;max-height:92vh;overflow-y:auto;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div id="sh-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">新增出貨單</div>
-        <button onclick="closeShipmentModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="sh-modal-bg" class="modal-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <span class="modal-title" id="sh-modal-title">新增出貨單</span>
+        <button class="modal-close" onclick="closeShipmentModal()">✕</button>
       </div>
-      <input type="hidden" id="sh-edit-id">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-        <div>
-          <label class="form-label">客戶</label>
-          <select class="form-input" id="sh-f-customer" onchange="onShipCustomerChange()">
-            <option value="">— 選擇客戶 —</option>
-          </select>
+      <div class="modal-body">
+        <input type="hidden" id="sh-edit-id">
+        <div class="form-grid" style="margin-bottom:20px">
+          <div class="form-group"><label class="form-label">客戶</label><select class="form-input" id="sh-f-customer" onchange="onShipCustomerChange()"><option value="">— 選擇客戶 —</option></select></div>
+          <div class="form-group"><label class="form-label">出貨倉庫</label><select class="form-input" id="sh-f-warehouse"><option value="">— 選擇倉庫 —</option></select></div>
+          <div class="form-group full-width"><label class="form-label">收件地址</label><input class="form-input" id="sh-f-addr" placeholder="收件人地址"></div>
         </div>
-        <div>
-          <label class="form-label">出貨倉庫</label>
-          <select class="form-input" id="sh-f-warehouse">
-            <option value="">— 選擇倉庫 —</option>
-          </select>
-        </div>
-        <div style="grid-column:1/-1">
-          <label class="form-label">收件地址</label>
-          <input class="form-input" id="sh-f-addr" placeholder="收件人地址">
-        </div>
+        <div class="form-section-title" style="grid-column:unset;border:none;padding:0;margin-bottom:10px">出貨品項</div>
+        <div id="sh-items-wrap" style="margin-bottom:10px"></div>
+        <button class="btn btn-outline btn-sm" onclick="addShipItem()" style="margin-bottom:20px">＋ 新增品項</button>
+        <div class="form-group"><label class="form-label">備註</label><textarea class="form-input" id="sh-f-notes" rows="2" style="resize:vertical"></textarea></div>
       </div>
-      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">出貨品項</div>
-      <div id="sh-items-wrap" style="margin-bottom:10px"></div>
-      <button class="btn btn-outline btn-sm" onclick="addShipItem()" style="margin-bottom:16px">＋ 新增品項</button>
-      <div><label class="form-label">備註</label><textarea class="form-input" id="sh-f-notes" rows="2" style="resize:vertical"></textarea></div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeShipmentModal()">取消</button>
         <button class="btn btn-primary" onclick="saveShipment()">儲存</button>
       </div>
@@ -2677,22 +2675,24 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div>
 
   <!-- ── 出貨確認 Modal ── -->
-  <div id="sh-ship-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:420px;max-width:96vw;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div style="font-size:16px;font-weight:700;color:var(--navy)">確認出貨</div>
-        <button onclick="closeShipModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="sh-ship-modal-bg" class="modal-overlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <span class="modal-title">確認出貨</span>
+        <button class="modal-close" onclick="closeShipModal()">✕</button>
       </div>
-      <input type="hidden" id="sh-ship-id">
-      <div style="display:grid;gap:12px">
-        <div><label class="form-label">出貨日期</label><input class="form-input" type="date" id="sh-ship-date"></div>
-        <div><label class="form-label">物流商</label><input class="form-input" id="sh-ship-carrier" placeholder="例：黑貓、新竹、郵局"></div>
-        <div><label class="form-label">追蹤號碼</label><input class="form-input" id="sh-ship-tracking" placeholder="物流追蹤號碼"></div>
+      <div class="modal-body">
+        <input type="hidden" id="sh-ship-id">
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="form-group"><label class="form-label">出貨日期</label><input class="form-input" type="date" id="sh-ship-date"></div>
+          <div class="form-group"><label class="form-label">物流商</label><input class="form-input" id="sh-ship-carrier" placeholder="例：黑貓、新竹、郵局"></div>
+          <div class="form-group"><label class="form-label">追蹤號碼</label><input class="form-input mono" id="sh-ship-tracking" placeholder="物流追蹤號碼"></div>
+        </div>
+        <div style="background:var(--red-light);border:1px solid rgba(214,66,66,.25);border-radius:8px;padding:12px;margin-top:4px;font-size:12px;color:var(--red)">
+          ⚠️ 確認出貨後將自動扣除庫存，此操作無法復原。
+        </div>
       </div>
-      <div style="background:rgba(220,53,69,.08);border:1px solid rgba(220,53,69,.3);border-radius:8px;padding:12px;margin-top:16px;font-size:12px;color:var(--red)">
-        ⚠️ 確認出貨後將自動扣除庫存，此操作無法復原。
-      </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeShipModal()">取消</button>
         <button class="btn btn-primary" onclick="confirmShip()">確認出貨</button>
       </div>
@@ -2700,29 +2700,23 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div>
 
   <!-- ── 入庫 Modal ── -->
-  <div id="grn-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:640px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div id="grn-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">建立入庫單</div>
-        <button onclick="closeGRNModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="grn-modal-bg" class="modal-overlay">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <span class="modal-title" id="grn-modal-title">建立入庫單</span>
+        <button class="modal-close" onclick="closeGRNModal()">✕</button>
       </div>
-      <input type="hidden" id="grn-po-id">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
-        <div>
-          <label class="form-label">入庫倉庫</label>
-          <select class="form-input" id="grn-f-warehouse">
-            <option value="">— 選擇倉庫 —</option>
-          </select>
+      <div class="modal-body">
+        <input type="hidden" id="grn-po-id">
+        <div class="form-grid" style="margin-bottom:20px">
+          <div class="form-group"><label class="form-label">入庫倉庫</label><select class="form-input" id="grn-f-warehouse"><option value="">— 選擇倉庫 —</option></select></div>
+          <div class="form-group"><label class="form-label">入庫日期</label><input class="form-input" type="date" id="grn-f-date"></div>
         </div>
-        <div>
-          <label class="form-label">入庫日期</label>
-          <input class="form-input" type="date" id="grn-f-date">
-        </div>
+        <div class="form-section-title" style="grid-column:unset;border:none;padding:0;margin-bottom:10px">入庫品項（填寫實際收到數量）</div>
+        <div id="grn-items-wrap" style="margin-bottom:16px"></div>
+        <div class="form-group"><label class="form-label">備註</label><textarea class="form-input" id="grn-f-notes" rows="2" style="resize:vertical"></textarea></div>
       </div>
-      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">入庫品項（填寫實際收到數量）</div>
-      <div id="grn-items-wrap" style="margin-bottom:16px"></div>
-      <div><label class="form-label">備註</label><textarea class="form-input" id="grn-f-notes" rows="2" style="resize:vertical"></textarea></div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeGRNModal()">取消</button>
         <button class="btn btn-primary" onclick="saveGRN()">確認入庫</button>
       </div>
@@ -2733,54 +2727,54 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <!-- 會計記帳 -->
   <!-- ══════════════════════════════════════════════════════════════ -->
   <div class="page" id="page-accounting" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-      <div style="font-size:15px;font-weight:700;color:var(--navy)">會計記帳系統</div>
+    <div class="panel-bar" style="margin-bottom:20px">
+      <span class="page-title">會計記帳系統</span>
     </div>
     <!-- 統計卡片 -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">會計科目數</div><div id="acc-stat-accounts" style="font-size:26px;font-weight:800;color:var(--navy)">—</div></div>
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">待收（AR）</div><div id="acc-stat-ar" style="font-size:22px;font-weight:800;color:var(--orange)">—</div></div>
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">待付（AP）</div><div id="acc-stat-ap" style="font-size:22px;font-weight:800;color:var(--red)">—</div></div>
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px">本月損益</div><div id="acc-stat-pnl" style="font-size:22px;font-weight:800;color:var(--green)">—</div></div>
+    <div class="kpi-grid-4">
+      <div class="stat-card"><div class="stat-label">會計科目數</div><div class="stat-value" id="acc-stat-accounts">—</div></div>
+      <div class="stat-card" style="border-left:3px solid var(--orange)"><div class="stat-label">待收（AR）</div><div class="stat-value warning" id="acc-stat-ar">—</div></div>
+      <div class="stat-card" style="border-left:3px solid var(--red)"><div class="stat-label">待付（AP）</div><div class="stat-value negative" id="acc-stat-ap">—</div></div>
+      <div class="stat-card" style="border-left:3px solid var(--green)"><div class="stat-label">本月損益</div><div class="stat-value positive" id="acc-stat-pnl">—</div></div>
     </div>
     <!-- Tab Bar -->
-    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border);overflow-x:auto">
-      <button id="acc-tab-dashboard"    onclick="switchAccTab('dashboard')"    style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid var(--accent);font-weight:700;color:var(--navy);white-space:nowrap">儀表板</button>
-      <button id="acc-tab-vouchers"     onclick="switchAccTab('vouchers')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">傳票管理<span class="nav-badge" id="badge-acc-vouchers" style="display:none;margin-left:4px"></span></button>
-      <button id="acc-tab-receivables"  onclick="switchAccTab('receivables')"  style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">應收帳款<span class="nav-badge" id="badge-acc-ar" style="display:none;margin-left:4px;background:var(--orange)"></span></button>
-      <button id="acc-tab-payables"     onclick="switchAccTab('payables')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">應付帳款<span class="nav-badge" id="badge-acc-ap" style="display:none;margin-left:4px;background:var(--red)"></span></button>
-      <button id="acc-tab-accounts"     onclick="switchAccTab('accounts')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">科目設定</button>
-      <button id="acc-tab-invoices"     onclick="switchAccTab('invoices')"     style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">發票管理</button>
-      <button id="acc-tab-reports"      onclick="switchAccTab('reports')"      style="padding:8px 20px;background:none;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;color:var(--muted);white-space:nowrap">財務報表</button>
+    <div class="inv-tab-bar">
+      <button class="inv-tab active" id="acc-tab-dashboard"   onclick="switchAccTab('dashboard')">儀表板</button>
+      <button class="inv-tab"        id="acc-tab-vouchers"    onclick="switchAccTab('vouchers')">傳票管理<span class="tab-badge" id="badge-acc-vouchers" style="display:none"></span></button>
+      <button class="inv-tab"        id="acc-tab-receivables" onclick="switchAccTab('receivables')">應收帳款<span class="tab-badge" id="badge-acc-ar" style="display:none;background:var(--orange)"></span></button>
+      <button class="inv-tab"        id="acc-tab-payables"    onclick="switchAccTab('payables')">應付帳款<span class="tab-badge" id="badge-acc-ap" style="display:none;background:var(--red)"></span></button>
+      <button class="inv-tab"        id="acc-tab-accounts"    onclick="switchAccTab('accounts')">科目設定</button>
+      <button class="inv-tab"        id="acc-tab-invoices"    onclick="switchAccTab('invoices')">發票管理</button>
+      <button class="inv-tab"        id="acc-tab-reports"     onclick="switchAccTab('reports')">財務報表</button>
     </div>
 
     <!-- 儀表板 Panel -->
     <div id="acc-panel-dashboard">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
-        <div class="card" style="padding:20px;border-left:4px solid var(--orange)">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">應收帳款未收金額</div>
-          <div id="acc-dash-ar" style="font-size:24px;font-weight:800;color:var(--orange)">—</div>
-          <div id="acc-dash-ar-overdue" style="font-size:12px;color:var(--red);margin-top:4px"></div>
+      <div class="kpi-grid-3">
+        <div class="stat-card" style="border-left:4px solid var(--orange)">
+          <div class="stat-label">應收帳款未收金額</div>
+          <div class="stat-value warning" id="acc-dash-ar">—</div>
+          <div class="stat-sub" id="acc-dash-ar-overdue"></div>
         </div>
-        <div class="card" style="padding:20px;border-left:4px solid var(--red)">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">應付帳款未付金額</div>
-          <div id="acc-dash-ap" style="font-size:24px;font-weight:800;color:var(--red)">—</div>
-          <div id="acc-dash-ap-overdue" style="font-size:12px;color:var(--red);margin-top:4px"></div>
+        <div class="stat-card" style="border-left:4px solid var(--red)">
+          <div class="stat-label">應付帳款未付金額</div>
+          <div class="stat-value negative" id="acc-dash-ap">—</div>
+          <div class="stat-sub" id="acc-dash-ap-overdue"></div>
         </div>
-        <div class="card" style="padding:20px;border-left:4px solid var(--muted)">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px">草稿傳票待過帳</div>
-          <div id="acc-dash-draft" style="font-size:24px;font-weight:800;color:var(--navy)">—</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:4px">需審核過帳</div>
+        <div class="stat-card" style="border-left:4px solid var(--border)">
+          <div class="stat-label">草稿傳票待過帳</div>
+          <div class="stat-value" id="acc-dash-draft">—</div>
+          <div class="stat-sub">需審核過帳</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div class="card" style="padding:16px">
-          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">逾期應收帳款</div>
-          <div id="acc-dash-ar-aging"></div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">逾期應收帳款</span></div>
+          <div style="padding:16px" id="acc-dash-ar-aging"></div>
         </div>
-        <div class="card" style="padding:16px">
-          <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">快速操作</div>
-          <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">快速操作</span></div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
             <button class="btn btn-outline" onclick="switchAccTab('vouchers');openVoucherModal()">＋ 新增傳票</button>
             <button class="btn btn-outline" onclick="switchAccTab('receivables');openARModal()">＋ 新增應收</button>
             <button class="btn btn-outline" onclick="switchAccTab('payables');openAPModal()">＋ 新增應付</button>
@@ -2791,7 +2785,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 傳票管理 Panel -->
     <div id="acc-panel-vouchers" style="display:none">
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="filter-row">
         <select class="filter-input" id="vou-filter-status" onchange="loadVouchers()" style="min-width:110px">
           <option value="">全部狀態</option>
           <option value="draft">草稿</option>
@@ -2810,60 +2804,60 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <input class="filter-input" id="vou-filter-q" placeholder="搜尋傳票號 / 摘要…" oninput="loadVouchers()" style="flex:1;min-width:160px">
         <button class="btn btn-primary btn-sm" onclick="openVoucherModal()">＋ 新增傳票</button>
       </div>
-      <div class="card" style="overflow:hidden"><div id="acc-vouchers-wrap"></div></div>
+      <div class="card"><div id="acc-vouchers-wrap"></div></div>
     </div>
 
     <!-- 應收帳款 Panel -->
     <div id="acc-panel-receivables" style="display:none">
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="filter-row">
         <select class="filter-input" id="ar-filter-status" onchange="loadARList()" style="min-width:110px">
           <option value="">全部狀態</option>
           <option value="open">未收</option>
           <option value="partial">部分收款</option>
           <option value="paid">已收清</option>
         </select>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer">
           <input type="checkbox" id="ar-filter-overdue" onchange="loadARList()"> 僅逾期
         </label>
         <input class="filter-input" id="ar-filter-q" placeholder="搜尋客戶名稱…" oninput="loadARList()" style="flex:1;min-width:160px">
         <button class="btn btn-primary btn-sm" onclick="openARModal()">＋ 新增應收</button>
         <button class="btn btn-outline btn-sm" onclick="loadARAgingTable()">帳齡分析</button>
       </div>
-      <div class="card" style="overflow:hidden"><div id="acc-ar-wrap"></div></div>
+      <div class="card"><div id="acc-ar-wrap"></div></div>
       <div id="acc-ar-aging-wrap" style="margin-top:16px;display:none">
-        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">應收帳款帳齡分析</div>
-        <div class="card" style="overflow:hidden"><div id="acc-ar-aging-table"></div></div>
+        <div class="section-title" style="margin-bottom:10px">應收帳款帳齡分析</div>
+        <div class="card"><div id="acc-ar-aging-table"></div></div>
       </div>
     </div>
 
     <!-- 應付帳款 Panel -->
     <div id="acc-panel-payables" style="display:none">
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="filter-row">
         <select class="filter-input" id="ap-filter-status" onchange="loadAPList()" style="min-width:110px">
           <option value="">全部狀態</option>
           <option value="open">未付</option>
           <option value="partial">部分付款</option>
           <option value="paid">已付清</option>
         </select>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text);cursor:pointer">
           <input type="checkbox" id="ap-filter-overdue" onchange="loadAPList()"> 僅逾期
         </label>
         <input class="filter-input" id="ap-filter-q" placeholder="搜尋供應商名稱…" oninput="loadAPList()" style="flex:1;min-width:160px">
         <button class="btn btn-primary btn-sm" onclick="openAPModal()">＋ 新增應付</button>
       </div>
-      <div class="card" style="overflow:hidden"><div id="acc-ap-wrap"></div></div>
+      <div class="card"><div id="acc-ap-wrap"></div></div>
     </div>
 
     <!-- 科目設定 Panel -->
     <div id="acc-panel-accounts" style="display:none">
-      <div class="card" style="overflow:hidden"><div id="acc-accounts-wrap">
+      <div class="card"><div id="acc-accounts-wrap">
         <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
       </div></div>
     </div>
 
     <!-- 發票管理 Panel -->
     <div id="acc-panel-invoices" style="display:none">
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="filter-row">
         <select class="filter-input" id="inv-filter-type" onchange="loadInvoices()" style="min-width:110px">
           <option value="">全部類型</option>
           <option value="sales">銷項發票</option>
@@ -2880,134 +2874,113 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <a class="btn btn-outline btn-sm" id="inv-export-btn" href="/api/export/invoices-excel" target="_blank">匯出 Excel</a>
       </div>
       <!-- 稅額統計摘要 -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px" id="inv-stat-row">
-        <div class="card" style="padding:14px;border-left:4px solid var(--green)">
-          <div style="font-size:11px;color:var(--muted)">銷項稅額</div>
-          <div id="inv-stat-sales-tax" style="font-size:20px;font-weight:800;color:var(--green)">—</div>
-        </div>
-        <div class="card" style="padding:14px;border-left:4px solid var(--red)">
-          <div style="font-size:11px;color:var(--muted)">進項稅額</div>
-          <div id="inv-stat-pur-tax" style="font-size:20px;font-weight:800;color:var(--red)">—</div>
-        </div>
-        <div class="card" style="padding:14px;border-left:4px solid var(--navy)">
-          <div style="font-size:11px;color:var(--muted)">應納稅額</div>
-          <div id="inv-stat-net-tax" style="font-size:20px;font-weight:800;color:var(--navy)">—</div>
-        </div>
-        <div class="card" style="padding:14px;border-left:4px solid var(--accent)">
-          <div style="font-size:11px;color:var(--muted)">本期筆數</div>
-          <div id="inv-stat-count" style="font-size:20px;font-weight:800;color:var(--accent)">—</div>
-        </div>
+      <div class="kpi-grid-4" id="inv-stat-row">
+        <div class="stat-card" style="border-left:4px solid var(--green)"><div class="stat-label">銷項稅額</div><div class="stat-value positive" id="inv-stat-sales-tax">—</div></div>
+        <div class="stat-card" style="border-left:4px solid var(--red)"><div class="stat-label">進項稅額</div><div class="stat-value negative" id="inv-stat-pur-tax">—</div></div>
+        <div class="stat-card" style="border-left:4px solid var(--navy)"><div class="stat-label">應納稅額</div><div class="stat-value" id="inv-stat-net-tax">—</div></div>
+        <div class="stat-card" style="border-left:4px solid var(--accent)"><div class="stat-label">本期筆數</div><div class="stat-value accent" id="inv-stat-count">—</div></div>
       </div>
-      <div class="card" style="overflow:hidden"><div id="acc-invoices-wrap"></div></div>
+      <div class="card"><div id="acc-invoices-wrap"></div></div>
     </div>
 
     <!-- 財務報表 Panel -->
     <div id="acc-panel-reports" style="display:none">
       <!-- 子頁籤 -->
-      <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0">
-        <button id="rpt-tab-trial"   onclick="switchRptTab('trial')"   style="padding:6px 16px;background:none;border:none;border-bottom:2px solid var(--accent);cursor:pointer;font-size:12px;font-weight:700;color:var(--navy)">試算表</button>
-        <button id="rpt-tab-income"  onclick="switchRptTab('income')"  style="padding:6px 16px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:12px;color:var(--muted)">損益表</button>
-        <button id="rpt-tab-balance" onclick="switchRptTab('balance')" style="padding:6px 16px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:12px;color:var(--muted)">資產負債表</button>
-        <button id="rpt-tab-tax"     onclick="switchRptTab('tax')"     style="padding:6px 16px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:12px;color:var(--muted)">稅務申報</button>
+      <div class="inv-tab-bar" style="margin-bottom:16px">
+        <button class="inv-tab active" id="rpt-tab-trial"   onclick="switchRptTab('trial')">試算表</button>
+        <button class="inv-tab"        id="rpt-tab-income"  onclick="switchRptTab('income')">損益表</button>
+        <button class="inv-tab"        id="rpt-tab-balance" onclick="switchRptTab('balance')">資產負債表</button>
+        <button class="inv-tab"        id="rpt-tab-tax"     onclick="switchRptTab('tax')">稅務申報</button>
       </div>
 
       <!-- 試算表 -->
       <div id="rpt-panel-trial">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-          <span style="font-size:13px;font-weight:600;color:var(--navy)">試算表</span>
+        <div class="filter-row" style="margin-bottom:14px">
           <input type="month" id="rpt-trial-month" class="filter-input" style="min-width:130px">
           <button class="btn btn-primary btn-sm" onclick="loadTrialBalance()">產生報表</button>
         </div>
-        <div class="card" style="overflow:hidden"><div id="rpt-trial-wrap">
-          <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">請選擇月份後點擊「產生報表」</div>
+        <div class="card"><div id="rpt-trial-wrap">
+          <div class="empty-state"><div class="empty-state-text">請選擇月份後點擊「產生報表」</div></div>
         </div></div>
       </div>
 
       <!-- 損益表 -->
       <div id="rpt-panel-income" style="display:none">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-          <span style="font-size:13px;font-weight:600;color:var(--navy)">損益表</span>
+        <div class="filter-row" style="margin-bottom:14px">
           <input type="month" id="rpt-income-month" class="filter-input" style="min-width:130px">
           <button class="btn btn-primary btn-sm" onclick="loadIncomeStatement()">產生報表</button>
         </div>
-        <div class="card" style="overflow:hidden"><div id="rpt-income-wrap">
-          <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">請選擇月份後點擊「產生報表」</div>
+        <div class="card"><div id="rpt-income-wrap">
+          <div class="empty-state"><div class="empty-state-text">請選擇月份後點擊「產生報表」</div></div>
         </div></div>
       </div>
 
       <!-- 資產負債表 -->
       <div id="rpt-panel-balance" style="display:none">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-          <span style="font-size:13px;font-weight:600;color:var(--navy)">資產負債表</span>
+        <div class="filter-row" style="margin-bottom:14px">
           <input type="date" id="rpt-balance-date" class="filter-input" style="min-width:140px">
           <button class="btn btn-primary btn-sm" onclick="loadBalanceSheet()">產生報表</button>
         </div>
-        <div class="card" style="overflow:hidden"><div id="rpt-balance-wrap">
-          <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">請選擇日期後點擊「產生報表」</div>
+        <div class="card"><div id="rpt-balance-wrap">
+          <div class="empty-state"><div class="empty-state-text">請選擇日期後點擊「產生報表」</div></div>
         </div></div>
       </div>
 
       <!-- 稅務申報 -->
       <div id="rpt-panel-tax" style="display:none">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-          <span style="font-size:13px;font-weight:600;color:var(--navy)">稅務申報摘要</span>
+        <div class="filter-row" style="margin-bottom:14px">
           <input type="month" id="rpt-tax-month" class="filter-input" style="min-width:130px">
           <button class="btn btn-primary btn-sm" onclick="loadTaxSummary()">查詢</button>
         </div>
         <div id="rpt-tax-wrap">
-          <div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">請選擇月份後點擊「查詢」</div>
+          <div class="empty-state"><div class="empty-state-text">請選擇月份後點擊「查詢」</div></div>
         </div>
       </div>
     </div>
   </div><!-- end page-accounting -->
 
   <!-- ── 傳票 Modal ── -->
-  <div id="vou-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:800px;max-width:97vw;max-height:92vh;overflow-y:auto;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div style="font-size:16px;font-weight:700;color:var(--navy)">新增傳票</div>
-        <button onclick="closeVoucherModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="vou-modal-bg" class="modal-overlay">
+    <div class="modal modal-xl">
+      <div class="modal-header">
+        <span class="modal-title">新增傳票</span>
+        <button class="modal-close" onclick="closeVoucherModal()">✕</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px">
-        <div>
-          <label class="form-label">傳票類型</label>
-          <select class="form-input" id="vou-f-type">
-            <option value="general">一般傳票</option>
-            <option value="purchase">採購傳票</option>
-            <option value="sales">銷售傳票</option>
-            <option value="payment">付款傳票</option>
-            <option value="receipt">收款傳票</option>
-          </select>
+      <div class="modal-body">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:20px">
+          <div class="form-group"><label class="form-label">傳票類型</label>
+            <select class="form-input" id="vou-f-type">
+              <option value="general">一般傳票</option>
+              <option value="purchase">採購傳票</option>
+              <option value="sales">銷售傳票</option>
+              <option value="payment">付款傳票</option>
+              <option value="receipt">收款傳票</option>
+            </select></div>
+          <div class="form-group"><label class="form-label">傳票日期</label><input class="form-input" type="date" id="vou-f-date"></div>
+          <div class="form-group"><label class="form-label">摘要</label><input class="form-input" id="vou-f-desc" placeholder="傳票說明"></div>
         </div>
-        <div>
-          <label class="form-label">傳票日期</label>
-          <input class="form-input" type="date" id="vou-f-date">
+        <div class="form-section-title" style="grid-column:unset;margin-bottom:10px">借貸明細</div>
+        <div class="table-wrap">
+          <table style="margin-bottom:8px">
+            <thead><tr>
+              <th style="width:40%">會計科目</th>
+              <th style="text-align:right;width:20%">借方（Dr）</th>
+              <th style="text-align:right;width:20%">貸方（Cr）</th>
+              <th>摘要</th>
+              <th style="width:36px"></th>
+            </tr></thead>
+            <tbody id="vou-lines-wrap"></tbody>
+            <tfoot><tr style="border-top:2px solid var(--border)">
+              <td style="padding:8px 16px;font-weight:700;font-family:'Noto Sans TC',sans-serif">合計</td>
+              <td style="text-align:right;padding:8px 16px;font-family:'DM Mono',monospace;font-weight:700" id="vou-total-debit">0</td>
+              <td style="text-align:right;padding:8px 16px;font-family:'DM Mono',monospace;font-weight:700" id="vou-total-credit">0</td>
+              <td colspan="2" style="padding:8px 16px"><span id="vou-balance-msg" style="font-size:12px"></span></td>
+            </tr></tfoot>
+          </table>
         </div>
-        <div>
-          <label class="form-label">摘要</label>
-          <input class="form-input" id="vou-f-desc" placeholder="傳票說明">
-        </div>
+        <button class="btn btn-outline btn-sm" onclick="addVoucherLine()" style="margin-top:4px">＋ 新增明細行</button>
       </div>
-      <!-- 傳票明細表格 -->
-      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">借貸明細</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">
-        <thead><tr style="border-bottom:2px solid var(--border)">
-          <th style="text-align:left;padding:6px 4px;width:40%">會計科目</th>
-          <th style="text-align:right;padding:6px 4px;width:20%">借方（Dr）</th>
-          <th style="text-align:right;padding:6px 4px;width:20%">貸方（Cr）</th>
-          <th style="text-align:left;padding:6px 4px">摘要</th>
-          <th style="width:32px"></th>
-        </tr></thead>
-        <tbody id="vou-lines-wrap"></tbody>
-        <tfoot><tr style="border-top:2px solid var(--border);font-weight:700">
-          <td style="padding:8px 4px">合計</td>
-          <td style="text-align:right;padding:8px 4px" id="vou-total-debit">0</td>
-          <td style="text-align:right;padding:8px 4px" id="vou-total-credit">0</td>
-          <td colspan="2"><span id="vou-balance-msg" style="font-size:12px;margin-left:8px"></span></td>
-        </tr></tfoot>
-      </table>
-      <button class="btn btn-outline btn-sm" onclick="addVoucherLine()" style="margin-bottom:16px">＋ 新增明細行</button>
-      <div style="display:flex;justify-content:flex-end;gap:10px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeVoucherModal()">取消</button>
         <button class="btn btn-primary" onclick="saveVoucher()">儲存草稿</button>
       </div>
@@ -3015,32 +2988,30 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div>
 
   <!-- ── 應收帳款 Modal ── -->
-  <div id="ar-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:480px;max-width:96vw;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div style="font-size:16px;font-weight:700;color:var(--navy)">新增應收帳款</div>
-        <button onclick="closeARModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="ar-modal-bg" class="modal-overlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <span class="modal-title">新增應收帳款</span>
+        <button class="modal-close" onclick="closeARModal()">✕</button>
       </div>
-      <div style="display:grid;gap:12px">
-        <div><label class="form-label">客戶</label>
-          <select class="form-input" id="ar-f-customer">
-            <option value="">— 選擇客戶 —</option>
-          </select></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div><label class="form-label">金額 *</label><input class="form-input" id="ar-f-amount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
-          <div><label class="form-label">到期日</label><input class="form-input" id="ar-f-due" type="date"></div>
+      <div class="modal-body">
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="form-group"><label class="form-label">客戶</label>
+            <select class="form-input" id="ar-f-customer"><option value="">— 選擇客戶 —</option></select></div>
         </div>
-        <div><label class="form-label">付款條件</label>
-          <select class="form-input" id="ar-f-terms">
-            <option value="immediate">即期</option>
-            <option value="net15">Net 15</option>
-            <option value="net30" selected>Net 30</option>
-            <option value="net60">Net 60</option>
-            <option value="net90">Net 90</option>
-          </select></div>
-        <div><label class="form-label">備註</label><textarea class="form-input" id="ar-f-notes" rows="2" style="resize:vertical"></textarea></div>
+        <div class="form-grid" style="margin-top:0">
+          <div class="form-group"><label class="form-label">金額 *</label><input class="form-input" id="ar-f-amount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
+          <div class="form-group"><label class="form-label">到期日</label><input class="form-input" id="ar-f-due" type="date"></div>
+          <div class="form-group full-width"><label class="form-label">付款條件</label>
+            <select class="form-input" id="ar-f-terms">
+              <option value="immediate">即期</option><option value="net15">Net 15</option>
+              <option value="net30" selected>Net 30</option><option value="net60">Net 60</option>
+              <option value="net90">Net 90</option>
+            </select></div>
+          <div class="form-group full-width"><label class="form-label">備註</label><textarea class="form-input" id="ar-f-notes" rows="2" style="resize:vertical"></textarea></div>
+        </div>
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeARModal()">取消</button>
         <button class="btn btn-primary" onclick="saveAR()">儲存</button>
       </div>
@@ -3048,27 +3019,27 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div>
 
   <!-- ── 收款 Modal ── -->
-  <div id="ar-pay-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:400px;max-width:96vw;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div style="font-size:16px;font-weight:700;color:var(--navy)">登錄收款</div>
-        <button onclick="closeARPayModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="ar-pay-modal-bg" class="modal-overlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <span class="modal-title">登錄收款</span>
+        <button class="modal-close" onclick="closeARPayModal()">✕</button>
       </div>
-      <input type="hidden" id="ar-pay-id">
-      <div id="ar-pay-info" style="background:#f8f9fa;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px"></div>
-      <div style="display:grid;gap:10px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div><label class="form-label">收款日期</label><input class="form-input" type="date" id="ar-pay-date"></div>
-          <div><label class="form-label">收款金額 *</label><input class="form-input" id="ar-pay-amount" type="number" min="0.01" step="0.01"></div>
+      <div class="modal-body">
+        <input type="hidden" id="ar-pay-id">
+        <div id="ar-pay-info" style="background:var(--bg);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text)"></div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">收款日期</label><input class="form-input" type="date" id="ar-pay-date"></div>
+          <div class="form-group"><label class="form-label">收款金額 *</label><input class="form-input" id="ar-pay-amount" type="number" min="0.01" step="0.01"></div>
+          <div class="form-group full-width"><label class="form-label">收款方式</label>
+            <select class="form-input" id="ar-pay-method">
+              <option value="transfer">匯款</option><option value="cash">現金</option>
+              <option value="check">支票</option><option value="card">刷卡</option>
+            </select></div>
+          <div class="form-group full-width"><label class="form-label">參考號碼</label><input class="form-input mono" id="ar-pay-ref" placeholder="匯款單號/票號"></div>
         </div>
-        <div><label class="form-label">收款方式</label>
-          <select class="form-input" id="ar-pay-method">
-            <option value="transfer">匯款</option><option value="cash">現金</option>
-            <option value="check">支票</option><option value="card">刷卡</option>
-          </select></div>
-        <div><label class="form-label">參考號碼</label><input class="form-input" id="ar-pay-ref" placeholder="匯款單號/票號"></div>
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeARPayModal()">取消</button>
         <button class="btn btn-primary" onclick="submitARPayment()">確認收款</button>
       </div>
@@ -3076,24 +3047,24 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div>
 
   <!-- ── 應付帳款 Modal ── -->
-  <div id="ap-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:480px;max-width:96vw;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div style="font-size:16px;font-weight:700;color:var(--navy)">新增應付帳款</div>
-        <button onclick="closeAPModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="ap-modal-bg" class="modal-overlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <span class="modal-title">新增應付帳款</span>
+        <button class="modal-close" onclick="closeAPModal()">✕</button>
       </div>
-      <div style="display:grid;gap:12px">
-        <div><label class="form-label">供應商</label>
-          <select class="form-input" id="ap-f-vendor">
-            <option value="">— 選擇供應商 —</option>
-          </select></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div><label class="form-label">金額 *</label><input class="form-input" id="ap-f-amount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
-          <div><label class="form-label">到期日</label><input class="form-input" id="ap-f-due" type="date"></div>
+      <div class="modal-body">
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="form-group"><label class="form-label">供應商</label>
+            <select class="form-input" id="ap-f-vendor"><option value="">— 選擇供應商 —</option></select></div>
         </div>
-        <div><label class="form-label">備註</label><textarea class="form-input" id="ap-f-notes" rows="2" style="resize:vertical"></textarea></div>
+        <div class="form-grid" style="margin-top:0">
+          <div class="form-group"><label class="form-label">金額 *</label><input class="form-input" id="ap-f-amount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
+          <div class="form-group"><label class="form-label">到期日</label><input class="form-input" id="ap-f-due" type="date"></div>
+          <div class="form-group full-width"><label class="form-label">備註</label><textarea class="form-input" id="ap-f-notes" rows="2" style="resize:vertical"></textarea></div>
+        </div>
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeAPModal()">取消</button>
         <button class="btn btn-primary" onclick="saveAP()">儲存</button>
       </div>
@@ -3101,27 +3072,27 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div>
 
   <!-- ── 付款 Modal ── -->
-  <div id="ap-pay-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:400px;max-width:96vw;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div style="font-size:16px;font-weight:700;color:var(--navy)">登錄付款</div>
-        <button onclick="closeAPPayModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="ap-pay-modal-bg" class="modal-overlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <span class="modal-title">登錄付款</span>
+        <button class="modal-close" onclick="closeAPPayModal()">✕</button>
       </div>
-      <input type="hidden" id="ap-pay-id">
-      <div id="ap-pay-info" style="background:#f8f9fa;border-radius:8px;padding:10px;margin-bottom:14px;font-size:13px"></div>
-      <div style="display:grid;gap:10px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div><label class="form-label">付款日期</label><input class="form-input" type="date" id="ap-pay-date"></div>
-          <div><label class="form-label">付款金額 *</label><input class="form-input" id="ap-pay-amount" type="number" min="0.01" step="0.01"></div>
+      <div class="modal-body">
+        <input type="hidden" id="ap-pay-id">
+        <div id="ap-pay-info" style="background:var(--bg);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text)"></div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">付款日期</label><input class="form-input" type="date" id="ap-pay-date"></div>
+          <div class="form-group"><label class="form-label">付款金額 *</label><input class="form-input" id="ap-pay-amount" type="number" min="0.01" step="0.01"></div>
+          <div class="form-group full-width"><label class="form-label">付款方式</label>
+            <select class="form-input" id="ap-pay-method">
+              <option value="transfer">匯款</option><option value="cash">現金</option>
+              <option value="check">支票</option>
+            </select></div>
+          <div class="form-group full-width"><label class="form-label">參考號碼</label><input class="form-input mono" id="ap-pay-ref" placeholder="匯款單號/票號"></div>
         </div>
-        <div><label class="form-label">付款方式</label>
-          <select class="form-input" id="ap-pay-method">
-            <option value="transfer">匯款</option><option value="cash">現金</option>
-            <option value="check">支票</option>
-          </select></div>
-        <div><label class="form-label">參考號碼</label><input class="form-input" id="ap-pay-ref" placeholder="匯款單號/票號"></div>
       </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeAPPayModal()">取消</button>
         <button class="btn btn-primary" onclick="submitAPPayment()">確認付款</button>
       </div>
@@ -3129,59 +3100,32 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div>
 
   <!-- ── 發票 Modal ── -->
-  <div id="inv-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center">
-    <div style="background:#fff;border-radius:12px;width:640px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:28px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-        <div id="inv-modal-title" style="font-size:16px;font-weight:700;color:var(--navy)">新增發票</div>
-        <button onclick="closeInvoiceModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+  <div id="inv-modal-bg" class="modal-overlay">
+    <div class="modal modal-md">
+      <div class="modal-header">
+        <span class="modal-title" id="inv-modal-title">新增發票</span>
+        <button class="modal-close" onclick="closeInvoiceModal()">✕</button>
       </div>
-      <input type="hidden" id="inv-modal-id">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div>
-          <label class="form-label">發票類型 *</label>
-          <select class="form-input" id="inv-modal-type">
-            <option value="sales">銷項發票</option>
-            <option value="purchase">進項發票</option>
-          </select>
-        </div>
-        <div>
-          <label class="form-label">發票號碼 *</label>
-          <input class="form-input" id="inv-modal-no" placeholder="例：AB12345678">
-        </div>
-        <div>
-          <label class="form-label">開票日期 *</label>
-          <input class="form-input" type="date" id="inv-modal-date">
-        </div>
-        <div>
-          <label class="form-label">買方名稱</label>
-          <input class="form-input" id="inv-modal-buyer-name" placeholder="公司名稱">
-        </div>
-        <div>
-          <label class="form-label">買方統編（buyer_ban）</label>
-          <input class="form-input" id="inv-modal-buyer-ban" placeholder="統一編號">
-        </div>
-        <div>
-          <label class="form-label">稅前金額 *</label>
-          <input class="form-input" id="inv-modal-subtotal" type="number" min="0" step="0.01" oninput="calcInvTax()">
-        </div>
-        <div>
-          <label class="form-label">稅率 (%)</label>
-          <input class="form-input" id="inv-modal-tax-rate" type="number" value="5" min="0" max="100" oninput="calcInvTax()">
-        </div>
-        <div>
-          <label class="form-label">稅額</label>
-          <input class="form-input" id="inv-modal-tax-amount" type="number" min="0" step="0.01" readonly style="background:#f8f9fa">
-        </div>
-        <div>
-          <label class="form-label">含稅總額</label>
-          <input class="form-input" id="inv-modal-total" type="number" readonly style="background:#f8f9fa">
+      <div class="modal-body">
+        <input type="hidden" id="inv-modal-id">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">發票類型 *</label>
+            <select class="form-input" id="inv-modal-type">
+              <option value="sales">銷項發票</option>
+              <option value="purchase">進項發票</option>
+            </select></div>
+          <div class="form-group"><label class="form-label">發票號碼 *</label><input class="form-input mono" id="inv-modal-no" placeholder="例：AB12345678"></div>
+          <div class="form-group"><label class="form-label">開票日期 *</label><input class="form-input" type="date" id="inv-modal-date"></div>
+          <div class="form-group"><label class="form-label">買方名稱</label><input class="form-input" id="inv-modal-buyer-name" placeholder="公司名稱"></div>
+          <div class="form-group"><label class="form-label">買方統一編號</label><input class="form-input mono" id="inv-modal-buyer-ban" placeholder="統一編號（選填）"></div>
+          <div class="form-group"><label class="form-label">稅前金額 *</label><input class="form-input" id="inv-modal-subtotal" type="number" min="0" step="0.01" oninput="calcInvTax()"></div>
+          <div class="form-group"><label class="form-label">稅率 (%)</label><input class="form-input" id="inv-modal-tax-rate" type="number" value="5" min="0" max="100" oninput="calcInvTax()"></div>
+          <div class="form-group"><label class="form-label">稅額（自動計算）</label><input class="form-input" id="inv-modal-tax-amount" type="number" min="0" step="0.01" readonly></div>
+          <div class="form-group"><label class="form-label">含稅總額（自動計算）</label><input class="form-input" id="inv-modal-total" type="number" readonly></div>
+          <div class="form-group full-width"><label class="form-label">備註</label><input class="form-input" id="inv-modal-note" placeholder="選填"></div>
         </div>
       </div>
-      <div style="margin-top:10px">
-        <label class="form-label">備註</label>
-        <input class="form-input" id="inv-modal-note" placeholder="選填">
-      </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+      <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeInvoiceModal()">取消</button>
         <button class="btn btn-primary" onclick="saveInvoice()">儲存</button>
       </div>
@@ -19616,7 +19560,7 @@ function switchInvTab(tab) {
   tabs.forEach(t => {
     const btn   = document.getElementById('inv-tab-' + t);
     const panel = document.getElementById('inv-panel-' + t);
-    if (btn)   { btn.style.borderBottomColor = t === tab ? 'var(--accent)' : 'transparent'; btn.style.fontWeight = t === tab ? '700' : '400'; btn.style.color = t === tab ? 'var(--navy)' : 'var(--muted)'; }
+    if (btn)   btn.classList.toggle('active', t === tab);
     if (panel) panel.style.display = t === tab ? '' : 'none';
   });
   const addBtn = document.getElementById('inv-header-btns');
@@ -19713,11 +19657,11 @@ function openInvProductModal(id) {
   document.getElementById('inv-prod-f-reorder').value = p ? (p.reorder_point||0) : 0;
   document.getElementById('inv-prod-f-barcode').value = p ? (p.barcode||'') : '';
   document.getElementById('inv-prod-f-notes').value   = p ? (p.notes||'') : '';
-  document.getElementById('inv-product-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('inv-product-modal-bg').classList.add('open');
 }
 
 function closeInvProductModal() {
-  document.getElementById('inv-product-modal-bg').style.display = 'none';
+  document.getElementById('inv-product-modal-bg').classList.remove('open');
 }
 
 async function saveInvProduct() {
@@ -19820,11 +19764,11 @@ function openInvWarehouseModal(id) {
   document.getElementById('inv-wh-f-code').value       = w ? (w.code||'') : '';
   document.getElementById('inv-wh-f-address').value    = w ? (w.address||'') : '';
   document.getElementById('inv-wh-f-manager').value    = w ? (w.manager||'') : '';
-  document.getElementById('inv-warehouse-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('inv-warehouse-modal-bg').classList.add('open');
 }
 
 function closeInvWarehouseModal() {
-  document.getElementById('inv-warehouse-modal-bg').style.display = 'none';
+  document.getElementById('inv-warehouse-modal-bg').classList.remove('open');
 }
 
 async function saveInvWarehouse() {
@@ -19919,11 +19863,11 @@ function openPOModal(id) {
   else _addPOItemRow();
   recalcPO();
 
-  document.getElementById('po-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('po-modal-bg').classList.add('open');
 }
 
 function closePOModal() {
-  document.getElementById('po-modal-bg').style.display = 'none';
+  document.getElementById('po-modal-bg').classList.remove('open');
 }
 
 function addPOItem() { _addPOItemRow(); recalcPO(); }
@@ -20067,11 +20011,11 @@ function openGRNModal(poId) {
         </tbody></table>`
     : `<div style="padding:20px;text-align:center;color:var(--muted)">此採購單無品項</div>`;
 
-  document.getElementById('grn-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('grn-modal-bg').classList.add('open');
 }
 
 function closeGRNModal() {
-  document.getElementById('grn-modal-bg').style.display = 'none';
+  document.getElementById('grn-modal-bg').classList.remove('open');
 }
 
 async function saveGRN() {
@@ -20179,11 +20123,11 @@ function openShipmentModal(id) {
   if (items.length) items.forEach(it => _addShipItemRow(it));
   else _addShipItemRow();
 
-  document.getElementById('sh-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('sh-modal-bg').classList.add('open');
 }
 
 function closeShipmentModal() {
-  document.getElementById('sh-modal-bg').style.display = 'none';
+  document.getElementById('sh-modal-bg').classList.remove('open');
 }
 
 function onShipCustomerChange() {
@@ -20252,11 +20196,11 @@ function openShipModal(id) {
   document.getElementById('sh-ship-date').value = new Date().toISOString().slice(0,10);
   document.getElementById('sh-ship-carrier').value  = '';
   document.getElementById('sh-ship-tracking').value = '';
-  document.getElementById('sh-ship-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('sh-ship-modal-bg').classList.add('open');
 }
 
 function closeShipModal() {
-  document.getElementById('sh-ship-modal-bg').style.display = 'none';
+  document.getElementById('sh-ship-modal-bg').classList.remove('open');
 }
 
 async function confirmShip() {
@@ -20302,7 +20246,7 @@ function switchAccTab(tab) {
   ['dashboard','vouchers','receivables','payables','accounts','invoices','reports'].forEach(t => {
     const btn   = document.getElementById('acc-tab-' + t);
     const panel = document.getElementById('acc-panel-' + t);
-    if (btn)   { btn.style.borderBottomColor = t===tab?'var(--accent)':'transparent'; btn.style.fontWeight = t===tab?'700':'400'; btn.style.color = t===tab?'var(--navy)':'var(--muted)'; }
+    if (btn)   btn.classList.toggle('active', t === tab);
     if (panel) panel.style.display = t===tab ? '' : 'none';
   });
   if (tab==='dashboard')   loadAccDashboard();
@@ -20320,7 +20264,7 @@ function switchRptTab(tab) {
   ['trial','income','balance','tax'].forEach(t => {
     const btn   = document.getElementById('rpt-tab-' + t);
     const panel = document.getElementById('rpt-panel-' + t);
-    if (btn)   { btn.style.borderBottomColor = t===tab?'var(--accent)':'transparent'; btn.style.fontWeight = t===tab?'700':'400'; btn.style.color = t===tab?'var(--navy)':'var(--muted)'; }
+    if (btn)   btn.classList.toggle('active', t === tab);
     if (panel) panel.style.display = t===tab ? '' : 'none';
   });
 }
@@ -20417,9 +20361,9 @@ function openVoucherModal() {
   document.getElementById('vou-lines-wrap').innerHTML = '';
   addVoucherLine(); addVoucherLine();
   recalcVoucher();
-  document.getElementById('vou-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('vou-modal-bg').classList.add('open');
 }
-function closeVoucherModal() { document.getElementById('vou-modal-bg').style.display='none'; }
+function closeVoucherModal() { document.getElementById('vou-modal-bg').classList.remove('open'); }
 
 function addVoucherLine() {
   const tbody  = document.getElementById('vou-lines-wrap');
@@ -20557,9 +20501,9 @@ function openARModal() {
   document.getElementById('ar-f-amount').value = '';
   document.getElementById('ar-f-due').value    = '';
   document.getElementById('ar-f-notes').value  = '';
-  document.getElementById('ar-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('ar-modal-bg').classList.add('open');
 }
-function closeARModal() { document.getElementById('ar-modal-bg').style.display='none'; }
+function closeARModal() { document.getElementById('ar-modal-bg').classList.remove('open'); }
 
 async function saveAR() {
   const cid  = document.getElementById('ar-f-customer').value;
@@ -20591,9 +20535,9 @@ function openARPayModal(id) {
   document.getElementById('ar-pay-info').innerHTML =
     `<strong>${escHtml(ar.customer_name)}</strong> — ${ar.ar_no}<br>
      應收：NT$${ar.amount.toLocaleString()}　已收：NT$${ar.paid_amount.toLocaleString()}　<strong>餘額：NT$${ar.balance.toLocaleString()}</strong>`;
-  document.getElementById('ar-pay-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('ar-pay-modal-bg').classList.add('open');
 }
-function closeARPayModal() { document.getElementById('ar-pay-modal-bg').style.display='none'; }
+function closeARPayModal() { document.getElementById('ar-pay-modal-bg').classList.remove('open'); }
 
 async function submitARPayment() {
   const id  = parseInt(document.getElementById('ar-pay-id').value);
@@ -20657,9 +20601,9 @@ function openAPModal() {
   document.getElementById('ap-f-amount').value = '';
   document.getElementById('ap-f-due').value    = '';
   document.getElementById('ap-f-notes').value  = '';
-  document.getElementById('ap-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('ap-modal-bg').classList.add('open');
 }
-function closeAPModal() { document.getElementById('ap-modal-bg').style.display='none'; }
+function closeAPModal() { document.getElementById('ap-modal-bg').classList.remove('open'); }
 
 async function saveAP() {
   const vid  = document.getElementById('ap-f-vendor').value;
@@ -20690,9 +20634,9 @@ function openAPPayModal(id) {
   document.getElementById('ap-pay-info').innerHTML =
     `<strong>${escHtml(ap.vendor_name)}</strong> — ${ap.ap_no}<br>
      應付：NT$${ap.amount.toLocaleString()}　已付：NT$${ap.paid_amount.toLocaleString()}　<strong>餘額：NT$${ap.balance.toLocaleString()}</strong>`;
-  document.getElementById('ap-pay-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('ap-pay-modal-bg').classList.add('open');
 }
-function closeAPPayModal() { document.getElementById('ap-pay-modal-bg').style.display='none'; }
+function closeAPPayModal() { document.getElementById('ap-pay-modal-bg').classList.remove('open'); }
 
 async function submitAPPayment() {
   const id  = parseInt(document.getElementById('ap-pay-id').value);
@@ -20824,9 +20768,9 @@ function openInvoiceModal(id) {
       document.getElementById('inv-modal-note').value       = data.notes        || '';
     });
   }
-  document.getElementById('inv-modal-bg').style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center';
+  document.getElementById('inv-modal-bg').classList.add('open');
 }
-function closeInvoiceModal() { document.getElementById('inv-modal-bg').style.display = 'none'; }
+function closeInvoiceModal() { document.getElementById('inv-modal-bg').classList.remove('open'); }
 
 function calcInvTax() {
   const sub  = parseFloat(document.getElementById('inv-modal-subtotal').value) || 0;
