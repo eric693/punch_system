@@ -3875,54 +3875,110 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- Punch Staff Modal -->
 <div class="modal-overlay" id="punch-staff-modal" style="display:none">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="modal-title" data-i18n="modal.add_staff" id="psm-title">新增員工</span><button class="modal-close" onclick="closePunchStaffModal()">&times;</button></div>
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <span class="modal-title" data-i18n="modal.add_staff" id="psm-title">新增員工</span>
+      <button class="modal-close" onclick="closePunchStaffModal()">&times;</button>
+    </div>
     <div class="modal-body">
       <input type="hidden" id="psm-id">
-      <div class="form-row">
-        <div><label class="form-label">姓名 *</label><input class="form-input" id="psm-name" placeholder="顯示名稱" oninput="if(!document.getElementById('psm-account-holder').value||document.getElementById('psm-account-holder').dataset.autofilled==='1'){document.getElementById('psm-account-holder').value=this.value;document.getElementById('psm-account-holder').dataset.autofilled='1';}"></div>
-        <div><label class="form-label">員工代碼</label><input class="form-input" id="psm-code" placeholder="例：EMP001"></div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">部門</label><input class="form-input" id="psm-department" placeholder="例：外場、廚房"></div>
-        <div><label class="form-label">職稱</label><input class="form-input" id="psm-role" placeholder="例：組長、員工"></div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">到職日</label><input class="form-input" type="date" id="psm-hire-date"></div>
-        <div><label class="form-label">狀態</label><select class="form-input" id="psm-active"><option value="1">在職</option><option value="0">停用</option></select></div>
-      </div>
-      <div style="border-top:1.5px solid var(--border);margin:10px 0 10px;padding-top:10px">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">個人資料</div>
-        <div class="form-row">
-          <div><label class="form-label">身分證號</label><input class="form-input" id="psm-national-id" placeholder="A123456789" style="font-family:'DM Mono',monospace"></div>
-          <div><label class="form-label">性別</label><select class="form-input" id="psm-gender"><option value="">未填</option><option value="M">男</option><option value="F">女</option></select></div>
+      <div class="form-grid">
+        <!-- 基本資訊 -->
+        <div class="form-section-title">基本資訊</div>
+        <div class="form-group">
+          <label class="form-label">姓名 *</label>
+          <input class="form-input" id="psm-name" placeholder="顯示名稱"
+            oninput="if(!document.getElementById('psm-account-holder').value||document.getElementById('psm-account-holder').dataset.autofilled==='1'){document.getElementById('psm-account-holder').value=this.value;document.getElementById('psm-account-holder').dataset.autofilled='1';}">
         </div>
-        <div class="form-row">
-          <div><label class="form-label">生日</label><input class="form-input" type="date" id="psm-birth-date"></div>
-          <div><label class="form-label">正式職稱（薪資文件用）</label><input class="form-input" id="psm-position-title" placeholder="例：資深外場服務員"></div>
+        <div class="form-group">
+          <label class="form-label">員工代碼</label>
+          <input class="form-input mono" id="psm-code" placeholder="例：EMP001">
         </div>
-        <div><label class="form-label">地址</label><input class="form-input" id="psm-address" placeholder="戶籍或通訊地址"></div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">登入帳號 *</label><input class="form-input" id="psm-username" placeholder="英文或數字" autocapitalize="none" autocomplete="username"></div>
-      </div>
-      <div class="form-row">
-        <div><label class="form-label">密碼 *</label><input class="form-input" id="psm-password" placeholder="設定密碼" type="text" autocomplete="new-password"><div style="font-size:11px;color:var(--muted);margin-top:4px" id="psm-pw-hint">新增員工請輸入密碼</div></div>
-      </div>
-      <div style="border-top:1.5px solid var(--border);margin:14px 0 10px;padding-top:12px">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px">匯款帳號</div>
-        <div class="form-row">
-          <div><label class="form-label">銀行代碼</label><input class="form-input" id="psm-bank-code" placeholder="例：004" inputmode="numeric"></div>
-          <div><label class="form-label">銀行名稱</label><input class="form-input" id="psm-bank-name" placeholder="例：台灣銀行"></div>
+        <div class="form-group">
+          <label class="form-label">部門</label>
+          <input class="form-input" id="psm-department" placeholder="例：外場、廚房">
         </div>
-        <div class="form-row">
-          <div><label class="form-label">分行名稱</label><input class="form-input" id="psm-bank-branch" placeholder="例：信義分行"></div>
-          <div><label class="form-label">帳戶名義人</label><input class="form-input" id="psm-account-holder" placeholder="例：王小明"></div>
+        <div class="form-group">
+          <label class="form-label">職稱</label>
+          <input class="form-input" id="psm-role" placeholder="例：組長、員工">
         </div>
-        <div><label class="form-label">帳號</label><input class="form-input" id="psm-bank-account" placeholder="例：123456789012" inputmode="numeric" style="font-family:'DM Mono',monospace;letter-spacing:.04em"></div>
+        <div class="form-group">
+          <label class="form-label">到職日</label>
+          <input class="form-input" type="date" id="psm-hire-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">狀態</label>
+          <select class="form-input" id="psm-active">
+            <option value="1">在職</option>
+            <option value="0">停用</option>
+          </select>
+        </div>
+
+        <!-- 個人資料 -->
+        <div class="form-section-title">個人資料</div>
+        <div class="form-group">
+          <label class="form-label">身分證號</label>
+          <input class="form-input mono" id="psm-national-id" placeholder="A123456789">
+        </div>
+        <div class="form-group">
+          <label class="form-label">性別</label>
+          <select class="form-input" id="psm-gender">
+            <option value="">未填</option><option value="M">男</option><option value="F">女</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">生日</label>
+          <input class="form-input" type="date" id="psm-birth-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">正式職稱（薪資文件用）</label>
+          <input class="form-input" id="psm-position-title" placeholder="例：資深外場服務員">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">地址</label>
+          <input class="form-input" id="psm-address" placeholder="戶籍或通訊地址">
+        </div>
+
+        <!-- 登入資訊 -->
+        <div class="form-section-title">登入資訊</div>
+        <div class="form-group">
+          <label class="form-label">登入帳號 *</label>
+          <input class="form-input mono" id="psm-username" placeholder="英文或數字" autocapitalize="none" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">密碼 *</label>
+          <input class="form-input" id="psm-password" placeholder="設定密碼" type="text" autocomplete="new-password">
+          <span class="form-hint" id="psm-pw-hint">新增員工請輸入密碼</span>
+        </div>
+
+        <!-- 匯款帳號 -->
+        <div class="form-section-title">匯款帳號</div>
+        <div class="form-group">
+          <label class="form-label">銀行代碼</label>
+          <input class="form-input mono" id="psm-bank-code" placeholder="例：004" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label class="form-label">銀行名稱</label>
+          <input class="form-input" id="psm-bank-name" placeholder="例：台灣銀行">
+        </div>
+        <div class="form-group">
+          <label class="form-label">分行名稱</label>
+          <input class="form-input" id="psm-bank-branch" placeholder="例：信義分行">
+        </div>
+        <div class="form-group">
+          <label class="form-label">帳戶名義人</label>
+          <input class="form-input" id="psm-account-holder" placeholder="例：王小明">
+        </div>
+        <div class="form-group full-width">
+          <label class="form-label">帳號</label>
+          <input class="form-input mono" id="psm-bank-account" placeholder="例：123456789012" inputmode="numeric" style="letter-spacing:.04em">
+        </div>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="closePunchStaffModal()">取消</button><button class="btn btn-primary" onclick="savePunchStaff()">儲存</button></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closePunchStaffModal()">取消</button>
+      <button class="btn btn-primary" onclick="savePunchStaff()">儲存</button>
+    </div>
   </div>
 </div>
 
