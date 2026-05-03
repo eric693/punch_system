@@ -16722,6 +16722,31 @@ def api_acc_ar_create():
     return jsonify(_ar_row(row)), 201
 
 
+@app.route('/api/accounting/receivables/<int:arid>', methods=['PUT'])
+@require_module('accounting')
+def api_acc_ar_update(arid):
+    d = request.get_json() or {}
+    amt = float(d.get('amount', 0))
+    if amt <= 0:
+        return jsonify({'error': '金額必須大於 0'}), 400
+    with get_db() as conn:
+        ar = conn.execute("SELECT * FROM acc_receivables WHERE id=%s", (arid,)).fetchone()
+        if not ar:
+            return jsonify({'error': '應收帳款不存在'}), 404
+        if ar['status'] in ('paid', 'void'):
+            return jsonify({'error': '已結清或作廢的帳款無法編輯'}), 400
+        row = conn.execute(
+            """UPDATE acc_receivables
+               SET customer_id=%s, customer_name=%s, amount=%s,
+                   due_date=%s, payment_terms=%s, notes=%s, updated_at=NOW()
+               WHERE id=%s RETURNING *""",
+            (d.get('customer_id') or None, d.get('customer_name', ''),
+             amt, d.get('due_date') or None,
+             d.get('payment_terms', 'net30'), d.get('notes', ''), arid)
+        ).fetchone()
+    return jsonify(_ar_row(row))
+
+
 @app.route('/api/accounting/receivables/<int:arid>/payment', methods=['POST'])
 @require_module('accounting')
 def api_acc_ar_payment(arid):
@@ -16839,6 +16864,31 @@ def api_acc_ap_create():
              d.get('notes', ''), admin)
         ).fetchone()
     return jsonify(_ap_row(row)), 201
+
+
+@app.route('/api/accounting/payables/<int:apid>', methods=['PUT'])
+@require_module('accounting')
+def api_acc_ap_update(apid):
+    d = request.get_json() or {}
+    amt = float(d.get('amount', 0))
+    if amt <= 0:
+        return jsonify({'error': '金額必須大於 0'}), 400
+    with get_db() as conn:
+        ap = conn.execute("SELECT * FROM acc_payables WHERE id=%s", (apid,)).fetchone()
+        if not ap:
+            return jsonify({'error': '應付帳款不存在'}), 404
+        if ap['status'] in ('paid', 'void'):
+            return jsonify({'error': '已結清或作廢的帳款無法編輯'}), 400
+        row = conn.execute(
+            """UPDATE acc_payables
+               SET vendor_id=%s, vendor_name=%s, amount=%s,
+                   due_date=%s, notes=%s, updated_at=NOW()
+               WHERE id=%s RETURNING *""",
+            (d.get('vendor_id') or None, d.get('vendor_name', ''),
+             amt, d.get('due_date') or None,
+             d.get('notes', ''), apid)
+        ).fetchone()
+    return jsonify(_ap_row(row))
 
 
 @app.route('/api/accounting/payables/<int:apid>/payment', methods=['POST'])

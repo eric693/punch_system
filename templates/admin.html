@@ -2991,10 +2991,11 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <div id="ar-modal-bg" class="modal-overlay">
     <div class="modal modal-sm">
       <div class="modal-header">
-        <span class="modal-title">新增應收帳款</span>
+        <span class="modal-title" id="ar-modal-title">新增應收帳款</span>
         <button class="modal-close" onclick="closeARModal()">✕</button>
       </div>
       <div class="modal-body">
+        <input type="hidden" id="ar-edit-id">
         <div class="form-grid" style="grid-template-columns:1fr">
           <div class="form-group"><label class="form-label">客戶</label>
             <select class="form-input" id="ar-f-customer"><option value="">— 選擇客戶 —</option></select></div>
@@ -3050,10 +3051,11 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <div id="ap-modal-bg" class="modal-overlay">
     <div class="modal modal-sm">
       <div class="modal-header">
-        <span class="modal-title">新增應付帳款</span>
+        <span class="modal-title" id="ap-modal-title">新增應付帳款</span>
         <button class="modal-close" onclick="closeAPModal()">✕</button>
       </div>
       <div class="modal-body">
+        <input type="hidden" id="ap-edit-id">
         <div class="form-grid" style="grid-template-columns:1fr">
           <div class="form-group"><label class="form-label">供應商</label>
             <select class="form-input" id="ap-f-vendor"><option value="">— 選擇供應商 —</option></select></div>
@@ -20465,8 +20467,7 @@ async function loadARList() {
       <td style="text-align:right;font-weight:600;color:${r.balance>0?'var(--orange)':'var(--green)'}">NT$${r.balance.toLocaleString()}</td>
       <td style="font-size:12px;color:${isOd?'var(--red)':'var(--muted)'}">${r.due_date||'—'}${isOd?' ⚠':'  '}</td>
       <td><span style="background:${AR_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${AR_STATUS_LABEL[r.status]||r.status}</span></td>
-      <td>${r.status!=='paid'&&r.status!=='void'?`<button class="btn btn-primary btn-sm" onclick="openARPayModal(${r.id})">收款</button>`:''}
-      </td>
+      <td><div class="action-btns">${r.status!=='paid'&&r.status!=='void'?`<button class="btn btn-outline btn-sm" onclick="openARModal(${r.id})">編輯</button><button class="btn btn-primary btn-sm" onclick="openARPayModal(${r.id})">收款</button>`:''}</div></td>
     </tr>`;
   }).join('')}</tbody></table>`;
 }
@@ -20494,22 +20495,27 @@ async function loadARAgingTable() {
   </tr>`).join('')}</tbody></table>`;
 }
 
-function openARModal() {
+function openARModal(id) {
+  const rec  = id ? _arList.find(x => x.id === id) : null;
+  document.getElementById('ar-modal-title').textContent = rec ? '編輯應收帳款' : '新增應收帳款';
+  document.getElementById('ar-edit-id').value = rec ? rec.id : '';
   const csel = document.getElementById('ar-f-customer');
   csel.innerHTML = '<option value="">— 選擇客戶 —</option>' +
-    _invVendors.map(v => `<option value="${v.id}">${escHtml(v.company_name)}</option>`).join('');
-  document.getElementById('ar-f-amount').value = '';
-  document.getElementById('ar-f-due').value    = '';
-  document.getElementById('ar-f-notes').value  = '';
+    _invVendors.map(v => `<option value="${v.id}"${rec&&rec.customer_id==v.id?' selected':''}>${escHtml(v.company_name)}</option>`).join('');
+  document.getElementById('ar-f-amount').value = rec ? rec.amount : '';
+  document.getElementById('ar-f-due').value    = rec ? (rec.due_date || '') : '';
+  document.getElementById('ar-f-terms').value  = rec ? (rec.payment_terms || 'net30') : 'net30';
+  document.getElementById('ar-f-notes').value  = rec ? (rec.notes || '') : '';
   document.getElementById('ar-modal-bg').classList.add('open');
 }
 function closeARModal() { document.getElementById('ar-modal-bg').classList.remove('open'); }
 
 async function saveAR() {
-  const cid  = document.getElementById('ar-f-customer').value;
-  const csel = document.getElementById('ar-f-customer');
-  const cname = cid ? csel.options[csel.selectedIndex].textContent : '';
-  const amt  = parseFloat(document.getElementById('ar-f-amount').value||0);
+  const editId = document.getElementById('ar-edit-id').value;
+  const cid    = document.getElementById('ar-f-customer').value;
+  const csel   = document.getElementById('ar-f-customer');
+  const cname  = cid ? csel.options[csel.selectedIndex].textContent : '';
+  const amt    = parseFloat(document.getElementById('ar-f-amount').value||0);
   if (!amt || amt <= 0) { showToast('請填入正確金額','error'); return; }
   const body = {
     customer_id:   cid ? parseInt(cid) : null,
@@ -20519,9 +20525,15 @@ async function saveAR() {
     payment_terms: document.getElementById('ar-f-terms').value,
     notes:         document.getElementById('ar-f-notes').value.trim(),
   };
-  const { ok, data } = await api('/api/accounting/receivables', { method:'POST', body:JSON.stringify(body) });
+  let ok, data;
+  if (editId) {
+    ({ ok, data } = await api(`/api/accounting/receivables/${editId}`, { method:'PUT', body:JSON.stringify(body) }));
+    if (ok) showToast('應收帳款已更新','success');
+  } else {
+    ({ ok, data } = await api('/api/accounting/receivables', { method:'POST', body:JSON.stringify(body) }));
+    if (ok) showToast(`應收帳款 ${data.ar_no} 已建立`,'success');
+  }
   if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
-  showToast(`應收帳款 ${data.ar_no} 已建立`,'success');
   closeARModal(); loadARList(); loadAccDashboard();
 }
 
@@ -20588,28 +20600,31 @@ async function loadAPList() {
       <td style="text-align:right;font-weight:600;color:${r.balance>0?'var(--red)':'var(--green)'}">NT$${r.balance.toLocaleString()}</td>
       <td style="font-size:12px;color:${isOd?'var(--red)':'var(--muted)'}">${r.due_date||'—'}${isOd?' ⚠':'  '}</td>
       <td><span style="background:${AP_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${AP_STATUS_LABEL[r.status]||r.status}</span></td>
-      <td>${r.status!=='paid'&&r.status!=='void'?`<button class="btn btn-primary btn-sm" onclick="openAPPayModal(${r.id})">付款</button>`:''}
-      </td>
+      <td><div class="action-btns">${r.status!=='paid'&&r.status!=='void'?`<button class="btn btn-outline btn-sm" onclick="openAPModal(${r.id})">編輯</button><button class="btn btn-primary btn-sm" onclick="openAPPayModal(${r.id})">付款</button>`:''}</div></td>
     </tr>`;
   }).join('')}</tbody></table>`;
 }
 
-function openAPModal() {
+function openAPModal(id) {
+  const rec  = id ? _accApList.find(x => x.id === id) : null;
+  document.getElementById('ap-modal-title').textContent = rec ? '編輯應付帳款' : '新增應付帳款';
+  document.getElementById('ap-edit-id').value = rec ? rec.id : '';
   const vsel = document.getElementById('ap-f-vendor');
   vsel.innerHTML = '<option value="">— 選擇供應商 —</option>' +
-    _invVendors.map(v => `<option value="${v.id}">${escHtml(v.company_name)}</option>`).join('');
-  document.getElementById('ap-f-amount').value = '';
-  document.getElementById('ap-f-due').value    = '';
-  document.getElementById('ap-f-notes').value  = '';
+    _invVendors.map(v => `<option value="${v.id}"${rec&&rec.vendor_id==v.id?' selected':''}>${escHtml(v.company_name)}</option>`).join('');
+  document.getElementById('ap-f-amount').value = rec ? rec.amount : '';
+  document.getElementById('ap-f-due').value    = rec ? (rec.due_date || '') : '';
+  document.getElementById('ap-f-notes').value  = rec ? (rec.notes || '') : '';
   document.getElementById('ap-modal-bg').classList.add('open');
 }
 function closeAPModal() { document.getElementById('ap-modal-bg').classList.remove('open'); }
 
 async function saveAP() {
-  const vid  = document.getElementById('ap-f-vendor').value;
-  const vsel = document.getElementById('ap-f-vendor');
-  const vname = vid ? vsel.options[vsel.selectedIndex].textContent : '';
-  const amt  = parseFloat(document.getElementById('ap-f-amount').value||0);
+  const editId = document.getElementById('ap-edit-id').value;
+  const vid    = document.getElementById('ap-f-vendor').value;
+  const vsel   = document.getElementById('ap-f-vendor');
+  const vname  = vid ? vsel.options[vsel.selectedIndex].textContent : '';
+  const amt    = parseFloat(document.getElementById('ap-f-amount').value||0);
   if (!amt || amt <= 0) { showToast('請填入正確金額','error'); return; }
   const body = {
     vendor_id:   vid ? parseInt(vid) : null,
@@ -20618,9 +20633,15 @@ async function saveAP() {
     due_date:    document.getElementById('ap-f-due').value || null,
     notes:       document.getElementById('ap-f-notes').value.trim(),
   };
-  const { ok, data } = await api('/api/accounting/payables', { method:'POST', body:JSON.stringify(body) });
+  let ok, data;
+  if (editId) {
+    ({ ok, data } = await api(`/api/accounting/payables/${editId}`, { method:'PUT', body:JSON.stringify(body) }));
+    if (ok) showToast('應付帳款已更新','success');
+  } else {
+    ({ ok, data } = await api('/api/accounting/payables', { method:'POST', body:JSON.stringify(body) }));
+    if (ok) showToast(`應付帳款 ${data.ap_no} 已建立`,'success');
+  }
   if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
-  showToast(`應付帳款 ${data.ap_no} 已建立`,'success');
   closeAPModal(); loadAPList(); loadAccDashboard();
 }
 
