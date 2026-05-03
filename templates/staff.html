@@ -2367,8 +2367,8 @@ async function doBioLogin(){
   const btn=document.getElementById('bio-login-btn');
   const err=document.getElementById('login-err');
   err.textContent='';btn.disabled=true;
-  const origText=document.getElementById('bio-label').textContent;
-  document.getElementById('bio-label').textContent='驗證中...';
+  const origText=document.getElementById('staff-bio-label').textContent;
+  document.getElementById('staff-bio-label').textContent='驗證中...';
   const username=document.getElementById('inp-user').value.trim()||null;
   try{
     const beginRes=await fetch('/api/webauthn/auth/begin',{
@@ -2406,7 +2406,7 @@ async function doBioLogin(){
     else{err.textContent='驗證失敗：'+e.message;}
   }finally{
     btn.disabled=false;
-    document.getElementById('bio-label').textContent=origText;
+    document.getElementById('staff-bio-label').textContent=origText;
   }
 }
 
