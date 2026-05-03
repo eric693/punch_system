@@ -313,7 +313,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   <div class="page" id="page-dash" style="display:none">
 
     <!-- 月份選擇器 -->
-    <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+    <div class="filter-bar">
       <span class="filter-label">查詢月份</span>
       <input type="month" class="filter-input" id="dash-month-picker"
              style="min-width:150px" onchange="initDash()">
@@ -488,7 +488,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 出勤摘要 -->
     <div id="punch-panel-summary">
-      <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sum-month" onchange="loadPunchSummary()">
         <span style="flex:1"></span>
@@ -510,7 +510,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 打卡記錄 -->
     <div id="punch-panel-records" style="display:none">
-      <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.staff">員工</span>
         <select class="filter-input" id="rec-filter-staff" onchange="loadPunchRecords()" style="min-width:120px"><option value="" data-i18n="status.all">全部</option></select>
         <div class="filter-divider"></div>
@@ -566,9 +566,9 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 員工管理 -->
     <div id="punch-panel-staff" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div class="panel-bar">
         <span id="punch-staff-count" style="font-size:13px;color:var(--muted)"></span>
-        <div style="display:flex;gap:8px">
+        <div class="panel-bar-actions">
           <button class="btn btn-outline btn-sm" onclick="exportStaffExcel()" data-i18n="btn.export_excel">匯出 Excel</button>
           <button class="btn btn-primary" onclick="openPunchStaffModal()" data-i18n="btn.add_staff">新增員工</button>
         </div>
@@ -585,7 +585,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 補打申請 -->
     <div id="punch-panel-requests" style="display:none">
-      <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.status">狀態</span>
         <select class="filter-input" id="preq-filter-status" onchange="loadPunchRequests()" style="min-width:120px">
           <option value="pending" data-i18n="req.status.pending">待審核</option><option value="" data-i18n="status.all">全部</option>
@@ -605,7 +605,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 加班申請 -->
     <div id="punch-panel-overtime" style="display:none">
-      <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="ot-filter-month" onchange="otFilterChanged()">
         <div class="filter-divider"></div>
@@ -652,10 +652,11 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 離職員工 -->
     <div id="punch-panel-resigned" style="display:none">
-      <div class="filter-bar" style="margin-bottom:16px;flex-wrap:wrap;gap:10px">
-        <span class="card-title" style="font-size:15px">離職員工記錄</span>
-        <span style="flex:1"></span>
-        <button class="btn btn-outline btn-sm" onclick="loadResignedStaff()">重新整理</button>
+      <div class="panel-bar">
+        <span class="page-title">離職員工記錄</span>
+        <div class="panel-bar-actions">
+          <button class="btn btn-outline btn-sm" onclick="loadResignedStaff()">重新整理</button>
+        </div>
       </div>
       <div class="card">
         <div class="table-wrap">
@@ -682,9 +683,11 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         </select>
         <span style="font-size:12px;color:var(--muted)" data-i18n="gps.auto_save">變更後自動儲存</span>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div class="panel-bar">
         <span id="gps-loc-count" style="font-size:13px;color:var(--muted)" data-i18n="loading">載入中...</span>
-        <button class="btn btn-primary" onclick="openLocModal()" data-i18n="modal.add_location">新增地點</button>
+        <div class="panel-bar-actions">
+          <button class="btn btn-primary" onclick="openLocModal()" data-i18n="modal.add_location">新增地點</button>
+        </div>
       </div>
       <div id="gps-loc-list" style="margin-bottom:20px"></div>
       <div class="card" style="padding:16px 20px;background:var(--bg)">
@@ -700,7 +703,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div id="punch-panel-line" style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
         <div class="card" style="padding:24px">
-          <div class="card-title" style="padding:0;margin-bottom:6px" data-i18n="card.line_config">LINE 官方帳號打卡設定</div>
+          <div class="section-title" data-i18n="card.line_config">LINE 官方帳號打卡設定</div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:20px" data-i18n="line.punch_desc">員工透過 LINE 傳送位置訊息即可打卡</div>
           <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px">
             <label class="form-label" style="margin:0" data-i18n="lbl.enable_line">啟用 LINE 打卡</label>
@@ -717,7 +720,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         </div>
         <div>
           <div class="card" style="padding:20px;margin-bottom:14px">
-            <div class="card-title" style="padding:0;margin-bottom:12px">圖文選單</div>
+            <div class="section-title">圖文選單</div>
             <!-- Google Drive image URL -->
             <div style="margin-bottom:10px">
               <label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:4px">Google Drive 圖片連結（選填）</label>
@@ -768,7 +771,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     </div>
     <!-- 異常告警 -->
     <div id="punch-panel-anomaly" style="display:none">
-      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar" style="margin-bottom:16px">
         <span style="font-size:13px;color:var(--muted)">自動偵測近 7 天出勤異常（遲到、早退、缺打卡、今日未出勤）</span>
         <span style="flex:1"></span>
         <span class="filter-label" data-i18n="label.month">月份</span>
@@ -788,7 +791,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 月統計 -->
     <div id="punch-panel-mstats" style="display:none">
-      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar" style="margin-bottom:16px">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="mstats-month" onchange="loadMonthlyStats()">
         <button class="btn btn-primary btn-sm" onclick="loadMonthlyStats()">查詢</button>
@@ -834,7 +837,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 班別排班 -->
     <div id="sched-panel-shift">
-      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar" style="margin-bottom:16px">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="shift-month" onchange="loadShiftCalendar()">
         <span style="flex:1"></span>
@@ -864,7 +867,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 排休月曆 -->
     <div id="sched-panel-calendar" style="display:none">
-      <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sched-cal-month" onchange="loadSchedCalendar()">
         <span style="flex:1"></span>
@@ -875,7 +878,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 排休申請 -->
     <div id="sched-panel-requests" style="display:none">
-      <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sched-req-month" onchange="loadSchedRequests()">
         <div class="filter-divider"></div>
@@ -894,7 +897,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 人員摘要 -->
     <div id="sched-panel-summary" style="display:none">
-      <div class="filter-bar" style="margin-bottom:20px;gap:12px">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sched-sum-month" onchange="loadSchedSummary()">
         <span style="flex:1"></span>
@@ -912,7 +915,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 衝突警示 -->
     <div id="sched-panel-conflicts" style="display:none">
-      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar" style="margin-bottom:16px">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="conflicts-month" onchange="loadShiftConflicts()">
         <span style="flex:1"></span>
@@ -986,7 +989,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 請假申請 -->
     <div id="leave-panel-requests">
-      <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="leave-req-month" onchange="loadLeaveRequests()">
         <div class="filter-divider"></div>
@@ -1015,7 +1018,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 請假月曆 -->
     <div id="leave-panel-calendar" style="display:none">
-      <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="leave-cal-month" onchange="loadLeaveCalendar()">
       </div>
@@ -1024,7 +1027,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 假別餘額 -->
     <div id="leave-panel-balance" style="display:none">
-      <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.year">年度</span>
         <select class="filter-input" id="leave-bal-year" onchange="loadLeaveBalances()" style="min-width:100px"></select>
         <button class="btn btn-outline btn-sm" onclick="initAnnualLeave()" data-i18n="btn.calc_annual">自動計算特休</button>
@@ -1037,9 +1040,11 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 假別設定 -->
     <div id="leave-panel-types" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <span style="font-size:12px;color:var(--muted)" data-i18n="leave.types_desc">設定假別名稱、薪資倍率、天數上限</span>
-        <button class="btn btn-primary" onclick="openLeaveTypeModal()" data-i18n="btn.add_leave_type">新增假別</button>
+      <div class="panel-bar">
+        <span class="form-hint" data-i18n="leave.types_desc">設定假別名稱、薪資倍率、天數上限</span>
+        <div class="panel-bar-actions">
+          <button class="btn btn-primary" onclick="openLeaveTypeModal()" data-i18n="btn.add_leave_type">新增假別</button>
+        </div>
       </div>
       <div class="card">
         <div class="table-wrap">
@@ -1074,7 +1079,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 月薪計算 -->
     <div id="salary-panel-calc">
-      <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sal-month" onchange="loadSalaryRecords()">
         <button class="btn btn-outline btn-sm" onclick="previewSalary()">預覽計算明細</button>
@@ -1119,7 +1124,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div id="salary-panel-settings" style="display:none">
       <!-- 每月結算日設定 -->
       <div class="card" style="padding:18px 20px;margin-bottom:18px">
-        <div class="card-title" data-i18n="salary.settle_cfg_title" style="padding:0;margin-bottom:14px">每月結算設定</div>
+        <div class="section-title" data-i18n="salary.settle_cfg_title">每月結算設定</div>
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
           <label class="form-label" data-i18n="salary.payroll_day_label" style="margin:0;white-space:nowrap">每月結算日：第</label>
           <input type="number" class="form-input" id="sal-payroll-day" min="1" max="28" style="width:80px">
@@ -1128,7 +1133,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <span id="sal-cfg-msg" style="font-size:12px;color:var(--green);min-height:14px"></span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div class="panel-bar">
         <span id="sal-staff-count" style="font-size:13px;color:var(--muted)"></span>
         <a href="#" onclick="showPage('punch',event);switchPunchTab('staff')" style="font-size:12px;color:var(--accent)">管理員工 →</a>
       </div>
@@ -1144,13 +1149,15 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 薪資項目 -->
     <div id="salary-panel-items" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <span style="font-size:12px;color:var(--muted)" data-i18n="salary.items_desc">設定每月薪資計算時使用的津貼和扣除項目</span>
-        <button class="btn btn-primary" onclick="openSalaryItemModal()" data-i18n="btn.add_record">新增項目</button>
+      <div class="panel-bar">
+        <span class="form-hint" data-i18n="salary.items_desc">設定每月薪資計算時使用的津貼和扣除項目</span>
+        <div class="panel-bar-actions">
+          <button class="btn btn-primary" onclick="openSalaryItemModal()" data-i18n="btn.add_record">新增項目</button>
+        </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="salary-items-grid">
-        <div><div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:12px">津貼項目（加項）</div><div id="sal-items-allow"></div></div>
-        <div><div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:12px">扣除項目（減項）</div><div id="sal-items-deduct"></div></div>
+      <div class="form-grid" id="salary-items-grid">
+        <div><div class="section-title" style="color:var(--green);margin-bottom:12px">津貼項目（加項）</div><div id="sal-items-allow"></div></div>
+        <div><div class="section-title" style="color:var(--red);margin-bottom:12px">扣除項目（減項）</div><div id="sal-items-deduct"></div></div>
       </div>
       <div class="card" style="padding:14px 20px;background:var(--bg);margin-top:12px">
         <div style="font-size:12px;color:var(--muted);line-height:2">
@@ -1166,14 +1173,14 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     </div>
     <!-- 扣繳憑單 -->
     <div id="salary-panel-withholding" style="display:none">
-      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar" style="margin-bottom:16px">
         <span class="filter-label" data-i18n="label.year">年度</span>
         <select id="wh-year" class="filter-input" style="width:100px"></select>
         <button class="btn btn-outline btn-sm" onclick="openWithholdingReport('html')">產生報表（列印）</button>
         <button class="btn btn-outline btn-sm" onclick="openWithholdingReport('xlsx')">匯出 Excel</button>
       </div>
       <div class="card" style="padding:20px">
-        <div class="card-title" style="padding:0;margin-bottom:12px">統一編號與公司資訊（用於憑單表頭）</div>
+        <div class="section-title" style="margin-bottom:12px">統一編號與公司資訊（用於憑單表頭）</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:600px">
           <div><label class="form-label">公司名稱</label><input class="form-input" id="wh-company-name" style="width:100%"></div>
           <div><label class="form-label">統一編號</label><input class="form-input" id="wh-tax-id" style="width:100%"></div>
@@ -1187,10 +1194,10 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 勞健保 EDI -->
     <div id="salary-panel-edi" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="form-grid">
         <!-- 投保單位設定 -->
         <div class="card" style="padding:20px">
-          <div class="card-title" style="padding:0;margin-bottom:12px">投保單位設定</div>
+          <div class="section-title" style="margin-bottom:12px">投保單位設定</div>
           <div style="display:grid;gap:10px">
             <div><label class="form-label">勞保證號（8 碼）</label><input class="form-input" id="edi-labor-no" style="width:100%"></div>
             <div><label class="form-label">健保費類代號</label><input class="form-input" id="edi-health-no" style="width:100%"></div>
@@ -1203,7 +1210,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
         <!-- 申報產生 -->
         <div class="card" style="padding:20px">
-          <div class="card-title" style="padding:0;margin-bottom:12px">產生申報檔</div>
+          <div class="section-title" style="margin-bottom:12px">產生申報檔</div>
           <div style="display:grid;gap:10px;margin-bottom:14px">
             <div>
               <label class="form-label">員工（多選，空=全部）</label>
@@ -1228,7 +1235,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 預支管理 -->
     <div id="salary-panel-advances" style="display:none">
-      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar" style="margin-bottom:16px">
         <span class="filter-label">員工</span>
         <select class="filter-input" id="adv-filter-staff" style="min-width:130px" onchange="loadAdvances()">
           <option value="">全部員工</option>
@@ -1302,7 +1309,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
   </div><!-- end page-ann -->
   <!-- ── 國定假日 ── -->
   <div class="page" id="page-holiday" style="display:none">
-    <div class="filter-bar" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+    <div class="filter-bar">
       <span class="filter-label" data-i18n="label.year">年度</span>
       <select class="filter-input" id="holiday-year" onchange="loadHolidays()" style="min-width:100px"></select>
       <button class="btn btn-outline btn-sm" onclick="loadHolidays()">重新整理</button>
@@ -1362,7 +1369,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 損益儀表板 -->
     <div id="fin-panel-dash">
-      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar" style="margin-bottom:16px">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="fin-dash-month" onchange="loadFinSummary()">
         <span style="flex:1"></span>
@@ -1410,7 +1417,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 收支記錄 -->
     <div id="fin-panel-records" style="display:none">
-      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar" style="margin-bottom:16px">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="fin-rec-month" onchange="loadFinRecords()">
         <select class="filter-input" id="fin-rec-type" onchange="loadFinRecords()" style="min-width:100px">
@@ -1541,7 +1548,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 稅務申報 -->
     <div id="fin-panel-tax" style="display:none">
-      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar" style="margin-bottom:16px">
         <span class="filter-label" data-i18n="label.year">年度</span>
         <input class="filter-input" type="number" id="tax-year" style="width:90px" min="2020" max="2099">
         <span class="filter-label">期別（雙月）</span>
@@ -1607,7 +1614,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 預算管理 -->
     <div id="fin-panel-budget" style="display:none">
-      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar" style="margin-bottom:16px">
         <span class="filter-label">年月</span>
         <input class="filter-input" type="month" id="budget-month" onchange="loadBudgetVsActual()">
         <button class="btn btn-primary btn-sm" onclick="openBudgetEditModal()">設定預算</button>
@@ -1638,7 +1645,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 財務報表 -->
     <div id="fin-panel-stmts" style="display:none">
-      <div class="filter-bar" style="margin-bottom:16px;gap:12px;flex-wrap:wrap">
+      <div class="filter-bar" style="margin-bottom:16px">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="fin-stmt-month">
         <button class="btn btn-primary btn-sm" onclick="loadStatements()">產生報表</button>
@@ -1818,7 +1825,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 訓練記錄 -->
     <div id="training-panel-records" style="display:none">
-      <div class="filter-bar" style="margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div class="filter-bar" style="margin-bottom:16px">
         <select id="training-filter-staff" class="filter-input" style="min-width:130px" onchange="loadTrainingRecords()">
           <option value="" data-i18n="training.staff.all">全部員工</option>
         </select>
@@ -1870,7 +1877,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
   <!-- ── 費用審核 ── -->
   <div class="page" id="page-expense-review" style="display:none">
-    <div class="filter-bar" style="margin-bottom:20px">
+    <div class="filter-bar">
       <span class="filter-label" data-i18n="label.status">狀態</span>
       <select id="exp-review-status" class="filter-input" style="min-width:100px" onchange="loadExpenseReview()">
         <option value="pending" data-i18n="req.status.pending">待審核</option>
@@ -1906,7 +1913,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 考核記錄 tab -->
     <div id="perf-panel-reviews">
-      <div class="filter-bar" style="margin-bottom:20px">
+      <div class="filter-bar">
         <span class="filter-label" data-i18n="label.staff">員工</span>
         <select id="perf-filter-staff" class="filter-input" style="min-width:140px">
           <option value="">全部員工</option>
