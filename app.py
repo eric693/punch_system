@@ -2204,8 +2204,10 @@ def _do_line_leave_submit(staff, user_id, leave_type_name, start_date, end_date,
         """, (staff['id'], lt['id'], year)).fetchone()
 
         remain = None
-        if bal:
-            remain = float(bal['total_days'] or 0) - float(bal['used_days'] or 0)
+        if bal and lt['max_days'] is not None:
+            # total_days=0 表示尚未初始化，改用 leave_types.max_days 為基準
+            total = float(bal['total_days']) if bal['total_days'] else float(lt['max_days'])
+            remain = total - float(bal['used_days'] or 0)
             if remain < days:
                 _send_line_punch(user_id, _lmsg('leave_insufficient_balance', lang,
                     type=lt['name'], remain=f'{remain:.1f}', days=days))
@@ -11261,7 +11263,7 @@ def _line_query_leave_balance(staff, user_id):
     try:
         with get_db() as conn:
             rows = conn.execute("""
-                SELECT lb.total_days, lb.used_days, lt.name AS type_name
+                SELECT lb.total_days, lb.used_days, lt.name AS type_name, lt.max_days
                 FROM leave_balances lb
                 JOIN leave_types lt ON lt.id=lb.leave_type_id
                 WHERE lb.staff_id=%s AND lb.year=%s
@@ -11275,12 +11277,16 @@ def _line_query_leave_balance(staff, user_id):
         return
     lines = [_lmsg('bal_header', lang, name=staff['name'], year=year)]
     for r in rows:
-        total = float(r['total_days'] or 0)
+        # total_days=0 表示尚未初始化，改用 leave_types.max_days 為基準
+        total = float(r['total_days']) if r['total_days'] else (float(r['max_days']) if r['max_days'] else 0.0)
         used  = float(r['used_days']  or 0)
         remain= total - used
-        bar   = '▓' * int(remain) + '░' * max(0, int(total - remain))
-        lines.append(_lmsg('bal_row', lang,
-            type=r['type_name'], remain=f'{remain:.1f}', total=f'{total:.0f}', bar=bar))
+        if r['max_days'] is None:
+            lines.append(f'\n【{r["type_name"]}】\n  剩餘 {remain:.1f} 天（無上限）')
+        else:
+            bar = '▓' * int(remain) + '░' * max(0, int(total - remain))
+            lines.append(_lmsg('bal_row', lang,
+                type=r['type_name'], remain=f'{remain:.1f}', total=f'{total:.0f}', bar=bar))
     _send_line_punch(user_id, '\n'.join(lines))
 
 
@@ -11391,8 +11397,10 @@ def _line_submit_leave(staff, user_id, text):
         days = _calc_leave_days(date_str1, date_str2, scheduled_dates=sched)
 
         remain = None
-        if bal:
-            remain = float(bal['total_days'] or 0) - float(bal['used_days'] or 0)
+        if bal and lt['max_days'] is not None:
+            # total_days=0 表示尚未初始化，改用 leave_types.max_days 為基準
+            total = float(bal['total_days']) if bal['total_days'] else float(lt['max_days'])
+            remain = total - float(bal['used_days'] or 0)
             if remain < days:
                 _send_line_punch(user_id, _lmsg('leave_insufficient_balance', lang,
                     type=lt['name'], remain=f'{remain:.1f}', days=days))
