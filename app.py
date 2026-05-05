@@ -6352,7 +6352,7 @@ def api_salary_staff_update(sid):
         conn.execute("""
             UPDATE punch_staff SET
               employee_code=%s, department=%s, position_title=%s,
-              hire_date=%s, birth_date=%s,
+              hire_date=%s,
               base_salary=%s, insured_salary=%s, daily_hours=%s,
               ot_rate1=%s, ot_rate2=%s, salary_type=%s,
               hourly_rate=%s, vacation_quota=%s, salary_notes=%s,
@@ -6360,7 +6360,7 @@ def api_salary_staff_update(sid):
               national_id=%s, gender=%s, insurance_type=%s, address=%s
             WHERE id=%s
         """, (_s('employee_code'), _s('department'), _s('position_title'),
-              _s('hire_date'), _s('birth_date'),
+              _s('hire_date'),
               _f('base_salary'), _f('insured_salary'), _f('daily_hours') or 8,
               _f('ot_rate1') or 1.33, _f('ot_rate2') or 1.67,
               b.get('salary_type','monthly'),

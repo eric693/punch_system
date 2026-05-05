@@ -4563,20 +4563,28 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div class="modal-body">
       <input type="hidden" id="ssm-id">
       <div class="form-grid">
+        <!-- 基本資料 -->
+        <div class="form-section-title">基本資料</div>
         <div class="form-group"><label class="form-label">員工代碼</label><input class="form-input" id="ssm-code" placeholder="例：EMP001"></div>
         <div class="form-group"><label class="form-label">部門</label><input class="form-input" id="ssm-dept" placeholder="例：外場"></div>
         <div class="form-group"><label class="form-label">職稱</label><input class="form-input" id="ssm-pos" placeholder="例：領班"></div>
         <div class="form-group"><label class="form-label">到職日</label><input class="form-input" type="date" id="ssm-hire"></div>
+
+        <!-- 薪資設定 -->
+        <div class="form-section-title">薪資設定</div>
         <div class="form-group"><label class="form-label">薪資制度</label><select class="form-input" id="ssm-sal-type" onchange="toggleSalType()"><option value="monthly">月薪制</option><option value="hourly">時薪制</option></select></div>
         <div class="form-group" id="ssm-base-wrap"><label class="form-label">底薪（月薪）</label><input class="form-input" type="number" id="ssm-base" placeholder="例：28590"></div>
         <div class="form-group" id="ssm-hourly-wrap" style="display:none"><label class="form-label">時薪</label><input class="form-input" type="number" id="ssm-hourly" placeholder="例：183"></div>
         <div class="form-group"><label class="form-label">投保薪資</label><input class="form-input" type="number" id="ssm-insured" placeholder="依勞健保投保級距"></div>
-        <div class="form-group"><label class="form-label">每日工時</label><input class="form-input" type="number" id="ssm-daily-h" value="8" min="1" max="12" step="0.5"></div>
+        <div class="form-group"><label class="form-label">每日工時（小時）</label><input class="form-input" type="number" id="ssm-daily-h" value="8" min="1" max="12" step="0.5"></div>
         <div class="form-group"><label class="form-label">排休配額（天/月）</label><input class="form-input" type="number" id="ssm-vq" placeholder="空白=使用月份預設"></div>
-        <div class="form-group"><label class="form-label">加班費率1（前2h）</label><input class="form-input" type="number" id="ssm-ot1" value="1.33" step="0.01"></div>
-        <div class="form-group"><label class="form-label">加班費率2（後續）</label><input class="form-input" type="number" id="ssm-ot2" value="1.67" step="0.01"></div>
+        <div class="form-group"><label class="form-label">加班費率 1（前 2h）</label><input class="form-input" type="number" id="ssm-ot1" value="1.33" step="0.01"></div>
+        <div class="form-group"><label class="form-label">加班費率 2（後續時數）</label><input class="form-input" type="number" id="ssm-ot2" value="1.67" step="0.01"></div>
         <div class="form-group full-width"><label class="form-label">薪資備註</label><input class="form-input" id="ssm-notes" placeholder="選填"></div>
-        <div class="form-group"><label class="form-label">身分證字號</label><input class="form-input" id="ssm-national-id" placeholder="A123456789（扣繳憑單/EDI用）"></div>
+
+        <!-- 法定申報 -->
+        <div class="form-section-title">法定申報</div>
+        <div class="form-group"><label class="form-label">身分證字號</label><input class="form-input" id="ssm-national-id" placeholder="A123456789（扣繳憑單 / EDI 用）"></div>
         <div class="form-group"><label class="form-label">性別</label><select class="form-input" id="ssm-gender"><option value="">—</option><option value="M">男</option><option value="F">女</option></select></div>
         <div class="form-group"><label class="form-label">投保類別</label><select class="form-input" id="ssm-ins-type"><option value="regular">一般</option><option value="part_time">部分工時</option><option value="none">不投保</option></select></div>
         <div class="form-group full-width"><label class="form-label">戶籍地址</label><input class="form-input" id="ssm-address" placeholder="（扣繳憑單用）"></div>
@@ -6751,6 +6759,8 @@ const TRANSLATIONS = {
     'crm.col.company':'Company','crm.col.contact':'Contact','crm.col.phone':'Phone',
     'crm.col.industry':'Industry','crm.col.assigned':'Assigned To','crm.col.status':'Status','crm.col.last_contact':'Last Contact',
     'crm.status.active':'Active','crm.status.vip':'VIP','crm.status.inactive':'Inactive',
+    'crm.source.referral':'Referral','crm.source.ad':'Advertising','crm.source.website':'Website','crm.source.cold':'Cold Call','crm.source.other':'Other',
+    'crm.itype.call':'Phone Call','crm.itype.email':'Email','crm.itype.meeting':'Meeting','crm.itype.visit':'Visit','crm.itype.other':'Other',
     'crm.btn.add':'Add Customer','crm.btn.export':'Export Excel','crm.btn.save':'Save','crm.btn.delete':'Delete',
     'crm.btn.add_interaction':'Add Interaction','crm.no_customers':'No customers yet',
     'crm.detail.title':'Customer Detail','crm.detail.basic':'Basic Info','crm.detail.interactions':'Interactions',
@@ -7581,6 +7591,8 @@ const TRANSLATIONS = {
     'crm.col.company':'会社名','crm.col.contact':'担当者','crm.col.phone':'電話',
     'crm.col.industry':'業種','crm.col.assigned':'担当','crm.col.status':'ステータス','crm.col.last_contact':'最終連絡',
     'crm.status.active':'アクティブ','crm.status.vip':'VIP','crm.status.inactive':'無効',
+    'crm.source.referral':'紹介','crm.source.ad':'広告','crm.source.website':'ウェブサイト','crm.source.cold':'電話営業','crm.source.other':'その他',
+    'crm.itype.call':'電話','crm.itype.email':'メール','crm.itype.meeting':'会議','crm.itype.visit':'訪問','crm.itype.other':'その他',
     'crm.btn.add':'顧客追加','crm.btn.export':'Excel出力','crm.btn.save':'保存','crm.btn.delete':'削除',
     'crm.btn.add_interaction':'やり取り追加','crm.no_customers':'顧客データなし',
     'crm.detail.title':'顧客詳細','crm.detail.basic':'基本情報','crm.detail.interactions':'やり取り履歴',
@@ -7589,8 +7601,14 @@ const TRANSLATIONS = {
     'orders.stat.total':'注文総数','orders.stat.pending':'保留中','orders.stat.processing':'処理中','orders.stat.revenue':'今月売上',
     'orders.status.draft':'下書き','orders.status.sent':'送信済','orders.status.accepted':'承認','orders.status.rejected':'却下','orders.status.expired':'期限切れ',
     'orders.status.pending':'保留','orders.status.processing':'処理中','orders.status.shipped':'出荷済','orders.status.completed':'完了','orders.status.cancelled':'キャンセル',
+    'orders.col.no':'番号','orders.col.customer':'顧客','orders.col.title':'タイトル','orders.col.amount':'金額','orders.col.status':'ステータス','orders.col.channel':'チャネル','orders.col.date':'日付',
+    'orders.channel.direct':'直販','orders.channel.shopee':'Shopee','orders.channel.website':'ウェブサイト','orders.channel.other':'その他',
+    'orders.item.name':'品名','orders.item.qty':'数量','orders.item.unit':'単位','orders.item.price':'単価','orders.item.amount':'小計',
     'orders.btn.add_quote':'見積作成','orders.btn.add_order':'注文作成','orders.btn.convert':'注文に変換',
     'orders.subtotal':'小計','orders.tax':'税額','orders.total':'合計',
+    'ecom.stat.platforms':'プラットフォーム','ecom.stat.synced':'本日同期','ecom.stat.pending':'インポート待ち','ecom.stat.total':'注文総数',
+    'ecom.col.platform':'プラットフォーム','ecom.col.order_id':'注文番号','ecom.col.buyer':'購入者','ecom.col.amount':'金額','ecom.col.status':'ステータス','ecom.col.synced':'同期日時',
+    'ecom.platform.shopee':'Shopee','ecom.platform.website':'自社サイト','ecom.platform.other':'その他',
     'ecom.btn.sync':'今すぐ同期','ecom.btn.import':'インポート','ecom.btn.add_platform':'プラットフォーム追加',
     'ecom.no_platforms':'プラットフォーム未設定','ecom.no_orders':'ECオーダーなし',
     'ecom.sync_done':'同期完了','ecom.import_done':'注文としてインポート済',
@@ -8376,6 +8394,8 @@ const TRANSLATIONS = {
     'crm.col.company':'Công ty','crm.col.contact':'Liên hệ','crm.col.phone':'SĐT',
     'crm.col.industry':'Ngành','crm.col.assigned':'Phụ trách','crm.col.status':'Trạng thái','crm.col.last_contact':'Liên hệ cuối',
     'crm.status.active':'Hoạt động','crm.status.vip':'VIP','crm.status.inactive':'Không hoạt động',
+    'crm.source.referral':'Giới thiệu','crm.source.ad':'Quảng cáo','crm.source.website':'Website','crm.source.cold':'Gọi lạnh','crm.source.other':'Khác',
+    'crm.itype.call':'Điện thoại','crm.itype.email':'Email','crm.itype.meeting':'Họp','crm.itype.visit':'Thăm','crm.itype.other':'Khác',
     'crm.btn.add':'Thêm KH','crm.btn.export':'Xuất Excel','crm.btn.save':'Lưu','crm.btn.delete':'Xóa',
     'crm.btn.add_interaction':'Thêm tương tác','crm.no_customers':'Chưa có khách hàng',
     'crm.detail.title':'Chi tiết KH','crm.detail.basic':'Thông tin cơ bản','crm.detail.interactions':'Lịch sử tương tác',
@@ -8384,8 +8404,14 @@ const TRANSLATIONS = {
     'orders.stat.total':'Tổng đơn','orders.stat.pending':'Chờ xử lý','orders.stat.processing':'Đang xử lý','orders.stat.revenue':'Doanh thu tháng',
     'orders.status.draft':'Nháp','orders.status.sent':'Đã gửi','orders.status.accepted':'Chấp nhận','orders.status.rejected':'Từ chối','orders.status.expired':'Hết hạn',
     'orders.status.pending':'Chờ','orders.status.processing':'Xử lý','orders.status.shipped':'Đã giao','orders.status.completed':'Hoàn thành','orders.status.cancelled':'Hủy',
+    'orders.col.no':'Mã đơn','orders.col.customer':'Khách hàng','orders.col.title':'Tiêu đề','orders.col.amount':'Giá trị','orders.col.status':'Trạng thái','orders.col.channel':'Kênh','orders.col.date':'Ngày tạo',
+    'orders.channel.direct':'Trực tiếp','orders.channel.shopee':'Shopee','orders.channel.website':'Website','orders.channel.other':'Khác',
+    'orders.item.name':'Tên SP','orders.item.qty':'SL','orders.item.unit':'Đơn vị','orders.item.price':'Đơn giá','orders.item.amount':'Thành tiền',
     'orders.btn.add_quote':'Tạo báo giá','orders.btn.add_order':'Tạo đơn','orders.btn.convert':'Chuyển đơn',
     'orders.subtotal':'Tạm tính','orders.tax':'Thuế','orders.total':'Tổng',
+    'ecom.stat.platforms':'Nền tảng','ecom.stat.synced':'Đã đồng bộ','ecom.stat.pending':'Chờ nhập','ecom.stat.total':'Tổng đơn',
+    'ecom.col.platform':'Nền tảng','ecom.col.order_id':'Mã đơn','ecom.col.buyer':'Người mua','ecom.col.amount':'Giá trị','ecom.col.status':'Trạng thái','ecom.col.synced':'Thời gian',
+    'ecom.platform.shopee':'Shopee','ecom.platform.website':'Website','ecom.platform.other':'Khác',
     'ecom.btn.sync':'Đồng bộ','ecom.btn.import':'Nhập','ecom.btn.add_platform':'Thêm nền tảng',
     'ecom.no_platforms':'Chưa cấu hình nền tảng','ecom.no_orders':'Chưa có đơn TMĐT',
     'ecom.sync_done':'Đồng bộ xong','ecom.import_done':'Đã nhập thành đơn hàng',
@@ -9170,6 +9196,8 @@ const TRANSLATIONS = {
     'crm.col.company':'บริษัท','crm.col.contact':'ผู้ติดต่อ','crm.col.phone':'โทรศัพท์',
     'crm.col.industry':'อุตสาหกรรม','crm.col.assigned':'ผู้รับผิดชอบ','crm.col.status':'สถานะ','crm.col.last_contact':'ติดต่อล่าสุด',
     'crm.status.active':'ใช้งาน','crm.status.vip':'VIP','crm.status.inactive':'ไม่ใช้งาน',
+    'crm.source.referral':'แนะนำ','crm.source.ad':'โฆษณา','crm.source.website':'เว็บไซต์','crm.source.cold':'โทรหาลูกค้า','crm.source.other':'อื่นๆ',
+    'crm.itype.call':'โทรศัพท์','crm.itype.email':'อีเมล','crm.itype.meeting':'ประชุม','crm.itype.visit':'เยี่ยม','crm.itype.other':'อื่นๆ',
     'crm.btn.add':'เพิ่มลูกค้า','crm.btn.export':'ส่งออก Excel','crm.btn.save':'บันทึก','crm.btn.delete':'ลบ',
     'crm.btn.add_interaction':'เพิ่มการติดต่อ','crm.no_customers':'ยังไม่มีลูกค้า',
     'crm.detail.title':'รายละเอียดลูกค้า','crm.detail.basic':'ข้อมูลพื้นฐาน','crm.detail.interactions':'ประวัติการติดต่อ',
@@ -9178,8 +9206,14 @@ const TRANSLATIONS = {
     'orders.stat.total':'คำสั่งซื้อทั้งหมด','orders.stat.pending':'รอดำเนินการ','orders.stat.processing':'กำลังดำเนินการ','orders.stat.revenue':'รายได้เดือนนี้',
     'orders.status.draft':'ร่าง','orders.status.sent':'ส่งแล้ว','orders.status.accepted':'ยอมรับ','orders.status.rejected':'ปฏิเสธ','orders.status.expired':'หมดอายุ',
     'orders.status.pending':'รอ','orders.status.processing':'ดำเนิน','orders.status.shipped':'จัดส่ง','orders.status.completed':'เสร็จ','orders.status.cancelled':'ยกเลิก',
+    'orders.col.no':'หมายเลข','orders.col.customer':'ลูกค้า','orders.col.title':'หัวข้อ','orders.col.amount':'จำนวน','orders.col.status':'สถานะ','orders.col.channel':'ช่องทาง','orders.col.date':'วันที่',
+    'orders.channel.direct':'ตรง','orders.channel.shopee':'ช็อปปี้','orders.channel.website':'เว็บไซต์','orders.channel.other':'อื่นๆ',
+    'orders.item.name':'ชื่อสินค้า','orders.item.qty':'จำนวน','orders.item.unit':'หน่วย','orders.item.price':'ราคาต่อหน่วย','orders.item.amount':'รวม',
     'orders.btn.add_quote':'สร้างใบเสนอราคา','orders.btn.add_order':'สร้างคำสั่งซื้อ','orders.btn.convert':'แปลงเป็นคำสั่งซื้อ',
     'orders.subtotal':'ยอดรวม','orders.tax':'ภาษี','orders.total':'รวมทั้งสิ้น',
+    'ecom.stat.platforms':'แพลตฟอร์ม','ecom.stat.synced':'ซิงค์วันนี้','ecom.stat.pending':'รอนำเข้า','ecom.stat.total':'คำสั่งซื้อทั้งหมด',
+    'ecom.col.platform':'แพลตฟอร์ม','ecom.col.order_id':'หมายเลขคำสั่ง','ecom.col.buyer':'ผู้ซื้อ','ecom.col.amount':'จำนวน','ecom.col.status':'สถานะ','ecom.col.synced':'เวลาซิงค์',
+    'ecom.platform.shopee':'ช็อปปี้','ecom.platform.website':'เว็บไซต์','ecom.platform.other':'อื่นๆ',
     'ecom.btn.sync':'ซิงค์เดี๋ยวนี้','ecom.btn.import':'นำเข้า','ecom.btn.add_platform':'เพิ่มแพลตฟอร์ม',
     'ecom.no_platforms':'ยังไม่ได้ตั้งค่าแพลตฟอร์ม','ecom.no_orders':'ยังไม่มีคำสั่งซื้ออีคอมเมิร์ซ',
     'ecom.sync_done':'ซิงค์เสร็จแล้ว','ecom.import_done':'นำเข้าเป็นคำสั่งซื้อแล้ว',
@@ -9991,6 +10025,8 @@ const TRANSLATIONS = {
     'crm.col.company':'公司名称','crm.col.contact':'联系人','crm.col.phone':'电话',
     'crm.col.industry':'行业','crm.col.assigned':'负责业务','crm.col.status':'状态','crm.col.last_contact':'最后联系',
     'crm.status.active':'活跃','crm.status.vip':'VIP','crm.status.inactive':'停用',
+    'crm.source.referral':'转介绍','crm.source.ad':'广告','crm.source.website':'官网','crm.source.cold':'冷电','crm.source.other':'其他',
+    'crm.itype.call':'电话','crm.itype.email':'Email','crm.itype.meeting':'会议','crm.itype.visit':'拜访','crm.itype.other':'其他',
     'crm.btn.add':'新增客户','crm.btn.export':'导出Excel','crm.btn.save':'保存','crm.btn.delete':'删除',
     'crm.btn.add_interaction':'新增互动','crm.no_customers':'暂无客户数据',
     'crm.detail.title':'客户详情','crm.detail.basic':'基本资料','crm.detail.interactions':'互动记录',
@@ -9999,8 +10035,14 @@ const TRANSLATIONS = {
     'orders.stat.total':'订单总数','orders.stat.pending':'待处理','orders.stat.processing':'进行中','orders.stat.revenue':'本月营收',
     'orders.status.draft':'草稿','orders.status.sent':'已发送','orders.status.accepted':'已接受','orders.status.rejected':'已拒绝','orders.status.expired':'已过期',
     'orders.status.pending':'待处理','orders.status.processing':'处理中','orders.status.shipped':'已发货','orders.status.completed':'已完成','orders.status.cancelled':'已取消',
+    'orders.col.no':'单号','orders.col.customer':'客户','orders.col.title':'标题','orders.col.amount':'金额','orders.col.status':'状态','orders.col.channel':'渠道','orders.col.date':'创建时间',
+    'orders.channel.direct':'直销','orders.channel.shopee':'虾皮','orders.channel.website':'官网','orders.channel.other':'其他',
+    'orders.item.name':'品项名称','orders.item.qty':'数量','orders.item.unit':'单位','orders.item.price':'单价','orders.item.amount':'小计',
     'orders.btn.add_quote':'新增报价单','orders.btn.add_order':'新增订单','orders.btn.convert':'转为订单',
     'orders.subtotal':'小计','orders.tax':'税额','orders.total':'合计',
+    'ecom.stat.platforms':'已启用平台','ecom.stat.synced':'今日同步','ecom.stat.pending':'待导入','ecom.stat.total':'订单总数',
+    'ecom.col.platform':'平台','ecom.col.order_id':'平台订单号','ecom.col.buyer':'买家','ecom.col.amount':'金额','ecom.col.status':'状态','ecom.col.synced':'同步时间',
+    'ecom.platform.shopee':'虾皮购物','ecom.platform.website':'自家官网','ecom.platform.other':'其他平台',
     'ecom.btn.sync':'立即同步','ecom.btn.import':'导入订单','ecom.btn.add_platform':'新增平台',
     'ecom.no_platforms':'暂未配置平台','ecom.no_orders':'暂无电商订单',
     'ecom.sync_done':'同步完成','ecom.import_done':'已导入为订单',
