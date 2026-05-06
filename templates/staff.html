@@ -154,6 +154,10 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
       <input class="fi" type="text" id="inp-user" placeholder="請輸入帳號" autocapitalize="none" spellcheck="false" autocomplete="username">
       <div class="fl" id="staff-label-pw">密碼</div>
       <input class="fi" type="password" id="inp-pass" placeholder="請輸入密碼" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px">
+        <input type="checkbox" id="remember-me" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+        <label for="remember-me" style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none" id="staff-remember-label">記住帳號密碼</label>
+      </div>
       <button class="login-btn" id="login-btn" onclick="doLogin()">登入</button>
       <!-- WebAuthn biometric (shown only when supported) -->
       <div id="bio-sep" style="display:none;margin-top:12px">
@@ -676,6 +680,15 @@ setInterval(tick,1000);tick();
 function showLogin(){
   document.getElementById('screen-login').style.display='';
   document.getElementById('screen-main').style.display='none';
+  // Restore saved credentials
+  try{
+    const saved=JSON.parse(localStorage.getItem('staff_remember')||'null');
+    if(saved){
+      document.getElementById('inp-user').value=saved.u||'';
+      document.getElementById('inp-pass').value=saved.p?atob(saved.p):'';
+      document.getElementById('remember-me').checked=true;
+    }
+  }catch(e){}
 }
 async function doLogin(){
   const u=document.getElementById('inp-user').value.trim();
@@ -689,7 +702,14 @@ async function doLogin(){
     const r=await fetch('/api/punch/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
     const d=await r.json();
     if(!r.ok){err.textContent=d.error||'登入失敗';return;}
-    me=d;document.getElementById('inp-pass').value='';showMain();loadAnnStaff();
+    me=d;
+    // Save or clear credentials
+    if(document.getElementById('remember-me').checked){
+      try{localStorage.setItem('staff_remember',JSON.stringify({u,p:btoa(p)}));}catch(e){}
+    }else{
+      localStorage.removeItem('staff_remember');
+    }
+    document.getElementById('inp-pass').value='';showMain();loadAnnStaff();
   }catch(e){err.textContent='網路錯誤，請重試';}
   finally{btn.disabled=false;btn.textContent=staffT('loginBtn');}
 }
@@ -2957,7 +2977,7 @@ async function cancelMyLoanRequest(lid) {
 const STAFF_I18N = {
   'zh-TW': {
     brand:'打卡管理系統', loginTitle:'員工登入', labelUser:'帳號', labelPw:'密碼',
-    userPh:'請輸入帳號', pwPh:'請輸入密碼', loginBtn:'登入', bio:'指紋 / Face ID 登入',
+    userPh:'請輸入帳號', pwPh:'請輸入密碼', loginBtn:'登入', remember:'記住帳號密碼', bio:'指紋 / Face ID 登入',
     logout:'登出',
     'tab.ann':'公告','tab.punch':'打卡','tab.sched':'排休申請','tab.leave':'請假申請',
     'tab.schedule_view':'我的排班','tab.overtime':'加班申請','tab.attendance':'出勤月曆',
@@ -3209,7 +3229,7 @@ const STAFF_I18N = {
   },
   'en': {
     brand:'Attendance System', loginTitle:'Employee Login', labelUser:'Username', labelPw:'Password',
-    userPh:'Enter username', pwPh:'Enter password', loginBtn:'Sign In', bio:'Fingerprint / Face ID',
+    userPh:'Enter username', pwPh:'Enter password', loginBtn:'Sign In', remember:'Remember me', bio:'Fingerprint / Face ID',
     logout:'Logout',
     'tab.ann':'Notices','tab.punch':'Punch','tab.sched':'Schedule Req.','tab.leave':'Leave Req.',
     'tab.schedule_view':'My Schedule','tab.overtime':'Overtime','tab.attendance':'Attendance',
@@ -3454,7 +3474,7 @@ const STAFF_I18N = {
   },
   'ja': {
     brand:'勤怠管理システム', loginTitle:'従業員ログイン', labelUser:'ユーザー名', labelPw:'パスワード',
-    userPh:'ユーザー名を入力', pwPh:'パスワードを入力', loginBtn:'ログイン', bio:'指紋 / Face ID ログイン',
+    userPh:'ユーザー名を入力', pwPh:'パスワードを入力', loginBtn:'ログイン', remember:'ログイン情報を保存', bio:'指紋 / Face ID ログイン',
     logout:'ログアウト',
     'tab.ann':'お知らせ','tab.punch':'打刻','tab.sched':'シフト申請','tab.leave':'休暇申請',
     'tab.schedule_view':'マイシフト','tab.overtime':'残業申請','tab.attendance':'出勤カレンダー',
@@ -3699,7 +3719,7 @@ const STAFF_I18N = {
   },
   'vi': {
     brand:'Hệ thống Chấm công', loginTitle:'Đăng nhập', labelUser:'Tài khoản', labelPw:'Mật khẩu',
-    userPh:'Nhập tài khoản', pwPh:'Nhập mật khẩu', loginBtn:'Đăng nhập', bio:'Vân tay / Face ID',
+    userPh:'Nhập tài khoản', pwPh:'Nhập mật khẩu', loginBtn:'Đăng nhập', remember:'Ghi nhớ tài khoản', bio:'Vân tay / Face ID',
     logout:'Đăng xuất',
     'tab.ann':'Thông báo','tab.punch':'Chấm công','tab.sched':'Xin nghỉ','tab.leave':'Nghỉ phép',
     'tab.schedule_view':'Lịch của tôi','tab.overtime':'Tăng ca','tab.attendance':'Lịch chấm công',
@@ -3944,7 +3964,7 @@ const STAFF_I18N = {
   },
   'th': {
     brand:'ระบบบันทึกเวลา', loginTitle:'เข้าสู่ระบบ', labelUser:'ชื่อผู้ใช้', labelPw:'รหัสผ่าน',
-    userPh:'กรอกชื่อผู้ใช้', pwPh:'กรอกรหัสผ่าน', loginBtn:'เข้าสู่ระบบ', bio:'ลายนิ้วมือ / Face ID',
+    userPh:'กรอกชื่อผู้ใช้', pwPh:'กรอกรหัสผ่าน', loginBtn:'เข้าสู่ระบบ', remember:'จดจำบัญชี', bio:'ลายนิ้วมือ / Face ID',
     logout:'ออกจากระบบ',
     'tab.ann':'ประกาศ','tab.punch':'บันทึกเวลา','tab.sched':'ขอวันหยุด','tab.leave':'ขอลา',
     'tab.schedule_view':'ตารางของฉัน','tab.overtime':'ล่วงเวลา','tab.attendance':'ปฏิทินการเข้างาน',
@@ -4189,7 +4209,7 @@ const STAFF_I18N = {
   },
   'zh-CN': {
     brand:'打卡管理系统', loginTitle:'员工登录', labelUser:'账号', labelPw:'密码',
-    userPh:'请输入账号', pwPh:'请输入密码', loginBtn:'登录', bio:'指纹 / Face ID 登录',
+    userPh:'请输入账号', pwPh:'请输入密码', loginBtn:'登录', remember:'记住账号密码', bio:'指纹 / Face ID 登录',
     logout:'退出',
     'tab.ann':'公告','tab.punch':'打卡','tab.sched':'排休申请','tab.leave':'请假申请',
     'tab.schedule_view':'我的排班','tab.overtime':'加班申请','tab.attendance':'出勤月历',
@@ -4433,7 +4453,7 @@ const STAFF_I18N = {
   },
   'id': {
     brand:'Sistem Absensi', loginTitle:'Login Karyawan', labelUser:'Username', labelPw:'Kata Sandi',
-    userPh:'Masukkan username', pwPh:'Masukkan kata sandi', loginBtn:'Masuk', bio:'Sidik Jari / Face ID',
+    userPh:'Masukkan username', pwPh:'Masukkan kata sandi', loginBtn:'Masuk', remember:'Ingat akun saya', bio:'Sidik Jari / Face ID',
     logout:'Keluar',
     'tab.ann':'Pengumuman','tab.punch':'Absensi','tab.sched':'Ajukan Jadwal','tab.leave':'Ajukan Cuti',
     'tab.schedule_view':'Jadwal Saya','tab.overtime':'Lembur','tab.attendance':'Kalender Kehadiran',
@@ -4718,6 +4738,7 @@ function staffApplyI18n() {
   p('inp-user', staffT('userPh'));
   p('inp-pass', staffT('pwPh'));
   s('login-btn', staffT('loginBtn'));
+  s('staff-remember-label', staffT('remember'));
   s('staff-bio-label', staffT('bio'));
   const logoutEl = document.querySelector('.logout-btn');
   if (logoutEl) logoutEl.textContent = staffT('logout');

@@ -129,6 +129,10 @@
     <input type="text" id="un" name="username" placeholder="輸入帳號" autofocus autocomplete="username" autocapitalize="none">
     <label for="pw" id="login-label-pw">密碼</label>
     <input type="password" id="pw" name="password" placeholder="輸入密碼" autocomplete="current-password">
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+      <input type="checkbox" id="admin-remember-me" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+      <label for="admin-remember-me" id="login-remember-label" style="font-size:11px;color:var(--muted);cursor:pointer;letter-spacing:.05em;text-transform:uppercase;user-select:none">記住帳號密碼</label>
+    </div>
     {% if error %}
     <div class="error-msg">{{ error }}</div>
     {% endif %}
@@ -142,31 +146,31 @@
 // ── Login page i18n ───────────────────────────────────────────────
 const LOGIN_I18N = {
   'zh-TW': { brand:'管理後台', bio:'指紋 / Face ID 登入', orPw:'或使用密碼登入', userLabel:'管理員帳號',
-             userPh:'輸入帳號', pwLabel:'密碼', pwPh:'輸入密碼', submit:'登入',
+             userPh:'輸入帳號', pwLabel:'密碼', pwPh:'輸入密碼', submit:'登入', remember:'記住帳號密碼',
              footer:'打卡 & 排班管理系統', toggle:'EN', verifying:'正在驗證...',
              noDevice:'找不到已綁定的裝置', success:'驗證成功，正在跳轉...', cancelled:'已取消或逾時', failed:'驗證失敗：' },
   'en':    { brand:'Admin Panel', bio:'Fingerprint / Face ID', orPw:'or sign in with password', userLabel:'Username',
-             userPh:'Enter username', pwLabel:'Password', pwPh:'Enter password', submit:'Sign In',
+             userPh:'Enter username', pwLabel:'Password', pwPh:'Enter password', submit:'Sign In', remember:'Remember me',
              footer:'Attendance & Schedule System', toggle:'日本語', verifying:'Verifying...',
              noDevice:'No registered device found', success:'Verified, redirecting...', cancelled:'Cancelled or timed out', failed:'Verification failed: ' },
   'ja':    { brand:'管理パネル', bio:'指紋 / Face ID ログイン', orPw:'またはパスワードでログイン', userLabel:'ユーザー名',
-             userPh:'ユーザー名を入力', pwLabel:'パスワード', pwPh:'パスワードを入力', submit:'ログイン',
+             userPh:'ユーザー名を入力', pwLabel:'パスワード', pwPh:'パスワードを入力', submit:'ログイン', remember:'ログイン情報を保存',
              footer:'勤怠 & シフト管理システム', toggle:'Tiếng Việt', verifying:'認証中...',
              noDevice:'登録済みデバイスが見つかりません', success:'認証成功、転送中...', cancelled:'キャンセルまたはタイムアウト', failed:'認証失敗：' },
   'vi':    { brand:'Quản trị', bio:'Vân tay / Face ID', orPw:'hoặc đăng nhập bằng mật khẩu', userLabel:'Tên tài khoản',
-             userPh:'Nhập tên tài khoản', pwLabel:'Mật khẩu', pwPh:'Nhập mật khẩu', submit:'Đăng nhập',
+             userPh:'Nhập tên tài khoản', pwLabel:'Mật khẩu', pwPh:'Nhập mật khẩu', submit:'Đăng nhập', remember:'Ghi nhớ tài khoản',
              footer:'Hệ thống Chấm công & Lịch làm việc', toggle:'ภาษาไทย', verifying:'Đang xác thực...',
              noDevice:'Không tìm thấy thiết bị đã đăng ký', success:'Xác thực thành công, đang chuyển...', cancelled:'Đã hủy hoặc hết giờ', failed:'Xác thực thất bại: ' },
   'th':    { brand:'ระบบจัดการ', bio:'ลายนิ้วมือ / Face ID', orPw:'หรือเข้าสู่ระบบด้วยรหัสผ่าน', userLabel:'ชื่อผู้ใช้',
-             userPh:'กรอกชื่อผู้ใช้', pwLabel:'รหัสผ่าน', pwPh:'กรอกรหัสผ่าน', submit:'เข้าสู่ระบบ',
+             userPh:'กรอกชื่อผู้ใช้', pwLabel:'รหัสผ่าน', pwPh:'กรอกรหัสผ่าน', submit:'เข้าสู่ระบบ', remember:'จดจำบัญชี',
              footer:'ระบบบันทึกเวลา & ตารางงาน', toggle:'简体中文', verifying:'กำลังยืนยัน...',
              noDevice:'ไม่พบอุปกรณ์ที่ลงทะเบียน', success:'ยืนยันสำเร็จ กำลังเปลี่ยนเส้นทาง...', cancelled:'ยกเลิกหรือหมดเวลา', failed:'การยืนยันล้มเหลว: ' },
   'zh-CN': { brand:'管理后台', bio:'指纹 / Face ID 登录', orPw:'或使用密码登录', userLabel:'管理员账号',
-             userPh:'输入账号', pwLabel:'密码', pwPh:'输入密码', submit:'登录',
+             userPh:'输入账号', pwLabel:'密码', pwPh:'输入密码', submit:'登录', remember:'记住账号密码',
              footer:'打卡 & 排班管理系统', toggle:'Bahasa Indonesia', verifying:'正在验证...',
              noDevice:'找不到已绑定的设备', success:'验证成功，正在跳转...', cancelled:'已取消或超时', failed:'验证失败：' },
   'id':    { brand:'Panel Admin', bio:'Sidik Jari / Face ID', orPw:'atau masuk dengan kata sandi', userLabel:'Nama Pengguna',
-             userPh:'Masukkan nama pengguna', pwLabel:'Kata Sandi', pwPh:'Masukkan kata sandi', submit:'Masuk',
+             userPh:'Masukkan nama pengguna', pwLabel:'Kata Sandi', pwPh:'Masukkan kata sandi', submit:'Masuk', remember:'Ingat akun saya',
              footer:'Sistem Absensi & Jadwal Kerja', toggle:'繁體中文', verifying:'Memverifikasi...',
              noDevice:'Perangkat terdaftar tidak ditemukan', success:'Terverifikasi, mengalihkan...', cancelled:'Dibatalkan atau habis waktu', failed:'Verifikasi gagal: ' }
 };
@@ -181,6 +185,7 @@ function loginApplyI18n() {
   s('login-label-user', loginT('userLabel'));
   s('login-label-pw', loginT('pwLabel'));
   s('login-submit-btn', loginT('submit'));
+  s('login-remember-label', loginT('remember'));
   s('login-footer', loginT('footer'));
   const sel = document.getElementById('login-lang-btn');
   if (sel) sel.value = _loginLang;
@@ -195,6 +200,24 @@ function loginSetLang(lang) {
 }
 document.addEventListener('DOMContentLoaded', () => {
   loginApplyI18n();
+  // Restore saved credentials
+  try{
+    const saved=JSON.parse(localStorage.getItem('admin_remember')||'null');
+    if(saved){
+      document.getElementById('un').value=saved.u||'';
+      document.getElementById('pw').value=saved.p?atob(saved.p):'';
+      document.getElementById('admin-remember-me').checked=true;
+    }
+  }catch(e){}
+  // Save/clear credentials on form submit
+  document.getElementById('login-form').addEventListener('submit',()=>{
+    const checked=document.getElementById('admin-remember-me').checked;
+    if(checked){
+      try{localStorage.setItem('admin_remember',JSON.stringify({u:document.getElementById('un').value,p:btoa(document.getElementById('pw').value)}));}catch(e){}
+    }else{
+      localStorage.removeItem('admin_remember');
+    }
+  });
 });
 
 // ── WebAuthn helpers ──────────────────────────────────────────────
