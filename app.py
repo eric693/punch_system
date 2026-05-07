@@ -21,6 +21,7 @@ from linebot.models import (
 )
 
 # shared modules (extracted for blueprint reuse)
+import psycopg
 from db import get_db, _hash_pw, DATABASE_URL
 from auth import login_required, require_module, require_super
 from i18n import register_translate_hook, translate_message as _i18n_translate, line_msg as _lmsg, WDAY_ABBR as _WDAY_ABBR, get_lang as _get_lang
