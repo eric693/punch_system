@@ -884,7 +884,7 @@ function renderStatusArea(){
   if(!schedExistingReq){area.innerHTML='';return;}
   const s=schedExistingReq.status;const cls=SCLS[s]||'';const label=SLABEL[s]||s;
   const dateStr=(schedExistingReq.dates||[]).map(d=>{const dt=new Date(d+'T00:00:00');return d.slice(5)+'（'+DAYS[dt.getDay()]+'）';}).join('　');
-  let html=`<div class="status-box ${cls}"><div class="sb-title">${label}</div><div class="sb-dates">${dateStr||'（無日期）'}</div>`;
+  let html=`<div class="status-box ${cls}"><div class="sb-title">${label}</div><div class="sb-dates">${dateStr||staffT('sched.no_date')}</div>`;
   if(schedExistingReq.review_note)html+=`<div class="sb-note">${staffT('sched.review_note')}${esc(schedExistingReq.review_note)}</div>`;
   if(s==='rejected')html+=`<div class="sb-note" style="color:var(--red)">${staffT('sched.resubmit')}</div>`;
   html+='</div>';area.innerHTML=html;
@@ -909,7 +909,7 @@ function renderCalendar(){
     if(wd===6)cls+=' weekend';if(wd===0)cls+=' is-sun';
     const el=document.createElement('div');el.className=cls;
     if(!isPast&&(!isFull||isSelected))el.onclick=()=>toggleSchedDate(ds);
-    const badge=isFull?`<span class="dbadge full-b">額滿</span>`:othersCount>0?`<span class="dbadge">${othersCount}人</span>`:'';
+    const badge=isFull?`<span class="dbadge full-b">${staffT('sched.full')}</span>`:othersCount>0?`<span class="dbadge">${staffT('sched.n_people').replace('{0}',othersCount)}</span>`:'';
     el.innerHTML=badge+`<span class="dn">${day}</span><span class="dw">${DAYS[wd]}</span>`;
     grid.appendChild(el);
   }
@@ -1144,7 +1144,7 @@ function showSchedDayDetail(ds) {
          border-bottom:1px solid var(--border)">
       <div>
         <div style="font-size:16px;font-weight:700;color:var(--navy)">${title}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">排班 &amp; 排休</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${staffT('sched.shift_and_off')}</div>
       </div>
       <button onclick="document.getElementById('sched-day-popup').remove()"
         style="width:28px;height:28px;border:none;background:var(--bg);border-radius:50%;
@@ -1646,12 +1646,12 @@ function updateLeaveTypeInfo() {
   if (!opt) return;
   const pay = parseFloat(opt.getAttribute('data-pay') || 1);
   const max = opt.getAttribute('data-max');
-  const payLabel = pay === 1 ? '全薪' : pay === 0 ? '無薪（不給薪）' : `半薪（給薪 ${pay * 100}%）`;
-  const maxLabel = max ? `年度上限 ${max} 天` : '無天數限制';
+  const payLabel = pay === 1 ? staffT('leave.pay_full') : pay === 0 ? staffT('leave.pay_zero_long') : staffT('leave.pay_half_pct').replace('{0}', pay * 100);
+  const maxLabel = max ? staffT('leave.quota_limit').replace('{0}', max) : staffT('leave.no_limit');
   const balObj = leaveBalanceMap[sel.value];
   const remain = balObj != null ? balObj.remain : null;
   const balStr = remain != null
-    ? `　|　今年剩餘 <strong style="color:${remain<=0?'var(--red)':remain<=3?'var(--orange)':'var(--green)'}">${remain} 天</strong>`
+    ? `　|　${staffT('leave.remaining').replace('{0}', `<strong style="color:${remain<=0?'var(--red)':remain<=3?'var(--orange)':'var(--green)'}">${remain}</strong>`)}`
     : '';
   document.getElementById('leave-type-info').innerHTML =
     `<span style="color:var(--accent)">${payLabel}</span>　${maxLabel}${balStr}`;
@@ -1783,15 +1783,15 @@ function renderLeaveBalanceOverview() {
   const entries = Object.values(leaveBalanceMap);
   if (!entries.length) {
     wrap.innerHTML = `<div style="padding:12px 14px;background:var(--bg);border-radius:10px;border:1.5px solid var(--border);font-size:12px;color:var(--muted);text-align:center">
-      假期餘額尚未設定，請聯絡管理員
+      ${staffT('leave.no_balance_set')}
     </div>`;
     return;
   }
   const year = new Date().getFullYear();
   let html = `<div style="background:#fff;border-radius:12px;border:1.5px solid var(--border);overflow:hidden">
     <div style="padding:10px 14px;background:var(--navy);display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:13px;font-weight:700;color:#fff">${year} 年假期餘額</div>
-      <div style="font-size:10px;color:rgba(255,255,255,.45)">點擊可快速選擇假別</div>
+      <div style="font-size:13px;font-weight:700;color:#fff">${staffT('leave.year_balance_title').replace('{0}',year)}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,.45)">${staffT('leave.click_select_type')}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">`;
 
@@ -1815,12 +1815,12 @@ function renderLeaveBalanceOverview() {
       <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:5px">
         <span style="font-family:'DM Mono',monospace;font-size:22px;font-weight:700;
           color:${isEmpty?'#9ca3af':isLow?'var(--orange)':'var(--navy)'}">${b.remain}</span>
-        <span style="font-size:11px;color:var(--muted)">/ ${b.total} 天</span>
+        <span style="font-size:11px;color:var(--muted)">/ ${b.total} ${staffT('payslip.days_unit')}</span>
       </div>
       <div style="height:4px;background:#f0f2f8;border-radius:2px;overflow:hidden">
         <div style="height:100%;width:${pct}%;background:${barColor};border-radius:2px;transition:width .4s"></div>
       </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:3px">已用 ${b.used} 天${isEmpty?' · <span style=color:var(--red)>已用完</span>':isLow?' · <span style=color:var(--orange)>即將用完</span>':''}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:3px">${staffT('leave.used_days').replace('{0}',b.used)}${isEmpty?' · <span style=color:var(--red)>'+staffT('leave.all_used')+'</span>':isLow?' · <span style=color:var(--orange)>'+staffT('leave.low_balance')+'</span>':''}</div>
     </div>`;
   });
 
@@ -1997,8 +1997,8 @@ function renderMyLeaveList() {
   wrap.innerHTML = myLeaveList.map(r => {
     const sc = SC[r.status] || 'var(--muted)';
     const sl = SL[r.status] || r.status;
-    const sh = r.start_half ? '（下午）' : '';
-    const eh = r.end_half   ? '（上午）' : '';
+    const sh = r.start_half ? staffT('leave.pm_sfx') : '';
+    const eh = r.end_half   ? staffT('leave.am_sfx') : '';
     const payLabel = r.pay_rate === 1 ? staffT('leave.pay_full') : r.pay_rate === 0 ? staffT('leave.pay_zero') : staffT('leave.pay_half');
     return `<div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px">
       <div style="padding:10px 14px;background:var(--bg);display:flex;justify-content:space-between;align-items:center;gap:8px">
@@ -2332,7 +2332,7 @@ async function loadMyPerf() {
     <div class="card" style="border-radius:12px;border:1.5px solid var(--border);box-shadow:none;margin-bottom:12px">
       <div class="card-header">
         <div>
-          <div style="font-size:14px;font-weight:700;color:var(--navy);font-family:'Noto Sans TC',sans-serif">${esc(r.period_label||'')} 考核</div>
+          <div style="font-size:14px;font-weight:700;color:var(--navy);font-family:'Noto Sans TC',sans-serif">${esc(r.period_label||'')} ${staffT('perf.review_suffix')}</div>
           <div class="fl" style="margin-top:2px;margin-bottom:0">${esc(r.template_name||'')} · ${r.reviewed_at ? r.reviewed_at.slice(0,10) : ''}</div>
         </div>
         <div style="text-align:center;background:${gradeBg[r.grade]||'var(--bg)'};border-radius:10px;padding:10px 16px;min-width:64px">
@@ -2342,15 +2342,15 @@ async function loadMyPerf() {
       </div>
       <div style="padding:12px 16px">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-          <span class="fl" style="margin-bottom:0">得分</span>
-          <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace">${r.total_score||0} / ${r.max_score||0} 分</span>
+          <span class="fl" style="margin-bottom:0">${staffT('perf.score_label')}</span>
+          <span style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace">${r.total_score||0} / ${r.max_score||0} ${staffT('perf.score_unit')}</span>
         </div>
         <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px">
           <div style="width:${pct}%;height:100%;background:${gradeColor[r.grade]||'var(--accent)'};border-radius:4px;transition:width .4s"></div>
         </div>
         ${r.comments ? `<div style="font-size:12px;color:var(--muted);font-style:italic;font-family:'Noto Sans TC',sans-serif">"${esc(r.comments)}"</div>` : ''}
-        ${r.salary_adjusted ? `<div style="margin-top:8px;font-size:12px;color:var(--green);font-weight:600;font-family:'Noto Sans TC',sans-serif">✓ 薪資調整：${r.salary_delta >= 0 ? '+' : ''}${fmtNum(r.salary_delta)} 元</div>` : ''}
-        ${r.reviewer ? `<div class="fl" style="margin-top:8px;margin-bottom:0">考核人：${esc(r.reviewer)}</div>` : ''}
+        ${r.salary_adjusted ? `<div style="margin-top:8px;font-size:12px;color:var(--green);font-weight:600;font-family:'Noto Sans TC',sans-serif">${staffT('perf.salary_adj_pfx')}${r.salary_delta >= 0 ? '+' : ''}${fmtNum(r.salary_delta)}${staffT('perf.salary_adj_unit')}</div>` : ''}
+        ${r.reviewer ? `<div class="fl" style="margin-top:8px;margin-bottom:0">${staffT('perf.reviewer')}${esc(r.reviewer)}</div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -2475,8 +2475,8 @@ async function doRegisterBio(){
     const cred=await navigator.credentials.create({publicKey:opts});
     const deviceName=navigator.userAgent.includes('iPhone')?'iPhone':
                      navigator.userAgent.includes('iPad')?'iPad':
-                     navigator.userAgent.includes('Android')?'Android 裝置':
-                     navigator.userAgent.includes('Mac')?'Mac':'此裝置';
+                     navigator.userAgent.includes('Android')?staffT('bio.device_android'):
+                     navigator.userAgent.includes('Mac')?'Mac':staffT('bio.device_default');
     const completeRes=await fetch('/api/webauthn/register/complete',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
@@ -2818,18 +2818,18 @@ async function renderMyExpList() {
                  📎 ${esc(r.attachment_name)}
                </a>
                <label style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline">
-                 重新上傳<input type="file" accept="image/*,application/pdf" style="display:none"
+                 ${staffT('myt.reupload')}<input type="file" accept="image/*,application/pdf" style="display:none"
                    onchange="uploadMyExpAttachment(${r.id},this)">
                </label>`
             : `<label style="font-size:12px;color:var(--accent);cursor:pointer;display:flex;align-items:center;gap:4px">
-                 📎 上傳憑證
+                 ${staffT('myt.upload_receipt')}
                  <input type="file" accept="image/*,application/pdf" style="display:none"
                    onchange="uploadMyExpAttachment(${r.id},this)">
                </label>`}
           <button onclick="deleteMyExpense(${r.id})" style="padding:3px 8px;border-radius:6px;border:1px solid #e74c3c;background:transparent;color:#e74c3c;font-size:11px;cursor:pointer">${staffT('myt.delete_btn')}</button>
         </div>
       </div>`).join('') +
-      `<div style="padding:10px 0;font-size:13px;font-weight:700;color:var(--navy);text-align:right">合計：NT$ ${total.toLocaleString()}</div>`;
+      `<div style="padding:10px 0;font-size:13px;font-weight:700;color:var(--navy);text-align:right">${staffT('myt.total').replace('{0}',total.toLocaleString())}</div>`;
   } catch(e) { wrap.innerHTML=`<div style="color:var(--red);font-size:13px">${staffT('load_fail')}</div>`; }
 }
 
@@ -2960,7 +2960,7 @@ async function submitMyLoanRequest() {
                            expected_return: returnDate||null, purpose })
   });
   const data = await r.json();
-  if (!r.ok) { showToast(data.error||'申請失敗','error'); return; }
+  if (!r.ok) { showToast(data.error||staffT('submit_fail'),'error'); return; }
   closeMyLoanRequestForm();
   loadMyLoans();
   showToast(staffT('loan.submitted'),'success');
@@ -3235,6 +3235,18 @@ const STAFF_I18N = {
     'annual.th_milestone':'里程碑','annual.th_days':'天數','annual.th_reached':'達成日期','annual.th_status':'狀態',
     'annual.labor_law':'依勞基法第38條：滿6個月3天 → 滿1年7天 → 滿2年10天 → 滿3年14天 → 滿5年15天 → 滿10年起每年+1天（上限30天）',
     'login.or':'或',
+    'sched.no_date':'（無日期）','sched.full':'額滿','sched.n_people':'{0}人',
+    'sched.shift_and_off':'排班 &amp; 排休',
+    'leave.pay_zero_long':'無薪（不給薪）','leave.pay_half_pct':'半薪（給薪 {0}%）',
+    'leave.quota_limit':'年度上限 {0} 天','leave.no_limit':'無天數限制',
+    'leave.remaining':'今年剩餘 {0} 天','leave.no_balance_set':'假期餘額尚未設定，請聯絡管理員',
+    'leave.year_balance_title':'{0} 年假期餘額','leave.click_select_type':'點擊可快速選擇假別',
+    'leave.used_days':'已用 {0} 天','leave.all_used':'已用完','leave.low_balance':'即將用完',
+    'leave.pm_sfx':'（下午）','leave.am_sfx':'（上午）',
+    'perf.review_suffix':'考核','perf.score_label':'得分','perf.score_unit':'分',
+    'perf.salary_adj_pfx':'✓ 薪資調整：','perf.salary_adj_unit':' 元','perf.reviewer':'考核人：',
+    'bio.device_android':'Android 裝置','bio.device_default':'此裝置',
+    'myt.reupload':'重新上傳','myt.upload_receipt':'📎 上傳憑證','myt.total':'合計：NT$ {0}',
   },
   'en': {
     brand:'Attendance System', loginTitle:'Employee Login', labelUser:'Username', labelPw:'Password',
@@ -3489,6 +3501,18 @@ const STAFF_I18N = {
     'annual.th_milestone':'Milestone','annual.th_days':'Days','annual.th_reached':'Date Reached','annual.th_status':'Status',
     'annual.labor_law':'Labor Standards Act Art. 38: 6 mo→3d, 1yr→7d, 2yr→10d, 3yr→14d, 5yr→15d, 10yr+→+1d/yr (max 30d)',
     'login.or':'or',
+    'sched.no_date':'(No date)','sched.full':'Full','sched.n_people':'{0}',
+    'sched.shift_and_off':'Shift &amp; Off',
+    'leave.pay_zero_long':'No pay','leave.pay_half_pct':'Half pay ({0}%)',
+    'leave.quota_limit':'Annual limit: {0} days','leave.no_limit':'No day limit',
+    'leave.remaining':'Remaining: {0} days','leave.no_balance_set':'Leave balance not set, please contact admin',
+    'leave.year_balance_title':'{0} Leave Balance','leave.click_select_type':'Tap to quickly select leave type',
+    'leave.used_days':'Used: {0} days','leave.all_used':'All used','leave.low_balance':'Low balance',
+    'leave.pm_sfx':' (PM)','leave.am_sfx':' (AM)',
+    'perf.review_suffix':'Review','perf.score_label':'Score','perf.score_unit':'pts',
+    'perf.salary_adj_pfx':'✓ Salary Adj: ','perf.salary_adj_unit':' ','perf.reviewer':'Reviewer: ',
+    'bio.device_android':'Android Device','bio.device_default':'This Device',
+    'myt.reupload':'Re-upload','myt.upload_receipt':'📎 Upload Receipt','myt.total':'Total: NT$ {0}',
   },
   'ja': {
     brand:'勤怠管理システム', loginTitle:'従業員ログイン', labelUser:'ユーザー名', labelPw:'パスワード',
@@ -3743,6 +3767,18 @@ const STAFF_I18N = {
     'annual.th_milestone':'マイルストーン','annual.th_days':'日数','annual.th_reached':'達成日','annual.th_status':'状態',
     'annual.labor_law':'労働基準法第39条：6ヶ月→3日、1年→7日、2年→10日、3年→14日、5年→15日、10年以降は毎年+1日（上限30日）',
     'login.or':'または',
+    'sched.no_date':'（日付なし）','sched.full':'満員','sched.n_people':'{0}人',
+    'sched.shift_and_off':'シフト &amp; 休暇',
+    'leave.pay_zero_long':'無給（無給休暇）','leave.pay_half_pct':'半額支給（{0}%）',
+    'leave.quota_limit':'年間上限 {0} 日','leave.no_limit':'日数制限なし',
+    'leave.remaining':'今年の残り {0} 日','leave.no_balance_set':'休暇残日数が設定されていません。管理者にお問い合わせください',
+    'leave.year_balance_title':'{0}年の休暇残日数','leave.click_select_type':'タップで休暇種別を素早く選択',
+    'leave.used_days':'使用済み {0} 日','leave.all_used':'使い切り','leave.low_balance':'もうすぐ使い切り',
+    'leave.pm_sfx':'（午後）','leave.am_sfx':'（午前）',
+    'perf.review_suffix':'考課','perf.score_label':'スコア','perf.score_unit':'点',
+    'perf.salary_adj_pfx':'✓ 給与調整：','perf.salary_adj_unit':'円','perf.reviewer':'考課者：',
+    'bio.device_android':'Androidデバイス','bio.device_default':'このデバイス',
+    'myt.reupload':'再アップロード','myt.upload_receipt':'📎 領収書アップロード','myt.total':'合計：NT$ {0}',
   },
   'vi': {
     brand:'Hệ thống Chấm công', loginTitle:'Đăng nhập', labelUser:'Tài khoản', labelPw:'Mật khẩu',
@@ -3997,6 +4033,18 @@ const STAFF_I18N = {
     'annual.th_milestone':'Mốc','annual.th_days':'Số ngày','annual.th_reached':'Ngày đạt','annual.th_status':'Trạng thái',
     'annual.labor_law':'Luật Lao động Đài Loan Đ.38: 6th→3ng, 1năm→7ng, 2năm→10ng, 3năm→14ng, 5năm→15ng, 10năm+→+1ng/năm (tối đa 30ng)',
     'login.or':'hoặc',
+    'sched.no_date':'(Không có ngày)','sched.full':'Đầy','sched.n_people':'{0} người',
+    'sched.shift_and_off':'Ca &amp; Nghỉ',
+    'leave.pay_zero_long':'Không lương','leave.pay_half_pct':'Nửa lương ({0}%)',
+    'leave.quota_limit':'Giới hạn năm: {0} ngày','leave.no_limit':'Không giới hạn ngày',
+    'leave.remaining':'Còn lại: {0} ngày','leave.no_balance_set':'Số dư phép chưa được thiết lập, vui lòng liên hệ quản trị viên',
+    'leave.year_balance_title':'Số dư phép năm {0}','leave.click_select_type':'Nhấn để chọn nhanh loại nghỉ phép',
+    'leave.used_days':'Đã dùng: {0} ngày','leave.all_used':'Đã hết','leave.low_balance':'Sắp hết',
+    'leave.pm_sfx':' (Chiều)','leave.am_sfx':' (Sáng)',
+    'perf.review_suffix':'Đánh giá','perf.score_label':'Điểm','perf.score_unit':'điểm',
+    'perf.salary_adj_pfx':'✓ Điều chỉnh lương: ','perf.salary_adj_unit':' đ','perf.reviewer':'Người đánh giá: ',
+    'bio.device_android':'Thiết bị Android','bio.device_default':'Thiết bị này',
+    'myt.reupload':'Tải lại','myt.upload_receipt':'📎 Tải hóa đơn','myt.total':'Tổng cộng: NT$ {0}',
   },
   'th': {
     brand:'ระบบบันทึกเวลา', loginTitle:'เข้าสู่ระบบ', labelUser:'ชื่อผู้ใช้', labelPw:'รหัสผ่าน',
@@ -4251,6 +4299,18 @@ const STAFF_I18N = {
     'annual.th_milestone':'เป้าหมาย','annual.th_days':'จำนวนวัน','annual.th_reached':'วันที่บรรลุ','annual.th_status':'สถานะ',
     'annual.labor_law':'กฎหมายแรงงานไต้หวัน ม.38: 6ด→3ว, 1ป→7ว, 2ป→10ว, 3ป→14ว, 5ป→15ว, 10ป+→+1ว/ป (สูงสุด 30ว)',
     'login.or':'หรือ',
+    'sched.no_date':'(ไม่มีวันที่)','sched.full':'เต็ม','sched.n_people':'{0} คน',
+    'sched.shift_and_off':'กะ &amp; วันหยุด',
+    'leave.pay_zero_long':'ไม่ได้รับเงินเดือน','leave.pay_half_pct':'เงินเดือนครึ่ง ({0}%)',
+    'leave.quota_limit':'จำกัดต่อปี: {0} วัน','leave.no_limit':'ไม่จำกัดวัน',
+    'leave.remaining':'คงเหลือ: {0} วัน','leave.no_balance_set':'ยังไม่ได้ตั้งค่าวันลาคงเหลือ กรุณาติดต่อผู้ดูแลระบบ',
+    'leave.year_balance_title':'วันลาคงเหลือปี {0}','leave.click_select_type':'แตะเพื่อเลือกประเภทการลาอย่างรวดเร็ว',
+    'leave.used_days':'ใช้ไปแล้ว: {0} วัน','leave.all_used':'ใช้หมดแล้ว','leave.low_balance':'ใกล้หมด',
+    'leave.pm_sfx':' (บ่าย)','leave.am_sfx':' (เช้า)',
+    'perf.review_suffix':'การประเมิน','perf.score_label':'คะแนน','perf.score_unit':'คะแนน',
+    'perf.salary_adj_pfx':'✓ ปรับเงินเดือน: ','perf.salary_adj_unit':' บาท','perf.reviewer':'ผู้ประเมิน: ',
+    'bio.device_android':'อุปกรณ์ Android','bio.device_default':'อุปกรณ์นี้',
+    'myt.reupload':'อัปโหลดใหม่','myt.upload_receipt':'📎 อัปโหลดใบเสร็จ','myt.total':'รวม: NT$ {0}',
   },
   'zh-CN': {
     brand:'打卡管理系统', loginTitle:'员工登录', labelUser:'账号', labelPw:'密码',
@@ -4504,6 +4564,18 @@ const STAFF_I18N = {
     'annual.th_milestone':'里程碑','annual.th_days':'天数','annual.th_reached':'达成日期','annual.th_status':'状态',
     'annual.labor_law':'依劳动法：满6个月3天 → 满1年7天 → 满2年10天 → 满3年14天 → 满5年15天 → 满10年起每年+1天（上限30天）',
     'login.or':'或',
+    'sched.no_date':'（无日期）','sched.full':'额满','sched.n_people':'{0}人',
+    'sched.shift_and_off':'排班 &amp; 排休',
+    'leave.pay_zero_long':'无薪（不给薪）','leave.pay_half_pct':'半薪（给薪 {0}%）',
+    'leave.quota_limit':'年度上限 {0} 天','leave.no_limit':'无天数限制',
+    'leave.remaining':'今年剩余 {0} 天','leave.no_balance_set':'假期余额尚未设置，请联系管理员',
+    'leave.year_balance_title':'{0} 年假期余额','leave.click_select_type':'点击可快速选择假别',
+    'leave.used_days':'已用 {0} 天','leave.all_used':'已用完','leave.low_balance':'即将用完',
+    'leave.pm_sfx':'（下午）','leave.am_sfx':'（上午）',
+    'perf.review_suffix':'考核','perf.score_label':'得分','perf.score_unit':'分',
+    'perf.salary_adj_pfx':'✓ 薪资调整：','perf.salary_adj_unit':' 元','perf.reviewer':'考核人：',
+    'bio.device_android':'Android 设备','bio.device_default':'此设备',
+    'myt.reupload':'重新上传','myt.upload_receipt':'📎 上传凭证','myt.total':'合计：NT$ {0}',
   },
   'id': {
     brand:'Sistem Absensi', loginTitle:'Login Karyawan', labelUser:'Username', labelPw:'Kata Sandi',
@@ -4765,6 +4837,18 @@ const STAFF_I18N = {
     'annual.th_milestone':'Pencapaian','annual.th_days':'Hari','annual.th_reached':'Tgl Tercapai','annual.th_status':'Status',
     'annual.labor_law':'UU Ketenagakerjaan Taiwan Ps.38: 6bln→3hr, 1thn→7hr, 2thn→10hr, 3thn→14hr, 5thn→15hr, 10thn+→+1hr/thn (maks 30hr)',
     'login.or':'atau',
+    'sched.no_date':'(Tidak ada tanggal)','sched.full':'Penuh','sched.n_people':'{0} orang',
+    'sched.shift_and_off':'Shift &amp; Libur',
+    'leave.pay_zero_long':'Tanpa gaji','leave.pay_half_pct':'Setengah gaji ({0}%)',
+    'leave.quota_limit':'Batas tahunan: {0} hari','leave.no_limit':'Tidak ada batas hari',
+    'leave.remaining':'Sisa: {0} hari','leave.no_balance_set':'Saldo cuti belum diatur, hubungi admin',
+    'leave.year_balance_title':'Saldo Cuti {0}','leave.click_select_type':'Ketuk untuk memilih jenis cuti dengan cepat',
+    'leave.used_days':'Terpakai: {0} hari','leave.all_used':'Habis','leave.low_balance':'Hampir habis',
+    'leave.pm_sfx':' (Sore)','leave.am_sfx':' (Pagi)',
+    'perf.review_suffix':'Penilaian','perf.score_label':'Nilai','perf.score_unit':'poin',
+    'perf.salary_adj_pfx':'✓ Penyesuaian Gaji: ','perf.salary_adj_unit':' ','perf.reviewer':'Penilai: ',
+    'bio.device_android':'Perangkat Android','bio.device_default':'Perangkat Ini',
+    'myt.reupload':'Unggah Ulang','myt.upload_receipt':'📎 Unggah Bukti','myt.total':'Total: NT$ {0}',
   }
 };
 let _staffLang = localStorage.getItem('adminLang') || 'zh-TW';
@@ -4840,7 +4924,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sel.id = 'staff-lang-btn';
     sel.onchange = function() { staffSetLang(this.value); };
     sel.style.cssText = 'position:fixed;top:14px;right:14px;z-index:999;padding:3px 6px;border-radius:6px;border:1.5px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;outline:none;';
-    [['zh-TW','繁體中文'],['zh-CN','简体中文'],['en','English'],['ja','日本語'],['vi','Tiếng Việt'],['th','ภาษาไทย']].forEach(([v,l]) => {
+    [['zh-TW','繁體中文'],['zh-CN','简体中文'],['en','English'],['ja','日本語'],['vi','Tiếng Việt'],['th','ภาษาไทย'],['id','Indonesia']].forEach(([v,l]) => {
       const o = document.createElement('option');
       o.value = v; o.textContent = l;
       if (v === _staffLang) o.selected = true;
