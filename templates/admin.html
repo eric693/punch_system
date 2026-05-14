@@ -2493,6 +2493,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <button class="inv-tab"        id="inv-tab-shipments"    onclick="switchInvTab('shipments')">出貨管理<span class="tab-badge" id="badge-inv-shipments" style="display:none"></span></button>
       <button class="inv-tab"        id="inv-tab-transactions" onclick="switchInvTab('transactions')">異動記錄</button>
       <button class="inv-tab"        id="inv-tab-warehouses"   onclick="switchInvTab('warehouses')">倉庫設定</button>
+      <button class="inv-tab"        id="inv-tab-suppliers"    onclick="switchInvTab('suppliers')">供應商</button>
     </div>
 
     <!-- 庫存總覽 Panel -->
@@ -2506,6 +2507,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <option value="1">僅低庫存</option>
         </select>
         <input class="filter-input" id="inv-stock-filter-q" placeholder="搜尋 SKU / 商品名稱…" oninput="loadInvStock()" style="flex:1;min-width:180px">
+        <button class="btn btn-outline btn-sm" onclick="openInvAdjustModal()" style="white-space:nowrap">庫存調整</button>
+        <button class="btn btn-outline btn-sm" onclick="openInvTransferModal()" style="white-space:nowrap">倉庫調撥</button>
       </div>
       <div class="card"><div id="inv-stock-wrap"></div></div>
     </div>
@@ -2595,6 +2598,98 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       </div>
       <div class="card"><div id="inv-warehouses-wrap"></div></div>
     </div>
+
+    <!-- 供應商管理 Panel -->
+    <div id="inv-panel-suppliers" style="display:none">
+      <div class="filter-row" style="margin-bottom:12px">
+        <input class="filter-input" id="sup-filter-q" placeholder="搜尋供應商…" oninput="loadSupplierList()" style="flex:1;min-width:200px">
+        <button class="btn btn-primary btn-sm" onclick="openSupplierModal()">＋ 新增供應商</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="supplier-list-wrap"></div></div>
+    </div>
+
+    <!-- 庫存調整 Panel (stock sub-panel overlay) -->
+    <div id="inv-adjust-modal" class="modal-overlay" style="display:none">
+      <div class="modal modal-sm">
+        <div class="modal-header">
+          <span class="modal-title">手動調整庫存</span>
+          <button class="modal-close" onclick="closeInvAdjustModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-grid" style="grid-template-columns:1fr">
+            <div class="form-group">
+              <label class="form-label">商品 *</label>
+              <select class="form-input" id="adj-product">
+                <option value="">— 選擇商品 —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">倉庫 *</label>
+              <select class="form-input" id="adj-warehouse">
+                <option value="">— 選擇倉庫 —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">調整後數量 *</label>
+              <input class="form-input" type="number" min="0" step="1" id="adj-qty" placeholder="輸入調整後的庫存數量">
+            </div>
+            <div class="form-group">
+              <label class="form-label">調整原因</label>
+              <input class="form-input" id="adj-note" placeholder="例：盤點調整、退貨入庫">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeInvAdjustModal()">取消</button>
+          <button class="btn btn-primary" onclick="saveInvAdjust()">確認調整</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 倉庫調撥 Modal -->
+    <div id="inv-transfer-modal" class="modal-overlay" style="display:none">
+      <div class="modal modal-sm">
+        <div class="modal-header">
+          <span class="modal-title">倉庫調撥</span>
+          <button class="modal-close" onclick="closeInvTransferModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-grid" style="grid-template-columns:1fr">
+            <div class="form-group">
+              <label class="form-label">商品 *</label>
+              <select class="form-input" id="tfr-product">
+                <option value="">— 選擇商品 —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">來源倉庫 *</label>
+              <select class="form-input" id="tfr-from">
+                <option value="">— 選擇倉庫 —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">目標倉庫 *</label>
+              <select class="form-input" id="tfr-to">
+                <option value="">— 選擇倉庫 —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">調撥數量 *</label>
+              <input class="form-input" type="number" min="1" step="1" id="tfr-qty" placeholder="輸入調撥數量">
+            </div>
+            <div class="form-group">
+              <label class="form-label">備註</label>
+              <input class="form-input" id="tfr-note" placeholder="調撥原因（選填）">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="closeInvTransferModal()">取消</button>
+          <button class="btn btn-primary" onclick="saveInvTransfer()">確認調撥</button>
+        </div>
+      </div>
+    </div>
+
   </div><!-- end page-inventory -->
 
   <!-- ── 商品 Modal ── -->
@@ -2645,6 +2740,32 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeInvWarehouseModal()">取消</button>
         <button class="btn btn-primary" onclick="saveInvWarehouse()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 供應商 Modal ── -->
+  <div id="supplier-modal-bg" class="modal-overlay" style="display:none">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <span class="modal-title" id="sup-modal-title">新增供應商</span>
+        <button class="modal-close" onclick="closeSupplierModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="sup-edit-id">
+        <div class="form-grid">
+          <div class="form-group full-width"><label class="form-label">公司名稱 *</label><input class="form-input" id="sup-f-company"></div>
+          <div class="form-group"><label class="form-label">聯絡人</label><input class="form-input" id="sup-f-contact"></div>
+          <div class="form-group"><label class="form-label">電話</label><input class="form-input" id="sup-f-phone"></div>
+          <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="sup-f-email"></div>
+          <div class="form-group"><label class="form-label">行業</label><input class="form-input" id="sup-f-industry"></div>
+          <div class="form-group full-width"><label class="form-label">地址</label><input class="form-input" id="sup-f-address"></div>
+          <div class="form-group full-width"><label class="form-label">備註</label><textarea class="form-input" id="sup-f-notes" rows="2"></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeSupplierModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveSupplier()">儲存</button>
       </div>
     </div>
   </div>
@@ -2755,6 +2876,51 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeGRNModal()">取消</button>
         <button class="btn btn-primary" onclick="saveGRN()">確認入庫</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 訂單收款 Modal ── -->
+  <div id="order-pay-modal" class="modal-overlay" style="display:none">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <span class="modal-title">記錄收款</span>
+        <button class="modal-close" onclick="closeOrderPayModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:var(--surface,#f8f9fa);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="color:var(--muted)">訂單號</span>
+            <span id="opay-order-no" style="font-weight:600;font-family:'DM Mono',monospace"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="color:var(--muted)">訂單金額</span><span id="opay-total" style="font-weight:600"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="color:var(--muted)">已付金額</span><span id="opay-paid" style="color:var(--green)"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--muted)">待收金額</span><span id="opay-remain" style="font-weight:700;color:var(--orange)"></span>
+          </div>
+        </div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group" style="grid-column:1/-1"><label class="form-label">收款金額 *</label><input class="form-input" type="number" min="0" step="0.01" id="opay-amount"></div>
+          <div class="form-group"><label class="form-label">收款方式</label>
+            <select class="form-input" id="opay-method">
+              <option value="transfer">銀行轉帳</option>
+              <option value="cash">現金</option>
+              <option value="check">支票</option>
+              <option value="card">刷卡</option>
+              <option value="other">其他</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">收款日期</label><input class="form-input" type="date" id="opay-date"></div>
+          <div class="form-group" style="grid-column:1/-1"><label class="form-label">參考單號</label><input class="form-input mono" id="opay-ref" placeholder="匯款單號/支票號碼"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeOrderPayModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveOrderPayment()">確認收款</button>
       </div>
     </div>
   </div>
@@ -19815,19 +19981,32 @@ function _buildCrmForm(c) {
     </div>
   </div>
   ${c ? `<hr style="margin:20px 0;border-color:var(--border)">
-  <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px">${t('crm.detail.interactions')}</div>
-  <div id="crm-interactions-wrap" style="margin-bottom:16px"></div>
-  <div style="background:var(--surface,#f8f9fa);border-radius:8px;padding:14px">
-    <div style="font-size:12px;font-weight:600;color:var(--navy);margin-bottom:10px">新增互動記錄</div>
-    <select class="form-input" id="crm-int-type" style="margin-bottom:8px">
-      <option value="call">電話</option><option value="email">Email</option>
-      <option value="meeting">會議</option><option value="visit">拜訪</option><option value="other">其他</option>
-    </select>
-    <input class="form-input" id="crm-int-title" placeholder="標題" style="margin-bottom:8px">
-    <textarea class="form-input" id="crm-int-content" placeholder="內容說明…" rows="3" style="margin-bottom:8px"></textarea>
-    <input class="form-input" id="crm-int-next" placeholder="下次行動" style="margin-bottom:8px">
-    <input class="form-input" type="date" id="crm-int-date" style="margin-bottom:8px">
-    <button class="btn btn-primary btn-sm" onclick="addCrmInteraction(${c.id})">新增</button>
+  <!-- 客戶詳情 sub-tabs -->
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px">
+    <button id="crm-dtab-interactions" onclick="switchCrmDetailTab('interactions',${c.id})" style="padding:7px 14px;background:none;border:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--navy);border-bottom:2px solid var(--accent);margin-bottom:-2px">互動記錄</button>
+    <button id="crm-dtab-orders" onclick="switchCrmDetailTab('orders',${c.id})" style="padding:7px 14px;background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px">訂單記錄</button>
+    <button id="crm-dtab-quotes" onclick="switchCrmDetailTab('quotes',${c.id})" style="padding:7px 14px;background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px">報價記錄</button>
+  </div>
+  <div id="crm-detail-interactions">
+    <div id="crm-interactions-wrap" style="margin-bottom:16px"></div>
+    <div style="background:var(--surface,#f8f9fa);border-radius:8px;padding:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--navy);margin-bottom:10px">新增互動記錄</div>
+      <select class="form-input" id="crm-int-type" style="margin-bottom:8px">
+        <option value="call">電話</option><option value="email">Email</option>
+        <option value="meeting">會議</option><option value="visit">拜訪</option><option value="other">其他</option>
+      </select>
+      <input class="form-input" id="crm-int-title" placeholder="標題" style="margin-bottom:8px">
+      <textarea class="form-input" id="crm-int-content" placeholder="內容說明…" rows="3" style="margin-bottom:8px"></textarea>
+      <input class="form-input" id="crm-int-next" placeholder="下次行動" style="margin-bottom:8px">
+      <input class="form-input" type="date" id="crm-int-date" style="margin-bottom:8px">
+      <button class="btn btn-primary btn-sm" onclick="addCrmInteraction(${c.id})">新增</button>
+    </div>
+  </div>
+  <div id="crm-detail-orders" style="display:none">
+    <div id="crm-orders-wrap"></div>
+  </div>
+  <div id="crm-detail-quotes" style="display:none">
+    <div id="crm-quotes-wrap"></div>
   </div>` : ''}`;
 }
 
@@ -19917,6 +20096,77 @@ async function addCrmInteraction(cid) {
 }
 
 async function exportCrmExcel() { window.location.href = '/api/export/crm-excel'; }
+
+function switchCrmDetailTab(tab, cid) {
+  ['interactions','orders','quotes'].forEach(t => {
+    const btn   = document.getElementById('crm-dtab-' + t);
+    const panel = document.getElementById('crm-detail-' + t);
+    if (btn) {
+      btn.style.fontWeight   = t === tab ? '700' : '400';
+      btn.style.color        = t === tab ? 'var(--navy)' : 'var(--muted)';
+      btn.style.borderBottom = t === tab ? '2px solid var(--accent)' : '2px solid transparent';
+    }
+    if (panel) panel.style.display = t === tab ? '' : 'none';
+  });
+  if (tab === 'orders')  loadCrmCustomerOrders(cid);
+  if (tab === 'quotes')  loadCrmCustomerQuotes(cid);
+}
+
+async function loadCrmCustomerOrders(cid) {
+  const wrap = document.getElementById('crm-orders-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px">載入中…</div>';
+  const { ok, data } = await api(`/api/crm/customers/${cid}/orders`, {}, true);
+  if (!ok || !data.length) {
+    wrap.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0">尚無訂單記錄</div>';
+    return;
+  }
+  wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="border-bottom:2px solid var(--border)">
+      <th style="padding:6px 4px;text-align:left">訂單號</th>
+      <th style="padding:6px 4px;text-align:left">標題</th>
+      <th style="padding:6px 4px;text-align:right">金額</th>
+      <th style="padding:6px 4px;text-align:right">已付</th>
+      <th style="padding:6px 4px">狀態</th>
+      <th style="padding:6px 4px">日期</th>
+    </tr></thead>
+    <tbody>${data.map(r => `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 4px;font-family:'DM Mono',monospace;font-weight:600">${escHtml(r.order_no)}</td>
+      <td style="padding:5px 4px;color:var(--muted)">${escHtml(r.title||'—')}</td>
+      <td style="padding:5px 4px;text-align:right;font-weight:600">NT$${(r.total||0).toLocaleString()}</td>
+      <td style="padding:5px 4px;text-align:right;color:var(--green)">NT$${(r.paid_amount||0).toLocaleString()}</td>
+      <td style="padding:5px 4px"><span style="background:${ORDER_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:1px 7px;border-radius:10px;font-size:10px">${r.status}</span></td>
+      <td style="padding:5px 4px;color:var(--muted)">${r.created_at||'—'}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+async function loadCrmCustomerQuotes(cid) {
+  const wrap = document.getElementById('crm-quotes-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px">載入中…</div>';
+  const { ok, data } = await api(`/api/crm/customers/${cid}/quotes`, {}, true);
+  if (!ok || !data.length) {
+    wrap.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0">尚無報價記錄</div>';
+    return;
+  }
+  wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="border-bottom:2px solid var(--border)">
+      <th style="padding:6px 4px;text-align:left">報價單號</th>
+      <th style="padding:6px 4px;text-align:left">標題</th>
+      <th style="padding:6px 4px;text-align:right">金額</th>
+      <th style="padding:6px 4px">狀態</th>
+      <th style="padding:6px 4px">日期</th>
+    </tr></thead>
+    <tbody>${data.map(r => `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 4px;font-family:'DM Mono',monospace;font-weight:600">${escHtml(r.quote_no)}</td>
+      <td style="padding:5px 4px;color:var(--muted)">${escHtml(r.title||'—')}</td>
+      <td style="padding:5px 4px;text-align:right;font-weight:600">NT$${(r.total||0).toLocaleString()}</td>
+      <td style="padding:5px 4px"><span style="background:${QUOTE_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:1px 7px;border-radius:10px;font-size:10px">${r.status}</span></td>
+      <td style="padding:5px 4px;color:var(--muted)">${r.created_at||'—'}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
 
 // ══════════════════════════════════════════════════════════════
 // 報價訂單
@@ -20008,7 +20258,12 @@ async function loadOrdersList() {
     <td style="font-size:12px">${escHtml(r.channel||'')}</td>
     <td><span style="background:${ORDER_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${t('orders.status.'+r.status)||r.status}</span></td>
     <td style="font-size:12px;color:var(--muted)">${(r.created_at||'').slice(0,10)}</td>
-    <td><button class="btn btn-outline btn-sm" onclick="openOrderModal(${r.id})">編輯</button></td>
+    <td style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="openOrderModal(${r.id})">編輯</button>
+      ${r.status==='processing'||r.status==='pending' ? `<button class="btn btn-outline btn-sm" onclick="orderCreateShipment(${r.id})" title="建立出貨單" style="color:#8b5cf6">出貨</button>` : ''}
+      <button class="btn btn-outline btn-sm" onclick="orderCreateAR(${r.id})" title="建立應收帳款" style="color:var(--accent)">建AR</button>
+      ${r.total > r.paid_amount ? `<button class="btn btn-primary btn-sm" onclick="openOrderPayModal(${r.id},'${escHtml(r.order_no)}',${r.total},${r.paid_amount})">收款</button>` : ''}
+    </td>
   </tr>`).join('')}</tbody></table>`;
 }
 
@@ -20048,14 +20303,39 @@ function closeQuoteModal() { document.getElementById('quote-modal').style.displa
 
 function _renderQuoteItems() {
   const wrap = document.getElementById('qm-items');
+  const prodOpts = '<option value="">— 搜尋商品 —</option>' + _invProducts.map(p =>
+    `<option value="${p.id}" data-sell="${p.sell_price}" data-unit="${escHtml(p.unit)}" data-name="${escHtml(p.name)}">${escHtml(p.sku)} — ${escHtml(p.name)}</option>`
+  ).join('');
   wrap.innerHTML = _quoteItems.map((it,i) => `<tr>
-    <td><input class="form-input" style="width:100%" value="${escHtml(it.name)}" oninput="_quoteItems[${i}].name=this.value"></td>
+    <td style="min-width:180px">
+      <select class="form-input" style="width:100%;font-size:12px;margin-bottom:4px" onchange="_onQuoteItemProd(this,${i})">
+        ${prodOpts.replace(`value="${it.product_id||''}"`, `value="${it.product_id||''}" selected`)}
+      </select>
+      <input class="form-input" style="width:100%;font-size:12px" value="${escHtml(it.name)}" placeholder="或直接輸入品名" oninput="_quoteItems[${i}].name=this.value">
+    </td>
     <td><input class="form-input" style="width:60px" type="number" value="${it.qty}" oninput="_quoteItems[${i}].qty=+this.value;_calcQuoteTotals()"></td>
-    <td><input class="form-input" style="width:60px" value="${escHtml(it.unit)}" oninput="_quoteItems[${i}].unit=this.value"></td>
+    <td><input class="form-input" style="width:60px" value="${escHtml(it.unit||'式')}" oninput="_quoteItems[${i}].unit=this.value"></td>
     <td><input class="form-input" style="width:90px" type="number" value="${it.unit_price}" oninput="_quoteItems[${i}].unit_price=+this.value;_calcQuoteTotals()"></td>
     <td style="font-weight:600;min-width:80px" id="qm-item-amt-${i}">NT$${((it.qty||0)*(it.unit_price||0)).toLocaleString()}</td>
     <td><button class="btn btn-outline btn-sm" onclick="_removeQuoteItem(${i})" style="color:var(--red)">✕</button></td>
   </tr>`).join('');
+  _calcQuoteTotals();
+}
+
+function _onQuoteItemProd(sel, i) {
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.value) return;
+  const tr = sel.closest('tr');
+  const nameInput = tr.querySelector('input[type="text"], input:not([type])');
+  if (nameInput) nameInput.value = opt.dataset.name || '';
+  _quoteItems[i].product_id  = parseInt(opt.value);
+  _quoteItems[i].name        = opt.dataset.name || '';
+  _quoteItems[i].unit        = opt.dataset.unit || '式';
+  _quoteItems[i].unit_price  = parseFloat(opt.dataset.sell || 0);
+  const unitInput = tr.querySelectorAll('input')[1];
+  if (unitInput) unitInput.value = _quoteItems[i].unit;
+  const priceInput = tr.querySelectorAll('input')[2];
+  if (priceInput) priceInput.value = _quoteItems[i].unit_price;
   _calcQuoteTotals();
 }
 
@@ -20103,6 +20383,52 @@ async function convertQuote(id) {
   loadQuotes(); loadOrderStats();
 }
 
+async function orderCreateShipment(orderId) {
+  if (!confirm('確定要從此訂單建立出貨單？')) return;
+  const { ok, data } = await api(`/api/inventory/shipments/from-order/${orderId}`, { method:'POST' });
+  if (!ok) { showToast(data?.error||'建立失敗','error'); return; }
+  showToast(`出貨單 ${data.shipment_no} 已建立，請前往出貨管理確認出貨`, 'success');
+  loadOrdersList(); loadOrderStats();
+}
+
+async function orderCreateAR(orderId) {
+  const { ok, data } = await api(`/api/orders/${orderId}/create-ar`, { method:'POST' });
+  if (!ok) { showToast(data?.error||'建立失敗','error'); return; }
+  showToast(`應收帳款 ${data.ar_no} 已建立`, 'success');
+  loadOrdersList();
+}
+
+let _orderPayId = null;
+function openOrderPayModal(id, orderNo, total, paid) {
+  _orderPayId = id;
+  document.getElementById('opay-order-no').textContent = orderNo;
+  document.getElementById('opay-total').textContent    = 'NT$' + total.toLocaleString();
+  document.getElementById('opay-paid').textContent     = 'NT$' + paid.toLocaleString();
+  document.getElementById('opay-remain').textContent   = 'NT$' + (total - paid).toLocaleString();
+  document.getElementById('opay-amount').value         = (total - paid).toFixed(0);
+  document.getElementById('opay-method').value         = 'transfer';
+  document.getElementById('opay-ref').value            = '';
+  document.getElementById('opay-date').value           = new Date().toISOString().slice(0,10);
+  document.getElementById('order-pay-modal').style.display = 'flex';
+}
+function closeOrderPayModal() { document.getElementById('order-pay-modal').style.display = 'none'; }
+
+async function saveOrderPayment() {
+  if (!_orderPayId) return;
+  const body = {
+    amount:   parseFloat(document.getElementById('opay-amount').value) || 0,
+    method:   document.getElementById('opay-method').value,
+    ref_no:   document.getElementById('opay-ref').value.trim(),
+    pay_date: document.getElementById('opay-date').value,
+  };
+  if (body.amount <= 0) { showToast('請填寫收款金額', 'error'); return; }
+  const { ok, data } = await api(`/api/orders/${_orderPayId}/payment`, { method:'POST', body:JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'記錄失敗','error'); return; }
+  showToast('收款已記錄', 'success');
+  closeOrderPayModal();
+  loadOrdersList(); loadOrderStats();
+}
+
 function openOrderModal(id=null) {
   const isEdit = !!id;
   document.getElementById('om-id').value = id || '';
@@ -20140,14 +20466,40 @@ function closeOrderModal() { document.getElementById('order-modal').style.displa
 
 function _renderOrderItems() {
   const wrap = document.getElementById('om-items');
+  const prodOpts = '<option value="">— 搜尋商品 —</option>' + _invProducts.map(p =>
+    `<option value="${p.id}" data-sell="${p.sell_price}" data-unit="${escHtml(p.unit)}" data-name="${escHtml(p.name)}">${escHtml(p.sku)} — ${escHtml(p.name)}</option>`
+  ).join('');
   wrap.innerHTML = _orderItems.map((it,i) => `<tr>
-    <td><input class="form-input" style="width:100%" value="${escHtml(it.name)}" oninput="_orderItems[${i}].name=this.value"></td>
+    <td style="min-width:180px">
+      <select class="form-input" style="width:100%;font-size:12px;margin-bottom:4px" onchange="_onOrderItemProd(this,${i})">
+        ${prodOpts.replace(`value="${it.product_id||''}"`, `value="${it.product_id||''}" selected`)}
+      </select>
+      <input class="form-input" style="width:100%;font-size:12px" value="${escHtml(it.name)}" placeholder="或直接輸入品名" oninput="_orderItems[${i}].name=this.value">
+    </td>
     <td><input class="form-input" style="width:60px" type="number" value="${it.qty}" oninput="_orderItems[${i}].qty=+this.value;_calcOrderTotals()"></td>
-    <td><input class="form-input" style="width:60px" value="${escHtml(it.unit)}" oninput="_orderItems[${i}].unit=this.value"></td>
+    <td><input class="form-input" style="width:60px" value="${escHtml(it.unit||'式')}" oninput="_orderItems[${i}].unit=this.value"></td>
     <td><input class="form-input" style="width:90px" type="number" value="${it.unit_price}" oninput="_orderItems[${i}].unit_price=+this.value;_calcOrderTotals()"></td>
     <td style="font-weight:600;min-width:80px" id="om-item-amt-${i}">NT$0</td>
     <td><button class="btn btn-outline btn-sm" onclick="_removeOrderItem(${i})" style="color:var(--red)">✕</button></td>
   </tr>`).join('');
+  _calcOrderTotals();
+}
+
+function _onOrderItemProd(sel, i) {
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.value) return;
+  const tr = sel.closest('tr');
+  const nameInput = tr.querySelector('input:not([type="number"])');
+  if (nameInput) nameInput.value = opt.dataset.name || '';
+  _orderItems[i].product_id = parseInt(opt.value);
+  _orderItems[i].name       = opt.dataset.name || '';
+  _orderItems[i].unit       = opt.dataset.unit || '式';
+  _orderItems[i].unit_price = parseFloat(opt.dataset.sell || 0);
+  const inputs = tr.querySelectorAll('input');
+  inputs.forEach(inp => {
+    if (inp.style.width === '60px' && !inp.type.match(/number/)) inp.value = _orderItems[i].unit;
+    if (inp.style.width === '90px') inp.value = _orderItems[i].unit_price;
+  });
   _calcOrderTotals();
 }
 function _calcOrderTotals() {
@@ -20305,15 +20657,153 @@ let _invProducts   = [];
 let _invVendors    = [];
 let _invCurrentTab = 'stock';
 let _poList        = [];
+let _supplierList  = [];
 
 async function initInventory() {
-  await Promise.all([loadInvStats(), loadInvWarehouses(), loadInvVendors()]);
+  await Promise.all([loadInvStats(), loadInvWarehouses(), loadInvVendors(), loadInvProductsData(), loadCrmList()]);
   switchInvTab(_invCurrentTab);
 }
 
+async function loadInvProductsData() {
+  const { ok, data } = await api('/api/inventory/products?active=1', {}, true);
+  if (ok) _invProducts = data;
+}
+
 async function loadInvVendors() {
-  const { ok, data } = await api('/api/crm/customers?status=active', {}, true);
+  const { ok, data } = await api('/api/inventory/suppliers', {}, true);
   _invVendors = ok ? data : [];
+}
+
+// ── 庫存調整 ─────────────────────────────────────────────────
+function openInvAdjustModal() {
+  const psel = document.getElementById('adj-product');
+  psel.innerHTML = '<option value="">— 選擇商品 —</option>' +
+    _invProducts.map(p => `<option value="${p.id}">${escHtml(p.sku)} — ${escHtml(p.name)}</option>`).join('');
+  const wsel = document.getElementById('adj-warehouse');
+  wsel.innerHTML = '<option value="">— 選擇倉庫 —</option>' +
+    _invWarehouses.map(w => `<option value="${w.id}">${escHtml(w.name)}</option>`).join('');
+  document.getElementById('adj-qty').value = '';
+  document.getElementById('adj-note').value = '';
+  document.getElementById('inv-adjust-modal').style.display = 'flex';
+}
+function closeInvAdjustModal() { document.getElementById('inv-adjust-modal').style.display = 'none'; }
+
+async function saveInvAdjust() {
+  const pid  = document.getElementById('adj-product').value;
+  const wid  = document.getElementById('adj-warehouse').value;
+  const qty  = document.getElementById('adj-qty').value;
+  const note = document.getElementById('adj-note').value.trim() || '手動調整';
+  if (!pid || !wid || qty === '') { showToast('請填寫商品、倉庫與調整後數量', 'error'); return; }
+  const { ok, data } = await api('/api/inventory/stock/adjust', {
+    method: 'POST',
+    body: JSON.stringify({ product_id: parseInt(pid), warehouse_id: parseInt(wid), new_qty: parseFloat(qty), note }),
+  });
+  if (!ok) { showToast(data?.error || '調整失敗', 'error'); return; }
+  const diff = data.diff > 0 ? `+${data.diff}` : String(data.diff);
+  showToast(`庫存已調整（差異 ${diff}）`, 'success');
+  closeInvAdjustModal();
+  loadInvStock(); loadInvStats(); loadInvTransactions();
+}
+
+// ── 倉庫調撥 ─────────────────────────────────────────────────
+function openInvTransferModal() {
+  const psel = document.getElementById('tfr-product');
+  psel.innerHTML = '<option value="">— 選擇商品 —</option>' +
+    _invProducts.map(p => `<option value="${p.id}">${escHtml(p.sku)} — ${escHtml(p.name)}</option>`).join('');
+  const wOpts = _invWarehouses.map(w => `<option value="${w.id}">${escHtml(w.name)}</option>`).join('');
+  document.getElementById('tfr-from').innerHTML = '<option value="">— 選擇倉庫 —</option>' + wOpts;
+  document.getElementById('tfr-to').innerHTML   = '<option value="">— 選擇倉庫 —</option>' + wOpts;
+  document.getElementById('tfr-qty').value  = '';
+  document.getElementById('tfr-note').value = '';
+  document.getElementById('inv-transfer-modal').style.display = 'flex';
+}
+function closeInvTransferModal() { document.getElementById('inv-transfer-modal').style.display = 'none'; }
+
+async function saveInvTransfer() {
+  const pid  = document.getElementById('tfr-product').value;
+  const from = document.getElementById('tfr-from').value;
+  const to   = document.getElementById('tfr-to').value;
+  const qty  = parseFloat(document.getElementById('tfr-qty').value) || 0;
+  const note = document.getElementById('tfr-note').value.trim() || '倉庫調撥';
+  if (!pid || !from || !to || qty <= 0) { showToast('請填寫所有必填欄位', 'error'); return; }
+  const { ok, data } = await api('/api/inventory/stock/transfer', {
+    method: 'POST',
+    body: JSON.stringify({ product_id: parseInt(pid), from_warehouse_id: parseInt(from), to_warehouse_id: parseInt(to), qty, note }),
+  });
+  if (!ok) { showToast(data?.error || '調撥失敗', 'error'); return; }
+  showToast('調撥成功', 'success');
+  closeInvTransferModal();
+  loadInvStock(); loadInvStats(); loadInvTransactions();
+}
+
+// ── 供應商管理 ─────────────────────────────────────────────────
+async function loadSupplierList() {
+  const q = document.getElementById('sup-filter-q')?.value.trim() || '';
+  let url = '/api/inventory/suppliers';
+  if (q) url += `?q=${encodeURIComponent(q)}`;
+  const { ok, data } = await api(url, {}, true);
+  _supplierList = ok ? data : [];
+  const wrap = document.getElementById('supplier-list-wrap');
+  if (!_supplierList.length) {
+    wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無供應商資料</div>';
+    return;
+  }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>公司名稱</th><th>聯絡人</th><th>電話</th><th>Email</th><th>行業</th><th>備註</th><th></th>
+  </tr></thead><tbody>${_supplierList.map(r => `<tr>
+    <td style="font-weight:600">${escHtml(r.company_name)}</td>
+    <td>${escHtml(r.contact_name||'—')}</td>
+    <td style="font-size:12px">${escHtml(r.phone||'—')}</td>
+    <td style="font-size:12px">${escHtml(r.email||'—')}</td>
+    <td style="font-size:12px">${escHtml(r.industry||'—')}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.notes||'—')}</td>
+    <td style="display:flex;gap:4px">
+      <button class="btn btn-outline btn-sm" onclick="openSupplierModal(${r.id})">編輯</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteSupplier(${r.id})">刪除</button>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function openSupplierModal(id) {
+  const s = id ? _supplierList.find(x => x.id === id) : null;
+  document.getElementById('sup-modal-title').textContent = s ? '編輯供應商' : '新增供應商';
+  document.getElementById('sup-edit-id').value      = s ? s.id : '';
+  document.getElementById('sup-f-company').value    = s ? s.company_name : '';
+  document.getElementById('sup-f-contact').value    = s ? (s.contact_name||'') : '';
+  document.getElementById('sup-f-phone').value      = s ? (s.phone||'') : '';
+  document.getElementById('sup-f-email').value      = s ? (s.email||'') : '';
+  document.getElementById('sup-f-industry').value   = s ? (s.industry||'') : '';
+  document.getElementById('sup-f-address').value    = s ? (s.address||'') : '';
+  document.getElementById('sup-f-notes').value      = s ? (s.notes||'') : '';
+  document.getElementById('supplier-modal-bg').style.display = 'flex';
+}
+function closeSupplierModal() { document.getElementById('supplier-modal-bg').style.display = 'none'; }
+
+async function saveSupplier() {
+  const id   = document.getElementById('sup-edit-id').value;
+  const body = {
+    company_name:  document.getElementById('sup-f-company').value.trim(),
+    contact_name:  document.getElementById('sup-f-contact').value.trim(),
+    phone:         document.getElementById('sup-f-phone').value.trim(),
+    email:         document.getElementById('sup-f-email').value.trim(),
+    industry:      document.getElementById('sup-f-industry').value.trim(),
+    address:       document.getElementById('sup-f-address').value.trim(),
+    notes:         document.getElementById('sup-f-notes').value.trim(),
+  };
+  if (!body.company_name) { showToast('請填寫公司名稱', 'error'); return; }
+  const url    = id ? `/api/inventory/suppliers/${id}` : '/api/inventory/suppliers';
+  const method = id ? 'PUT' : 'POST';
+  const { ok, data } = await api(url, { method, body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error || '儲存失敗', 'error'); return; }
+  showToast(id ? '供應商已更新' : '供應商已新增', 'success');
+  closeSupplierModal();
+  loadSupplierList(); loadInvVendors();
+}
+
+async function deleteSupplier(id) {
+  if (!confirm('確定刪除此供應商？')) return;
+  const { ok } = await api(`/api/inventory/suppliers/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除', 'success'); loadSupplierList(); loadInvVendors(); }
 }
 
 async function loadInvStats() {
@@ -20339,7 +20829,7 @@ async function loadInvWarehouses() {
 
 function switchInvTab(tab) {
   _invCurrentTab = tab;
-  const tabs = ['stock','products','purchase','shipments','transactions','warehouses'];
+  const tabs = ['stock','products','purchase','shipments','transactions','warehouses','suppliers'];
   tabs.forEach(t => {
     const btn   = document.getElementById('inv-tab-' + t);
     const panel = document.getElementById('inv-panel-' + t);
@@ -20353,6 +20843,7 @@ function switchInvTab(tab) {
   if (tab === 'purchase')      { loadPOStats(); loadPOList(); }
   if (tab === 'shipments')     { loadShipmentStats(); loadShipmentList(); }
   if (tab === 'transactions')  loadInvTransactions();
+  if (tab === 'suppliers')     loadSupplierList();
 }
 
 // ── 庫存總覽 ─────────────────────────────────────────────────
@@ -20891,7 +21382,7 @@ function openShipmentModal(id) {
 
   const csel = document.getElementById('sh-f-customer');
   csel.innerHTML = '<option value="">— 選擇客戶 —</option>' +
-    _invVendors.map(v => `<option value="${v.id}" data-addr="${escHtml(v.address||'')}" ${sh&&sh.customer_id==v.id?'selected':''}>${escHtml(v.company_name)}</option>`).join('');
+    _crmList.map(v => `<option value="${v.id}" data-addr="${escHtml(v.address||'')}" ${sh&&sh.customer_id==v.id?'selected':''}>${escHtml(v.company_name)}</option>`).join('');
 
   const wsel = document.getElementById('sh-f-warehouse');
   wsel.innerHTML = '<option value="">— 選擇倉庫 —</option>' +
@@ -21020,7 +21511,7 @@ let _accApList     = [];
 let _voucherList   = [];
 
 async function initAccounting() {
-  await Promise.all([loadAccAccounts(), loadAccDashboard()]);
+  await Promise.all([loadAccAccounts(), loadAccDashboard(), loadCrmList()]);
   switchAccTab(_accCurrentTab);
 }
 
@@ -21236,13 +21727,14 @@ async function loadARList() {
   }
   const today = new Date().toISOString().slice(0,10);
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
-    <th>AR 單號</th><th>客戶</th><th>金額</th><th>已收</th>
+    <th>AR 單號</th><th>客戶</th><th>來源單號</th><th>金額</th><th>已收</th>
     <th style="text-align:right">餘額</th><th>到期日</th><th>狀態</th><th></th>
   </tr></thead><tbody>${filtered.map(r => {
     const isOd = r.due_date && r.due_date < today && r.status !== 'paid';
     return `<tr style="${isOd?'background:rgba(220,53,69,.05)':''}">
       <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${escHtml(r.ar_no)}</td>
       <td>${escHtml(r.customer_name||'—')}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.notes?escHtml(r.notes.split('\\n')[0].slice(0,20)):'—'}</td>
       <td>NT$${r.amount.toLocaleString()}</td>
       <td style="color:var(--green)">NT$${r.paid_amount.toLocaleString()}</td>
       <td style="text-align:right;font-weight:600;color:${r.balance>0?'var(--orange)':'var(--green)'}">NT$${r.balance.toLocaleString()}</td>
@@ -21282,7 +21774,7 @@ function openARModal(id) {
   document.getElementById('ar-edit-id').value = rec ? rec.id : '';
   const csel = document.getElementById('ar-f-customer');
   csel.innerHTML = '<option value="">— 選擇客戶 —</option>' +
-    _invVendors.map(v => `<option value="${v.id}"${rec&&rec.customer_id==v.id?' selected':''}>${escHtml(v.company_name)}</option>`).join('');
+    _crmList.map(v => `<option value="${v.id}"${rec&&rec.customer_id==v.id?' selected':''}>${escHtml(v.company_name)}</option>`).join('');
   document.getElementById('ar-f-amount').value = rec ? rec.amount : '';
   document.getElementById('ar-f-due').value    = rec ? (rec.due_date || '') : '';
   document.getElementById('ar-f-terms').value  = rec ? (rec.payment_terms || 'net30') : 'net30';
@@ -21369,13 +21861,14 @@ async function loadAPList() {
   }
   const today = new Date().toISOString().slice(0,10);
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
-    <th>AP 單號</th><th>供應商</th><th>金額</th><th>已付</th>
+    <th>AP 單號</th><th>供應商</th><th>來源單號</th><th>金額</th><th>已付</th>
     <th style="text-align:right">餘額</th><th>到期日</th><th>狀態</th><th></th>
   </tr></thead><tbody>${filtered.map(r => {
     const isOd = r.due_date && r.due_date < today && r.status !== 'paid';
     return `<tr style="${isOd?'background:rgba(220,53,69,.05)':''}">
       <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${escHtml(r.ap_no)}</td>
       <td>${escHtml(r.vendor_name||'—')}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.notes?escHtml(r.notes.split('\\n')[0].slice(0,20)):'—'}</td>
       <td>NT$${r.amount.toLocaleString()}</td>
       <td style="color:var(--green)">NT$${r.paid_amount.toLocaleString()}</td>
       <td style="text-align:right;font-weight:600;color:${r.balance>0?'var(--red)':'var(--green)'}">NT$${r.balance.toLocaleString()}</td>

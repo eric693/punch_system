@@ -14867,6 +14867,37 @@ def api_crm_interactions_create(cid):
     return jsonify({'id': row['id']}), 201
 
 
+@app.route('/api/crm/customers/<int:cid>/orders', methods=['GET'])
+@require_module('crm')
+def api_crm_customer_orders(cid):
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, order_no, title, status, total, paid_amount, created_at FROM crm_orders WHERE customer_id=%s ORDER BY created_at DESC LIMIT 50",
+            (cid,)
+        ).fetchall()
+    return jsonify([{
+        'id': r['id'], 'order_no': r['order_no'], 'title': r['title'],
+        'status': r['status'],
+        'total': float(r['total'] or 0), 'paid_amount': float(r['paid_amount'] or 0),
+        'created_at': str(r['created_at'])[:10] if r['created_at'] else None,
+    } for r in rows])
+
+
+@app.route('/api/crm/customers/<int:cid>/quotes', methods=['GET'])
+@require_module('crm')
+def api_crm_customer_quotes(cid):
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, quote_no, title, status, total, created_at FROM crm_quotes WHERE customer_id=%s ORDER BY created_at DESC LIMIT 50",
+            (cid,)
+        ).fetchall()
+    return jsonify([{
+        'id': r['id'], 'quote_no': r['quote_no'], 'title': r['title'],
+        'status': r['status'], 'total': float(r['total'] or 0),
+        'created_at': str(r['created_at'])[:10] if r['created_at'] else None,
+    } for r in rows])
+
+
 @app.route('/api/crm/stats', methods=['GET'])
 @require_module('crm')
 def api_crm_stats():
@@ -15199,6 +15230,75 @@ def api_orders_stats():
     return jsonify({'total_orders': total, 'pending': pending,
                     'processing': processing, 'completed': completed,
                     'total_revenue_month': float(rev)})
+
+
+@app.route('/api/orders/<int:oid>/create-ar', methods=['POST'])
+@require_module('orders')
+def api_orders_create_ar(oid):
+    import datetime as _dt2
+    admin = session.get('admin_display', session.get('admin', ''))
+    with get_db() as conn:
+        order = conn.execute("SELECT * FROM crm_orders WHERE id=%s", (oid,)).fetchone()
+        if not order:
+            return jsonify({'error': '訂單不存在'}), 404
+        existing = conn.execute(
+            "SELECT id, ar_no FROM acc_receivables WHERE order_id=%s AND status != 'void'", (oid,)
+        ).fetchone()
+        if existing:
+            return jsonify({'error': f'此訂單已有應收帳款 {existing["ar_no"]}'}), 409
+        remaining = float(order['total'] or 0) - float(order['paid_amount'] or 0)
+        if remaining <= 0:
+            return jsonify({'error': '此訂單已全額付清'}), 400
+        ar_no = _next_acc_no('AR', 'acc_receivables', 'ar_no')
+        due = (_dt2.date.today() + _dt2.timedelta(days=30)).isoformat()
+        row = conn.execute(
+            """INSERT INTO acc_receivables
+               (ar_no, customer_id, customer_name, order_id, amount, due_date, payment_terms, notes, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s,'net30',%s,%s) RETURNING *""",
+            (ar_no, order['customer_id'], order['customer_name'], oid,
+             remaining, due, f'訂單 {order["order_no"]}', admin)
+        ).fetchone()
+    return jsonify(_ar_row(row)), 201
+
+
+@app.route('/api/orders/<int:oid>/payment', methods=['POST'])
+@require_module('orders')
+def api_orders_record_payment(oid):
+    import datetime as _dt2
+    d = request.get_json() or {}
+    amt = float(d.get('amount', 0))
+    if amt <= 0:
+        return jsonify({'error': '金額必須大於 0'}), 400
+    admin = session.get('admin_display', session.get('admin', ''))
+    with get_db() as conn:
+        order = conn.execute("SELECT * FROM crm_orders WHERE id=%s", (oid,)).fetchone()
+        if not order:
+            return jsonify({'error': '訂單不存在'}), 404
+        new_paid = float(order['paid_amount'] or 0) + amt
+        new_paid = min(new_paid, float(order['total'] or 0))
+        conn.execute(
+            "UPDATE crm_orders SET paid_amount=%s, updated_at=NOW() WHERE id=%s",
+            (new_paid, oid)
+        )
+        # 同步更新 AR
+        ar = conn.execute(
+            "SELECT * FROM acc_receivables WHERE order_id=%s AND status != 'void' LIMIT 1", (oid,)
+        ).fetchone()
+        if ar:
+            conn.execute(
+                """INSERT INTO acc_ar_payments (ar_id, pay_date, amount, method, ref_no, notes, created_by)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                (ar['id'], d.get('pay_date') or str(_dt2.date.today()),
+                 amt, d.get('method', 'transfer'), d.get('ref_no', ''),
+                 d.get('notes', '訂單收款'), admin)
+            )
+            ar_paid = float(ar['paid_amount'] or 0) + amt
+            ar_status = 'paid' if ar_paid >= float(ar['amount']) else 'partial'
+            conn.execute(
+                "UPDATE acc_receivables SET paid_amount=%s, status=%s, updated_at=NOW() WHERE id=%s",
+                (ar_paid, ar_status, ar['id'])
+            )
+    return jsonify({'ok': True, 'paid_amount': new_paid})
 
 
 @app.route('/api/export/orders-excel', methods=['GET'])
@@ -16106,6 +16206,22 @@ def api_inv_po_receive(oid):
             "UPDATE inv_purchase_orders SET status=%s, updated_at=NOW() WHERE id=%s",
             (new_status, oid)
         )
+
+        # 自動建立 AP（若尚無未作廢的 AP）
+        existing_ap = conn.execute(
+            "SELECT id FROM acc_payables WHERE po_id=%s AND status != 'void' LIMIT 1", (oid,)
+        ).fetchone()
+        if not existing_ap and total_cost > 0:
+            import datetime as _dt3
+            ap_no = _next_acc_no('AP', 'acc_payables', 'ap_no')
+            due_ap = (_dt3.date.today() + _dt3.timedelta(days=30)).isoformat()
+            conn.execute(
+                """INSERT INTO acc_payables
+                   (ap_no, vendor_id, vendor_name, po_id, amount, due_date, notes, created_by)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (ap_no, po['vendor_id'], po['vendor_name'], oid,
+                 total_cost, due_ap, f'採購單 {po["po_no"]} 入庫', admin)
+            )
 
     return jsonify({'ok': True, 'grn_no': grn_no, 'status': new_status}), 201
 
@@ -17457,6 +17573,164 @@ def api_acc_balance_sheet():
 
 
 # ── Excel 匯出 ────────────────────────────────────────────────
+
+@app.route('/api/inventory/stock/adjust', methods=['POST'])
+@require_module('inventory')
+def api_inv_stock_adjust():
+    d     = request.get_json() or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    pid   = d.get('product_id')
+    wid   = d.get('warehouse_id')
+    new_qty = d.get('new_qty')
+    note    = d.get('note', '手動調整')
+    if not pid or wid is None or new_qty is None:
+        return jsonify({'error': '缺少必要欄位'}), 400
+    pid = int(pid); wid = int(wid); new_qty = float(new_qty)
+    with get_db() as conn:
+        cur = conn.execute(
+            "SELECT qty_on_hand FROM inv_stock WHERE product_id=%s AND warehouse_id=%s",
+            (pid, wid)
+        ).fetchone()
+        old_qty = float(cur['qty_on_hand']) if cur else 0.0
+        diff    = new_qty - old_qty
+        if diff == 0:
+            return jsonify({'ok': True, 'message': '數量未變動'})
+        conn.execute(
+            """INSERT INTO inv_stock (product_id, warehouse_id, qty_on_hand)
+               VALUES (%s,%s,%s)
+               ON CONFLICT (product_id, warehouse_id)
+               DO UPDATE SET qty_on_hand=%s, updated_at=NOW()""",
+            (pid, wid, new_qty, new_qty)
+        )
+        txn_type = 'adjust_in' if diff > 0 else 'adjust_out'
+        conn.execute(
+            """INSERT INTO inv_transactions
+               (product_id, warehouse_id, txn_type, qty, note, created_by)
+               VALUES (%s,%s,%s,%s,%s,%s)""",
+            (pid, wid, txn_type, abs(diff), note, admin)
+        )
+    return jsonify({'ok': True, 'old_qty': old_qty, 'new_qty': new_qty, 'diff': diff})
+
+
+@app.route('/api/inventory/stock/transfer', methods=['POST'])
+@require_module('inventory')
+def api_inv_stock_transfer():
+    d      = request.get_json() or {}
+    admin  = session.get('admin_display', session.get('admin', ''))
+    pid    = d.get('product_id')
+    from_w = d.get('from_warehouse_id')
+    to_w   = d.get('to_warehouse_id')
+    qty    = float(d.get('qty', 0))
+    note   = d.get('note', '倉庫調撥')
+    if not pid or not from_w or not to_w:
+        return jsonify({'error': '缺少必要欄位'}), 400
+    if from_w == to_w:
+        return jsonify({'error': '來源與目標倉庫相同'}), 400
+    if qty <= 0:
+        return jsonify({'error': '調撥數量必須大於 0'}), 400
+    pid = int(pid); from_w = int(from_w); to_w = int(to_w)
+    with get_db() as conn:
+        src = conn.execute(
+            "SELECT qty_on_hand FROM inv_stock WHERE product_id=%s AND warehouse_id=%s",
+            (pid, from_w)
+        ).fetchone()
+        if not src or float(src['qty_on_hand']) < qty:
+            return jsonify({'error': '來源倉庫庫存不足'}), 400
+        conn.execute(
+            "UPDATE inv_stock SET qty_on_hand=qty_on_hand-%s, updated_at=NOW() WHERE product_id=%s AND warehouse_id=%s",
+            (qty, pid, from_w)
+        )
+        conn.execute(
+            """INSERT INTO inv_stock (product_id, warehouse_id, qty_on_hand)
+               VALUES (%s,%s,%s)
+               ON CONFLICT (product_id, warehouse_id)
+               DO UPDATE SET qty_on_hand=inv_stock.qty_on_hand+EXCLUDED.qty_on_hand, updated_at=NOW()""",
+            (pid, to_w, qty)
+        )
+        conn.execute(
+            """INSERT INTO inv_transactions (product_id, warehouse_id, txn_type, qty, note, created_by)
+               VALUES (%s,%s,'transfer_out',%s,%s,%s)""",
+            (pid, from_w, -qty, note, admin)
+        )
+        conn.execute(
+            """INSERT INTO inv_transactions (product_id, warehouse_id, txn_type, qty, note, created_by)
+               VALUES (%s,%s,'transfer_in',%s,%s,%s)""",
+            (pid, to_w, qty, note, admin)
+        )
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/suppliers', methods=['GET'])
+@require_module('inventory')
+def api_inv_suppliers_list():
+    q = request.args.get('q', '').strip()
+    with get_db() as conn:
+        sql = "SELECT * FROM crm_customers WHERE customer_type='supplier'"
+        params = []
+        if q:
+            sql += " AND (company_name ILIKE %s OR contact_name ILIKE %s OR phone ILIKE %s)"
+            params += [f'%{q}%', f'%{q}%', f'%{q}%']
+        sql += " ORDER BY company_name"
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        for f in ('created_at', 'updated_at', 'last_contact_at'):
+            if d.get(f): d[f] = str(d[f])[:10]
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/inventory/suppliers', methods=['POST'])
+@require_module('inventory')
+def api_inv_supplier_create():
+    b = request.get_json(force=True) or {}
+    if not b.get('company_name', '').strip():
+        return jsonify({'error': '公司名稱為必填'}), 400
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO crm_customers
+              (company_name, contact_name, phone, email, address, industry,
+               status, source, tags, notes, customer_type)
+            VALUES (%s,%s,%s,%s,%s,%s,'active',%s,%s,%s,'supplier')
+            RETURNING id
+        """, (
+            b['company_name'].strip(),
+            b.get('contact_name',''), b.get('phone',''), b.get('email',''),
+            b.get('address',''), b.get('industry',''),
+            b.get('source',''), b.get('tags',''), b.get('notes',''),
+        )).fetchone()
+    return jsonify({'id': row['id']}), 201
+
+
+@app.route('/api/inventory/suppliers/<int:sid>', methods=['PUT'])
+@require_module('inventory')
+def api_inv_supplier_update(sid):
+    b = request.get_json(force=True) or {}
+    if not b.get('company_name', '').strip():
+        return jsonify({'error': '公司名稱為必填'}), 400
+    with get_db() as conn:
+        conn.execute("""
+            UPDATE crm_customers
+            SET company_name=%s, contact_name=%s, phone=%s, email=%s,
+                address=%s, industry=%s, tags=%s, notes=%s, updated_at=NOW()
+            WHERE id=%s AND customer_type='supplier'
+        """, (
+            b['company_name'].strip(),
+            b.get('contact_name',''), b.get('phone',''), b.get('email',''),
+            b.get('address',''), b.get('industry',''),
+            b.get('tags',''), b.get('notes',''), sid,
+        ))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/suppliers/<int:sid>', methods=['DELETE'])
+@require_module('inventory')
+def api_inv_supplier_delete(sid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM crm_customers WHERE id=%s AND customer_type='supplier'", (sid,))
+    return jsonify({'ok': True})
+
 
 @app.route('/api/export/invoices-excel', methods=['GET'])
 @require_module('accounting')
