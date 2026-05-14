@@ -716,7 +716,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div style="margin-bottom:8px">
           <label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:4px">允許的 IP 位址</label>
           <textarea id="wifi-allowed-ips" class="form-input" rows="4" placeholder="每行一個，支援單一 IP 或 CIDR 格式，例如：&#10;192.168.1.0/24&#10;10.0.0.1&#10;203.0.113.50" style="width:100%;font-family:'DM Mono',monospace;font-size:12px;resize:vertical"></textarea>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">員工透過 WiFi 打卡時，伺服器會驗證其來源 IP 是否在清單內。可填入公司 WiFi 的外部 IP 或內網 IP 段。</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">員工連上公司 WiFi 後，其對外 IP 與管理員目前的 IP 相同（都經過同一台路由器）。點擊「取得目前 IP」即可自動填入，支援 CIDR 格式（如 203.0.113.0/24）。</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="loadMyIp()">取得目前 IP</button>
@@ -12835,12 +12835,45 @@ async function saveWifiConfig() {
 }
 let _myIpValue = null;
 async function loadMyIp() {
-  const { ok, data } = await api('/api/punch/my-ip', {}, true);
-  if (ok) {
-    _myIpValue = data.ip;
-    document.getElementById('my-ip-display').textContent = data.ip;
-    document.getElementById('btn-add-my-ip').style.display = '';
-  }
+  const disp = document.getElementById('my-ip-display');
+  const addBtn = document.getElementById('btn-add-my-ip');
+  disp.style.color = 'var(--muted)';
+  disp.textContent = '偵測中...';
+  addBtn.style.display = 'none';
+  _myIpValue = null;
+
+  // 嘗試伺服器端偵測（回傳伺服器看到的來源 IP = WiFi 路由器公網 IP）
+  try {
+    const r = await fetch('/api/punch/my-ip');
+    if (r.ok) {
+      const d = await r.json();
+      if (d.ip && d.ip !== '127.0.0.1' && d.ip !== '::1') {
+        _myIpValue = d.ip;
+        disp.style.color = 'var(--accent)';
+        disp.textContent = d.ip + '（目前公網 IP）';
+        addBtn.style.display = '';
+        return;
+      }
+    }
+  } catch(e) {}
+
+  // 備援：使用公開 IP 查詢服務
+  try {
+    const r2 = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(5000) });
+    if (r2.ok) {
+      const d2 = await r2.json();
+      if (d2.ip) {
+        _myIpValue = d2.ip;
+        disp.style.color = 'var(--accent)';
+        disp.textContent = d2.ip + '（目前公網 IP）';
+        addBtn.style.display = '';
+        return;
+      }
+    }
+  } catch(e) {}
+
+  disp.style.color = 'var(--red)';
+  disp.textContent = '無法取得，請手動輸入公司 WiFi 的公網 IP';
 }
 function addMyIpToList() {
   if (!_myIpValue) return;
