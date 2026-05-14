@@ -206,6 +206,13 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
 
       <!-- 打卡 tab -->
       <div id="panel-punch" class="tab-body">
+        <!-- 打卡方式切換（WiFi 啟用時顯示） -->
+        <div id="punch-method-bar" style="display:none;padding:10px 16px 0;gap:8px">
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <button id="btn-mode-gps"  onclick="setPunchMode('gps')"  class="btn btn-primary btn-sm" style="flex:1">📍 GPS 打卡</button>
+            <button id="btn-mode-wifi" onclick="setPunchMode('wifi')" class="btn btn-outline btn-sm" style="flex:1">📶 WiFi 打卡</button>
+          </div>
+        </div>
         <div class="gps-bar gps-loading" id="gps-bar">
           <div class="gps-dot dot-spin" id="gps-dot"></div>
           <span id="gps-text">正在取得定位...</span>
@@ -657,7 +664,7 @@ const PLCLS={in:'lb-in',out:'lb-out',break_out:'lb-bout',break_in:'lb-bin'};
 let SLABEL={pending:'審核中',approved:'已核准',rejected:'已退回',modified_pending:'修改待審'};
 const SCLS={pending:'sb-pending',approved:'sb-approved',rejected:'sb-rejected',modified_pending:'sb-modified'};
 
-let me=null,gpsSettings=null,gpsPos=null,gpsWatchId=null,punchLocked=false;
+let me=null,gpsSettings=null,gpsPos=null,gpsWatchId=null,punchLocked=false,punchMode='gps';
 let curSchedMonth=null,schedCfg=null,schedOffCounts={},schedSelectedDates=new Set(),schedExistingReq=null;
 
 function tick(){
@@ -673,7 +680,7 @@ setInterval(tick,1000);tick();
     fetch('/api/punch/me')
   ]);
   gpsSettings = settingsData;
-  if(meRes.ok){me=await meRes.json();showMain();}
+  if(meRes.ok){me=await meRes.json();showMain();applyPunchMethodBar();}
   else showLogin();
 })();
 
@@ -715,7 +722,7 @@ async function doLogin(){
 }
 async function doLogout(){
   await fetch('/api/punch/logout',{method:'POST'});
-  me=null;gpsPos=null;
+  me=null;gpsPos=null;punchMode='gps';
   if(gpsWatchId)navigator.geolocation.clearWatch(gpsWatchId);
   showLogin();
 }
@@ -732,7 +739,7 @@ function switchTab(tab){
     document.getElementById('panel-'+t).style.display=t===tab?'':'none';
   });
   if(tab==='ann')initAnnStaff();
-  if(tab==='punch'){startGPS();loadTodayLog();}
+  if(tab==='punch'){applyPunchMethodBar();if(punchMode==='gps')startGPS();else setWifiBar();loadTodayLog();}
   if(tab==='sched')initSchedTab();
   if(tab==='leave')initLeaveTab();
   if(tab==='schedule-view')initScheduleViewTab();
@@ -746,6 +753,31 @@ function switchTab(tab){
   if(tab==='mytravel')initMyTravel();
   if(tab==='myloans')loadMyLoans();
   if(tab==='biodev')initBiodevTab();
+}
+
+/* 打卡方式切換 */
+function applyPunchMethodBar(){
+  const wifiOn=gpsSettings&&gpsSettings.wifi_enabled;
+  const bar=document.getElementById('punch-method-bar');
+  if(bar)bar.style.display=wifiOn?'':'none';
+}
+function setPunchMode(mode){
+  punchMode=mode;
+  document.getElementById('btn-mode-gps').className ='btn btn-sm'+(mode==='gps'?' btn-primary':' btn-outline');
+  document.getElementById('btn-mode-wifi').className='btn btn-sm'+(mode==='wifi'?' btn-primary':' btn-outline');
+  if(mode==='gps'){
+    if(gpsWatchId){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}
+    gpsPos=null;
+    startGPS();
+  }else{
+    if(gpsWatchId){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}
+    gpsPos=null;
+    setWifiBar();
+    setBtns(false);
+  }
+}
+function setWifiBar(){
+  setGpsBar('ok','📶 WiFi 模式：連線後點擊打卡');
 }
 
 /* GPS */
@@ -792,15 +824,16 @@ async function doPunch(type){
   if(punchLocked)return;
   punchLocked=true;setTimeout(()=>punchLocked=false,2000);
   _PUNCH_BTNS.forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=true;});
-  const body={punch_type:type};
-  if(gpsPos){body.lat=gpsPos.lat;body.lng=gpsPos.lng;}
+  const body={punch_type:type,punch_method:punchMode};
+  if(punchMode==='gps'&&gpsPos){body.lat=gpsPos.lat;body.lng=gpsPos.lng;}
   try{
     const r=await fetch('/api/punch/clock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
     if(!r.ok){showToast(d.error||staffT('punch.fail'),'err');punchLocked=false;return;}
     const n=new Date();
     const ts=[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
-    showSuccess(me.name,PLABEL[type],ts,d.gps_distance!=null?staffT('punch.dist').replace('{0}',d.gps_distance):'');
+    const extra=punchMode==='wifi'?'📶 WiFi':(d.gps_distance!=null?staffT('punch.dist').replace('{0}',d.gps_distance):'');
+    showSuccess(me.name,PLABEL[type],ts,extra);
     await loadTodayLog();
   }catch(e){showToast(staffT('punch.net_err'),'err');punchLocked=false;}
   finally{_PUNCH_BTNS.forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});}
@@ -812,8 +845,10 @@ async function loadTodayLog(){
   if(!list.length){wrap.innerHTML='<div class="log-empty">'+staffT('punch.no_records')+'</div>';return;}
   wrap.innerHTML=list.map(r=>{
     const t=r.punched_at?r.punched_at.slice(11,16):'';
-    const dist=r.gps_distance!=null?r.gps_distance+'m':'';
-    return '<div class="log-item"><span class="lb '+(PLCLS[r.punch_type]||'')+'">'+( PLABEL[r.punch_type]||r.punch_type)+'</span><div><div class="log-time">'+t+'</div>'+(dist?'<div class="log-sub">'+dist+'</div>':'')+(r.is_manual?'<div class="log-sub">'+staffT('punch.manual')+'</div>':'')+'</div></div>';
+    const isWifi=r.punch_method==='wifi';
+    const dist=(!isWifi&&r.gps_distance!=null)?r.gps_distance+'m':'';
+    const locBadge=isWifi?'📶 WiFi':(dist||'');
+    return '<div class="log-item"><span class="lb '+(PLCLS[r.punch_type]||'')+'">'+( PLABEL[r.punch_type]||r.punch_type)+'</span><div><div class="log-time">'+t+'</div>'+(locBadge?'<div class="log-sub">'+locBadge+'</div>':'')+(r.is_manual?'<div class="log-sub">'+staffT('punch.manual')+'</div>':'')+'</div></div>';
   }).join('');
 }
 

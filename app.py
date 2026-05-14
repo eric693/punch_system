@@ -1,3 +1,4 @@
+import ipaddress
 import math
 import os
 import secrets
@@ -466,6 +467,10 @@ def init_db():
         "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS review_note  TEXT DEFAULT ''",
         "ALTER TABLE asset_loans ADD COLUMN IF NOT EXISTS reviewed_at  TIMESTAMPTZ",
         "ALTER TABLE punch_staff ADD COLUMN IF NOT EXISTS preferred_lang TEXT DEFAULT 'zh-TW'",
+        # WiFi 打卡
+        "ALTER TABLE punch_config ADD COLUMN IF NOT EXISTS wifi_enabled BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE punch_config ADD COLUMN IF NOT EXISTS wifi_allowed_ips TEXT DEFAULT ''",
+        "ALTER TABLE punch_records ADD COLUMN IF NOT EXISTS punch_method TEXT DEFAULT 'gps'",
         # ── 效能索引 ──────────────────────────────────────────────────────────
         "CREATE INDEX IF NOT EXISTS idx_punch_records_staff_at       ON punch_records(staff_id, punched_at)",
         "CREATE INDEX IF NOT EXISTS idx_punch_records_punched_at     ON punch_records(punched_at)",
@@ -774,6 +779,29 @@ def _gps_distance(lat1, lng1, lat2, lng2):
          math.sin((lng2 - lng1) * p / 2) ** 2)
     return int(2 * R * math.asin(math.sqrt(a)))
 
+def _check_wifi_ip(client_ip, allowed_ips_str):
+    """Return True if client_ip matches any entry in allowed_ips_str (comma/newline separated, CIDR supported)."""
+    if not allowed_ips_str or not allowed_ips_str.strip():
+        return False
+    try:
+        client = ipaddress.ip_address(client_ip)
+    except ValueError:
+        return False
+    for entry in allowed_ips_str.replace('\n', ',').split(','):
+        entry = entry.strip()
+        if not entry:
+            continue
+        try:
+            if '/' in entry:
+                if client in ipaddress.ip_network(entry, strict=False):
+                    return True
+            else:
+                if client == ipaddress.ip_address(entry):
+                    return True
+        except ValueError:
+            continue
+    return False
+
 def punch_staff_row(row):
     if not row: return None
     d = dict(row)
@@ -936,6 +964,7 @@ def api_punch_settings_get():
         ).fetchall()
     data = {
         'gps_required': cfg['gps_required'] if cfg else False,
+        'wifi_enabled': cfg['wifi_enabled'] if cfg else False,
         'locations': [loc_row(r) for r in locs]
     }
     _cache_set('punch:settings', data, ttl=300)
@@ -945,14 +974,45 @@ def api_punch_settings_get():
 @login_required
 def api_punch_config_update():
     b = request.get_json(force=True)
-    gps_required = bool(b.get('gps_required', False))
+    gps_required     = bool(b.get('gps_required', False))
+    wifi_enabled     = bool(b.get('wifi_enabled', False))
+    wifi_allowed_ips = b.get('wifi_allowed_ips', '').strip() if 'wifi_allowed_ips' in b else None
     with get_db() as conn:
-        conn.execute(
-            "UPDATE punch_config SET gps_required=%s, updated_at=NOW() WHERE id=1",
-            (gps_required,)
-        )
+        if wifi_allowed_ips is not None:
+            conn.execute(
+                "UPDATE punch_config SET gps_required=%s, wifi_enabled=%s, wifi_allowed_ips=%s, updated_at=NOW() WHERE id=1",
+                (gps_required, wifi_enabled, wifi_allowed_ips)
+            )
+        else:
+            conn.execute(
+                "UPDATE punch_config SET gps_required=%s, wifi_enabled=%s, updated_at=NOW() WHERE id=1",
+                (gps_required, wifi_enabled)
+            )
     _cache_del('punch:settings')
-    return jsonify({'gps_required': gps_required})
+    return jsonify({'gps_required': gps_required, 'wifi_enabled': wifi_enabled})
+
+
+@app.route('/api/punch/my-ip', methods=['GET'])
+def api_punch_my_ip():
+    """Return the client's IP address (for WiFi allowlist setup)."""
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if ip:
+        ip = ip.split(',')[0].strip()
+    return jsonify({'ip': ip})
+
+@app.route('/api/punch/config', methods=['GET'])
+@login_required
+def api_punch_config_get():
+    with get_db() as conn:
+        cfg = conn.execute("SELECT * FROM punch_config WHERE id=1").fetchone()
+    if not cfg:
+        return jsonify({'gps_required': False, 'wifi_enabled': False, 'wifi_allowed_ips': ''})
+    return jsonify({
+        'gps_required':     cfg['gps_required'],
+        'wifi_enabled':     cfg['wifi_enabled'],
+        'wifi_allowed_ips': cfg['wifi_allowed_ips'] or '',
+    })
+
 
 @app.route('/api/punch/locations', methods=['GET'])
 @login_required
@@ -1022,10 +1082,11 @@ def api_punch_clock():
     if not sid:
         return jsonify({'error': '請先登入'}), 401
 
-    b          = request.get_json(force=True)
-    punch_type = b.get('punch_type')
-    lat        = b.get('lat')
-    lng        = b.get('lng')
+    b            = request.get_json(force=True)
+    punch_type   = b.get('punch_type')
+    lat          = b.get('lat')
+    lng          = b.get('lng')
+    punch_method = b.get('punch_method', 'gps')  # 'gps' or 'wifi'
 
     if punch_type not in ('in', 'out', 'break_out', 'break_in'):
         return jsonify({'error': '無效的打卡類型'}), 400
@@ -1039,28 +1100,45 @@ def api_punch_clock():
         cfg  = conn.execute("SELECT * FROM punch_config WHERE id=1").fetchone()
         locs = conn.execute("SELECT * FROM punch_locations WHERE active=TRUE").fetchall()
 
-    gps_required = cfg['gps_required'] if cfg else False
-    gps_distance = None
-    matched_loc  = None
+    gps_required     = cfg['gps_required'] if cfg else False
+    wifi_enabled     = cfg['wifi_enabled'] if cfg else False
+    wifi_allowed_ips = cfg['wifi_allowed_ips'] if cfg else ''
+    gps_distance     = None
+    matched_loc      = None
+    location_name    = ''
 
-    if lat is not None and lng is not None and locs:
-        for loc in locs:
-            d = _gps_distance(lat, lng, float(loc['lat']), float(loc['lng']))
-            if gps_distance is None or d < gps_distance:
-                gps_distance = d
-                matched_loc  = loc
-
-    if gps_required:
-        if lat is None or lng is None:
-            return jsonify({'error': '無法取得 GPS，請允許定位權限後重試'}), 403
-        if not locs:
-            return jsonify({'error': '管理員尚未設定任何打卡地點'}), 403
-        if gps_distance is None or gps_distance > int(matched_loc['radius_m']):
+    if punch_method == 'wifi':
+        if not wifi_enabled:
+            return jsonify({'error': 'WiFi 打卡功能未啟用'}), 403
+        client_ip = request.headers.get('X-Forwarded-For', request.remote_addr) or ''
+        client_ip = client_ip.split(',')[0].strip()
+        if not _check_wifi_ip(client_ip, wifi_allowed_ips):
             return jsonify({
-                'error': f'距離最近地點「{matched_loc["location_name"]}」{gps_distance} 公尺，超出允許範圍（{matched_loc["radius_m"]} 公尺）',
-                'distance': gps_distance,
-                'radius': int(matched_loc['radius_m'])
+                'error': f'目前網路 IP（{client_ip}）不在允許的 WiFi 清單中，請連上公司 WiFi 再試',
+                'client_ip': client_ip
             }), 403
+        location_name = 'WiFi'
+    else:
+        # GPS mode
+        if lat is not None and lng is not None and locs:
+            for loc in locs:
+                d = _gps_distance(lat, lng, float(loc['lat']), float(loc['lng']))
+                if gps_distance is None or d < gps_distance:
+                    gps_distance = d
+                    matched_loc  = loc
+
+        if gps_required:
+            if lat is None or lng is None:
+                return jsonify({'error': '無法取得 GPS，請允許定位權限後重試'}), 403
+            if not locs:
+                return jsonify({'error': '管理員尚未設定任何打卡地點'}), 403
+            if gps_distance is None or gps_distance > int(matched_loc['radius_m']):
+                return jsonify({
+                    'error': f'距離最近地點「{matched_loc["location_name"]}」{gps_distance} 公尺，超出允許範圍（{matched_loc["radius_m"]} 公尺）',
+                    'distance': gps_distance,
+                    'radius': int(matched_loc['radius_m'])
+                }), 403
+        location_name = matched_loc['location_name'] if matched_loc else ''
 
     with get_db() as conn:
         recent = conn.execute("""
@@ -1071,12 +1149,11 @@ def api_punch_clock():
         if recent:
             return jsonify({'error': '1 分鐘內已打過卡'}), 429
 
-        matched_name = matched_loc['location_name'] if matched_loc else ''
         row = conn.execute("""
             INSERT INTO punch_records
-              (staff_id, punch_type, latitude, longitude, gps_distance, location_name)
-            VALUES (%s,%s,%s,%s,%s,%s) RETURNING *
-        """, (sid, punch_type, lat, lng, gps_distance, matched_name)).fetchone()
+              (staff_id, punch_type, latitude, longitude, gps_distance, location_name, punch_method)
+            VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING *
+        """, (sid, punch_type, lat, lng, gps_distance, location_name, punch_method)).fetchone()
 
     d = punch_record_row(row)
     d['staff_name']   = staff['name']

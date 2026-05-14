@@ -576,8 +576,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card">
         <div class="table-wrap">
           <table>
-            <thead><tr><th data-i18n="th.name">姓名</th><th data-i18n="th.emp_code">員工代碼</th><th data-i18n="th.role">職稱</th><th data-i18n="th.account">帳號</th><th data-i18n="th.bank_account">匯款帳號</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th></tr></thead>
-            <tbody id="punch-staff-tbody"><tr><td colspan="7" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr></tbody>
+            <thead><tr><th data-i18n="th.name">姓名</th><th data-i18n="th.emp_code">員工代碼</th><th data-i18n="th.role">職稱</th><th data-i18n="th.account">帳號</th><th>密碼</th><th data-i18n="th.bank_account">匯款帳號</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th></tr></thead>
+            <tbody id="punch-staff-tbody"><tr><td colspan="8" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr></tbody>
           </table>
         </div>
       </div>
@@ -673,29 +673,58 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       </div>
     </div>
 
-    <!-- GPS 設定 -->
+    <!-- GPS / WiFi 打卡驗證設定 -->
     <div id="punch-panel-gps" style="display:none">
-      <div class="filter-bar" style="margin-bottom:20px;gap:14px;flex-wrap:wrap">
-        <span class="filter-label" data-i18n="label.gps_mode">GPS 驗證模式</span>
-        <select class="filter-input" id="gps-required" onchange="saveGpsConfig()" style="min-width:220px">
-          <option value="0" data-i18n="opt.gps_optional">不強制（記錄距離但不阻擋打卡）</option>
-          <option value="1" data-i18n="opt.gps_mandatory">強制（超出所有地點範圍則禁止打卡）</option>
-        </select>
-        <span style="font-size:12px;color:var(--muted)" data-i18n="gps.auto_save">變更後自動儲存</span>
-      </div>
-      <div class="panel-bar">
-        <span id="gps-loc-count" style="font-size:13px;color:var(--muted)" data-i18n="loading">載入中...</span>
-        <div class="panel-bar-actions">
-          <button class="btn btn-primary" onclick="openLocModal()" data-i18n="modal.add_location">新增地點</button>
+
+      <!-- GPS 區塊 -->
+      <div class="card" style="padding:20px;margin-bottom:20px">
+        <div class="section-title" style="margin-bottom:14px">📍 GPS 驗證設定</div>
+        <div class="filter-bar" style="margin-bottom:16px;gap:14px;flex-wrap:wrap">
+          <span class="filter-label" data-i18n="label.gps_mode">GPS 驗證模式</span>
+          <select class="filter-input" id="gps-required" onchange="saveGpsConfig()" style="min-width:220px">
+            <option value="0" data-i18n="opt.gps_optional">不強制（記錄距離但不阻擋打卡）</option>
+            <option value="1" data-i18n="opt.gps_mandatory">強制（超出所有地點範圍則禁止打卡）</option>
+          </select>
+          <span style="font-size:12px;color:var(--muted)" data-i18n="gps.auto_save">變更後自動儲存</span>
+        </div>
+        <div class="panel-bar">
+          <span id="gps-loc-count" style="font-size:13px;color:var(--muted)" data-i18n="loading">載入中...</span>
+          <div class="panel-bar-actions">
+            <button class="btn btn-primary" onclick="openLocModal()" data-i18n="modal.add_location">新增地點</button>
+          </div>
+        </div>
+        <div id="gps-loc-list" style="margin-bottom:12px"></div>
+        <div style="padding:12px 16px;background:var(--bg);border-radius:8px">
+          <div style="font-size:12px;color:var(--muted);line-height:2">
+            <strong style="color:var(--text)">如何取得 GPS 座標：</strong><br>
+            1. 在新增/編輯地點視窗中點擊「取得目前位置」，瀏覽器自動填入<br>
+            2. 或至 Google Maps 找到地點，右鍵點擊地圖 → 座標顯示在選單第一行
+          </div>
         </div>
       </div>
-      <div id="gps-loc-list" style="margin-bottom:20px"></div>
-      <div class="card" style="padding:16px 20px;background:var(--bg)">
-        <div style="font-size:12px;color:var(--muted);line-height:2">
-          <strong style="color:var(--text)">如何取得 GPS 座標：</strong><br>
-          1. 在新增/編輯地點視窗中點擊「取得目前位置」，瀏覽器自動填入<br>
-          2. 或至 Google Maps 找到地點，右鍵點擊地圖 → 座標顯示在選單第一行
+
+      <!-- WiFi 區塊 -->
+      <div class="card" style="padding:20px;margin-bottom:20px">
+        <div class="section-title" style="margin-bottom:14px">📶 WiFi 打卡設定</div>
+        <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span class="filter-label">啟用 WiFi 打卡</span>
+          <select class="filter-input" id="wifi-enabled" style="min-width:180px">
+            <option value="0">停用</option>
+            <option value="1">啟用（員工可選擇 WiFi 打卡）</option>
+          </select>
         </div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:4px">允許的 IP 位址</label>
+          <textarea id="wifi-allowed-ips" class="form-input" rows="4" placeholder="每行一個，支援單一 IP 或 CIDR 格式，例如：&#10;192.168.1.0/24&#10;10.0.0.1&#10;203.0.113.50" style="width:100%;font-family:'DM Mono',monospace;font-size:12px;resize:vertical"></textarea>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">員工透過 WiFi 打卡時，伺服器會驗證其來源 IP 是否在清單內。可填入公司 WiFi 的外部 IP 或內網 IP 段。</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="loadMyIp()">取得目前 IP</button>
+          <span id="my-ip-display" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent)"></span>
+          <button class="btn btn-ghost btn-sm" onclick="addMyIpToList()" id="btn-add-my-ip" style="display:none">加入清單</button>
+        </div>
+        <button class="btn btn-primary" onclick="saveWifiConfig()" style="min-width:120px">儲存 WiFi 設定</button>
+        <span id="wifi-save-msg" style="font-size:12px;color:var(--green);margin-left:12px;min-height:16px"></span>
       </div>
     </div>
 
@@ -1735,8 +1764,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div class="card">
       <div class="table-wrap">
         <table>
-          <thead><tr><th data-i18n="th.account">帳號</th><th data-i18n="th.display_name">顯示名稱</th><th data-i18n="th.modules">可用模組</th><th data-i18n="th.type_col">類型</th><th data-i18n="th.last_login">上次登入</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th></tr></thead>
-          <tbody id="adminacc-tbody"><tr><td colspan="7" class="empty-state"><div class="empty-state-text" data-i18n="loading">載入中...</div></td></tr></tbody>
+          <thead><tr><th data-i18n="th.account">帳號</th><th>密碼</th><th data-i18n="th.display_name">顯示名稱</th><th data-i18n="th.modules">可用模組</th><th data-i18n="th.type_col">類型</th><th data-i18n="th.last_login">上次登入</th><th data-i18n="th.status_col">狀態</th><th data-i18n="th.action">操作</th></tr></thead>
+          <tbody id="adminacc-tbody"><tr><td colspan="8" class="empty-state"><div class="empty-state-text" data-i18n="loading">載入中...</div></td></tr></tbody>
         </table>
       </div>
     </div>
@@ -12658,11 +12687,11 @@ async function submitManualPunch() {
 // ── 員工管理 ──────────────────────────────────────────────────
 async function loadPunchStaff() {
   const tb = document.getElementById('punch-staff-tbody');
-  tb.innerHTML = Array(4).fill(0).map(() => `<tr class="skeleton-row">${Array(7).fill(0).map((_,i)=>`<td><span class="skel" style="width:${[80,60,60,80,100,40,80][i]}px"></span></td>`).join('')}</tr>`).join('');
+  tb.innerHTML = Array(4).fill(0).map(() => `<tr class="skeleton-row">${Array(8).fill(0).map((_,i)=>`<td><span class="skel" style="width:${[80,60,60,80,70,100,40,80][i]}px"></span></td>`).join('')}</tr>`).join('');
   const { ok, data } = await cachedApi('/api/punch/staff');
   punchStaffList = ok ? data : [];
   document.getElementById('punch-staff-count').textContent = t('staff.count').replace('{0}', punchStaffList.length);
-  if (!punchStaffList.length) { tb.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('staff.no_staff')}</div></td></tr>`; return; }
+  if (!punchStaffList.length) { tb.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('staff.no_staff')}</div></td></tr>`; return; }
   tb.innerHTML = punchStaffList.map(s => {
     const bankDisplay = s.bank_account ? (s.bank_name ? `${escHtml(s.bank_name)} ${escHtml(s.bank_account)}` : escHtml(s.bank_account)) : '<span style="color:var(--muted)">—</span>';
     return `<tr>
@@ -12670,6 +12699,7 @@ async function loadPunchStaff() {
     <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${escHtml(s.employee_code||'—')}</td>
     <td style="color:var(--muted)">${escHtml(s.role||'')}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(s.username||'—')}${s.has_password ? '' : `<span style="color:var(--red);font-size:10px;margin-left:4px">${t('staff.no_password')}</span>`}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${s.password_plain ? escHtml(s.password_plain) : '<span style="color:var(--muted)">—</span>'}</td>
     <td style="font-family:'DM Mono',monospace;font-size:12px">${bankDisplay}</td>
     <td>${s.active ? `<span class="badge badge-ok">${t('staff.active_badge')}</span>` : `<span class="badge badge-warn">${t('staff.disabled_badge')}</span>`}</td>
     <td style="white-space:nowrap">
@@ -12701,7 +12731,17 @@ function openPunchStaffModal(id=null) {
     document.getElementById('psm-address').value        = s.address         || '';
     document.getElementById('psm-username').value       = s.username        || '';
     document.getElementById('psm-active').value         = s.active ? '1' : '0';
-    document.getElementById('psm-pw-hint').textContent  = s.has_password ? t('staff.pw_hint_set') : t('staff.pw_hint_unset');
+    const pwHintEl = document.getElementById('psm-pw-hint');
+    if (s.password_plain) {
+      pwHintEl.textContent = '目前密碼已顯示，可直接修改，留空則不更改';
+      pwHintEl.style.color = 'var(--green)';
+    } else if (s.has_password) {
+      pwHintEl.textContent = '密碼已設定（舊帳號未儲存明碼），請輸入新密碼以修改';
+      pwHintEl.style.color = 'var(--orange)';
+    } else {
+      pwHintEl.textContent = t('staff.pw_hint_unset');
+      pwHintEl.style.color = '';
+    }
     document.getElementById('psm-bank-code').value      = s.bank_code       || '';
     document.getElementById('psm-bank-name').value      = s.bank_name       || '';
     document.getElementById('psm-bank-branch').value    = s.bank_branch     || '';
@@ -12758,23 +12798,55 @@ async function deletePunchStaff(id) {
   showToast('已刪除', 'success'); await loadPunchStaff();
 }
 
-// ── GPS ────────────────────────────────────────────────────────
+// ── GPS / WiFi ─────────────────────────────────────────────────
 let gpsLocList = [], editingLocId = null;
 
 async function loadGpsSettings() {
   loadGoogleMapsApi();
   const [r1, r2] = await Promise.all([
-    api('/api/punch/settings', {}, true),
+    api('/api/punch/config', {}, true),
     cachedApi('/api/punch/locations'),
   ]);
-  if (r1.ok) document.getElementById('gps-required').value = r1.data.gps_required ? '1' : '0';
+  if (r1.ok) {
+    document.getElementById('gps-required').value  = r1.data.gps_required ? '1' : '0';
+    document.getElementById('wifi-enabled').value  = r1.data.wifi_enabled  ? '1' : '0';
+    document.getElementById('wifi-allowed-ips').value = r1.data.wifi_allowed_ips || '';
+  }
   gpsLocList = r2.ok ? r2.data : [];
   renderLocList();
 }
 async function saveGpsConfig() {
   const val = document.getElementById('gps-required').value === '1';
-  const { ok } = await api('/api/punch/config', apiPUT({ gps_required: val }));
+  const wifiEnabled = document.getElementById('wifi-enabled').value === '1';
+  const { ok } = await api('/api/punch/config', apiPUT({ gps_required: val, wifi_enabled: wifiEnabled }));
   if (ok) showToast(val ? 'GPS 驗證已開啟' : 'GPS 驗證已關閉', 'success');
+}
+async function saveWifiConfig() {
+  const enabled     = document.getElementById('wifi-enabled').value === '1';
+  const allowedIps  = document.getElementById('wifi-allowed-ips').value.trim();
+  const gpsRequired = document.getElementById('gps-required').value === '1';
+  const { ok } = await api('/api/punch/config', apiPUT({ gps_required: gpsRequired, wifi_enabled: enabled, wifi_allowed_ips: allowedIps }));
+  const msg = document.getElementById('wifi-save-msg');
+  if (ok) {
+    msg.textContent = '已儲存';
+    showToast(enabled ? 'WiFi 打卡已啟用' : 'WiFi 打卡已停用', 'success');
+    setTimeout(() => { msg.textContent = ''; }, 3000);
+  }
+}
+let _myIpValue = null;
+async function loadMyIp() {
+  const { ok, data } = await api('/api/punch/my-ip', {}, true);
+  if (ok) {
+    _myIpValue = data.ip;
+    document.getElementById('my-ip-display').textContent = data.ip;
+    document.getElementById('btn-add-my-ip').style.display = '';
+  }
+}
+function addMyIpToList() {
+  if (!_myIpValue) return;
+  const ta = document.getElementById('wifi-allowed-ips');
+  const lines = ta.value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lines.includes(_myIpValue)) { lines.push(_myIpValue); ta.value = lines.join('\n'); }
 }
 function renderLocList() {
   const wrap = document.getElementById('gps-loc-list');
@@ -17266,7 +17338,7 @@ async function loadAdminAccounts() {
   adminAccList = ok ? data : [];
   const tb = document.getElementById('adminacc-tbody');
   if (!adminAccList.length) {
-    tb.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('acc.no_accounts')}</div></td></tr>`; return;
+    tb.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('acc.no_accounts')}</div></td></tr>`; return;
   }
   tb.innerHTML = adminAccList.map(a => {
     const modLabels = a.is_super
@@ -17281,6 +17353,7 @@ async function loadAdminAccounts() {
     const lastLogin = a.last_login_at ? new Date(a.last_login_at).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
     return `<tr>
       <td style="font-family:'DM Mono',monospace;font-weight:600">${escHtml(a.username)}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${a.password_plain ? escHtml(a.password_plain) : '<span style="color:var(--muted)">—</span>'}</td>
       <td>${escHtml(a.display_name||'')}</td>
       <td style="line-height:1.8">${modLabels}</td>
       <td>${typeLabel}</td>
@@ -17295,11 +17368,19 @@ function openAdminAccModal(id=null) {
   document.getElementById('aam-id').value = id||'';
   document.getElementById('aam-title').textContent = id ? t('acc.modal_edit') : t('acc.modal_add');
   document.getElementById('aam-password').value = '';
-  document.getElementById('aam-pw-hint').textContent = id ? t('acc.pw_hint_edit') : t('acc.pw_hint_add');
+  const aamPwHint = document.getElementById('aam-pw-hint');
+  aamPwHint.textContent = id ? t('acc.pw_hint_edit') : t('acc.pw_hint_add');
+  aamPwHint.style.color = '';
   // 編輯時填入明文密碼
   if (id) {
     const _a = adminAccList.find(x=>x.id===id);
-    if (_a) document.getElementById('aam-password').value = _a.password_plain || '';
+    if (_a) {
+      document.getElementById('aam-password').value = _a.password_plain || '';
+      if (_a.password_plain) {
+        aamPwHint.textContent = '目前密碼已顯示，可直接修改，留空則不更改';
+        aamPwHint.style.color = 'var(--green)';
+      }
+    }
   }
   // render module checkboxes
   document.getElementById('aam-perms-list').innerHTML = ALL_MODULES.map(m =>
