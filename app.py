@@ -14739,7 +14739,7 @@ def api_crm_customers_list():
             SELECT c.*, s.name AS assigned_name
             FROM crm_customers c
             LEFT JOIN punch_staff s ON s.id = c.assigned_to
-            WHERE 1=1
+            WHERE c.customer_type != 'supplier'
         """
         params = []
         if status:
@@ -14902,10 +14902,10 @@ def api_crm_customer_quotes(cid):
 @require_module('crm')
 def api_crm_stats():
     with get_db() as conn:
-        total    = conn.execute("SELECT COUNT(*) AS n FROM crm_customers").fetchone()['n']
-        active   = conn.execute("SELECT COUNT(*) AS n FROM crm_customers WHERE status='active'").fetchone()['n']
-        vip      = conn.execute("SELECT COUNT(*) AS n FROM crm_customers WHERE status='vip'").fetchone()['n']
-        inactive = conn.execute("SELECT COUNT(*) AS n FROM crm_customers WHERE status='inactive'").fetchone()['n']
+        total    = conn.execute("SELECT COUNT(*) AS n FROM crm_customers WHERE customer_type != 'supplier'").fetchone()['n']
+        active   = conn.execute("SELECT COUNT(*) AS n FROM crm_customers WHERE status='active' AND customer_type != 'supplier'").fetchone()['n']
+        vip      = conn.execute("SELECT COUNT(*) AS n FROM crm_customers WHERE status='vip' AND customer_type != 'supplier'").fetchone()['n']
+        inactive = conn.execute("SELECT COUNT(*) AS n FROM crm_customers WHERE status='inactive' AND customer_type != 'supplier'").fetchone()['n']
         this_month = conn.execute("""
             SELECT COUNT(*) AS n FROM crm_interactions
             WHERE date_trunc('month', created_at) = date_trunc('month', NOW())
@@ -14929,6 +14929,7 @@ def api_export_crm_excel():
                    c.last_contact_at, c.created_at
             FROM crm_customers c
             LEFT JOIN punch_staff s ON s.id = c.assigned_to
+            WHERE c.customer_type != 'supplier'
             ORDER BY c.company_name
         """).fetchall()
     wb = Workbook()
@@ -15581,7 +15582,7 @@ def _next_inv_no(prefix: str, table: str, col: str) -> str:
         ).fetchone()
     if row:
         try:
-            seq = int(row[0].rsplit('-', 1)[-1]) + 1
+            seq = int(row[col].rsplit('-', 1)[-1]) + 1
         except Exception:
             seq = 1
     else:
@@ -16709,7 +16710,7 @@ def _next_acc_no(prefix, table, col):
     seq = 1
     if row:
         try:
-            seq = int(row[0].rsplit('-', 1)[-1]) + 1
+            seq = int(row[col].rsplit('-', 1)[-1]) + 1
         except Exception:
             seq = 1
     return f"{prefix}-{ym}-{seq:04d}"

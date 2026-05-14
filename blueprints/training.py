@@ -62,7 +62,7 @@ def api_training_list():
         sql += " AND tr.category = %s"; params.append(category)
     if expiring:
         days = int(expiring)
-        sql += " AND tr.expiry_date IS NOT NULL AND tr.expiry_date <= CURRENT_DATE + INTERVAL '%s days' AND tr.expiry_date >= CURRENT_DATE"
+        sql += " AND tr.expiry_date IS NOT NULL AND tr.expiry_date <= CURRENT_DATE + (%s * INTERVAL '1 day') AND tr.expiry_date >= CURRENT_DATE"
         params.append(days)
     if expired == '1':
         sql += " AND tr.expiry_date IS NOT NULL AND tr.expiry_date < CURRENT_DATE"
