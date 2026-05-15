@@ -264,7 +264,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <a href="#" class="nav-item"        id="nav-orders"    data-i18n="nav.orders"    onclick="showPage('orders',event)">報價訂單</a>
     <a href="#" class="nav-item"        id="nav-ecommerce" data-i18n="nav.ecommerce" onclick="showPage('ecommerce',event)">電商串接</a>
     <a href="#" class="nav-item"        id="nav-inventory" data-i18n="nav.inventory" onclick="showPage('inventory',event)">進銷存管理<span class="nav-badge" id="badge-inventory" style="display:none"></span></a>
-    <a href="#" class="nav-item"        id="nav-accounting" data-i18n="nav.accounting" onclick="showPage('accounting',event)">會計記帳</a>
+    <a href="#" class="nav-item"        id="nav-accounting"    data-i18n="nav.accounting"    onclick="showPage('accounting',event)">會計記帳</a>
+    <a href="#" class="nav-item"        id="nav-fixed-assets"  onclick="showPage('fixed-assets',event)">固定資產管理</a>
     <a href="#" class="nav-item"        id="nav-approval" onclick="showPage('approval',event)">審批工作流程<span class="nav-badge" id="badge-approval" style="display:none"></span></a>
     <a href="#" class="nav-item"        id="nav-audit-log" onclick="showPage('audit-log',event)">稽核日誌</a>
     <a href="#" class="nav-item"        id="nav-adminmgr" data-i18n="nav.adminmgr" onclick="showPage('adminmgr',event)" style="display:none">帳號管理</a>
@@ -2373,9 +2374,11 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- Tab Bar -->
     <div class="inv-tab-bar" style="margin-bottom:14px">
       <button class="inv-tab active" id="crm-tab-customers" onclick="switchCrmTab('customers')">客戶列表</button>
-      <button class="inv-tab"        id="crm-tab-leads"     onclick="switchCrmTab('leads')">Lead 潛在客戶<span class="tab-badge" id="badge-crm-leads" style="display:none"></span></button>
+      <button class="inv-tab"        id="crm-tab-leads"     onclick="switchCrmTab('leads')">潛在客戶<span class="tab-badge" id="badge-crm-leads" style="display:none"></span></button>
       <button class="inv-tab"        id="crm-tab-pipeline"  onclick="switchCrmTab('pipeline')">銷售漏斗</button>
       <button class="inv-tab"        id="crm-tab-followups" onclick="switchCrmTab('followups')">跟進提醒<span class="tab-badge" id="badge-crm-fups" style="display:none"></span></button>
+      <button class="inv-tab"        id="crm-tab-contracts" onclick="switchCrmTab('contracts')">合約管理<span class="tab-badge" id="badge-crm-contracts" style="display:none"></span></button>
+      <button class="inv-tab"        id="crm-tab-tags"      onclick="switchCrmTab('tags')">標籤管理</button>
     </div>
 
     <!-- ── 客戶列表 Panel ── -->
@@ -2471,9 +2474,112 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="card" style="overflow:hidden"><div id="fup-list-wrap" style="padding:0"></div></div>
     </div>
 
+    <!-- ── 合約管理 Panel ── -->
+    <div id="crm-panel-contracts" style="display:none">
+      <!-- KPI -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+        <div class="stat-card"><div class="stat-label">合約總數</div><div class="stat-value" id="cont-stat-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">進行中</div><div class="stat-value positive" id="cont-stat-active">—</div></div>
+        <div class="stat-card"><div class="stat-label">30天內到期</div><div class="stat-value negative" id="cont-stat-exp30">—</div></div>
+        <div class="stat-card"><div class="stat-label">合約金額</div><div class="stat-value accent" id="cont-stat-value">—</div></div>
+      </div>
+      <div class="filter-row">
+        <select class="filter-input" id="cont-filter-status" onchange="loadContracts()" style="min-width:110px">
+          <option value="">全部狀態</option>
+          <option value="draft">草稿</option><option value="active">進行中</option>
+          <option value="expired">已到期</option><option value="terminated">已終止</option>
+        </select>
+        <select class="filter-input" id="cont-filter-type" onchange="loadContracts()" style="min-width:110px">
+          <option value="">全部類型</option>
+          <option value="sales">銷售合約</option><option value="service">服務合約</option>
+          <option value="procurement">採購合約</option><option value="nda">保密協議</option><option value="other">其他</option>
+        </select>
+        <input class="filter-input" id="cont-filter-q" placeholder="搜尋合約號/標題/客戶…" oninput="loadContracts()" style="flex:1;min-width:180px">
+        <button class="btn btn-primary btn-sm" onclick="openContractModal()">＋ 新增合約</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="contracts-list-wrap"></div></div>
+    </div>
+
+    <!-- ── 標籤管理 Panel ── -->
+    <div id="crm-panel-tags" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:13px;color:var(--muted)">標籤可用於客戶分類篩選，多個標籤間使用 AND 邏輯</div>
+        <button class="btn btn-primary btn-sm" onclick="openTagModal()">＋ 新增標籤</button>
+      </div>
+      <div id="crm-tags-wrap" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start"></div>
+    </div>
+
+    <!-- ── 合約 Modal ── -->
+    <div id="contract-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+      <div style="background:#fff;border-radius:12px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:28px 32px;position:relative">
+        <button onclick="closeContractModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+        <h3 id="cont-modal-title" style="margin:0 0 20px;font-size:16px;color:var(--navy)">新增合約</h3>
+        <input type="hidden" id="cont-id">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="grid-column:1/-1"><label class="form-label">合約標題 *</label><input class="form-input" id="cont-title" style="width:100%" placeholder="合約名稱"></div>
+          <div><label class="form-label">客戶</label>
+            <select class="form-input" id="cont-customer" style="width:100%"><option value="">-- 選擇客戶 --</option></select>
+          </div>
+          <div><label class="form-label">合約類型</label>
+            <select class="form-input" id="cont-type" style="width:100%">
+              <option value="sales">銷售合約</option><option value="service">服務合約</option>
+              <option value="procurement">採購合約</option><option value="nda">保密協議</option><option value="other">其他</option>
+            </select>
+          </div>
+          <div><label class="form-label">合約金額</label><input class="form-input" id="cont-value" type="number" style="width:100%" placeholder="0" min="0"></div>
+          <div><label class="form-label">狀態</label>
+            <select class="form-input" id="cont-status" style="width:100%">
+              <option value="draft">草稿</option><option value="active">進行中</option>
+              <option value="expired">已到期</option><option value="terminated">已終止</option>
+            </select>
+          </div>
+          <div><label class="form-label">開始日期</label><input class="form-input" id="cont-start" type="date" style="width:100%"></div>
+          <div><label class="form-label">結束日期</label><input class="form-input" id="cont-end" type="date" style="width:100%"></div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="cont-renew" style="width:16px;height:16px">
+            <label for="cont-renew" style="font-size:13px;color:var(--navy)">自動續約</label>
+          </div>
+          <div style="grid-column:1/-1"><label class="form-label">備註</label><textarea class="form-input" id="cont-notes" rows="3" style="width:100%;resize:vertical"></textarea></div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+          <button class="btn btn-outline" onclick="closeContractModal()">取消</button>
+          <button class="btn btn-primary" onclick="saveContract()">儲存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 標籤 Modal ── -->
+    <div id="tag-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+      <div style="background:#fff;border-radius:12px;width:360px;max-width:95vw;padding:24px 28px;position:relative">
+        <button onclick="closeTagModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+        <h3 id="tag-modal-title" style="margin:0 0 18px;font-size:15px;color:var(--navy)">新增標籤</h3>
+        <input type="hidden" id="tag-id">
+        <div style="display:grid;gap:12px">
+          <div><label class="form-label">標籤名稱</label><input class="form-input" id="tag-name" style="width:100%" placeholder="例：VIP 客戶"></div>
+          <div><label class="form-label">顏色</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap" id="tag-color-swatches">
+              <div onclick="selectTagColor('#4a7bda')" style="width:24px;height:24px;border-radius:50%;background:#4a7bda;cursor:pointer;border:2px solid transparent" data-color="#4a7bda"></div>
+              <div onclick="selectTagColor('#10b981')" style="width:24px;height:24px;border-radius:50%;background:#10b981;cursor:pointer;border:2px solid transparent" data-color="#10b981"></div>
+              <div onclick="selectTagColor('#f59e0b')" style="width:24px;height:24px;border-radius:50%;background:#f59e0b;cursor:pointer;border:2px solid transparent" data-color="#f59e0b"></div>
+              <div onclick="selectTagColor('#ef4444')" style="width:24px;height:24px;border-radius:50%;background:#ef4444;cursor:pointer;border:2px solid transparent" data-color="#ef4444"></div>
+              <div onclick="selectTagColor('#8b5cf6')" style="width:24px;height:24px;border-radius:50%;background:#8b5cf6;cursor:pointer;border:2px solid transparent" data-color="#8b5cf6"></div>
+              <div onclick="selectTagColor('#ec4899')" style="width:24px;height:24px;border-radius:50%;background:#ec4899;cursor:pointer;border:2px solid transparent" data-color="#ec4899"></div>
+              <div onclick="selectTagColor('#0ea5e9')" style="width:24px;height:24px;border-radius:50%;background:#0ea5e9;cursor:pointer;border:2px solid transparent" data-color="#0ea5e9"></div>
+              <div onclick="selectTagColor('#64748b')" style="width:24px;height:24px;border-radius:50%;background:#64748b;cursor:pointer;border:2px solid transparent" data-color="#64748b"></div>
+            </div>
+            <input type="hidden" id="tag-color" value="#4a7bda">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+          <button class="btn btn-outline" onclick="closeTagModal()">取消</button>
+          <button class="btn btn-primary" onclick="saveTag()">儲存</button>
+        </div>
+      </div>
+    </div>
+
     <!-- slide panel -->
     <div id="crm-panel-backdrop" onclick="closeCrmPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150"></div>
-    <div id="crm-panel" style="display:none;position:fixed;top:0;right:0;width:480px;max-width:100vw;height:100vh;background:#fff;z-index:160;overflow-y:auto;box-shadow:-4px 0 24px rgba(0,0,0,.15);padding:28px 28px 40px">
+    <div id="crm-panel" style="display:none;position:fixed;top:0;right:0;width:520px;max-width:100vw;height:100vh;background:#fff;z-index:160;overflow-y:auto;box-shadow:-4px 0 24px rgba(0,0,0,.15);padding:28px 28px 40px">
       <button onclick="closeCrmPanel()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
       <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:20px" id="crm-panel-title">客戶詳情</div>
       <div id="crm-panel-body"></div>
@@ -2548,9 +2654,14 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div id="ecom-platforms-wrap" style="display:flex;flex-wrap:wrap;gap:14px"></div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <select class="filter-input" id="ecom-filter-platform" onchange="loadEcomOrders()" style="min-width:110px">
+      <select class="filter-input" id="ecom-filter-platform" onchange="loadEcomOrders()" style="min-width:130px">
         <option value="">全部平台</option>
-        <option value="shopee">蝦皮</option><option value="website">官網</option><option value="other">其他</option>
+        <option value="shopify">Shopify</option>
+        <option value="woocommerce">WooCommerce</option>
+        <option value="shopee">蝦皮</option>
+        <option value="website">官網</option>
+        <option value="custom">自訂</option>
+        <option value="other">其他</option>
       </select>
       <select class="filter-input" id="ecom-filter-status" onchange="loadEcomOrders()" style="min-width:100px">
         <option value="">全部狀態</option>
@@ -2589,6 +2700,9 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <button class="inv-tab"        id="inv-tab-transactions" onclick="switchInvTab('transactions')">異動記錄</button>
       <button class="inv-tab"        id="inv-tab-warehouses"   onclick="switchInvTab('warehouses')">倉庫設定</button>
       <button class="inv-tab"        id="inv-tab-suppliers"    onclick="switchInvTab('suppliers')">供應商</button>
+      <button class="inv-tab"        id="inv-tab-count"        onclick="switchInvTab('count')">盤點作業</button>
+      <button class="inv-tab"        id="inv-tab-returns"      onclick="switchInvTab('returns')">退貨管理</button>
+      <button class="inv-tab"        id="inv-tab-batches"      onclick="switchInvTab('batches')">批號管理<span class="tab-badge" id="badge-inv-batches" style="display:none"></span></button>
     </div>
 
     <!-- 庫存總覽 Panel -->
@@ -2729,6 +2843,152 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <button class="btn btn-primary btn-sm" onclick="openSupplierModal()">＋ 新增供應商</button>
       </div>
       <div class="card" style="overflow:hidden"><div id="supplier-list-wrap"></div></div>
+    </div>
+
+    <!-- ── 盤點作業 Panel ── -->
+    <div id="inv-panel-count" style="display:none">
+      <div class="filter-row" style="margin-bottom:12px">
+        <select class="filter-input" id="count-filter-status" onchange="loadCountSessions()" style="min-width:110px">
+          <option value="">全部狀態</option>
+          <option value="draft">草稿</option>
+          <option value="in_progress">進行中</option>
+          <option value="completed">已完成</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openCountSessionModal()">＋ 建立盤點</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="count-sessions-wrap"></div></div>
+      <!-- 盤點明細（展開時顯示） -->
+      <div id="count-detail-wrap" style="display:none;margin-top:16px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="font-size:14px;font-weight:700;color:var(--navy)" id="count-detail-title"></div>
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('count-detail-wrap').style.display='none'">收起</button>
+          <button class="btn btn-primary btn-sm" id="count-detail-start-btn" onclick="startCountSession()" style="display:none">開始盤點</button>
+          <button class="btn btn-primary btn-sm" id="count-detail-complete-btn" onclick="completeCountSession()" style="display:none">完成並調整庫存</button>
+        </div>
+        <div class="card" style="overflow:hidden"><div id="count-items-wrap"></div></div>
+      </div>
+    </div>
+
+    <!-- ── 退貨管理 Panel ── -->
+    <div id="inv-panel-returns" style="display:none">
+      <div class="filter-row" style="margin-bottom:12px">
+        <select class="filter-input" id="rma-filter-type" onchange="loadReturns()" style="min-width:110px">
+          <option value="">全部類型</option>
+          <option value="customer">客戶退貨</option>
+          <option value="vendor">供應商退貨</option>
+        </select>
+        <select class="filter-input" id="rma-filter-status" onchange="loadReturns()" style="min-width:110px">
+          <option value="">全部狀態</option>
+          <option value="pending">待處理</option>
+          <option value="processed">已處理</option>
+        </select>
+        <input class="filter-input" id="rma-filter-q" placeholder="搜尋退貨單號/客戶…" oninput="loadReturns()" style="flex:1;min-width:180px">
+        <button class="btn btn-primary btn-sm" onclick="openReturnModal()">＋ 新增退貨</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="returns-list-wrap"></div></div>
+    </div>
+
+    <!-- ── 批號管理 Panel ── -->
+    <div id="inv-panel-batches" style="display:none">
+      <div class="filter-row" style="margin-bottom:12px">
+        <select class="filter-input" id="batch-filter-wh" onchange="loadBatches()" style="min-width:130px">
+          <option value="">全部倉庫</option>
+        </select>
+        <select class="filter-input" id="batch-filter-expiring" onchange="loadBatches()" style="min-width:140px">
+          <option value="">全部有效期</option>
+          <option value="7">7天內到期</option>
+          <option value="30">30天內到期</option>
+        </select>
+        <input class="filter-input" id="batch-filter-q" placeholder="搜尋批號/商品名…" oninput="loadBatches()" style="flex:1;min-width:180px">
+        <button class="btn btn-primary btn-sm" onclick="openBatchModal()">＋ 新增批號</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="batches-list-wrap"></div></div>
+    </div>
+
+    <!-- 盤點建立 Modal -->
+    <div id="count-session-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+      <div style="background:#fff;border-radius:12px;width:420px;max-width:95vw;padding:24px 28px;position:relative">
+        <button onclick="closeCountSessionModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+        <h3 style="margin:0 0 18px;font-size:15px;color:var(--navy)">建立盤點作業</h3>
+        <div style="display:grid;gap:12px">
+          <div><label class="form-label">盤點標題</label><input class="form-input" id="cnt-title" style="width:100%" placeholder="例：2024 Q2 全倉盤點"></div>
+          <div><label class="form-label">倉庫（留空=全部）</label>
+            <select class="form-input" id="cnt-warehouse" style="width:100%"><option value="">全部倉庫</option></select>
+          </div>
+          <div><label class="form-label">備註</label><input class="form-input" id="cnt-notes" style="width:100%"></div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+          <button class="btn btn-outline" onclick="closeCountSessionModal()">取消</button>
+          <button class="btn btn-primary" onclick="createCountSession()">建立</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 退貨 Modal -->
+    <div id="return-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+      <div style="background:#fff;border-radius:12px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:24px 28px;position:relative">
+        <button onclick="closeReturnModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+        <h3 style="margin:0 0 18px;font-size:15px;color:var(--navy)">新增退貨單</h3>
+        <div style="display:grid;gap:12px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><label class="form-label">退貨類型</label>
+              <select class="form-input" id="rma-type" style="width:100%">
+                <option value="customer">客戶退貨</option>
+                <option value="vendor">供應商退貨</option>
+              </select>
+            </div>
+            <div><label class="form-label">入庫倉庫</label>
+              <select class="form-input" id="rma-warehouse" style="width:100%"><option value="">-- 選擇 --</option></select>
+            </div>
+          </div>
+          <div><label class="form-label">客戶 / 供應商名稱</label><input class="form-input" id="rma-party" style="width:100%" placeholder="公司名稱"></div>
+          <div><label class="form-label">原單號（選填）</label><input class="form-input" id="rma-ref" style="width:100%" placeholder="訂單號 / 採購單號"></div>
+          <div><label class="form-label">退貨原因</label><input class="form-input" id="rma-reason" style="width:100%" placeholder="品質不良 / 規格不符…"></div>
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <label class="form-label" style="margin:0">退貨品項</label>
+              <button class="btn btn-outline btn-sm" onclick="addReturnItem()" style="font-size:11px">＋ 加品項</button>
+            </div>
+            <div id="rma-items-wrap"></div>
+          </div>
+          <div><label class="form-label">備註</label><input class="form-input" id="rma-notes" style="width:100%"></div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+          <button class="btn btn-outline" onclick="closeReturnModal()">取消</button>
+          <button class="btn btn-primary" onclick="saveReturn()">儲存退貨單</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 批號 Modal -->
+    <div id="batch-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+      <div style="background:#fff;border-radius:12px;width:460px;max-width:95vw;padding:24px 28px;position:relative">
+        <button onclick="closeBatchModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+        <h3 id="batch-modal-title" style="margin:0 0 18px;font-size:15px;color:var(--navy)">新增批號</h3>
+        <input type="hidden" id="batch-id">
+        <div style="display:grid;gap:12px">
+          <div><label class="form-label">商品 *</label>
+            <select class="form-input" id="batch-product" style="width:100%"><option value="">-- 選擇商品 --</option></select>
+          </div>
+          <div><label class="form-label">倉庫</label>
+            <select class="form-input" id="batch-warehouse" style="width:100%"><option value="">-- 選擇倉庫 --</option></select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><label class="form-label">批號 *</label><input class="form-input" id="batch-no" style="width:100%" placeholder="LOT-20240001"></div>
+            <div><label class="form-label">數量</label><input class="form-input" id="batch-qty" type="number" min="0" style="width:100%" placeholder="0"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><label class="form-label">到期日</label><input class="form-input" id="batch-expiry" type="date" style="width:100%"></div>
+            <div><label class="form-label">收貨日期</label><input class="form-input" id="batch-received" type="date" style="width:100%"></div>
+          </div>
+          <div><label class="form-label">單位成本</label><input class="form-input" id="batch-cost" type="number" min="0" step="0.01" style="width:100%" placeholder="0.00"></div>
+          <div><label class="form-label">備註</label><input class="form-input" id="batch-notes" style="width:100%"></div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+          <button class="btn btn-outline" onclick="closeBatchModal()">取消</button>
+          <button class="btn btn-primary" onclick="saveBatch()">儲存</button>
+        </div>
+      </div>
     </div>
 
     <!-- 庫存調整 Panel (stock sub-panel overlay) -->
@@ -3263,6 +3523,92 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       </div>
     </div>
   </div><!-- end page-accounting -->
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- 固定資產管理 -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="page" id="page-fixed-assets" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:15px;font-weight:700;color:var(--navy)">固定資產管理</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="batchDepreciate()">執行本月折舊</button>
+        <button class="btn btn-primary btn-sm" onclick="openFixedAssetModal()">＋ 新增資產</button>
+      </div>
+    </div>
+    <!-- KPI -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div class="stat-card"><div class="stat-label">使用中資產</div><div class="stat-value" id="fa-stat-count">—</div></div>
+      <div class="stat-card"><div class="stat-label">帳面總值</div><div class="stat-value accent" id="fa-stat-value">—</div></div>
+      <div class="stat-card"><div class="stat-label">保固即將到期</div><div class="stat-value negative" id="fa-stat-warranty">—</div></div>
+      <div class="stat-card"><div class="stat-label">類別數</div><div class="stat-value" id="fa-stat-cats">—</div></div>
+    </div>
+    <!-- 篩選 -->
+    <div class="filter-row" style="margin-bottom:12px">
+      <select class="filter-input" id="fa-filter-status" onchange="loadFixedAssets()" style="min-width:110px">
+        <option value="">全部狀態</option>
+        <option value="active">使用中</option>
+        <option value="retired">已報廢</option>
+        <option value="disposed">已處置</option>
+      </select>
+      <select class="filter-input" id="fa-filter-category" onchange="loadFixedAssets()" style="min-width:130px">
+        <option value="">全部類別</option>
+        <option value="computer">電腦/3C</option>
+        <option value="vehicle">車輛</option>
+        <option value="machinery">機械設備</option>
+        <option value="furniture">辦公家具</option>
+        <option value="building">建物/裝修</option>
+        <option value="other">其他</option>
+      </select>
+      <input class="filter-input" id="fa-filter-q" placeholder="搜尋名稱/編號/廠商…" oninput="loadFixedAssets()" style="flex:1;min-width:180px">
+    </div>
+    <div class="card" style="overflow:hidden"><div id="fa-list-wrap"></div></div>
+  </div><!-- end page-fixed-assets -->
+
+  <!-- 固定資產 Modal -->
+  <div id="fixed-asset-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;width:580px;max-width:95vw;max-height:92vh;overflow-y:auto;padding:28px 32px;position:relative">
+      <button onclick="closeFixedAssetModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      <h3 id="fa-modal-title" style="margin:0 0 20px;font-size:16px;color:var(--navy)">新增固定資產</h3>
+      <input type="hidden" id="fa-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="grid-column:1/-1"><label class="form-label">資產名稱 *</label><input class="form-input" id="fa-name" style="width:100%" placeholder="資產名稱"></div>
+        <div><label class="form-label">資產編號（留空自動產生）</label><input class="form-input" id="fa-code" style="width:100%" placeholder="FA-2024-0001"></div>
+        <div><label class="form-label">類別</label>
+          <select class="form-input" id="fa-category" style="width:100%">
+            <option value="computer">電腦/3C</option><option value="vehicle">車輛</option>
+            <option value="machinery">機械設備</option><option value="furniture">辦公家具</option>
+            <option value="building">建物/裝修</option><option value="other">其他</option>
+          </select>
+        </div>
+        <div><label class="form-label">購入日期</label><input class="form-input" id="fa-purchase-date" type="date" style="width:100%"></div>
+        <div><label class="form-label">購入成本</label><input class="form-input" id="fa-cost" type="number" min="0" style="width:100%" placeholder="0"></div>
+        <div><label class="form-label">殘值</label><input class="form-input" id="fa-salvage" type="number" min="0" style="width:100%" placeholder="0"></div>
+        <div><label class="form-label">耐用年數（月）</label><input class="form-input" id="fa-life" type="number" min="1" style="width:100%" placeholder="60"></div>
+        <div><label class="form-label">折舊方法</label>
+          <select class="form-input" id="fa-method" style="width:100%">
+            <option value="straight_line">直線法</option>
+            <option value="double_declining">雙倍遞減法</option>
+          </select>
+        </div>
+        <div><label class="form-label">存放位置</label><input class="form-input" id="fa-location" style="width:100%" placeholder="辦公室 A / 倉庫 B"></div>
+        <div><label class="form-label">使用人</label>
+          <select class="form-input" id="fa-assigned" style="width:100%"><option value="">-- 無 --</option></select>
+        </div>
+        <div><label class="form-label">廠商</label><input class="form-input" id="fa-vendor" style="width:100%" placeholder="供應商名稱"></div>
+        <div><label class="form-label">保固到期日</label><input class="form-input" id="fa-warranty" type="date" style="width:100%"></div>
+        <div><label class="form-label">狀態</label>
+          <select class="form-input" id="fa-status" style="width:100%">
+            <option value="active">使用中</option><option value="retired">已報廢</option><option value="disposed">已處置</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1"><label class="form-label">備註</label><textarea class="form-input" id="fa-notes" rows="2" style="width:100%;resize:vertical"></textarea></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button class="btn btn-outline" onclick="closeFixedAssetModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveFixedAsset()">儲存</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ── 傳票 Modal ── -->
   <div id="vou-modal-bg" class="modal-overlay">
@@ -4068,38 +4414,66 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
 <!-- ── 電商平台 Modal ── -->
 <div id="platform-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:3000;align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:12px;width:480px;max-width:95vw;padding:28px 32px;position:relative">
+  <div style="background:#fff;border-radius:12px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:28px 32px;position:relative">
     <button onclick="closePlatformModal()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
     <h3 id="pm-modal-title" style="margin:0 0 20px;font-size:16px;color:var(--navy)">新增電商平台</h3>
     <input type="hidden" id="pm-id">
-    <div style="display:grid;gap:12px">
+    <div style="display:grid;gap:14px">
+      <!-- 平台類型 -->
       <div>
         <label class="form-label">平台類型</label>
-        <select class="form-input" id="pm-platform" style="width:100%">
+        <select class="form-input" id="pm-platform" style="width:100%" onchange="onPlatformTypeChange()">
+          <option value="shopify">Shopify</option>
+          <option value="woocommerce">WooCommerce</option>
           <option value="shopee">蝦皮 Shopee</option>
-          <option value="website">官方網站</option>
+          <option value="website">官方網站 (Webhook)</option>
+          <option value="custom">自訂平台 (Webhook)</option>
           <option value="other">其他</option>
         </select>
       </div>
+      <!-- 平台說明提示 -->
+      <div id="pm-hint" style="background:#f0f6ff;border-radius:8px;padding:10px 14px;font-size:12px;color:#1a3a6e;line-height:1.7;display:none"></div>
+      <!-- 店家名稱 -->
       <div>
-        <label class="form-label">店家名稱</label>
-        <input class="form-input" id="pm-shop" style="width:100%" placeholder="例：我的蝦皮店">
+        <label class="form-label" id="pm-shop-label">店家名稱</label>
+        <input class="form-input" id="pm-shop" style="width:100%" placeholder="例：mystore.myshopify.com">
       </div>
-      <div>
-        <label class="form-label">API Key</label>
-        <input class="form-input" id="pm-key" style="width:100%" placeholder="平台提供的 API Key">
+      <!-- API Key -->
+      <div id="pm-key-row">
+        <label class="form-label" id="pm-key-label">API Key</label>
+        <input class="form-input" id="pm-key" style="width:100%" placeholder="平台提供的 API Key / Access Token">
       </div>
-      <div>
-        <label class="form-label">API Secret</label>
+      <!-- API Secret -->
+      <div id="pm-secret-row">
+        <label class="form-label" id="pm-secret-label">API Secret</label>
         <input class="form-input" id="pm-secret" type="password" style="width:100%" placeholder="平台提供的 API Secret">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px" id="pm-secret-hint"></div>
       </div>
-      <div>
-        <label class="form-label">Webhook URL</label>
-        <input class="form-input" id="pm-webhook" style="width:100%" placeholder="https://your-domain/webhook（選填）">
-      </div>
+      <!-- 啟用 -->
       <div style="display:flex;align-items:center;gap:8px">
         <input type="checkbox" id="pm-enabled" style="width:16px;height:16px">
         <label for="pm-enabled" style="font-size:13px;color:var(--navy);cursor:pointer">啟用此平台</label>
+      </div>
+      <!-- Webhook Token 區塊（僅編輯模式顯示） -->
+      <div id="pm-webhook-section" style="display:none;background:#f8fafb;border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">Webhook 串接設定</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">
+          將下方 URL 填入官網的「訂單通知 Webhook」設定，官網有新訂單時會自動推送過來。
+        </div>
+        <div style="margin-bottom:10px">
+          <label class="form-label" style="margin-bottom:4px">Webhook 接收 URL</label>
+          <div style="display:flex;gap:6px">
+            <input class="form-input" id="pm-webhook-url-display" readonly style="flex:1;font-size:11px;font-family:'DM Mono',monospace;background:#fff;color:var(--navy)" placeholder="點右側按鈕產生…">
+            <button class="btn btn-outline btn-sm" onclick="copyWebhookUrl()" style="flex-shrink:0">複製</button>
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="genWebhookToken()" style="font-size:12px">
+          重新產生 Token（舊連結立即失效）
+        </button>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px" id="pm-webhook-siginfo">
+          若設定了 API Secret，官網推播時請在 Header 加入：<br>
+          <code style="background:#eee;padding:1px 5px;border-radius:3px">X-Webhook-Signature: sha256=&lt;HMAC-SHA256&gt;</code>
+        </div>
       </div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
@@ -12796,6 +13170,7 @@ function showPage(page, e) {
   if (page === 'ecommerce')       initEcommerce();
   if (page === 'inventory')       initInventory();
   if (page === 'accounting')      initAccounting();
+  if (page === 'fixed-assets')    initFixedAssets();
   if (page === 'approval')        initApproval();
   if (page === 'audit-log')       initAuditLog();
 }
@@ -20777,7 +21152,41 @@ async function loadEcomStats() {
   document.getElementById('ecom-stat-total').textContent   = data.total_orders;
 }
 
-const PLAT_ICON = { shopee:'🛒', website:'🌐', other:'📦' };
+const PLAT_ICON = {
+  shopify:'🟢', woocommerce:'🟣', shopee:'🛒',
+  website:'🌐', custom:'🔗', other:'📦'
+};
+const PLAT_LABEL = {
+  shopify:'Shopify', woocommerce:'WooCommerce', shopee:'蝦皮',
+  website:'官網', custom:'自訂', other:'其他'
+};
+const PLAT_HINTS = {
+  shopify: `<b>Shopify 主動拉取</b><br>店家網址填 <code>mystore.myshopify.com</code>，API Key 填 Admin API Access Token（後台 → Apps → Develop apps → Access tokens），點「同步」可主動拉最新訂單。`,
+  woocommerce: `<b>WooCommerce 主動拉取</b><br>店家網址填你的 WordPress 網址（如 <code>shop.example.com</code>），API Key 填 Consumer Key，API Secret 填 Consumer Secret（WooCommerce → 設定 → 進階 → REST API）。`,
+  shopee: `<b>蝦皮 Shopee</b><br>填入蝦皮 Open Platform 的 Partner Key / Access Token，設定好後點「同步」拉取訂單。`,
+  website: `<b>官網 Webhook 接收</b><br>儲存後點「產生 Webhook Token」，將 Webhook URL 貼到官網的訂單通知設定。官網有新訂單時自動推送，無需輪詢。<br>API Secret（選填）：用於驗簽，官網推播時加 <code>X-Webhook-Signature</code> Header。`,
+  custom: `<b>自訂平台 Webhook</b><br>適用於自建電商或其他第三方平台。儲存後產生 Webhook URL，由對方以 POST JSON 推送訂單。欄位格式彈性支援多種命名（buyer_name / customer_name / name 等）。`,
+  other: `<b>其他平台</b><br>填入平台名稱與憑證，可手動新增訂單或透過 Webhook 接收。`,
+};
+
+function onPlatformTypeChange() {
+  const pt = document.getElementById('pm-platform').value;
+  const hint = document.getElementById('pm-hint');
+  const isWebhook = ['website','custom'].includes(pt);
+  const isPull    = ['shopify','woocommerce','shopee'].includes(pt);
+  hint.style.display = 'block';
+  hint.innerHTML = PLAT_HINTS[pt] || '';
+  document.getElementById('pm-key-label').textContent    = isPull ? 'API Key / Access Token' : 'API Key（選填）';
+  document.getElementById('pm-secret-label').textContent = isPull ? 'API Secret' : 'API Secret / 驗簽金鑰（選填）';
+  document.getElementById('pm-secret-hint').textContent  = isWebhook
+    ? '官網推播時以此金鑰進行 HMAC-SHA256 驗簽（選填）'
+    : isPull ? '平台提供的 Consumer Secret / App Secret' : '';
+  document.getElementById('pm-shop-label').textContent   = isPull ? '店家網址 / 域名' : '店家名稱';
+  document.getElementById('pm-shop').placeholder         =
+    pt==='shopify'     ? 'mystore.myshopify.com' :
+    pt==='woocommerce' ? 'shop.example.com' :
+    pt==='shopee'      ? '蝦皮店名' : '店名';
+}
 
 async function loadPlatforms() {
   const { ok, data } = await api('/api/ecommerce/platforms', {}, true);
@@ -20786,48 +21195,124 @@ async function loadPlatforms() {
     wrap.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:8px">${t('ecom.no_platforms')}</div>`;
     return;
   }
-  wrap.innerHTML = data.map(p => `<div class="card" style="padding:18px;min-width:220px;flex:0 0 220px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="font-size:24px">${PLAT_ICON[p.platform]||'📦'}</div>
-      <span style="background:${p.enabled?'var(--green)':'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${p.enabled?'啟用':'停用'}</span>
-    </div>
-    <div style="font-weight:700;color:var(--navy);margin-bottom:4px">${escHtml(p.shop_name||p.platform)}</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">上次同步：${p.last_sync_at?new Date(p.last_sync_at).toLocaleString():'從未'}</div>
-    <div style="display:flex;gap:6px">
-      <button class="btn btn-outline btn-sm" onclick="openPlatformModal(${p.id})">設定</button>
-      <button class="btn btn-primary btn-sm" onclick="syncOrders(${p.id})">同步</button>
-      <button class="btn btn-outline btn-sm" onclick="deletePlatform(${p.id})" style="color:var(--red)">✕</button>
-    </div>
-  </div>`).join('');
+  const origin = window.location.origin;
+  wrap.innerHTML = data.map(p => {
+    const isWebhook = ['website','custom'].includes(p.platform);
+    const webhookUrl = p.webhook_token ? `${origin}/api/ecommerce/webhook/${p.webhook_token}` : '';
+    return `<div class="card" style="padding:18px;min-width:240px;flex:0 0 240px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:22px;line-height:1">${PLAT_ICON[p.platform]||'📦'} <span style="font-size:12px;font-weight:700;color:var(--navy);vertical-align:middle">${PLAT_LABEL[p.platform]||p.platform}</span></div>
+        <span style="background:${p.enabled?'var(--green)':'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${p.enabled?'啟用':'停用'}</span>
+      </div>
+      <div style="font-weight:700;color:var(--navy);margin-bottom:2px;font-size:13px">${escHtml(p.shop_name||'未命名')}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">上次同步：${p.last_sync_at?new Date(p.last_sync_at).toLocaleString():'從未'}</div>
+      ${isWebhook && webhookUrl ? `<div style="margin-bottom:10px;background:#f0f6ff;border-radius:6px;padding:6px 8px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px">Webhook URL</div>
+        <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--navy);word-break:break-all">${escHtml(webhookUrl)}</div>
+      </div>` : ''}
+      ${isWebhook && !webhookUrl ? `<div style="margin-bottom:10px;font-size:11px;color:var(--orange)">⚠ 尚未產生 Webhook Token，請點「設定」</div>` : ''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="openPlatformModal(${p.id})">設定</button>
+        ${!isWebhook?`<button class="btn btn-primary btn-sm" onclick="syncOrders(${p.id})">同步</button>`:''}
+        <button class="btn btn-outline btn-sm" onclick="deletePlatform(${p.id})" style="color:var(--red)">✕</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
-function openPlatformModal(id=null) {
+let _pmPlatformData = null;
+
+async function openPlatformModal(id=null) {
+  _pmPlatformData = null;
   document.getElementById('pm-id').value = id||'';
   document.getElementById('pm-modal-title').textContent = id ? '編輯平台設定' : '新增電商平台';
+  document.getElementById('pm-webhook-section').style.display = 'none';
   if (!id) {
-    document.getElementById('pm-platform').value = 'shopee';
+    document.getElementById('pm-platform').value = 'shopify';
     document.getElementById('pm-shop').value = '';
     document.getElementById('pm-key').value = '';
     document.getElementById('pm-secret').value = '';
-    document.getElementById('pm-webhook').value = '';
     document.getElementById('pm-enabled').checked = false;
+    onPlatformTypeChange();
+  } else {
+    const { ok, data } = await api('/api/ecommerce/platforms', {}, true);
+    if (ok) {
+      const p = data.find(x => x.id == id);
+      if (p) {
+        _pmPlatformData = p;
+        document.getElementById('pm-platform').value  = p.platform || 'other';
+        document.getElementById('pm-shop').value      = p.shop_name || '';
+        document.getElementById('pm-key').value       = p.api_key || '';
+        document.getElementById('pm-secret').value    = '';
+        document.getElementById('pm-enabled').checked = !!p.enabled;
+        onPlatformTypeChange();
+        const isWebhook = ['website','custom'].includes(p.platform);
+        if (isWebhook) {
+          document.getElementById('pm-webhook-section').style.display = 'block';
+          const origin = window.location.origin;
+          document.getElementById('pm-webhook-url-display').value = p.webhook_token
+            ? `${origin}/api/ecommerce/webhook/${p.webhook_token}`
+            : '';
+        }
+      }
+    }
   }
   document.getElementById('platform-modal').style.display = 'flex';
 }
-function closePlatformModal() { document.getElementById('platform-modal').style.display = 'none'; }
+function closePlatformModal() {
+  document.getElementById('platform-modal').style.display = 'none';
+  _pmPlatformData = null;
+}
 
 async function savePlatform() {
+  const idVal = document.getElementById('pm-id').value;
   const body = {
-    id:          document.getElementById('pm-id').value || undefined,
-    platform:    document.getElementById('pm-platform').value,
-    shop_name:   document.getElementById('pm-shop').value.trim(),
-    api_key:     document.getElementById('pm-key').value.trim(),
-    api_secret:  document.getElementById('pm-secret').value.trim(),
-    webhook_url: document.getElementById('pm-webhook').value.trim(),
-    enabled:     document.getElementById('pm-enabled').checked,
+    platform:   document.getElementById('pm-platform').value,
+    shop_name:  document.getElementById('pm-shop').value.trim(),
+    api_key:    document.getElementById('pm-key').value.trim(),
+    api_secret: document.getElementById('pm-secret').value.trim(),
+    enabled:    document.getElementById('pm-enabled').checked,
   };
-  const { ok } = await api('/api/ecommerce/platforms', { method:'POST', body: JSON.stringify(body) });
-  if (ok) { showToast('平台設定已儲存','success'); closePlatformModal(); loadPlatforms(); loadEcomStats(); }
+  if (idVal) body.id = parseInt(idVal);
+  const { ok, data } = await api('/api/ecommerce/platforms', { method:'POST', body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  const newId = idVal ? parseInt(idVal) : data.id;
+  const isWebhook = ['website','custom'].includes(body.platform);
+  // 若是 Webhook 平台且尚無 token，自動產生
+  if (isWebhook && !_pmPlatformData?.webhook_token && newId) {
+    const r = await api(`/api/ecommerce/platforms/${newId}/webhook-token`, { method:'POST' });
+    if (r.ok) {
+      const origin = window.location.origin;
+      document.getElementById('pm-id').value = newId;
+      document.getElementById('pm-webhook-section').style.display = 'block';
+      document.getElementById('pm-webhook-url-display').value =
+        `${origin}/api/ecommerce/webhook/${r.data.webhook_token}`;
+      showToast('已儲存並自動產生 Webhook Token','success');
+      loadPlatforms(); loadEcomStats();
+      return;
+    }
+  }
+  showToast('平台設定已儲存','success');
+  closePlatformModal();
+  loadPlatforms(); loadEcomStats();
+}
+
+async function genWebhookToken() {
+  const id = document.getElementById('pm-id').value;
+  if (!id) { showToast('請先儲存平台設定','error'); return; }
+  if (!confirm('重新產生 Token 後，舊的 Webhook URL 立即失效，確定要繼續？')) return;
+  const { ok, data } = await api(`/api/ecommerce/platforms/${id}/webhook-token`, { method:'POST' });
+  if (!ok) { showToast('產生失敗','error'); return; }
+  const origin = window.location.origin;
+  document.getElementById('pm-webhook-url-display').value = `${origin}${data.webhook_url}`;
+  showToast('已產生新的 Webhook Token','success');
+  loadPlatforms();
+}
+
+function copyWebhookUrl() {
+  const url = document.getElementById('pm-webhook-url-display').value;
+  if (!url) { showToast('尚未產生 Webhook URL','error'); return; }
+  navigator.clipboard.writeText(url).then(() => showToast('已複製 Webhook URL','success'));
 }
 
 async function deletePlatform(id) {
@@ -20837,9 +21322,12 @@ async function deletePlatform(id) {
 }
 
 async function syncOrders(platformId=null) {
+  const btn = event?.target;
+  if (btn) { btn.disabled = true; btn.textContent = '同步中…'; }
   const body = platformId ? { platform_id: platformId } : {};
   const { ok, data } = await api('/api/ecommerce/orders/sync', { method:'POST', body: JSON.stringify(body) });
-  if (ok) { showToast(data.message||t('ecom.sync_done'),'success'); loadPlatforms(); loadEcomStats(); loadEcomOrders(); }
+  if (btn) { btn.disabled = false; btn.textContent = '同步'; }
+  if (ok) { showToast(data.message||t('ecom.sync_done'), data.message?.includes('錯誤') ? 'error' : 'success'); loadPlatforms(); loadEcomStats(); loadEcomOrders(); }
 }
 
 async function loadEcomOrders() {
@@ -20847,29 +21335,36 @@ async function loadEcomOrders() {
   const status   = document.getElementById('ecom-filter-status').value;
   const q        = document.getElementById('ecom-filter-q').value.trim();
   let url = '/api/ecommerce/orders?';
-  if (platform) url += `platform=${platform}&`;
-  if (status)   url += `status=${status}&`;
+  if (platform) url += `platform=${encodeURIComponent(platform)}&`;
+  if (status)   url += `status=${encodeURIComponent(status)}&`;
   if (q)        url += `q=${encodeURIComponent(q)}&`;
   const { ok, data } = await api(url, {}, true);
   const wrap = document.getElementById('ecom-orders-wrap');
-  if (!ok || !data.length) { wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">${t('ecom.no_orders')}</div>`; return; }
+  if (!ok || !data.length) {
+    wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">${t('ecom.no_orders')}</div>`;
+    return;
+  }
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
-    <th>平台</th><th>訂單號</th><th>買家</th><th>金額</th><th>狀態</th><th>同步時間</th><th></th>
+    <th>平台</th><th>訂單號</th><th>買家</th><th>電話</th><th>金額</th><th>狀態</th><th>同步時間</th><th></th>
   </tr></thead><tbody>${data.map(r => `<tr>
-    <td>${PLAT_ICON[r.platform]||'📦'} ${escHtml(r.platform)}</td>
+    <td>${PLAT_ICON[r.platform]||'📦'} <span style="font-size:11px">${PLAT_LABEL[r.platform]||escHtml(r.platform)}</span></td>
     <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(r.platform_order_id)}</td>
     <td>${escHtml(r.buyer_name||'—')}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.buyer_phone||'—')}</td>
     <td style="font-weight:600">NT$${(r.total||0).toLocaleString()}</td>
     <td><span style="background:${ORDER_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${t('orders.status.'+r.status)||r.status}</span></td>
     <td style="font-size:11px;color:var(--muted)">${(r.synced_at||'').slice(0,16).replace('T',' ')}</td>
-    <td>${!r.order_no?`<button class="btn btn-primary btn-sm" onclick="importEcomOrder(${r.id})">匯入訂單</button>`:'<span style="font-size:11px;color:var(--green)">已匯入</span>'}</td>
+    <td>${!r.order_no
+      ?`<button class="btn btn-primary btn-sm" onclick="importEcomOrder(${r.id})">匯入訂單</button>`
+      :`<span style="font-size:11px;color:var(--green)">✓ 已匯入 #${r.order_no}</span>`
+    }</td>
   </tr>`).join('')}</tbody></table>`;
 }
 
 async function importEcomOrder(id) {
   const { ok, data } = await api(`/api/ecommerce/orders/${id}/import`, { method:'POST' });
   if (!ok) { showToast(data?.error||'匯入失敗','error'); return; }
-  showToast(`${t('ecom.import_done')} ${data.order_no}`,'success');
+  showToast(`${t('ecom.import_done')} #${data.order_no}`,'success');
   loadEcomOrders(); loadEcomStats();
 }
 
@@ -22551,7 +23046,7 @@ function renderPipelineFunnel(pipeline) {
 
 function switchCrmTab(tab) {
   _crmTab = tab;
-  ['customers','leads','pipeline','followups'].forEach(t => {
+  ['customers','leads','pipeline','followups','contracts','tags'].forEach(t => {
     const btn   = document.getElementById('crm-tab-' + t);
     const panel = document.getElementById('crm-panel-' + t);
     if (btn)   btn.classList.toggle('active', t === tab);
@@ -22563,6 +23058,8 @@ function switchCrmTab(tab) {
   if (tab === 'leads')     loadLeads();
   if (tab === 'pipeline')  { loadOpportunities(); loadCrmStats(); }
   if (tab === 'followups') loadFollowUps();
+  if (tab === 'contracts') { loadContractStats(); loadContracts(); }
+  if (tab === 'tags')      loadCrmTags();
 }
 
 // ── Lead ─────────────────────────────────────────────────────
@@ -22951,7 +23448,7 @@ async function openSuggestPOModal() {
 
 function switchInvTab(tab) {
   _invCurrentTab = tab;
-  const tabs = ['stock','alerts','products','purchase','shipments','transactions','warehouses','suppliers'];
+  const tabs = ['stock','alerts','products','purchase','shipments','transactions','warehouses','suppliers','count','returns','batches'];
   tabs.forEach(t => {
     const btn   = document.getElementById('inv-tab-' + t);
     const panel = document.getElementById('inv-panel-' + t);
@@ -22967,6 +23464,9 @@ function switchInvTab(tab) {
   if (tab === 'shipments')     { loadShipmentStats(); loadShipmentList(); }
   if (tab === 'transactions')  loadInvTransactions();
   if (tab === 'suppliers')     loadSupplierList();
+  if (tab === 'count')         loadCountSessions();
+  if (tab === 'returns')       loadReturns();
+  if (tab === 'batches')       { loadBatches(); checkBatchExpiry(); }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -23280,6 +23780,842 @@ function closeGenericModal() {
   if (m) m.style.display = 'none';
   _genericModalCallback = null;
 }
+
+// ══════════════════════════════════════════════════════════════
+// CRM 合約管理
+// ══════════════════════════════════════════════════════════════
+
+const CONT_STATUS_COLOR = { draft:'#aaa', active:'var(--green)', expired:'var(--red)', terminated:'#64748b' };
+const CONT_STATUS_LABEL = { draft:'草稿', active:'進行中', expired:'已到期', terminated:'已終止' };
+const CONT_TYPE_LABEL   = { sales:'銷售合約', service:'服務合約', procurement:'採購合約', nda:'保密協議', other:'其他' };
+let _contractsCache = [];
+let _assetsCache    = [];
+let _batchesCache   = [];
+
+async function loadContractStats() {
+  const { ok, data } = await api('/api/crm/contracts/stats', {}, true);
+  if (!ok) return;
+  document.getElementById('cont-stat-total').textContent  = data.total;
+  document.getElementById('cont-stat-active').textContent = data.active;
+  document.getElementById('cont-stat-exp30').textContent  = data.expiring_30d;
+  document.getElementById('cont-stat-value').textContent  = 'NT$' + Math.round(data.active_value).toLocaleString();
+  const badge = document.getElementById('badge-crm-contracts');
+  if (badge) { badge.textContent = data.expiring_30d; badge.style.display = data.expiring_30d > 0 ? '' : 'none'; }
+}
+
+async function loadContracts() {
+  const status = document.getElementById('cont-filter-status')?.value || '';
+  const type   = document.getElementById('cont-filter-type')?.value || '';
+  const q      = document.getElementById('cont-filter-q')?.value.trim() || '';
+  let url = '/api/crm/contracts?';
+  if (status) url += `status=${status}&`;
+  if (type)   url += `type=${encodeURIComponent(type)}&`;
+  if (q)      url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  const wrap = document.getElementById('contracts-list-wrap');
+  if (!ok || !data.length) { wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">尚無合約資料</div>`; return; }
+  _contractsCache = data;
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>合約號</th><th>標題</th><th>客戶</th><th>類型</th><th>金額</th>
+    <th>開始</th><th>結束</th><th>剩餘天數</th><th>狀態</th><th></th>
+  </tr></thead><tbody>${data.map(r => `<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(r.contract_no)}</td>
+    <td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.title)}">${escHtml(r.title)}</td>
+    <td>${escHtml(r.cust_company || r.customer_name || '—')}</td>
+    <td style="font-size:12px">${CONT_TYPE_LABEL[r.type]||r.type}</td>
+    <td style="font-weight:600">NT$${(r.value||0).toLocaleString()}</td>
+    <td style="font-size:12px;color:var(--muted)">${r.start_date||'—'}</td>
+    <td style="font-size:12px;color:var(--muted)">${r.end_date||'—'}</td>
+    <td style="font-size:12px;font-weight:600;${r.days_remaining!=null&&r.days_remaining<=0?'color:var(--red)':r.days_remaining!=null&&r.days_remaining<=30?'color:var(--orange)':''}">${
+      r.days_remaining!=null?(r.days_remaining<=0?`已超出 ${-r.days_remaining} 天`:r.days_remaining+'天'):'—'}</td>
+    <td><span style="background:${CONT_STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${CONT_STATUS_LABEL[r.status]||r.status}</span></td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openContractModal(${r.id})">編輯</button>
+      <button class="btn btn-outline btn-sm" onclick="deleteContract(${r.id})" style="color:var(--red)">刪除</button>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function openContractModal(id=null) {
+  document.getElementById('cont-id').value = id||'';
+  document.getElementById('cont-modal-title').textContent = id ? '編輯合約' : '新增合約';
+  // 填入客戶選單
+  const sel = document.getElementById('cont-customer');
+  sel.innerHTML = '<option value="">-- 選擇客戶 --</option>';
+  const { ok, data } = await api('/api/crm/customers', {}, true);
+  if (ok) data.forEach(c => sel.innerHTML += `<option value="${c.id}">${escHtml(c.company_name)}</option>`);
+  if (!id) {
+    ['cont-title','cont-value','cont-notes'].forEach(x => document.getElementById(x).value = '');
+    document.getElementById('cont-type').value = 'sales';
+    document.getElementById('cont-status').value = 'draft';
+    ['cont-start','cont-end'].forEach(x => document.getElementById(x).value = '');
+    document.getElementById('cont-renew').checked = false;
+  } else {
+    // 先從快取找，找不到再 API 查詢
+    let r = _contractsCache.find(x => x.id == id);
+    if (!r) {
+      const { ok: ok2, data: d } = await api(`/api/crm/contracts?id=${id}`, {}, true);
+      r = ok2 && d.length ? d[0] : null;
+    }
+    if (r) {
+      document.getElementById('cont-title').value    = r.title || '';
+      document.getElementById('cont-customer').value = r.customer_id || '';
+      document.getElementById('cont-type').value     = r.type || 'sales';
+      document.getElementById('cont-value').value    = r.value || 0;
+      document.getElementById('cont-status').value   = r.status || 'draft';
+      document.getElementById('cont-start').value    = r.start_date || '';
+      document.getElementById('cont-end').value      = r.end_date || '';
+      document.getElementById('cont-renew').checked  = !!r.auto_renew;
+      document.getElementById('cont-notes').value    = r.notes || '';
+    }
+  }
+  document.getElementById('contract-modal').style.display = 'flex';
+}
+function closeContractModal() { document.getElementById('contract-modal').style.display = 'none'; }
+
+async function saveContract() {
+  const id = document.getElementById('cont-id').value;
+  const custSel = document.getElementById('cont-customer');
+  const body = {
+    customer_id:   parseInt(custSel.value)||null,
+    customer_name: custSel.options[custSel.selectedIndex]?.text || '',
+    title:      document.getElementById('cont-title').value.trim(),
+    type:       document.getElementById('cont-type').value,
+    value:      parseFloat(document.getElementById('cont-value').value)||0,
+    status:     document.getElementById('cont-status').value,
+    start_date: document.getElementById('cont-start').value||null,
+    end_date:   document.getElementById('cont-end').value||null,
+    auto_renew: document.getElementById('cont-renew').checked,
+    notes:      document.getElementById('cont-notes').value.trim(),
+  };
+  if (!body.title) { showToast('合約標題不可為空','error'); return; }
+  const url    = id ? `/api/crm/contracts/${id}` : '/api/crm/contracts';
+  const method = id ? 'PUT' : 'POST';
+  const { ok } = await api(url, { method, body: JSON.stringify(body) });
+  if (ok) { showToast('合約已儲存','success'); closeContractModal(); loadContracts(); loadContractStats(); }
+}
+
+async function deleteContract(id) {
+  if (!confirm('確定刪除此合約？')) return;
+  const { ok } = await api(`/api/crm/contracts/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); loadContracts(); loadContractStats(); }
+}
+
+// ── CRM 標籤管理 ──────────────────────────────────────────────
+let _crmTagColor = '#4a7bda';
+
+function selectTagColor(color) {
+  _crmTagColor = color;
+  document.getElementById('tag-color').value = color;
+  document.querySelectorAll('#tag-color-swatches [data-color]').forEach(el => {
+    el.style.border = el.dataset.color === color ? '2px solid #222' : '2px solid transparent';
+  });
+}
+
+async function loadCrmTags() {
+  const { ok, data } = await api('/api/crm/tags', {}, true);
+  const wrap = document.getElementById('crm-tags-wrap');
+  if (!ok || !data.length) {
+    wrap.innerHTML = '<div style="font-size:13px;color:var(--muted)">尚未建立標籤</div>';
+    return;
+  }
+  wrap.innerHTML = data.map(t => `
+    <div style="display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--border);border-radius:20px;padding:6px 14px">
+      <span style="width:10px;height:10px;border-radius:50%;background:${t.color};flex-shrink:0"></span>
+      <span style="font-size:13px;font-weight:600;color:var(--navy)">${escHtml(t.name)}</span>
+      <span style="font-size:11px;color:var(--muted)">${t.usage_count} 位客戶</span>
+      <button onclick="openTagModal(${t.id},'${escHtml(t.name)}','${t.color}')" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--muted);padding:0 2px" title="編輯">✏</button>
+      <button onclick="deleteCrmTag(${t.id})" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--red);padding:0 2px" title="刪除">✕</button>
+    </div>`).join('');
+}
+
+function openTagModal(id=null, name='', color='#4a7bda') {
+  document.getElementById('tag-id').value = id||'';
+  document.getElementById('tag-modal-title').textContent = id ? '編輯標籤' : '新增標籤';
+  document.getElementById('tag-name').value = name;
+  selectTagColor(color);
+  document.getElementById('tag-modal').style.display = 'flex';
+}
+function closeTagModal() { document.getElementById('tag-modal').style.display = 'none'; }
+
+async function saveTag() {
+  const id = document.getElementById('tag-id').value;
+  const body = { name: document.getElementById('tag-name').value.trim(), color: _crmTagColor };
+  if (!body.name) { showToast('標籤名稱不可為空','error'); return; }
+  const url = id ? `/api/crm/tags/${id}` : '/api/crm/tags';
+  const method = id ? 'PUT' : 'POST';
+  const { ok, data } = await api(url, { method, body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast('標籤已儲存','success'); closeTagModal(); loadCrmTags();
+}
+
+async function deleteCrmTag(id) {
+  if (!confirm('刪除標籤後，所有客戶的此標籤也會移除，確定？')) return;
+  const { ok } = await api(`/api/crm/tags/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); loadCrmTags(); }
+}
+
+// ── 客戶 360° 視圖（增強版 side panel） ──────────────────────
+async function openCrm360Panel(cid, company) {
+  document.getElementById('crm-panel-title').textContent = company + ' — 客戶總覽';
+  document.getElementById('crm-panel-body').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">載入中…</div>';
+  document.getElementById('crm-panel-backdrop').style.display = '';
+  document.getElementById('crm-panel').style.display = '';
+  const { ok, data } = await api(`/api/crm/customers/${cid}/360`, {}, true);
+  if (!ok) { document.getElementById('crm-panel-body').innerHTML = '<div style="color:var(--red)">載入失敗</div>'; return; }
+  const c = data.customer;
+  const creditPct = c.credit_limit > 0 ? Math.min(100, Math.round(c.credit_used / c.credit_limit * 100)) : 0;
+  const creditColor = creditPct >= 90 ? 'var(--red)' : creditPct >= 70 ? 'var(--orange)' : 'var(--green)';
+
+  document.getElementById('crm-panel-body').innerHTML = `
+    <!-- 基本資訊 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;font-size:13px">
+      <div><span style="color:var(--muted)">狀態：</span><span style="font-weight:600">${c.status||'—'}</span></div>
+      <div><span style="color:var(--muted)">分級：</span><span style="font-weight:600">${c.tier||'standard'}</span></div>
+      <div><span style="color:var(--muted)">行業：</span>${escHtml(c.industry||'—')}</div>
+      <div><span style="color:var(--muted)">統編：</span>${escHtml(c.tax_id||'—')}</div>
+      <div style="grid-column:1/-1"><span style="color:var(--muted)">地址：</span>${escHtml(c.address||'—')}</div>
+      <div style="grid-column:1/-1"><span style="color:var(--muted)">網站：</span>${c.website?`<a href="${escHtml(c.website)}" target="_blank" style="color:var(--accent)">${escHtml(c.website)}</a>`:'—'}</div>
+    </div>
+
+    <!-- 信用額度 -->
+    ${c.credit_limit > 0 ? `<div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px">信用額度</div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">
+        <span>已用 NT$${c.credit_used.toLocaleString()}</span>
+        <span>額度 NT$${c.credit_limit.toLocaleString()}</span>
+      </div>
+      <div style="background:#e5e7eb;border-radius:4px;height:8px">
+        <div style="background:${creditColor};border-radius:4px;height:8px;width:${creditPct}%;transition:width .3s"></div>
+      </div>
+    </div>` : ''}
+
+    <!-- 標籤 -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px">標籤</div>
+      ${data.tags.length ? data.tags.map(t=>`<span style="display:inline-block;background:${t.color};color:#fff;padding:2px 10px;border-radius:12px;font-size:11px;margin:2px">${escHtml(t.name)}</span>`).join('') : '<span style="font-size:12px;color:var(--muted)">未設定</span>'}
+    </div>
+
+    <!-- 終身價值 -->
+    <div style="background:#f0fdf4;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;color:var(--muted)">終身貢獻金額</span>
+      <span style="font-size:16px;font-weight:800;color:var(--green)">NT$${c.lifetime_value.toLocaleString()}</span>
+    </div>
+
+    <!-- 聯絡人 -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px">聯絡人（${data.contacts.length}）
+        <button onclick="openContactModal(${c.id})" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;margin-left:6px">＋ 新增</button>
+      </div>
+      ${data.contacts.length ? data.contacts.map(ct=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;align-items:center">
+        ${ct.is_primary ? '<span style="background:var(--accent);color:#fff;padding:1px 6px;border-radius:8px;font-size:10px">主要</span>' : ''}
+        <div style="flex:1"><div style="font-weight:600">${escHtml(ct.name)} <span style="color:var(--muted);font-weight:400">${escHtml(ct.title||'')}</span></div>
+          <div style="color:var(--muted)">${escHtml(ct.email||'')} ${escHtml(ct.mobile||ct.phone||'')}</div>
+        </div>
+        <button onclick="deleteContact(${ct.id},${c.id},'${escHtml(company)}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:13px">✕</button>
+      </div>`).join('') : '<div style="font-size:12px;color:var(--muted)">尚無聯絡人</div>'}
+    </div>
+
+    <!-- 近期訂單 -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px">近期訂單（${data.orders.length}）</div>
+      ${data.orders.slice(0,5).map(o=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:12px">
+        <span style="color:var(--accent)">${escHtml(o.order_no)}</span>
+        <span style="color:var(--muted)">${(o.created_at||'').slice(0,10)}</span>
+        <span style="font-weight:600">NT$${(o.total||0).toLocaleString()}</span>
+        <span style="color:${ORDER_STATUS_COLOR[o.status]||'#aaa'}">${o.status}</span>
+      </div>`).join('') || '<div style="font-size:12px;color:var(--muted)">尚無訂單</div>'}
+    </div>
+
+    <!-- 進行中合約 -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px">合約（${data.contracts.length}）</div>
+      ${data.contracts.slice(0,3).map(ct=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f1f5f9;font-size:12px">
+        <span>${escHtml(ct.title)}</span>
+        <span style="color:var(--muted)">${ct.end_date||'無期限'}</span>
+        <span style="color:${CONT_STATUS_COLOR[ct.status]||'#aaa'}">${CONT_STATUS_LABEL[ct.status]||ct.status}</span>
+      </div>`).join('') || '<div style="font-size:12px;color:var(--muted)">尚無合約</div>'}
+    </div>
+
+    <!-- 近期互動 -->
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:6px">近期互動</div>
+      ${data.interactions.slice(0,4).map(i=>`<div style="padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:12px">
+        <div style="display:flex;justify-content:space-between">
+          <span style="font-weight:600">${escHtml(i.title||i.interaction_type)}</span>
+          <span style="color:var(--muted)">${(i.created_at||'').slice(0,10)}</span>
+        </div>
+        ${i.content?`<div style="color:var(--muted);margin-top:2px">${escHtml(i.content.slice(0,60))}${i.content.length>60?'…':''}</div>`:''}
+      </div>`).join('') || '<div style="font-size:12px;color:var(--muted)">尚無互動記錄</div>'}
+    </div>`;
+}
+
+// ── 聯絡人 Modal ──────────────────────────────────────────────
+let _contactCustomerId = null;
+
+function openContactModal(customerId) {
+  _contactCustomerId = customerId;
+  ['ct-name','ct-title','ct-email','ct-phone','ct-mobile','ct-notes'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const cb = document.getElementById('ct-primary'); if (cb) cb.checked = false;
+  const m  = document.getElementById('contact-modal-inline');
+  if (!m) {
+    const div = document.createElement('div');
+    div.id = 'contact-modal-inline';
+    div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:4000;display:flex;align-items:center;justify-content:center';
+    div.innerHTML = `<div style="background:#fff;border-radius:12px;width:420px;max-width:95vw;padding:24px 28px;position:relative">
+      <button onclick="document.getElementById('contact-modal-inline').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)">✕</button>
+      <h3 style="margin:0 0 16px;font-size:15px;color:var(--navy)">新增聯絡人</h3>
+      <div style="display:grid;gap:10px">
+        <div><label class="form-label">姓名 *</label><input class="form-input" id="ct-name" style="width:100%"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label class="form-label">職稱</label><input class="form-input" id="ct-title" style="width:100%"></div>
+          <div><label class="form-label">Email</label><input class="form-input" id="ct-email" type="email" style="width:100%"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label class="form-label">電話</label><input class="form-input" id="ct-phone" style="width:100%"></div>
+          <div><label class="form-label">手機</label><input class="form-input" id="ct-mobile" style="width:100%"></div>
+        </div>
+        <div><label class="form-label">備註</label><input class="form-input" id="ct-notes" style="width:100%"></div>
+        <div style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="ct-primary"><label for="ct-primary" style="font-size:13px;cursor:pointer">設為主要聯絡人</label></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button class="btn btn-outline" onclick="document.getElementById('contact-modal-inline').remove()">取消</button>
+        <button class="btn btn-primary" onclick="saveContact(${customerId})">儲存</button>
+      </div>
+    </div>`;
+    document.body.appendChild(div);
+  } else {
+    m.style.display = 'flex';
+  }
+}
+
+async function saveContact(customerId) {
+  const name = document.getElementById('ct-name')?.value.trim();
+  if (!name) { showToast('姓名不可為空','error'); return; }
+  const body = {
+    customer_id: customerId,
+    name, title:  document.getElementById('ct-title')?.value.trim(),
+    email:  document.getElementById('ct-email')?.value.trim(),
+    phone:  document.getElementById('ct-phone')?.value.trim(),
+    mobile: document.getElementById('ct-mobile')?.value.trim(),
+    notes:  document.getElementById('ct-notes')?.value.trim(),
+    is_primary: document.getElementById('ct-primary')?.checked,
+  };
+  const { ok } = await api('/api/crm/contacts', { method:'POST', body: JSON.stringify(body) });
+  if (ok) {
+    showToast('聯絡人已新增','success');
+    document.getElementById('contact-modal-inline')?.remove();
+    const row = document.querySelector(`[data-crm-id="${customerId}"]`);
+    if (row) openCrm360Panel(customerId, row.dataset.company||'');
+  }
+}
+
+async function deleteContact(contactId, customerId, company) {
+  if (!confirm('確定刪除此聯絡人？')) return;
+  const { ok } = await api(`/api/crm/contacts/${contactId}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); openCrm360Panel(customerId, company); }
+}
+
+// ── 覆寫 openCrmPanel：客戶列表點擊時改用 360 視圖 ──────────
+const _origLoadCrmList = typeof loadCrmList !== 'undefined' ? loadCrmList : null;
+// 在 loadCrmList 的 render 裡，每列加上 data-crm-id 和 onclick=360
+// 此部分透過覆寫 renderCrmRow 實現（找不到時 fallback 原本行為）
+
+// ══════════════════════════════════════════════════════════════
+// 固定資產管理 JS
+// ══════════════════════════════════════════════════════════════
+
+async function initFixedAssets() {
+  await Promise.all([loadFixedAssetStats(), loadFixedAssets()]);
+  // 填入使用人下拉
+  const sel = document.getElementById('fa-assigned');
+  if (sel && sel.options.length <= 1) {
+    const { ok, data } = await api('/api/punch/staff', {}, true);
+    if (ok) data.forEach(s => sel.innerHTML += `<option value="${s.id}">${escHtml(s.name)}</option>`);
+  }
+}
+
+async function loadFixedAssetStats() {
+  const { ok, data } = await api('/api/assets/stats', {}, true);
+  if (!ok) return;
+  document.getElementById('fa-stat-count').textContent   = data.active_count;
+  document.getElementById('fa-stat-value').textContent   = 'NT$' + Math.round(data.total_book_value).toLocaleString();
+  document.getElementById('fa-stat-warranty').textContent = data.expiring_warranty;
+  document.getElementById('fa-stat-cats').textContent    = data.by_category.length;
+}
+
+async function loadFixedAssets() {
+  const status   = document.getElementById('fa-filter-status')?.value || '';
+  const category = document.getElementById('fa-filter-category')?.value || '';
+  const q        = document.getElementById('fa-filter-q')?.value.trim() || '';
+  let url = '/api/assets?';
+  if (status)   url += `status=${status}&`;
+  if (category) url += `category=${encodeURIComponent(category)}&`;
+  if (q)        url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  const wrap = document.getElementById('fa-list-wrap');
+  if (!ok || !data.length) { wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">尚無固定資產資料</div>`; return; }
+  _assetsCache = data;
+  const METH = { straight_line:'直線法', double_declining:'雙倍遞減' };
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>編號</th><th>名稱</th><th>類別</th><th>購入成本</th><th>累積折舊</th><th>帳面淨值</th>
+    <th>使用人</th><th>保固到期</th><th>狀態</th><th></th>
+  </tr></thead><tbody>${data.map(r => `<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:11px">${escHtml(r.code||'—')}</td>
+    <td style="font-weight:600">${escHtml(r.name)}</td>
+    <td style="font-size:12px">${escHtml(r.category||'—')}</td>
+    <td>NT$${r.purchase_cost.toLocaleString()}</td>
+    <td style="color:var(--red)">NT$${r.accumulated_depreciation.toLocaleString()}</td>
+    <td style="font-weight:700;color:var(--navy)">NT$${r.current_book_value.toLocaleString()}</td>
+    <td style="font-size:12px">${escHtml(r.assigned_name||'—')}</td>
+    <td style="font-size:12px;${r.warranty_expiry&&new Date(r.warranty_expiry)<new Date()?'color:var(--red)':''}">${r.warranty_expiry||'—'}</td>
+    <td><span style="background:${r.status==='active'?'var(--green)':r.status==='retired'?'#aaa':'var(--orange)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${r.status==='active'?'使用中':r.status==='retired'?'已報廢':'已處置'}</span></td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openFixedAssetModal(${r.id})">編輯</button>
+      <button class="btn btn-outline btn-sm" onclick="depreciateAsset(${r.id},'${escHtml(r.name)}')" ${r.status!=='active'?'disabled':''}>折舊</button>
+      <button class="btn btn-outline btn-sm" onclick="deleteFixedAsset(${r.id})" style="color:var(--red)">刪除</button>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function openFixedAssetModal(id=null) {
+  document.getElementById('fa-id').value = id||'';
+  document.getElementById('fa-modal-title').textContent = id ? '編輯固定資產' : '新增固定資產';
+  if (!id) {
+    ['fa-name','fa-code','fa-location','fa-vendor','fa-notes'].forEach(x => document.getElementById(x).value='');
+    document.getElementById('fa-cost').value = 0;
+    document.getElementById('fa-salvage').value = 0;
+    document.getElementById('fa-life').value = 60;
+    document.getElementById('fa-category').value = 'computer';
+    document.getElementById('fa-method').value = 'straight_line';
+    document.getElementById('fa-status').value = 'active';
+    ['fa-purchase-date','fa-warranty'].forEach(x => document.getElementById(x).value='');
+    document.getElementById('fa-assigned').value = '';
+  } else {
+    // 先從快取找，找不到再 API 查詢
+    let r = _assetsCache.find(x => x.id == id);
+    if (!r) {
+      const { ok, data } = await api(`/api/assets?id=${id}`, {}, true);
+      r = ok && data.length ? data[0] : null;
+    }
+    if (r) {
+      document.getElementById('fa-name').value          = r.name || '';
+      document.getElementById('fa-code').value          = r.code || '';
+      document.getElementById('fa-category').value      = r.category || 'other';
+      document.getElementById('fa-purchase-date').value = r.purchase_date || '';
+      document.getElementById('fa-cost').value          = r.purchase_cost || 0;
+      document.getElementById('fa-salvage').value       = r.salvage_value || 0;
+      document.getElementById('fa-life').value          = r.useful_life_months || 60;
+      document.getElementById('fa-method').value        = r.depreciation_method || 'straight_line';
+      document.getElementById('fa-location').value      = r.location || '';
+      document.getElementById('fa-assigned').value      = r.assigned_to || '';
+      document.getElementById('fa-vendor').value        = r.vendor || '';
+      document.getElementById('fa-warranty').value      = r.warranty_expiry || '';
+      document.getElementById('fa-status').value        = r.status || 'active';
+      document.getElementById('fa-notes').value         = r.notes || '';
+    } else {
+      showToast('載入資產資料失敗','error');
+    }
+  }
+  document.getElementById('fixed-asset-modal').style.display = 'flex';
+}
+function closeFixedAssetModal() { document.getElementById('fixed-asset-modal').style.display = 'none'; }
+
+async function saveFixedAsset() {
+  const id = document.getElementById('fa-id').value;
+  const body = {
+    name:                document.getElementById('fa-name').value.trim(),
+    code:                document.getElementById('fa-code').value.trim()||null,
+    category:            document.getElementById('fa-category').value,
+    purchase_date:       document.getElementById('fa-purchase-date').value||null,
+    purchase_cost:       parseFloat(document.getElementById('fa-cost').value)||0,
+    salvage_value:       parseFloat(document.getElementById('fa-salvage').value)||0,
+    useful_life_months:  parseInt(document.getElementById('fa-life').value)||60,
+    depreciation_method: document.getElementById('fa-method').value,
+    location:            document.getElementById('fa-location').value.trim(),
+    assigned_to:         parseInt(document.getElementById('fa-assigned').value)||null,
+    vendor:              document.getElementById('fa-vendor').value.trim(),
+    warranty_expiry:     document.getElementById('fa-warranty').value||null,
+    status:              document.getElementById('fa-status').value,
+    notes:               document.getElementById('fa-notes').value.trim(),
+  };
+  if (!body.name) { showToast('資產名稱不可為空','error'); return; }
+  const url = id ? `/api/assets/${id}` : '/api/assets';
+  const { ok, data } = await api(url, { method: id ? 'PUT' : 'POST', body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast('資產已儲存','success'); closeFixedAssetModal(); initFixedAssets();
+}
+
+async function depreciateAsset(id, name) {
+  const period = prompt(`計提折舊 — ${name}\n請輸入期間（格式 YYYY-MM）：`, new Date().toISOString().slice(0,7));
+  if (!period) return;
+  const { ok, data } = await api(`/api/assets/${id}/depreciate`, { method:'POST', body: JSON.stringify({ period }) });
+  if (!ok) { showToast(data?.error||'折舊失敗','error'); return; }
+  showToast(`${period} 折舊 NT$${data.depreciation.toFixed(0)} 已計提，帳面值 NT$${data.book_value.toFixed(0)}`,'success');
+  loadFixedAssets(); loadFixedAssetStats();
+}
+
+async function batchDepreciate() {
+  if (!confirm('對所有使用中資產執行本月折舊計提？')) return;
+  const { ok, data } = await api('/api/assets/batch-depreciate', { method:'POST', body: JSON.stringify({}) });
+  if (ok) { showToast(`完成：${data.processed} 筆計提，${data.skipped} 筆略過`,'success'); initFixedAssets(); }
+}
+
+async function deleteFixedAsset(id) {
+  if (!confirm('確定刪除此固定資產？')) return;
+  const { ok } = await api(`/api/assets/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); initFixedAssets(); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 進銷存：盤點作業
+// ══════════════════════════════════════════════════════════════
+
+let _currentCountSessionId = null;
+
+async function loadCountSessions() {
+  const status = document.getElementById('count-filter-status')?.value || '';
+  let url = '/api/inventory/count-sessions?';
+  if (status) url += `status=${status}&`;
+  const { ok, data } = await api(url, {}, true);
+  const wrap = document.getElementById('count-sessions-wrap');
+  if (!ok || !data.length) { wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">尚無盤點作業</div>`; return; }
+  const STATUS_LABEL = { draft:'草稿', in_progress:'進行中', completed:'已完成' };
+  const STATUS_COLOR = { draft:'#aaa', in_progress:'var(--accent)', completed:'var(--green)' };
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>標題</th><th>倉庫</th><th>狀態</th><th>建立者</th><th>建立時間</th><th>完成時間</th><th></th>
+  </tr></thead><tbody>${data.map(r => `<tr>
+    <td style="font-weight:600">${escHtml(r.title)}</td>
+    <td>${escHtml(r.warehouse_name||'全部倉庫')}</td>
+    <td><span style="background:${STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${STATUS_LABEL[r.status]||r.status}</span></td>
+    <td style="font-size:12px">${escHtml(r.counted_by||'—')}</td>
+    <td style="font-size:12px;color:var(--muted)">${(r.created_at||'').slice(0,16).replace('T',' ')}</td>
+    <td style="font-size:12px;color:var(--muted)">${r.completed_at?(r.completed_at||'').slice(0,16).replace('T',' '):'—'}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openCountDetail(${r.id})">明細</button>
+      ${r.status==='draft'?`<button class="btn btn-outline btn-sm" onclick="deleteCountSession(${r.id})" style="color:var(--red)">刪除</button>`:''}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function openCountSessionModal() {
+  const wrap = document.getElementById('cnt-warehouse');
+  wrap.innerHTML = '<option value="">全部倉庫</option>';
+  (_invWarehouses||[]).forEach(w => wrap.innerHTML += `<option value="${w.id}">${escHtml(w.name)}</option>`);
+  document.getElementById('cnt-title').value = `${new Date().toISOString().slice(0,7)} 盤點作業`;
+  document.getElementById('cnt-notes').value = '';
+  document.getElementById('count-session-modal').style.display = 'flex';
+}
+function closeCountSessionModal() { document.getElementById('count-session-modal').style.display = 'none'; }
+
+async function createCountSession() {
+  const body = {
+    title:       document.getElementById('cnt-title').value.trim(),
+    warehouse_id: parseInt(document.getElementById('cnt-warehouse').value)||null,
+    notes:       document.getElementById('cnt-notes').value.trim(),
+  };
+  if (!body.title) { showToast('請輸入盤點標題','error'); return; }
+  const { ok, data } = await api('/api/inventory/count-sessions', { method:'POST', body: JSON.stringify(body) });
+  if (ok) {
+    showToast('盤點作業已建立','success');
+    closeCountSessionModal();
+    loadCountSessions();
+    openCountDetail(data.id);
+  }
+}
+
+async function openCountDetail(sid) {
+  _currentCountSessionId = sid;
+  const { ok, data } = await api(`/api/inventory/count-sessions/${sid}`, {}, true);
+  if (!ok) return;
+  const wrap = document.getElementById('count-detail-wrap');
+  wrap.style.display = '';
+  document.getElementById('count-detail-title').textContent = `${data.title}（${data.status==='draft'?'草稿':data.status==='in_progress'?'進行中':'已完成'}）`;
+  document.getElementById('count-detail-start-btn').style.display = data.status==='draft' ? '' : 'none';
+  document.getElementById('count-detail-complete-btn').style.display = data.status==='in_progress' ? '' : 'none';
+  const items = data.items||[];
+  document.getElementById('count-items-wrap').innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>商品</th><th>SKU</th><th>系統庫存</th><th>實際盤點</th><th>差異</th><th>備註</th>
+  </tr></thead><tbody>${items.map(it => `<tr style="${it.variance!=null&&it.variance!==0?'background:#fff8f0':''}">
+    <td>${escHtml(it.product_name||'—')}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:11px">${escHtml(it.sku||'')}</td>
+    <td style="text-align:right">${it.system_qty}</td>
+    <td>${data.status!=='completed'?`<input id="cnt-qty-${it.id}" type="number" step="0.001" value="${it.counted_qty??''}"
+      onchange="updateCountItem(${it.id},'${sid}',this.value,document.getElementById('cnt-note-${it.id}')?.value||'')"
+      style="width:80px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px">`:
+      (it.counted_qty??'—')}</td>
+    <td style="text-align:right;font-weight:600;${it.variance!=null?it.variance>0?'color:var(--green)':it.variance<0?'color:var(--red)':'':''}">${it.variance!=null?(it.variance>0?'+':'')+it.variance:'—'}</td>
+    <td>${data.status!=='completed'?`<input id="cnt-note-${it.id}" type="text" value="${escHtml(it.notes||'')}"
+      onchange="updateCountItem(${it.id},'${sid}',document.getElementById('cnt-qty-${it.id}')?.value||'',this.value)"
+      style="width:100px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:12px">`:(escHtml(it.notes||''))}</td>
+  </tr>`).join('')}</tbody></table>`;
+  wrap.scrollIntoView({ behavior:'smooth' });
+}
+
+async function updateCountItem(itemId, sessionId, qty, notes) {
+  if (qty === '' || qty === null) return;
+  await api(`/api/inventory/count-sessions/${sessionId}/items/${itemId}`,
+    { method:'PUT', body: JSON.stringify({ counted_qty: parseFloat(qty), notes: notes||'' }) });
+}
+
+async function startCountSession() {
+  if (!_currentCountSessionId) return;
+  const { ok } = await api(`/api/inventory/count-sessions/${_currentCountSessionId}/start`, { method:'POST' });
+  if (ok) { showToast('盤點作業已開始','success'); openCountDetail(_currentCountSessionId); loadCountSessions(); }
+}
+
+async function completeCountSession() {
+  if (!_currentCountSessionId || !confirm('完成盤點並依差異調整庫存？此操作不可復原')) return;
+  const { ok, data } = await api(`/api/inventory/count-sessions/${_currentCountSessionId}/complete`, { method:'POST' });
+  if (ok) {
+    showToast(`盤點完成，已調整 ${data.adjusted_items} 項庫存`,'success');
+    openCountDetail(_currentCountSessionId); loadCountSessions(); loadInvStock();
+  }
+}
+
+async function deleteCountSession(sid) {
+  if (!confirm('刪除此盤點作業（草稿）？')) return;
+  const { ok } = await api(`/api/inventory/count-sessions/${sid}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); loadCountSessions(); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 進銷存：退貨管理
+// ══════════════════════════════════════════════════════════════
+
+let _returnItems = [];
+
+async function loadReturns() {
+  const rtype  = document.getElementById('rma-filter-type')?.value || '';
+  const status = document.getElementById('rma-filter-status')?.value || '';
+  const q      = document.getElementById('rma-filter-q')?.value.trim() || '';
+  let url = '/api/inventory/returns?';
+  if (rtype)  url += `return_type=${rtype}&`;
+  if (status) url += `status=${status}&`;
+  if (q)      url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  const wrap = document.getElementById('returns-list-wrap');
+  if (!ok || !data.length) { wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">尚無退貨記錄</div>`; return; }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>退貨單號</th><th>類型</th><th>客戶/供應商</th><th>原單號</th>
+    <th>數量</th><th>退貨原因</th><th>狀態</th><th>時間</th><th></th>
+  </tr></thead><tbody>${data.map(r => `<tr>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(r.return_no)}</td>
+    <td><span style="background:${r.return_type==='customer'?'var(--accent)':'var(--orange)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${r.return_type==='customer'?'客退':'供退'}</span></td>
+    <td>${escHtml(r.customer_name||r.vendor_name||'—')}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.reference_no||'—')}</td>
+    <td style="text-align:right">${r.total_qty}</td>
+    <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(r.reason||'—')}</td>
+    <td><span style="background:${r.status==='processed'?'var(--green)':'var(--orange)'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${r.status==='processed'?'已處理':'待處理'}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${(r.created_at||'').slice(0,16).replace('T',' ')}</td>
+    <td style="white-space:nowrap">
+      ${r.status==='pending'?`<button class="btn btn-primary btn-sm" onclick="processReturn(${r.id})">確認入庫</button>
+      <button class="btn btn-outline btn-sm" onclick="deleteReturn(${r.id})" style="color:var(--red)">刪除</button>`:''}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+function openReturnModal() {
+  _returnItems = [];
+  document.getElementById('rma-type').value    = 'customer';
+  document.getElementById('rma-party').value   = '';
+  document.getElementById('rma-ref').value     = '';
+  document.getElementById('rma-reason').value  = '';
+  document.getElementById('rma-notes').value   = '';
+  const wsel = document.getElementById('rma-warehouse');
+  wsel.innerHTML = '<option value="">-- 選擇倉庫 --</option>';
+  (_invWarehouses||[]).forEach(w => wsel.innerHTML += `<option value="${w.id}">${escHtml(w.name)}</option>`);
+  renderReturnItems();
+  document.getElementById('return-modal').style.display = 'flex';
+}
+function closeReturnModal() { document.getElementById('return-modal').style.display = 'none'; }
+
+function addReturnItem() {
+  _returnItems.push({ product_id: '', product_name: '', qty: 1 });
+  renderReturnItems();
+}
+
+function _rmaProductChange(sel) {
+  const i = parseInt(sel.closest('[data-rma-idx]').dataset.rmaIdx);
+  _returnItems[i].product_id   = sel.value;
+  _returnItems[i].product_name = sel.options[sel.selectedIndex].text;
+}
+function _rmaQtyChange(inp) {
+  const i = parseInt(inp.closest('[data-rma-idx]').dataset.rmaIdx);
+  _returnItems[i].qty = parseFloat(inp.value) || 1;
+}
+function _rmaRemoveItem(i) {
+  _returnItems.splice(i, 1);
+  renderReturnItems();
+}
+function renderReturnItems() {
+  const wrap = document.getElementById('rma-items-wrap');
+  if (!_returnItems.length) { wrap.innerHTML = '<div style="font-size:12px;color:var(--muted)">尚未加入品項</div>'; return; }
+  wrap.innerHTML = _returnItems.map((it, i) => `
+    <div data-rma-idx="${i}" style="display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-bottom:6px;align-items:center">
+      <select onchange="_rmaProductChange(this)" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+        <option value="">-- 選商品 --</option>
+        ${(_invProducts||[]).map(p=>`<option value="${p.id}" ${p.id==it.product_id?'selected':''}>${escHtml(p.name)}</option>`).join('')}
+      </select>
+      <input type="number" min="0.001" step="0.001" value="${it.qty}" onchange="_rmaQtyChange(this)"
+        style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+      <button onclick="_rmaRemoveItem(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px">✕</button>
+    </div>`).join('');
+}
+
+async function saveReturn() {
+  const wid = parseInt(document.getElementById('rma-warehouse').value)||null;
+  const rtype = document.getElementById('rma-type').value;
+  const party = document.getElementById('rma-party').value.trim();
+  const body = {
+    return_type:   rtype,
+    customer_name: rtype==='customer' ? party : '',
+    vendor_name:   rtype==='vendor'   ? party : '',
+    warehouse_id:  wid,
+    reference_no:  document.getElementById('rma-ref').value.trim(),
+    reason:        document.getElementById('rma-reason').value.trim(),
+    notes:         document.getElementById('rma-notes').value.trim(),
+    items:         _returnItems.filter(it => it.product_id && it.qty > 0),
+  };
+  if (!body.items.length) { showToast('請至少加入一個品項','error'); return; }
+  const { ok, data } = await api('/api/inventory/returns', { method:'POST', body: JSON.stringify(body) });
+  if (ok) { showToast(`退貨單 ${data.return_no} 已建立`,'success'); closeReturnModal(); loadReturns(); }
+}
+
+async function processReturn(id) {
+  if (!confirm('確認退貨入庫？庫存將回沖')) return;
+  const { ok } = await api(`/api/inventory/returns/${id}/process`, { method:'POST' });
+  if (ok) { showToast('退貨已入庫','success'); loadReturns(); loadInvStock(); }
+}
+
+async function deleteReturn(id) {
+  if (!confirm('刪除此退貨單？')) return;
+  const { ok } = await api(`/api/inventory/returns/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); loadReturns(); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 進銷存：批號管理
+// ══════════════════════════════════════════════════════════════
+
+async function loadBatches() {
+  const wid      = document.getElementById('batch-filter-wh')?.value || '';
+  const expiring = document.getElementById('batch-filter-expiring')?.value || '';
+  const q        = document.getElementById('batch-filter-q')?.value.trim() || '';
+  let url = '/api/inventory/batches?';
+  if (wid)      url += `warehouse_id=${wid}&`;
+  if (expiring) url += `expiring=${expiring}&`;
+  if (q)        url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  const wrap = document.getElementById('batches-list-wrap');
+  if (!ok || !data.length) { wrap.innerHTML = `<div style="padding:28px;text-align:center;color:var(--muted);font-size:13px">尚無批號資料</div>`; return; }
+  _batchesCache = data;
+  const EXP_COLOR = { expired:'var(--red)', critical:'var(--orange)', warning:'#e8820c', ok:'var(--green)' };
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>商品</th><th>SKU</th><th>批號</th><th>倉庫</th><th>數量</th>
+    <th>到期日</th><th>剩餘天數</th><th>收貨日</th><th>單位成本</th><th></th>
+  </tr></thead><tbody>${data.map(r => `<tr style="${r.expiry_status==='expired'||r.expiry_status==='critical'?'background:#fff8f0':''}">
+    <td style="font-weight:600">${escHtml(r.product_name||'—')}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:11px">${escHtml(r.sku||'')}</td>
+    <td style="font-family:'DM Mono',monospace;font-size:12px">${escHtml(r.batch_no)}</td>
+    <td style="font-size:12px">${escHtml(r.warehouse_name||'—')}</td>
+    <td style="text-align:right;font-weight:600">${r.qty}</td>
+    <td style="font-size:12px">${r.expiry_date||'—'}</td>
+    <td style="font-size:12px;font-weight:600;color:${r.expiry_status?EXP_COLOR[r.expiry_status]:'var(--muted)'}">${
+      r.days_to_expiry!=null?(r.days_to_expiry<0?`過期 ${-r.days_to_expiry}天`:r.days_to_expiry+'天'):'無期限'}</td>
+    <td style="font-size:12px;color:var(--muted)">${r.received_date||'—'}</td>
+    <td style="font-size:12px">NT$${r.cost_per_unit.toFixed(2)}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-outline btn-sm" onclick="openBatchModal(${r.id})">編輯</button>
+      <button class="btn btn-outline btn-sm" onclick="deleteBatch(${r.id})" style="color:var(--red)">刪除</button>
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function checkBatchExpiry() {
+  const { ok, data } = await api('/api/inventory/batches/expiry-alerts', {}, true);
+  if (!ok) return;
+  const badge = document.getElementById('badge-inv-batches');
+  if (badge) { badge.textContent = data.length; badge.style.display = data.length > 0 ? '' : 'none'; }
+}
+
+async function openBatchModal(id=null) {
+  document.getElementById('batch-id').value = id||'';
+  document.getElementById('batch-modal-title').textContent = id ? '編輯批號' : '新增批號';
+  const psel = document.getElementById('batch-product');
+  const wsel = document.getElementById('batch-warehouse');
+  psel.innerHTML = '<option value="">-- 選擇商品 --</option>';
+  wsel.innerHTML = '<option value="">-- 選擇倉庫 --</option>';
+  (_invProducts||[]).forEach(p => psel.innerHTML += `<option value="${p.id}">${escHtml(p.name)}</option>`);
+  (_invWarehouses||[]).forEach(w => wsel.innerHTML += `<option value="${w.id}">${escHtml(w.name)}</option>`);
+  if (!id) {
+    ['batch-no','batch-notes'].forEach(x => document.getElementById(x).value='');
+    document.getElementById('batch-qty').value = 0;
+    document.getElementById('batch-cost').value = 0;
+    document.getElementById('batch-expiry').value = '';
+    document.getElementById('batch-received').value = new Date().toISOString().slice(0,10);
+  } else {
+    // 先從快取找，找不到再 API 查詢
+    let r = _batchesCache.find(x => x.id == id);
+    if (!r) {
+      const { ok, data } = await api(`/api/inventory/batches?id=${id}`, {}, true);
+      r = ok && data.length ? data[0] : null;
+    }
+    if (r) {
+      document.getElementById('batch-product').value   = r.product_id || '';
+      document.getElementById('batch-warehouse').value = r.warehouse_id || '';
+      document.getElementById('batch-no').value        = r.batch_no || '';
+      document.getElementById('batch-qty').value       = r.qty || 0;
+      document.getElementById('batch-expiry').value    = r.expiry_date || '';
+      document.getElementById('batch-received').value  = r.received_date || '';
+      document.getElementById('batch-cost').value      = r.cost_per_unit || 0;
+      document.getElementById('batch-notes').value     = r.notes || '';
+    } else {
+      showToast('載入批號資料失敗','error');
+    }
+  }
+  document.getElementById('batch-modal').style.display = 'flex';
+}
+function closeBatchModal() { document.getElementById('batch-modal').style.display = 'none'; }
+
+async function saveBatch() {
+  const id = document.getElementById('batch-id').value;
+  const body = {
+    product_id:    parseInt(document.getElementById('batch-product').value)||null,
+    warehouse_id:  parseInt(document.getElementById('batch-warehouse').value)||null,
+    batch_no:      document.getElementById('batch-no').value.trim(),
+    qty:           parseFloat(document.getElementById('batch-qty').value)||0,
+    expiry_date:   document.getElementById('batch-expiry').value||null,
+    received_date: document.getElementById('batch-received').value||null,
+    cost_per_unit: parseFloat(document.getElementById('batch-cost').value)||0,
+    notes:         document.getElementById('batch-notes').value.trim(),
+  };
+  if (!body.product_id) { showToast('請選擇商品','error'); return; }
+  if (!body.batch_no)   { showToast('請輸入批號','error'); return; }
+  const url = id ? `/api/inventory/batches/${id}` : '/api/inventory/batches';
+  const { ok, data } = await api(url, { method: id ? 'PUT' : 'POST', body: JSON.stringify(body) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast('批號已儲存','success'); closeBatchModal(); loadBatches(); checkBatchExpiry();
+}
+
+async function deleteBatch(id) {
+  if (!confirm('刪除此批號？')) return;
+  const { ok } = await api(`/api/inventory/batches/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); loadBatches(); checkBatchExpiry(); }
+}
+
+// 盤點倉庫下拉初始化時也更新批號倉庫篩選
+const _origInitInventory = typeof initInventory !== 'undefined' ? initInventory : null;
+async function _patchInvBatchWarehouses() {
+  const sel = document.getElementById('batch-filter-wh');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">全部倉庫</option>';
+  (_invWarehouses||[]).forEach(w => sel.innerHTML += `<option value="${w.id}">${escHtml(w.name)}</option>`);
+}
+// 在 initInventory 完成後補充
+const _origLoadInvWarehouses2 = typeof loadInvWarehouses !== 'undefined' ? loadInvWarehouses : null;
 
 </script>
 </html>

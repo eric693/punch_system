@@ -14729,6 +14729,7 @@ def init_crm_db():
             synced_at           TIMESTAMPTZ DEFAULT NOW(),
             UNIQUE(platform, platform_order_id)
         )""",
+        "ALTER TABLE ecommerce_platforms ADD COLUMN IF NOT EXISTS webhook_token TEXT DEFAULT ''",
     ]
     for sql in migrations:
         try:
@@ -15369,6 +15370,7 @@ def api_ecom_platforms_list():
         d['api_secret'] = '****' if d.get('api_secret') else ''
         if d.get('last_sync_at'): d['last_sync_at'] = d['last_sync_at'].isoformat()
         if d.get('created_at'):   d['created_at']   = d['created_at'].isoformat()
+        if not d.get('webhook_token'):   d['webhook_token'] = ''
         result.append(d)
     return jsonify(result)
 
@@ -15443,6 +15445,144 @@ def api_ecom_orders_list():
     return jsonify(result)
 
 
+def _ecom_upsert_orders(conn, platform_name, shop_name, orders_data):
+    """批次 upsert 訂單，回傳新增筆數"""
+    inserted = 0
+    for o in orders_data:
+        try:
+            existing = conn.execute(
+                "SELECT id FROM ecommerce_orders WHERE platform=%s AND platform_order_id=%s",
+                (platform_name, o['platform_order_id'])
+            ).fetchone()
+            if existing:
+                conn.execute("""
+                    UPDATE ecommerce_orders
+                    SET buyer_name=%s, buyer_phone=%s, buyer_address=%s, items=%s,
+                        subtotal=%s, shipping_fee=%s, discount=%s, total=%s,
+                        status=%s, synced_at=NOW()
+                    WHERE id=%s
+                """, (
+                    o['buyer_name'], o['buyer_phone'], o['buyer_address'],
+                    _json.dumps(o['items'], ensure_ascii=False),
+                    o['subtotal'], o['shipping_fee'], o['discount'], o['total'],
+                    o['status'], existing['id'],
+                ))
+            else:
+                conn.execute("""
+                    INSERT INTO ecommerce_orders
+                      (platform, platform_order_id, shop_name, buyer_name, buyer_phone,
+                       buyer_address, items, subtotal, shipping_fee, discount, total,
+                       status, platform_created_at)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                """, (
+                    platform_name, o['platform_order_id'], shop_name,
+                    o['buyer_name'], o['buyer_phone'], o['buyer_address'],
+                    _json.dumps(o['items'], ensure_ascii=False),
+                    o['subtotal'], o['shipping_fee'], o['discount'], o['total'],
+                    o['status'], o.get('platform_created_at'),
+                ))
+                inserted += 1
+        except Exception:
+            pass
+    return inserted
+
+
+def _sync_shopify(platform):
+    """向 Shopify REST API 拉訂單，回傳 (orders_list, error_msg)"""
+    shop   = platform['shop_name'].rstrip('/')
+    token  = platform['api_key']
+    if not shop or not token:
+        return [], 'shop_name 或 api_key 未設定'
+    if not shop.startswith('http'):
+        shop = 'https://' + shop
+    url = f"{shop}/admin/api/2024-01/orders.json?status=any&limit=50"
+    req = urllib.request.Request(url, headers={
+        'X-Shopify-Access-Token': token,
+        'Content-Type': 'application/json',
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = _json.loads(resp.read())
+    except Exception as e:
+        return [], f'Shopify API 錯誤: {e}'
+
+    orders = []
+    for o in data.get('orders', []):
+        cust    = o.get('customer') or {}
+        billing = o.get('billing_address') or o.get('shipping_address') or {}
+        ship    = (o.get('shipping_lines') or [{}])[0]
+        addr_parts = [billing.get('address1',''), billing.get('city',''),
+                      billing.get('province',''), billing.get('country','')]
+        items = [
+            {'name': li.get('name',''), 'qty': li.get('quantity',1),
+             'price': float(li.get('price',0))}
+            for li in o.get('line_items', [])
+        ]
+        orders.append({
+            'platform_order_id': str(o['id']),
+            'buyer_name':  f"{cust.get('first_name','')} {cust.get('last_name','')}".strip()
+                           or billing.get('name',''),
+            'buyer_phone': o.get('phone') or cust.get('phone') or billing.get('phone',''),
+            'buyer_address': ', '.join(p for p in addr_parts if p),
+            'items':        items,
+            'subtotal':     float(o.get('subtotal_price') or 0),
+            'shipping_fee': float(ship.get('price') or 0),
+            'discount':     float(o.get('total_discounts') or 0),
+            'total':        float(o.get('total_price') or 0),
+            'status':       o.get('financial_status','pending'),
+            'platform_created_at': o.get('created_at'),
+        })
+    return orders, None
+
+
+def _sync_woocommerce(platform):
+    """向 WooCommerce REST API 拉訂單，回傳 (orders_list, error_msg)"""
+    import base64 as _b64wc
+    shop        = platform['shop_name'].rstrip('/')
+    consumer_key    = platform['api_key']
+    consumer_secret = platform['api_secret']
+    if not shop or not consumer_key:
+        return [], 'shop_name 或 api_key 未設定'
+    if not shop.startswith('http'):
+        shop = 'https://' + shop
+    url  = f"{shop}/wp-json/wc/v3/orders?per_page=50&orderby=date&order=desc"
+    cred = _b64wc.b64encode(f"{consumer_key}:{consumer_secret}".encode()).decode()
+    req  = urllib.request.Request(url, headers={
+        'Authorization': f'Basic {cred}',
+        'Content-Type':  'application/json',
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = _json.loads(resp.read())
+    except Exception as e:
+        return [], f'WooCommerce API 錯誤: {e}'
+
+    orders = []
+    for o in (data if isinstance(data, list) else []):
+        billing = o.get('billing') or {}
+        addr_parts = [billing.get('address_1',''), billing.get('city',''),
+                      billing.get('state',''), billing.get('country','')]
+        items = [
+            {'name': li.get('name',''), 'qty': li.get('quantity',1),
+             'price': float(li.get('price',0))}
+            for li in o.get('line_items', [])
+        ]
+        orders.append({
+            'platform_order_id': str(o['id']),
+            'buyer_name':  f"{billing.get('first_name','')} {billing.get('last_name','')}".strip(),
+            'buyer_phone': billing.get('phone',''),
+            'buyer_address': ', '.join(p for p in addr_parts if p),
+            'items':        items,
+            'subtotal':     float(o.get('subtotal') or sum(float(li.get('subtotal',0)) for li in o.get('line_items',[]))),
+            'shipping_fee': float(o.get('shipping_total') or 0),
+            'discount':     float(o.get('discount_total') or 0),
+            'total':        float(o.get('total') or 0),
+            'status':       o.get('status','pending'),
+            'platform_created_at': o.get('date_created'),
+        })
+    return orders, None
+
+
 @app.route('/api/ecommerce/orders/sync', methods=['POST'])
 @require_module('ecommerce')
 def api_ecom_orders_sync():
@@ -15450,10 +15590,39 @@ def api_ecom_orders_sync():
     platform_id = b.get('platform_id')
     with get_db() as conn:
         if platform_id:
-            conn.execute("UPDATE ecommerce_platforms SET last_sync_at=NOW() WHERE id=%s", (platform_id,))
+            platforms = conn.execute(
+                "SELECT * FROM ecommerce_platforms WHERE id=%s AND enabled=TRUE", (platform_id,)
+            ).fetchall()
         else:
-            conn.execute("UPDATE ecommerce_platforms SET last_sync_at=NOW() WHERE enabled=TRUE")
-    return jsonify({'ok': True, 'synced': 0, 'message': '同步完成（需設定 API 金鑰以取得真實資料）'})
+            platforms = conn.execute(
+                "SELECT * FROM ecommerce_platforms WHERE enabled=TRUE"
+            ).fetchall()
+
+    total_synced = 0
+    errors = []
+    for p in platforms:
+        ptype = (p['platform'] or '').lower()
+        if ptype == 'shopify':
+            orders, err = _sync_shopify(dict(p))
+        elif ptype in ('woocommerce', 'woo'):
+            orders, err = _sync_woocommerce(dict(p))
+        else:
+            orders, err = [], None  # custom / webhook-only 平台不主動拉
+
+        if err:
+            errors.append(f"{p['shop_name']}: {err}")
+            continue
+        if orders:
+            with get_db() as conn:
+                n = _ecom_upsert_orders(conn, p['platform'], p['shop_name'], orders)
+                total_synced += n
+        with get_db() as conn:
+            conn.execute("UPDATE ecommerce_platforms SET last_sync_at=NOW() WHERE id=%s", (p['id'],))
+
+    msg = f"同步完成，新增 {total_synced} 筆訂單"
+    if errors:
+        msg += '；錯誤: ' + '、'.join(errors)
+    return jsonify({'ok': True, 'synced': total_synced, 'message': msg})
 
 
 @app.route('/api/ecommerce/orders/<int:oid>/status', methods=['PUT'])
@@ -15512,6 +15681,107 @@ def api_ecom_stats():
         """).fetchone()['n']
     return jsonify({'total_orders': total_orders, 'platforms_count': platforms_cnt,
                     'synced_today': synced_today, 'pending_import': pending_import})
+
+
+# ── 電商 Webhook 接收（官網 / 第三方平台推播訂單）───────────────
+
+@app.route('/api/ecommerce/webhook/<webhook_token>', methods=['POST'])
+def api_ecom_webhook_receive(webhook_token):
+    """無需登入；官網以 POST JSON 推播新訂單，用 webhook_token 識別平台"""
+    with get_db() as conn:
+        platform = conn.execute(
+            "SELECT * FROM ecommerce_platforms WHERE webhook_token=%s AND enabled=TRUE",
+            (webhook_token,)
+        ).fetchone()
+    if not platform:
+        return jsonify({'error': 'invalid token'}), 401
+
+    # HMAC-SHA256 驗簽（若平台設了 api_secret）
+    api_secret = platform['api_secret']
+    if api_secret:
+        import hmac as _hmac, hashlib as _hashlib
+        sig_header = (
+            request.headers.get('X-Webhook-Signature') or
+            request.headers.get('X-Hub-Signature-256') or ''
+        )
+        if sig_header.startswith('sha256='):
+            expected = 'sha256=' + _hmac.new(
+                api_secret.encode(), request.data, _hashlib.sha256
+            ).hexdigest()
+            if not _hmac.compare_digest(sig_header, expected):
+                return jsonify({'error': 'signature mismatch'}), 401
+
+    data = request.get_json(force=True) or {}
+    order_id = str(data.get('order_id') or data.get('id') or '').strip()
+    if not order_id:
+        return jsonify({'error': 'missing order_id / id'}), 400
+
+    raw_items = data.get('items') or data.get('line_items') or []
+    items = []
+    for it in raw_items:
+        if isinstance(it, dict):
+            items.append({
+                'name':  str(it.get('name') or it.get('product_name', '')),
+                'qty':   int(it.get('qty') or it.get('quantity') or 1),
+                'price': float(it.get('price') or it.get('unit_price') or 0),
+            })
+
+    buyer_name    = str(data.get('buyer_name') or data.get('customer_name') or data.get('name', ''))
+    buyer_phone   = str(data.get('buyer_phone') or data.get('phone') or data.get('mobile', ''))
+    buyer_address = str(data.get('buyer_address') or data.get('shipping_address') or data.get('address', ''))
+    subtotal      = float(data.get('subtotal') or 0)
+    shipping_fee  = float(data.get('shipping_fee') or data.get('shipping') or 0)
+    discount      = float(data.get('discount') or 0)
+    total         = float(data.get('total') or data.get('total_price') or data.get('amount') or 0)
+    status        = str(data.get('status') or 'pending')
+    created_at    = data.get('created_at') or data.get('order_time')
+
+    with get_db() as conn:
+        existing = conn.execute(
+            "SELECT id FROM ecommerce_orders WHERE platform=%s AND platform_order_id=%s",
+            (platform['platform'], order_id)
+        ).fetchone()
+        if existing:
+            conn.execute("""
+                UPDATE ecommerce_orders
+                SET buyer_name=%s, buyer_phone=%s, buyer_address=%s, items=%s,
+                    subtotal=%s, shipping_fee=%s, discount=%s, total=%s,
+                    status=%s, synced_at=NOW()
+                WHERE id=%s
+            """, (buyer_name, buyer_phone, buyer_address,
+                  _json.dumps(items, ensure_ascii=False),
+                  subtotal, shipping_fee, discount, total, status, existing['id']))
+            return jsonify({'ok': True, 'action': 'updated', 'order_id': order_id})
+        else:
+            conn.execute("""
+                INSERT INTO ecommerce_orders
+                  (platform, platform_order_id, shop_name, buyer_name, buyer_phone,
+                   buyer_address, items, subtotal, shipping_fee, discount, total,
+                   status, platform_created_at)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (
+                platform['platform'], order_id, platform['shop_name'],
+                buyer_name, buyer_phone, buyer_address,
+                _json.dumps(items, ensure_ascii=False),
+                subtotal, shipping_fee, discount, total, status, created_at,
+            ))
+            return jsonify({'ok': True, 'action': 'created', 'order_id': order_id}), 201
+
+
+@app.route('/api/ecommerce/platforms/<int:pid>/webhook-token', methods=['POST'])
+@require_module('ecommerce')
+def api_ecom_gen_webhook_token(pid):
+    """產生（或重新產生）此平台的 Webhook Token"""
+    token = secrets.token_urlsafe(24)
+    with get_db() as conn:
+        updated = conn.execute(
+            "UPDATE ecommerce_platforms SET webhook_token=%s WHERE id=%s RETURNING id",
+            (token, pid)
+        ).fetchone()
+    if not updated:
+        return jsonify({'error': '平台不存在'}), 404
+    return jsonify({'webhook_token': token,
+                    'webhook_url': f"/api/ecommerce/webhook/{token}"})
 
 
 # ══════════════════════════════════════════════════════════════
@@ -19362,4 +19632,1208 @@ def api_approval_stats():
         m = r['module']
         if m not in result: result[m] = {}
         result[m][r['status']] = r['cnt']
+    return jsonify(result)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CRM 延伸模組：聯絡人 / 標籤 / 合約 / 信用額度
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def init_crm_ext_db():
+    migrations = [
+        # 聯絡人（每位客戶可有多名聯絡人）
+        """CREATE TABLE IF NOT EXISTS crm_contacts (
+            id          SERIAL PRIMARY KEY,
+            customer_id INT NOT NULL REFERENCES crm_customers(id) ON DELETE CASCADE,
+            name        TEXT NOT NULL,
+            title       TEXT DEFAULT '',
+            email       TEXT DEFAULT '',
+            phone       TEXT DEFAULT '',
+            mobile      TEXT DEFAULT '',
+            is_primary  BOOLEAN DEFAULT FALSE,
+            notes       TEXT DEFAULT '',
+            created_at  TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_crm_contacts_cust ON crm_contacts(customer_id)",
+        # 標籤主表
+        """CREATE TABLE IF NOT EXISTS crm_tags (
+            id         SERIAL PRIMARY KEY,
+            name       TEXT NOT NULL UNIQUE,
+            color      TEXT DEFAULT '#4a7bda',
+            created_by TEXT DEFAULT '',
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        # 客戶 ↔ 標籤多對多
+        """CREATE TABLE IF NOT EXISTS crm_customer_tags (
+            customer_id INT NOT NULL REFERENCES crm_customers(id) ON DELETE CASCADE,
+            tag_id      INT NOT NULL REFERENCES crm_tags(id) ON DELETE CASCADE,
+            PRIMARY KEY (customer_id, tag_id)
+        )""",
+        # 合約
+        """CREATE TABLE IF NOT EXISTS crm_contracts (
+            id            SERIAL PRIMARY KEY,
+            contract_no   TEXT NOT NULL UNIQUE,
+            customer_id   INT REFERENCES crm_customers(id) ON DELETE SET NULL,
+            customer_name TEXT DEFAULT '',
+            title         TEXT NOT NULL,
+            type          TEXT DEFAULT 'sales',
+            value         NUMERIC(14,2) DEFAULT 0,
+            start_date    DATE,
+            end_date      DATE,
+            status        TEXT DEFAULT 'draft',
+            auto_renew    BOOLEAN DEFAULT FALSE,
+            file_url      TEXT DEFAULT '',
+            notes         TEXT DEFAULT '',
+            created_by    TEXT DEFAULT '',
+            created_at    TIMESTAMPTZ DEFAULT NOW(),
+            updated_at    TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_crm_contracts_cust   ON crm_contracts(customer_id)",
+        "CREATE INDEX IF NOT EXISTS idx_crm_contracts_end    ON crm_contracts(end_date)",
+        "CREATE INDEX IF NOT EXISTS idx_crm_contracts_status ON crm_contracts(status)",
+        # 擴充 crm_customers
+        "ALTER TABLE crm_customers ADD COLUMN IF NOT EXISTS credit_limit  NUMERIC(14,2) DEFAULT 0",
+        "ALTER TABLE crm_customers ADD COLUMN IF NOT EXISTS credit_used   NUMERIC(14,2) DEFAULT 0",
+        "ALTER TABLE crm_customers ADD COLUMN IF NOT EXISTS tier          TEXT DEFAULT 'standard'",
+        "ALTER TABLE crm_customers ADD COLUMN IF NOT EXISTS website       TEXT DEFAULT ''",
+        "ALTER TABLE crm_customers ADD COLUMN IF NOT EXISTS tax_id        TEXT DEFAULT ''",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[crm_ext_init] {str(e)[:120]}")
+
+init_crm_ext_db()
+
+
+def _next_contract_no():
+    with get_db() as conn:
+        n = conn.execute("SELECT COUNT(*) AS c FROM crm_contracts").fetchone()['c']
+    return f"CNT-{_dt.now(TW_TZ).strftime('%Y%m')}-{n+1:04d}"
+
+
+# ── 聯絡人 CRUD ─────────────────────────────────────────────────────────────
+
+@app.route('/api/crm/contacts', methods=['GET'])
+@require_module('crm')
+def api_crm_contacts_list():
+    customer_id = request.args.get('customer_id', '').strip()
+    with get_db() as conn:
+        if customer_id:
+            rows = conn.execute(
+                "SELECT * FROM crm_contacts WHERE customer_id=%s ORDER BY is_primary DESC, id",
+                (customer_id,)
+            ).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM crm_contacts ORDER BY id DESC LIMIT 200").fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/crm/contacts', methods=['POST'])
+@require_module('crm')
+def api_crm_contacts_create():
+    b = request.get_json(force=True) or {}
+    cid = b.get('customer_id')
+    if not cid:
+        return jsonify({'error': '缺少 customer_id'}), 400
+    with get_db() as conn:
+        if b.get('is_primary'):
+            conn.execute("UPDATE crm_contacts SET is_primary=FALSE WHERE customer_id=%s", (cid,))
+        row = conn.execute("""
+            INSERT INTO crm_contacts (customer_id, name, title, email, phone, mobile, is_primary, notes)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
+        """, (cid, b.get('name',''), b.get('title',''), b.get('email',''),
+              b.get('phone',''), b.get('mobile',''),
+              bool(b.get('is_primary', False)), b.get('notes',''))).fetchone()
+    return jsonify({'id': row['id']}), 201
+
+
+@app.route('/api/crm/contacts/<int:cid>', methods=['PUT'])
+@require_module('crm')
+def api_crm_contacts_update(cid):
+    b = request.get_json(force=True) or {}
+    with get_db() as conn:
+        contact = conn.execute("SELECT * FROM crm_contacts WHERE id=%s", (cid,)).fetchone()
+        if not contact:
+            return jsonify({'error': '不存在'}), 404
+        if b.get('is_primary'):
+            conn.execute("UPDATE crm_contacts SET is_primary=FALSE WHERE customer_id=%s AND id<>%s",
+                         (contact['customer_id'], cid))
+        conn.execute("""
+            UPDATE crm_contacts SET name=%s, title=%s, email=%s, phone=%s,
+                mobile=%s, is_primary=%s, notes=%s WHERE id=%s
+        """, (b.get('name', contact['name']), b.get('title', contact['title']),
+              b.get('email', contact['email']), b.get('phone', contact['phone']),
+              b.get('mobile', contact['mobile']), bool(b.get('is_primary', contact['is_primary'])),
+              b.get('notes', contact['notes']), cid))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/crm/contacts/<int:cid>', methods=['DELETE'])
+@require_module('crm')
+def api_crm_contacts_delete(cid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM crm_contacts WHERE id=%s", (cid,))
+    return jsonify({'ok': True})
+
+
+# ── 標籤 CRUD ───────────────────────────────────────────────────────────────
+
+@app.route('/api/crm/tags', methods=['GET'])
+@require_module('crm')
+def api_crm_tags_list():
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT t.*, COUNT(ct.customer_id) AS usage_count
+            FROM crm_tags t
+            LEFT JOIN crm_customer_tags ct ON ct.tag_id=t.id
+            GROUP BY t.id ORDER BY t.name
+        """).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/crm/tags', methods=['POST'])
+@require_module('crm')
+def api_crm_tags_create():
+    b = request.get_json(force=True) or {}
+    name = b.get('name','').strip()
+    if not name:
+        return jsonify({'error': '標籤名稱不可為空'}), 400
+    with get_db() as conn:
+        existing = conn.execute("SELECT id FROM crm_tags WHERE name=%s", (name,)).fetchone()
+        if existing:
+            return jsonify({'error': '標籤已存在'}), 409
+        row = conn.execute("""
+            INSERT INTO crm_tags (name, color, created_by) VALUES (%s,%s,%s) RETURNING id
+        """, (name, b.get('color','#4a7bda'), session.get('username',''))).fetchone()
+    return jsonify({'id': row['id']}), 201
+
+
+@app.route('/api/crm/tags/<int:tid>', methods=['PUT'])
+@require_module('crm')
+def api_crm_tags_update(tid):
+    b = request.get_json(force=True) or {}
+    with get_db() as conn:
+        conn.execute("UPDATE crm_tags SET name=%s, color=%s WHERE id=%s",
+                     (b.get('name',''), b.get('color','#4a7bda'), tid))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/crm/tags/<int:tid>', methods=['DELETE'])
+@require_module('crm')
+def api_crm_tags_delete(tid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM crm_tags WHERE id=%s", (tid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/crm/customers/<int:cid>/tags', methods=['GET'])
+@require_module('crm')
+def api_crm_customer_tags_get(cid):
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT t.id, t.name, t.color FROM crm_tags t
+            JOIN crm_customer_tags ct ON ct.tag_id=t.id
+            WHERE ct.customer_id=%s ORDER BY t.name
+        """, (cid,)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/crm/customers/<int:cid>/tags', methods=['PUT'])
+@require_module('crm')
+def api_crm_customer_tags_set(cid):
+    b = request.get_json(force=True) or {}
+    tag_ids = b.get('tag_ids', [])
+    with get_db() as conn:
+        conn.execute("DELETE FROM crm_customer_tags WHERE customer_id=%s", (cid,))
+        for tid in tag_ids:
+            try:
+                conn.execute("INSERT INTO crm_customer_tags (customer_id, tag_id) VALUES (%s,%s)", (cid, tid))
+            except Exception:
+                pass
+    return jsonify({'ok': True})
+
+
+# ── 合約 CRUD ───────────────────────────────────────────────────────────────
+
+@app.route('/api/crm/contracts', methods=['GET'])
+@require_module('crm')
+def api_crm_contracts_list():
+    customer_id = request.args.get('customer_id','').strip()
+    status      = request.args.get('status','').strip()
+    expiring    = request.args.get('expiring','').strip()  # days
+    q           = request.args.get('q','').strip()
+    cid         = request.args.get('id','').strip()        # 精確 ID 查詢
+    with get_db() as conn:
+        sql    = "SELECT c.*, cu.company_name AS cust_company FROM crm_contracts c LEFT JOIN crm_customers cu ON cu.id=c.customer_id WHERE 1=1"
+        params = []
+        if cid:
+            try:
+                sql += " AND c.id=%s"; params.append(int(cid))
+            except ValueError:
+                pass
+        if customer_id:
+            sql += " AND c.customer_id=%s"; params.append(customer_id)
+        if status:
+            sql += " AND c.status=%s"; params.append(status)
+        if expiring:
+            sql += " AND c.end_date BETWEEN CURRENT_DATE AND (CURRENT_DATE + (%s * interval '1 day'))"
+            params.append(int(expiring))
+        if q:
+            sql += " AND (c.contract_no ILIKE %s OR c.title ILIKE %s OR c.customer_name ILIKE %s)"
+            params += [f'%{q}%', f'%{q}%', f'%{q}%']
+        sql += " ORDER BY c.created_at DESC LIMIT 200"
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        for f in ('start_date','end_date'):
+            if d.get(f): d[f] = str(d[f])
+        for f in ('created_at','updated_at'):
+            if d.get(f): d[f] = d[f].isoformat()
+        d['value'] = float(d.get('value') or 0)
+        # 計算剩餘天數
+        if d.get('end_date'):
+            from datetime import date as _date_cls
+            diff = (_date_cls.fromisoformat(d['end_date']) - _date_cls.today()).days
+            d['days_remaining'] = diff
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/crm/contracts', methods=['POST'])
+@require_module('crm')
+def api_crm_contracts_create():
+    b   = request.get_json(force=True) or {}
+    cno = _next_contract_no()
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO crm_contracts
+              (contract_no, customer_id, customer_name, title, type, value,
+               start_date, end_date, status, auto_renew, file_url, notes, created_by)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
+        """, (cno,
+              b.get('customer_id') or None,
+              b.get('customer_name',''),
+              b.get('title',''),
+              b.get('type','sales'),
+              float(b.get('value') or 0),
+              b.get('start_date') or None,
+              b.get('end_date') or None,
+              b.get('status','draft'),
+              bool(b.get('auto_renew', False)),
+              b.get('file_url',''),
+              b.get('notes',''),
+              session.get('username',''))).fetchone()
+    return jsonify({'id': row['id'], 'contract_no': cno}), 201
+
+
+@app.route('/api/crm/contracts/<int:cid>', methods=['PUT'])
+@require_module('crm')
+def api_crm_contracts_update(cid):
+    b = request.get_json(force=True) or {}
+    with get_db() as conn:
+        conn.execute("""
+            UPDATE crm_contracts SET
+              customer_id=%s, customer_name=%s, title=%s, type=%s, value=%s,
+              start_date=%s, end_date=%s, status=%s, auto_renew=%s,
+              file_url=%s, notes=%s, updated_at=NOW()
+            WHERE id=%s
+        """, (b.get('customer_id') or None, b.get('customer_name',''),
+              b.get('title',''), b.get('type','sales'),
+              float(b.get('value') or 0),
+              b.get('start_date') or None, b.get('end_date') or None,
+              b.get('status','draft'), bool(b.get('auto_renew', False)),
+              b.get('file_url',''), b.get('notes',''), cid))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/crm/contracts/<int:cid>', methods=['DELETE'])
+@require_module('crm')
+def api_crm_contracts_delete(cid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM crm_contracts WHERE id=%s", (cid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/crm/contracts/stats', methods=['GET'])
+@require_module('crm')
+def api_crm_contracts_stats():
+    with get_db() as conn:
+        total   = conn.execute("SELECT COUNT(*) AS n FROM crm_contracts").fetchone()['n']
+        active  = conn.execute("SELECT COUNT(*) AS n FROM crm_contracts WHERE status='active'").fetchone()['n']
+        expiring30 = conn.execute("""
+            SELECT COUNT(*) AS n FROM crm_contracts
+            WHERE status='active' AND end_date BETWEEN CURRENT_DATE AND CURRENT_DATE+30
+        """).fetchone()['n']
+        total_value = conn.execute("""
+            SELECT COALESCE(SUM(value),0) AS v FROM crm_contracts WHERE status='active'
+        """).fetchone()['v']
+    return jsonify({'total': total, 'active': active,
+                    'expiring_30d': expiring30, 'active_value': float(total_value)})
+
+
+# ── 客戶信用額度 ─────────────────────────────────────────────────────────────
+
+@app.route('/api/crm/customers/<int:cid>/credit', methods=['GET'])
+@require_module('crm')
+def api_crm_customer_credit(cid):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT credit_limit, credit_used FROM crm_customers WHERE id=%s", (cid,)
+        ).fetchone()
+        if not row:
+            return jsonify({'error': '客戶不存在'}), 404
+        # 重新計算 credit_used（未完成訂單總金額）
+        used = conn.execute("""
+            SELECT COALESCE(SUM(total - paid_amount), 0) AS v
+            FROM crm_orders
+            WHERE customer_id=%s AND status NOT IN ('completed','cancelled')
+        """, (cid,)).fetchone()['v']
+        conn.execute("UPDATE crm_customers SET credit_used=%s WHERE id=%s", (used, cid))
+    return jsonify({
+        'credit_limit': float(row['credit_limit'] or 0),
+        'credit_used':  float(used),
+        'credit_avail': float(row['credit_limit'] or 0) - float(used),
+    })
+
+
+@app.route('/api/crm/customers/<int:cid>/credit', methods=['PUT'])
+@require_module('crm')
+def api_crm_customer_credit_update(cid):
+    b = request.get_json(force=True) or {}
+    with get_db() as conn:
+        conn.execute("UPDATE crm_customers SET credit_limit=%s WHERE id=%s",
+                     (float(b.get('credit_limit', 0)), cid))
+    return jsonify({'ok': True})
+
+
+# ── 360° 客戶視圖 ────────────────────────────────────────────────────────────
+
+@app.route('/api/crm/customers/<int:cid>/360', methods=['GET'])
+@require_module('crm')
+def api_crm_customer_360(cid):
+    with get_db() as conn:
+        cust = conn.execute("SELECT * FROM crm_customers WHERE id=%s", (cid,)).fetchone()
+        if not cust:
+            return jsonify({'error': '客戶不存在'}), 404
+        contacts = conn.execute(
+            "SELECT * FROM crm_contacts WHERE customer_id=%s ORDER BY is_primary DESC, id",
+            (cid,)
+        ).fetchall()
+        tags = conn.execute("""
+            SELECT t.id, t.name, t.color FROM crm_tags t
+            JOIN crm_customer_tags ct ON ct.tag_id=t.id
+            WHERE ct.customer_id=%s ORDER BY t.name
+        """, (cid,)).fetchall()
+        interactions = conn.execute("""
+            SELECT i.*, s.name AS staff_name FROM crm_interactions i
+            LEFT JOIN punch_staff s ON s.id=i.staff_id
+            WHERE i.customer_id=%s ORDER BY i.created_at DESC LIMIT 20
+        """, (cid,)).fetchall()
+        orders = conn.execute("""
+            SELECT id, order_no, title, status, total, paid_amount, created_at
+            FROM crm_orders WHERE customer_id=%s ORDER BY created_at DESC LIMIT 20
+        """, (cid,)).fetchall()
+        quotes = conn.execute("""
+            SELECT id, quote_no, title, status, total, created_at
+            FROM crm_quotes WHERE customer_id=%s ORDER BY created_at DESC LIMIT 10
+        """, (cid,)).fetchall()
+        contracts = conn.execute("""
+            SELECT id, contract_no, title, status, value, start_date, end_date
+            FROM crm_contracts WHERE customer_id=%s ORDER BY created_at DESC LIMIT 10
+        """, (cid,)).fetchall()
+        opportunities = conn.execute("""
+            SELECT id, title, stage, value, expected_close_date
+            FROM crm_opportunities WHERE customer_id=%s ORDER BY created_at DESC LIMIT 10
+        """, (cid,)).fetchall()
+        lifetime_value = conn.execute("""
+            SELECT COALESCE(SUM(total),0) AS v FROM crm_orders
+            WHERE customer_id=%s AND status='completed'
+        """, (cid,)).fetchone()['v']
+
+    def iso(d): return d.isoformat() if hasattr(d,'isoformat') else str(d) if d else None
+    def row2d(r, date_fields=(), ts_fields=()):
+        d = dict(r)
+        for f in date_fields:
+            if d.get(f): d[f] = str(d[f])
+        for f in ts_fields:
+            if d.get(f): d[f] = iso(d[f])
+        return d
+
+    c = dict(cust)
+    for f in ('last_contact_at',): 
+        if c.get(f): c[f] = str(c[f])
+    for f in ('created_at','updated_at'):
+        if c.get(f): c[f] = iso(c[f])
+    c['credit_limit'] = float(c.get('credit_limit') or 0)
+    c['credit_used']  = float(c.get('credit_used') or 0)
+    c['lifetime_value'] = float(lifetime_value)
+
+    return jsonify({
+        'customer':      c,
+        'contacts':      [row2d(r, ts_fields=('created_at',)) for r in contacts],
+        'tags':          [dict(r) for r in tags],
+        'interactions':  [row2d(r, date_fields=('next_action_date',), ts_fields=('created_at',)) for r in interactions],
+        'orders':        [row2d(r, ts_fields=('created_at',)) for r in orders],
+        'quotes':        [row2d(r, ts_fields=('created_at',)) for r in quotes],
+        'contracts':     [row2d(r, date_fields=('start_date','end_date')) for r in contracts],
+        'opportunities': [row2d(r, date_fields=('expected_close_date',)) for r in opportunities],
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 固定資產管理
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def init_fixed_assets_db():
+    migrations = [
+        """CREATE TABLE IF NOT EXISTS fixed_assets (
+            id                  SERIAL PRIMARY KEY,
+            name                TEXT NOT NULL,
+            code                TEXT UNIQUE,
+            category            TEXT DEFAULT '',
+            purchase_date       DATE,
+            purchase_cost       NUMERIC(14,2) DEFAULT 0,
+            salvage_value       NUMERIC(14,2) DEFAULT 0,
+            useful_life_months  INT DEFAULT 60,
+            depreciation_method TEXT DEFAULT 'straight_line',
+            current_book_value  NUMERIC(14,2) DEFAULT 0,
+            accumulated_depreciation NUMERIC(14,2) DEFAULT 0,
+            status              TEXT DEFAULT 'active',
+            location            TEXT DEFAULT '',
+            assigned_to         INT REFERENCES punch_staff(id) ON DELETE SET NULL,
+            vendor              TEXT DEFAULT '',
+            warranty_expiry     DATE,
+            notes               TEXT DEFAULT '',
+            created_by          TEXT DEFAULT '',
+            created_at          TIMESTAMPTZ DEFAULT NOW(),
+            updated_at          TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS asset_depreciation (
+            id                   SERIAL PRIMARY KEY,
+            asset_id             INT NOT NULL REFERENCES fixed_assets(id) ON DELETE CASCADE,
+            period               TEXT NOT NULL,
+            depreciation_amount  NUMERIC(14,2) DEFAULT 0,
+            accumulated          NUMERIC(14,2) DEFAULT 0,
+            book_value           NUMERIC(14,2) DEFAULT 0,
+            notes                TEXT DEFAULT '',
+            created_at           TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_assets_status   ON fixed_assets(status)",
+        "CREATE INDEX IF NOT EXISTS idx_assets_category ON fixed_assets(category)",
+        "CREATE INDEX IF NOT EXISTS idx_asset_depr_asset ON asset_depreciation(asset_id, period)",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[fixed_assets_init] {str(e)[:120]}")
+
+init_fixed_assets_db()
+
+
+def _asset_next_code():
+    with get_db() as conn:
+        n = conn.execute("SELECT COUNT(*) AS c FROM fixed_assets").fetchone()['c']
+    return f"FA-{_dt.now(TW_TZ).strftime('%Y')}-{n+1:04d}"
+
+
+def _calc_monthly_depreciation(cost, salvage, life_months, method):
+    depreciable = max(float(cost) - float(salvage), 0)
+    if method == 'straight_line':
+        return depreciable / max(life_months, 1)
+    if method == 'double_declining':
+        return (2 / max(life_months, 1)) * depreciable
+    return depreciable / max(life_months, 1)
+
+
+@app.route('/api/assets', methods=['GET'])
+@require_module('crm')
+def api_assets_list():
+    status   = request.args.get('status','').strip()
+    category = request.args.get('category','').strip()
+    q        = request.args.get('q','').strip()
+    aid      = request.args.get('id','').strip()  # 精確 ID 查詢
+    with get_db() as conn:
+        sql = """SELECT a.*, s.name AS assigned_name
+                 FROM fixed_assets a LEFT JOIN punch_staff s ON s.id=a.assigned_to WHERE 1=1"""
+        params = []
+        if aid:
+            try:
+                sql += " AND a.id=%s"; params.append(int(aid))
+            except ValueError:
+                pass
+        if status:   sql += " AND a.status=%s"; params.append(status)
+        if category: sql += " AND a.category=%s"; params.append(category)
+        if q:
+            sql += " AND (a.name ILIKE %s OR a.code ILIKE %s OR a.vendor ILIKE %s)"
+            params += [f'%{q}%']*3
+        sql += " ORDER BY a.created_at DESC"
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        for f in ('purchase_date','warranty_expiry'):
+            if d.get(f): d[f] = str(d[f])
+        for f in ('created_at','updated_at'):
+            if d.get(f): d[f] = d[f].isoformat()
+        for f in ('purchase_cost','salvage_value','current_book_value','accumulated_depreciation'):
+            d[f] = float(d.get(f) or 0)
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/assets/stats', methods=['GET'])
+@require_module('crm')
+def api_assets_stats():
+    with get_db() as conn:
+        total   = conn.execute("SELECT COUNT(*) AS n FROM fixed_assets WHERE status='active'").fetchone()['n']
+        total_v = conn.execute("SELECT COALESCE(SUM(current_book_value),0) AS v FROM fixed_assets WHERE status='active'").fetchone()['v']
+        cats    = conn.execute("""
+            SELECT category, COUNT(*) AS cnt, SUM(current_book_value) AS book_val
+            FROM fixed_assets WHERE status='active' GROUP BY category ORDER BY cnt DESC
+        """).fetchall()
+        expiring_warranty = conn.execute("""
+            SELECT COUNT(*) AS n FROM fixed_assets
+            WHERE warranty_expiry BETWEEN CURRENT_DATE AND CURRENT_DATE+30 AND status='active'
+        """).fetchone()['n']
+    return jsonify({
+        'active_count': total,
+        'total_book_value': float(total_v),
+        'expiring_warranty': expiring_warranty,
+        'by_category': [{'category': r['category'] or '未分類', 'count': r['cnt'],
+                          'book_value': float(r['book_val'] or 0)} for r in cats],
+    })
+
+
+@app.route('/api/assets', methods=['POST'])
+@require_module('crm')
+def api_assets_create():
+    b    = request.get_json(force=True) or {}
+    code = b.get('code','').strip() or _asset_next_code()
+    cost = float(b.get('purchase_cost') or 0)
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO fixed_assets
+              (name, code, category, purchase_date, purchase_cost, salvage_value,
+               useful_life_months, depreciation_method, current_book_value,
+               status, location, assigned_to, vendor, warranty_expiry, notes, created_by)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
+        """, (b.get('name',''), code, b.get('category',''),
+              b.get('purchase_date') or None, cost,
+              float(b.get('salvage_value') or 0),
+              int(b.get('useful_life_months') or 60),
+              b.get('depreciation_method','straight_line'),
+              cost,  # initial book value = purchase cost
+              b.get('status','active'), b.get('location',''),
+              b.get('assigned_to') or None, b.get('vendor',''),
+              b.get('warranty_expiry') or None, b.get('notes',''),
+              session.get('username',''))).fetchone()
+    return jsonify({'id': row['id'], 'code': code}), 201
+
+
+@app.route('/api/assets/<int:aid>', methods=['PUT'])
+@require_module('crm')
+def api_assets_update(aid):
+    b = request.get_json(force=True) or {}
+    with get_db() as conn:
+        conn.execute("""
+            UPDATE fixed_assets SET
+              name=%s, category=%s, purchase_date=%s, purchase_cost=%s,
+              salvage_value=%s, useful_life_months=%s, depreciation_method=%s,
+              status=%s, location=%s, assigned_to=%s, vendor=%s,
+              warranty_expiry=%s, notes=%s, updated_at=NOW()
+            WHERE id=%s
+        """, (b.get('name',''), b.get('category',''),
+              b.get('purchase_date') or None,
+              float(b.get('purchase_cost') or 0),
+              float(b.get('salvage_value') or 0),
+              int(b.get('useful_life_months') or 60),
+              b.get('depreciation_method','straight_line'),
+              b.get('status','active'), b.get('location',''),
+              b.get('assigned_to') or None, b.get('vendor',''),
+              b.get('warranty_expiry') or None, b.get('notes',''), aid))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/assets/<int:aid>', methods=['DELETE'])
+@require_module('crm')
+def api_assets_delete(aid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM fixed_assets WHERE id=%s", (aid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/assets/<int:aid>/depreciate', methods=['POST'])
+@require_module('crm')
+def api_assets_depreciate(aid):
+    """執行一個月的折舊計提"""
+    b = request.get_json(force=True) or {}
+    period = b.get('period') or _dt.now(TW_TZ).strftime('%Y-%m')
+    with get_db() as conn:
+        asset = conn.execute("SELECT * FROM fixed_assets WHERE id=%s", (aid,)).fetchone()
+        if not asset:
+            return jsonify({'error': '資產不存在'}), 404
+        if asset['status'] != 'active':
+            return jsonify({'error': '已報廢或非使用中資產'}), 400
+        existing = conn.execute(
+            "SELECT id FROM asset_depreciation WHERE asset_id=%s AND period=%s", (aid, period)
+        ).fetchone()
+        if existing:
+            return jsonify({'error': f'{period} 已計提折舊'}), 409
+
+        monthly = _calc_monthly_depreciation(
+            asset['purchase_cost'], asset['salvage_value'],
+            asset['useful_life_months'], asset['depreciation_method']
+        )
+        new_book = max(float(asset['current_book_value']) - monthly,
+                       float(asset['salvage_value']))
+        actual_depr = float(asset['current_book_value']) - new_book
+        new_accum = float(asset['accumulated_depreciation']) + actual_depr
+
+        conn.execute("""
+            INSERT INTO asset_depreciation (asset_id, period, depreciation_amount, accumulated, book_value)
+            VALUES (%s,%s,%s,%s,%s)
+        """, (aid, period, actual_depr, new_accum, new_book))
+        conn.execute("""
+            UPDATE fixed_assets SET current_book_value=%s, accumulated_depreciation=%s,
+                updated_at=NOW() WHERE id=%s
+        """, (new_book, new_accum, aid))
+    return jsonify({'ok': True, 'period': period, 'depreciation': actual_depr, 'book_value': new_book})
+
+
+@app.route('/api/assets/<int:aid>/depreciation-schedule', methods=['GET'])
+@require_module('crm')
+def api_assets_depr_schedule(aid):
+    """回傳完整折舊明細記錄"""
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT * FROM asset_depreciation WHERE asset_id=%s ORDER BY period
+        """, (aid,)).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        for f in ('depreciation_amount','accumulated','book_value'):
+            d[f] = float(d.get(f) or 0)
+        if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/assets/batch-depreciate', methods=['POST'])
+@require_module('crm')
+def api_assets_batch_depreciate():
+    """對所有 active 資產執行當月折舊"""
+    period = _dt.now(TW_TZ).strftime('%Y-%m')
+    b = request.get_json(force=True) or {}
+    target_period = b.get('period', period)
+    with get_db() as conn:
+        assets = conn.execute(
+            "SELECT * FROM fixed_assets WHERE status='active'"
+        ).fetchall()
+    done, skipped = 0, 0
+    for asset in assets:
+        aid = asset['id']
+        with get_db() as conn:
+            existing = conn.execute(
+                "SELECT id FROM asset_depreciation WHERE asset_id=%s AND period=%s",
+                (aid, target_period)
+            ).fetchone()
+        if existing:
+            skipped += 1
+            continue
+        monthly = _calc_monthly_depreciation(
+            asset['purchase_cost'], asset['salvage_value'],
+            asset['useful_life_months'], asset['depreciation_method']
+        )
+        new_book = max(float(asset['current_book_value']) - monthly, float(asset['salvage_value']))
+        actual   = float(asset['current_book_value']) - new_book
+        new_acc  = float(asset['accumulated_depreciation']) + actual
+        with get_db() as conn:
+            try:
+                conn.execute("""
+                    INSERT INTO asset_depreciation (asset_id, period, depreciation_amount, accumulated, book_value)
+                    VALUES (%s,%s,%s,%s,%s)
+                """, (aid, target_period, actual, new_acc, new_book))
+                conn.execute("""
+                    UPDATE fixed_assets SET current_book_value=%s, accumulated_depreciation=%s,
+                        updated_at=NOW() WHERE id=%s
+                """, (new_book, new_acc, aid))
+                done += 1
+            except Exception:
+                skipped += 1
+    return jsonify({'ok': True, 'period': target_period, 'processed': done, 'skipped': skipped})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 進銷存延伸：盤點 / 退貨 / 批號追蹤
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def init_inv_ext_db():
+    migrations = [
+        # 盤點作業
+        """CREATE TABLE IF NOT EXISTS inv_count_sessions (
+            id           SERIAL PRIMARY KEY,
+            warehouse_id INT REFERENCES inv_warehouses(id) ON DELETE SET NULL,
+            title        TEXT NOT NULL,
+            status       TEXT DEFAULT 'draft',
+            notes        TEXT DEFAULT '',
+            counted_by   TEXT DEFAULT '',
+            created_at   TIMESTAMPTZ DEFAULT NOW(),
+            completed_at TIMESTAMPTZ
+        )""",
+        """CREATE TABLE IF NOT EXISTS inv_count_items (
+            id            SERIAL PRIMARY KEY,
+            session_id    INT NOT NULL REFERENCES inv_count_sessions(id) ON DELETE CASCADE,
+            product_id    INT REFERENCES inv_products(id) ON DELETE SET NULL,
+            product_name  TEXT DEFAULT '',
+            system_qty    NUMERIC(14,3) DEFAULT 0,
+            counted_qty   NUMERIC(14,3),
+            variance      NUMERIC(14,3) GENERATED ALWAYS AS (counted_qty - system_qty) STORED,
+            notes         TEXT DEFAULT ''
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_count_items_session ON inv_count_items(session_id)",
+        # 退貨管理 (RMA)
+        """CREATE TABLE IF NOT EXISTS inv_returns (
+            id            SERIAL PRIMARY KEY,
+            return_no     TEXT NOT NULL UNIQUE,
+            return_type   TEXT NOT NULL DEFAULT 'customer',
+            reference_id  INT,
+            reference_no  TEXT DEFAULT '',
+            customer_name TEXT DEFAULT '',
+            vendor_name   TEXT DEFAULT '',
+            warehouse_id  INT REFERENCES inv_warehouses(id) ON DELETE SET NULL,
+            items         JSONB DEFAULT '[]',
+            total_qty     NUMERIC(14,3) DEFAULT 0,
+            reason        TEXT DEFAULT '',
+            status        TEXT DEFAULT 'pending',
+            processed_by  TEXT DEFAULT '',
+            notes         TEXT DEFAULT '',
+            created_at    TIMESTAMPTZ DEFAULT NOW(),
+            processed_at  TIMESTAMPTZ
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_inv_returns_type   ON inv_returns(return_type)",
+        "CREATE INDEX IF NOT EXISTS idx_inv_returns_status ON inv_returns(status)",
+        # 批號管理
+        """CREATE TABLE IF NOT EXISTS inv_batches (
+            id           SERIAL PRIMARY KEY,
+            product_id   INT NOT NULL REFERENCES inv_products(id) ON DELETE CASCADE,
+            warehouse_id INT REFERENCES inv_warehouses(id) ON DELETE SET NULL,
+            batch_no     TEXT NOT NULL,
+            qty          NUMERIC(14,3) DEFAULT 0,
+            expiry_date  DATE,
+            received_date DATE DEFAULT CURRENT_DATE,
+            supplier_id  INT,
+            cost_per_unit NUMERIC(14,4) DEFAULT 0,
+            notes        TEXT DEFAULT '',
+            created_at   TIMESTAMPTZ DEFAULT NOW(),
+            UNIQUE(product_id, warehouse_id, batch_no)
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_inv_batches_product ON inv_batches(product_id)",
+        "CREATE INDEX IF NOT EXISTS idx_inv_batches_expiry  ON inv_batches(expiry_date)",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[inv_ext_init] {str(e)[:120]}")
+
+init_inv_ext_db()
+
+
+def _next_return_no():
+    with get_db() as conn:
+        n = conn.execute("SELECT COUNT(*) AS c FROM inv_returns").fetchone()['c']
+    return f"RMA-{_dt.now(TW_TZ).strftime('%Y%m')}-{n+1:04d}"
+
+
+# ── 盤點作業 ─────────────────────────────────────────────────────────────────
+
+@app.route('/api/inventory/count-sessions', methods=['GET'])
+@require_module('inventory')
+def api_inv_count_sessions_list():
+    status = request.args.get('status','').strip()
+    with get_db() as conn:
+        sql = """SELECT cs.*, w.name AS warehouse_name
+                 FROM inv_count_sessions cs
+                 LEFT JOIN inv_warehouses w ON w.id=cs.warehouse_id
+                 WHERE 1=1"""
+        params = []
+        if status: sql += " AND cs.status=%s"; params.append(status)
+        sql += " ORDER BY cs.created_at DESC LIMIT 100"
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        for f in ('created_at','completed_at'):
+            if d.get(f): d[f] = d[f].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/inventory/count-sessions', methods=['POST'])
+@require_module('inventory')
+def api_inv_count_sessions_create():
+    b = request.get_json(force=True) or {}
+    wid = b.get('warehouse_id')
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO inv_count_sessions (warehouse_id, title, status, notes, counted_by)
+            VALUES (%s,%s,'draft',%s,%s) RETURNING id
+        """, (wid or None, b.get('title','盤點作業'),
+              b.get('notes',''), session.get('username',''))).fetchone()
+        sid = row['id']
+        # 自動載入該倉庫現有庫存品項
+        if wid:
+            stock_rows = conn.execute("""
+                SELECT s.product_id, p.name AS product_name, s.qty_on_hand
+                FROM inv_stock s JOIN inv_products p ON p.id=s.product_id
+                WHERE s.warehouse_id=%s AND p.active=TRUE ORDER BY p.name
+            """, (wid,)).fetchall()
+        else:
+            stock_rows = conn.execute("""
+                SELECT DISTINCT s.product_id, p.name AS product_name,
+                       SUM(s.qty_on_hand) AS qty_on_hand
+                FROM inv_stock s JOIN inv_products p ON p.id=s.product_id
+                WHERE p.active=TRUE GROUP BY s.product_id, p.name ORDER BY p.name
+            """).fetchall()
+        for sr in stock_rows:
+            conn.execute("""
+                INSERT INTO inv_count_items (session_id, product_id, product_name, system_qty)
+                VALUES (%s,%s,%s,%s)
+            """, (sid, sr['product_id'], sr['product_name'], float(sr['qty_on_hand'] or 0)))
+    return jsonify({'id': sid}), 201
+
+
+@app.route('/api/inventory/count-sessions/<int:sid>', methods=['GET'])
+@require_module('inventory')
+def api_inv_count_session_detail(sid):
+    with get_db() as conn:
+        sess = conn.execute("""
+            SELECT cs.*, w.name AS warehouse_name FROM inv_count_sessions cs
+            LEFT JOIN inv_warehouses w ON w.id=cs.warehouse_id WHERE cs.id=%s
+        """, (sid,)).fetchone()
+        if not sess:
+            return jsonify({'error': '不存在'}), 404
+        items = conn.execute("""
+            SELECT ci.*, p.sku FROM inv_count_items ci
+            LEFT JOIN inv_products p ON p.id=ci.product_id
+            WHERE ci.session_id=%s ORDER BY ci.product_name
+        """, (sid,)).fetchall()
+    d = dict(sess)
+    for f in ('created_at','completed_at'):
+        if d.get(f): d[f] = d[f].isoformat()
+    item_list = []
+    for r in items:
+        it = dict(r)
+        for f in ('system_qty','counted_qty','variance'):
+            it[f] = float(it[f]) if it.get(f) is not None else None
+        item_list.append(it)
+    d['items'] = item_list
+    return jsonify(d)
+
+
+@app.route('/api/inventory/count-sessions/<int:sid>/items/<int:iid>', methods=['PUT'])
+@require_module('inventory')
+def api_inv_count_item_update(sid, iid):
+    b = request.get_json(force=True) or {}
+    qty = b.get('counted_qty')
+    if qty is not None:
+        try:
+            qty = float(qty)
+            if qty < 0:
+                return jsonify({'error': '盤點數量不可為負數'}), 400
+        except (TypeError, ValueError):
+            return jsonify({'error': '無效的數量'}), 400
+    with get_db() as conn:
+        conn.execute("""
+            UPDATE inv_count_items SET counted_qty=%s, notes=%s
+            WHERE id=%s AND session_id=%s
+        """, (qty, b.get('notes',''), iid, sid))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/count-sessions/<int:sid>/complete', methods=['POST'])
+@require_module('inventory')
+def api_inv_count_session_complete(sid):
+    """完成盤點並依差異調整庫存"""
+    with get_db() as conn:
+        sess = conn.execute("SELECT * FROM inv_count_sessions WHERE id=%s AND status='in_progress'",
+                            (sid,)).fetchone()
+        if not sess:
+            return jsonify({'error': '盤點作業不存在或非進行中狀態'}), 400
+        items = conn.execute("""
+            SELECT * FROM inv_count_items WHERE session_id=%s AND counted_qty IS NOT NULL
+        """, (sid,)).fetchall()
+        adjusted = 0
+        for it in items:
+            variance = float(it['counted_qty'] or 0) - float(it['system_qty'] or 0)
+            if abs(variance) < 0.001:
+                continue
+            wid = sess['warehouse_id']
+            if it['product_id'] and wid:
+                conn.execute("""
+                    INSERT INTO inv_stock (product_id, warehouse_id, qty_on_hand)
+                    VALUES (%s,%s,%s)
+                    ON CONFLICT (product_id, warehouse_id)
+                    DO UPDATE SET qty_on_hand = inv_stock.qty_on_hand + %s
+                """, (it['product_id'], wid,
+                      float(it['counted_qty']), variance))
+                conn.execute("""
+                    INSERT INTO inv_transactions
+                      (product_id, warehouse_id, transaction_type, qty, notes, created_by)
+                    VALUES (%s,%s,'adjustment',%s,'盤點調整 session#%s',%s)
+                """, (it['product_id'], wid, variance, sid, session.get('username','')))
+                adjusted += 1
+        conn.execute("""
+            UPDATE inv_count_sessions SET status='completed', completed_at=NOW() WHERE id=%s
+        """, (sid,))
+    return jsonify({'ok': True, 'adjusted_items': adjusted})
+
+
+@app.route('/api/inventory/count-sessions/<int:sid>/start', methods=['POST'])
+@require_module('inventory')
+def api_inv_count_session_start(sid):
+    with get_db() as conn:
+        conn.execute("UPDATE inv_count_sessions SET status='in_progress' WHERE id=%s AND status='draft'", (sid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/count-sessions/<int:sid>', methods=['DELETE'])
+@require_module('inventory')
+def api_inv_count_session_delete(sid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM inv_count_sessions WHERE id=%s AND status='draft'", (sid,))
+    return jsonify({'ok': True})
+
+
+# ── 退貨管理 (RMA) ───────────────────────────────────────────────────────────
+
+@app.route('/api/inventory/returns', methods=['GET'])
+@require_module('inventory')
+def api_inv_returns_list():
+    rtype  = request.args.get('return_type','').strip()
+    status = request.args.get('status','').strip()
+    q      = request.args.get('q','').strip()
+    with get_db() as conn:
+        sql    = "SELECT r.*, w.name AS warehouse_name FROM inv_returns r LEFT JOIN inv_warehouses w ON w.id=r.warehouse_id WHERE 1=1"
+        params = []
+        if rtype:  sql += " AND r.return_type=%s"; params.append(rtype)
+        if status: sql += " AND r.status=%s"; params.append(status)
+        if q:
+            sql += " AND (r.return_no ILIKE %s OR r.customer_name ILIKE %s OR r.vendor_name ILIKE %s)"
+            params += [f'%{q}%']*3
+        sql += " ORDER BY r.created_at DESC LIMIT 200"
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        d['total_qty'] = float(d.get('total_qty') or 0)
+        for f in ('created_at','processed_at'):
+            if d.get(f): d[f] = d[f].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/inventory/returns', methods=['POST'])
+@require_module('inventory')
+def api_inv_returns_create():
+    b    = request.get_json(force=True) or {}
+    rno  = _next_return_no()
+    items = b.get('items', [])
+    total_qty = sum(float(it.get('qty',0)) for it in items)
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO inv_returns
+              (return_no, return_type, reference_id, reference_no, customer_name, vendor_name,
+               warehouse_id, items, total_qty, reason, status, notes)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s) RETURNING id
+        """, (rno, b.get('return_type','customer'),
+              b.get('reference_id') or None, b.get('reference_no',''),
+              b.get('customer_name',''), b.get('vendor_name',''),
+              b.get('warehouse_id') or None,
+              _json.dumps(items, ensure_ascii=False),
+              total_qty, b.get('reason',''), b.get('notes',''))).fetchone()
+    return jsonify({'id': row['id'], 'return_no': rno}), 201
+
+
+@app.route('/api/inventory/returns/<int:rid>/process', methods=['POST'])
+@require_module('inventory')
+def api_inv_returns_process(rid):
+    """確認退貨並回沖庫存"""
+    with get_db() as conn:
+        ret = conn.execute("SELECT * FROM inv_returns WHERE id=%s AND status='pending'", (rid,)).fetchone()
+        if not ret:
+            return jsonify({'error': '退貨單不存在或已處理'}), 400
+        items = ret['items'] if isinstance(ret['items'], list) else _json.loads(ret['items'] or '[]')
+        for it in items:
+            pid = it.get('product_id')
+            qty = float(it.get('qty', 0))
+            wid = ret['warehouse_id']
+            if pid and wid and qty > 0:
+                conn.execute("""
+                    INSERT INTO inv_stock (product_id, warehouse_id, qty_on_hand)
+                    VALUES (%s,%s,%s)
+                    ON CONFLICT (product_id, warehouse_id)
+                    DO UPDATE SET qty_on_hand = inv_stock.qty_on_hand + %s
+                """, (pid, wid, qty, qty))
+                conn.execute("""
+                    INSERT INTO inv_transactions
+                      (product_id, warehouse_id, transaction_type, qty, notes, created_by)
+                    VALUES (%s,%s,'return',%s,'退貨入庫 RMA#%s',%s)
+                """, (pid, wid, qty, ret['return_no'], session.get('username','')))
+        conn.execute("""
+            UPDATE inv_returns SET status='processed', processed_by=%s, processed_at=NOW()
+            WHERE id=%s
+        """, (session.get('username',''), rid))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/returns/<int:rid>', methods=['DELETE'])
+@require_module('inventory')
+def api_inv_returns_delete(rid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM inv_returns WHERE id=%s AND status='pending'", (rid,))
+    return jsonify({'ok': True})
+
+
+# ── 批號管理 ─────────────────────────────────────────────────────────────────
+
+@app.route('/api/inventory/batches', methods=['GET'])
+@require_module('inventory')
+def api_inv_batches_list():
+    product_id   = request.args.get('product_id','').strip()
+    warehouse_id = request.args.get('warehouse_id','').strip()
+    expiring     = request.args.get('expiring','').strip()  # days
+    q            = request.args.get('q','').strip()
+    bid          = request.args.get('id','').strip()  # 精確 ID 查詢
+    with get_db() as conn:
+        sql = """SELECT b.*, p.name AS product_name, p.sku, w.name AS warehouse_name
+                 FROM inv_batches b
+                 LEFT JOIN inv_products p ON p.id=b.product_id
+                 LEFT JOIN inv_warehouses w ON w.id=b.warehouse_id
+                 WHERE 1=1"""
+        params = []
+        if bid:
+            try:
+                sql += " AND b.id=%s"; params.append(int(bid))
+            except ValueError:
+                pass
+        else:
+            sql += " AND b.qty > 0"
+        if product_id:   sql += " AND b.product_id=%s"; params.append(product_id)
+        if warehouse_id: sql += " AND b.warehouse_id=%s"; params.append(warehouse_id)
+        if expiring:
+            sql += " AND b.expiry_date IS NOT NULL AND b.expiry_date <= CURRENT_DATE + (%s * interval '1 day')"
+            params.append(int(expiring))
+        if q:
+            sql += " AND (b.batch_no ILIKE %s OR p.name ILIKE %s)"
+            params += [f'%{q}%', f'%{q}%']
+        sql += " ORDER BY b.expiry_date ASC NULLS LAST, b.batch_no"
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        for f in ('expiry_date','received_date'):
+            if d.get(f): d[f] = str(d[f])
+        if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+        d['qty'] = float(d.get('qty') or 0)
+        d['cost_per_unit'] = float(d.get('cost_per_unit') or 0)
+        # 標記即將過期
+        if d.get('expiry_date'):
+            from datetime import date as _dc
+            diff = (_dc.fromisoformat(d['expiry_date']) - _dc.today()).days
+            d['days_to_expiry'] = diff
+            d['expiry_status'] = 'expired' if diff < 0 else 'critical' if diff <= 7 else 'warning' if diff <= 30 else 'ok'
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/inventory/batches', methods=['POST'])
+@require_module('inventory')
+def api_inv_batches_create():
+    b = request.get_json(force=True) or {}
+    pid = b.get('product_id')
+    if not pid:
+        return jsonify({'error': '缺少 product_id'}), 400
+    with get_db() as conn:
+        try:
+            row = conn.execute("""
+                INSERT INTO inv_batches
+                  (product_id, warehouse_id, batch_no, qty, expiry_date,
+                   received_date, supplier_id, cost_per_unit, notes)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
+            """, (pid, b.get('warehouse_id') or None, b.get('batch_no',''),
+                  float(b.get('qty') or 0),
+                  b.get('expiry_date') or None,
+                  b.get('received_date') or None,
+                  b.get('supplier_id') or None,
+                  float(b.get('cost_per_unit') or 0),
+                  b.get('notes',''))).fetchone()
+        except Exception as e:
+            if 'unique' in str(e).lower():
+                return jsonify({'error': '此商品同倉庫同批號已存在'}), 409
+            raise
+    return jsonify({'id': row['id']}), 201
+
+
+@app.route('/api/inventory/batches/<int:bid>', methods=['PUT'])
+@require_module('inventory')
+def api_inv_batches_update(bid):
+    b = request.get_json(force=True) or {}
+    with get_db() as conn:
+        conn.execute("""
+            UPDATE inv_batches SET qty=%s, expiry_date=%s, cost_per_unit=%s, notes=%s
+            WHERE id=%s
+        """, (float(b.get('qty') or 0), b.get('expiry_date') or None,
+              float(b.get('cost_per_unit') or 0), b.get('notes',''), bid))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/batches/<int:bid>', methods=['DELETE'])
+@require_module('inventory')
+def api_inv_batches_delete(bid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM inv_batches WHERE id=%s", (bid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/inventory/batches/expiry-alerts', methods=['GET'])
+@require_module('inventory')
+def api_inv_batches_expiry_alerts():
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT b.*, p.name AS product_name, p.sku, w.name AS warehouse_name,
+                   (b.expiry_date - CURRENT_DATE) AS days_to_expiry
+            FROM inv_batches b
+            LEFT JOIN inv_products p ON p.id=b.product_id
+            LEFT JOIN inv_warehouses w ON w.id=b.warehouse_id
+            WHERE b.expiry_date IS NOT NULL
+              AND b.expiry_date <= CURRENT_DATE + 30
+              AND b.qty > 0
+            ORDER BY b.expiry_date ASC
+        """).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        if d.get('expiry_date'): d['expiry_date'] = str(d['expiry_date'])
+        if d.get('received_date'): d['received_date'] = str(d['received_date'])
+        if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+        d['qty'] = float(d.get('qty') or 0)
+        result.append(d)
     return jsonify(result)
