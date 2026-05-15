@@ -4,9 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>員工系統</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Sans+Thai:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+.bi{vertical-align:-0.125em}
 :root{
   --navy:#0f1c3a;--navy-mid:#1a2d58;--accent:#4a7bda;--accent-light:#eef3fd;
   --green:#2e9e6b;--green-light:#edfaf4;
@@ -209,8 +211,8 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
         <!-- 打卡方式切換（WiFi 啟用時顯示） -->
         <div id="punch-method-bar" style="display:none;padding:10px 16px 0;gap:8px">
           <div style="display:flex;gap:8px;margin-bottom:8px">
-            <button id="btn-mode-gps"  onclick="setPunchMode('gps')"  class="btn btn-primary btn-sm" style="flex:1">📍 GPS 打卡</button>
-            <button id="btn-mode-wifi" onclick="setPunchMode('wifi')" class="btn btn-outline btn-sm" style="flex:1">📶 WiFi 打卡</button>
+            <button id="btn-mode-gps"  onclick="setPunchMode('gps')"  class="btn btn-primary btn-sm" style="flex:1"><i class="bi bi-geo-alt-fill"></i> GPS 打卡</button>
+            <button id="btn-mode-wifi" onclick="setPunchMode('wifi')" class="btn btn-outline btn-sm" style="flex:1"><i class="bi bi-wifi"></i> WiFi 打卡</button>
           </div>
         </div>
         <div class="gps-bar gps-loading" id="gps-bar">
@@ -610,7 +612,7 @@ html,body{min-height:100%;background:var(--navy);font-family:"Noto Sans TC","Not
               <div id="exp-photo-wrap" style="border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;position:relative;background:var(--bg)" onclick="document.getElementById('exp-photo-input').click()">
                 <input type="file" id="exp-photo-input" accept="image/*" capture="environment" style="display:none" onchange="expPhotoSelected(event)">
                 <div id="exp-photo-hint" style="color:var(--muted);font-size:13px">
-                  <div style="font-size:24px;margin-bottom:6px">📷</div>
+                  <div style="font-size:24px;margin-bottom:6px"><i class="bi bi-camera"></i></div>
                   <span data-i18n-staff="hint.upload_photo">點擊上傳或拍照</span>
                 </div>
                 <img id="exp-photo-preview" style="display:none;max-width:100%;max-height:180px;border-radius:8px;object-fit:contain">
@@ -777,7 +779,7 @@ function setPunchMode(mode){
   }
 }
 function setWifiBar(){
-  setGpsBar('ok','📶 WiFi 模式：連線後點擊打卡');
+  setGpsBar('ok','<i class="bi bi-wifi"></i> WiFi 模式：連線後點擊打卡');
 }
 
 /* GPS */
@@ -832,7 +834,7 @@ async function doPunch(type){
     if(!r.ok){showToast(d.error||staffT('punch.fail'),'err');punchLocked=false;return;}
     const n=new Date();
     const ts=[n.getHours(),n.getMinutes()].map(x=>String(x).padStart(2,'0')).join(':');
-    const extra=punchMode==='wifi'?'📶 WiFi':(d.gps_distance!=null?staffT('punch.dist').replace('{0}',d.gps_distance):'');
+    const extra=punchMode==='wifi'?'<i class="bi bi-wifi"></i> WiFi':(d.gps_distance!=null?staffT('punch.dist').replace('{0}',d.gps_distance):'');
     showSuccess(me.name,PLABEL[type],ts,extra);
     await loadTodayLog();
   }catch(e){showToast(staffT('punch.net_err'),'err');punchLocked=false;}
@@ -847,7 +849,7 @@ async function loadTodayLog(){
     const t=r.punched_at?r.punched_at.slice(11,16):'';
     const isWifi=r.punch_method==='wifi';
     const dist=(!isWifi&&r.gps_distance!=null)?r.gps_distance+'m':'';
-    const locBadge=isWifi?'📶 WiFi':(dist||'');
+    const locBadge=isWifi?'<i class="bi bi-wifi"></i> WiFi':(dist||'');
     return '<div class="log-item"><span class="lb '+(PLCLS[r.punch_type]||'')+'">'+( PLABEL[r.punch_type]||r.punch_type)+'</span><div><div class="log-time">'+t+'</div>'+(locBadge?'<div class="log-sub">'+locBadge+'</div>':'')+(r.is_manual?'<div class="log-sub">'+staffT('punch.manual')+'</div>':'')+'</div></div>';
   }).join('');
 }
@@ -1044,7 +1046,7 @@ async function loadScheduleView(){
       ${req ? `（${myDates.size}${staffT('sched.days_sfx')}）` : ''}
       ${totalShiftDays > 0 ? `　|　${staffT('sched.this_month_shifts')} <strong>${totalShiftDays}${staffT('sched.days_sfx')}</strong>` : ''}
     </div>
-    ${cfg.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">📢 ${esc(cfg.notes)}</div>` : ''}
+    ${cfg.notes ? `<div style="font-size:11px;color:var(--muted);margin-top:3px"><i class="bi bi-megaphone-fill"></i> ${esc(cfg.notes)}</div>` : ''}
   </div>
   <div style="padding:12px 14px">
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px">
@@ -1156,7 +1158,7 @@ function showSchedDayDetail(ds) {
     <div style="padding:14px 0">
       <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;letter-spacing:.08em">${staffT('sched.popup.sched_req')}</div>
       <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:22px">🌿</span>
+        <span style="font-size:20px"><i class="bi bi-tree"></i></span>
         <div>
           <div style="font-size:14px;font-weight:700;color:${statusColor[myStatus]||'var(--muted)'}">
             ${statusLabel[myStatus] || myStatus}
@@ -1522,7 +1524,7 @@ function showDayDetail(ds) {
         <div style="width:8px;height:8px;border-radius:50%;background:${PCOLOR[r.type]||'#888'};flex-shrink:0"></div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600;color:${PCOLOR[r.type]||'var(--text)'}">${PLABEL[r.type]||r.type}</div>
-          ${r.gps_distance!=null?`<div style="font-size:11px;color:var(--muted)">📍 ${r.location_name||''} ${r.gps_distance}m</div>`:''}
+          ${r.gps_distance!=null?`<div style="font-size:11px;color:var(--muted)"><i class="bi bi-geo-alt-fill"></i> ${r.location_name||''} ${r.gps_distance}m</div>`:''}
           ${r.is_manual?`<div style="font-size:11px;color:var(--accent)">${staffT('att.manual')}</div>`:''}
         </div>
         <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--navy)">${r.time}</div>
@@ -1567,7 +1569,7 @@ const ANN_CAT_LABEL_S = {
   urgent:'緊急公告', policy:'制度政策'
 };
 function annCatLabel(cat) { return staffT('ann.cat.'+cat) || ANN_CAT_LABEL_S[cat] || cat; }
-const ANN_PRI_ICON = { normal:'', important:'⚠️ ', urgent:'🚨 ' };
+const ANN_PRI_ICON = { normal:'', important:'<i class="bi bi-exclamation-triangle-fill"></i> ', urgent:'<i class="bi bi-exclamation-octagon-fill"></i> ' };
 
 let readAnnIds = new Set(
   JSON.parse(localStorage.getItem('readAnns') || '[]')
@@ -1600,7 +1602,7 @@ async function loadAnnStaff() {
           ${isUnread ? '<div class="ann-unread"></div>' : '<div style="width:8px;flex-shrink:0"></div>'}
           <div style="flex:1;min-width:0">
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
-              ${a.is_pinned ? '<span style="font-size:11px;font-weight:700;color:var(--gold)">📌</span>' : ''}
+              ${a.is_pinned ? '<span style="font-size:11px;font-weight:700;color:var(--gold)"><i class="bi bi-pin-fill"></i></span>' : ''}
               <span class="ann-cat" style="background:${catColor}22;color:${catColor}">${catLabel}</span>
             </div>
             <div style="font-size:14px;font-weight:700;color:var(--navy)">${priIcon}${esc(a.title)}</div>
@@ -1894,8 +1896,8 @@ function previewLeaveStaff() {
     const bal   = balObj.remain;
     const color = days > bal ? 'var(--red)' : bal <= 3 ? 'var(--orange)' : 'var(--green)';
     const warn  = days > bal
-      ? `　<span style="color:var(--red)">⚠️ ${staffT('leave.exceed_balance').replace('{0}',bal)}</span>`
-      : `　<span style="color:var(--green)">✅ ${staffT('leave.sufficient').replace('{0}',bal)}</span>`;
+      ? `　<span style="color:var(--red)"><i class="bi bi-exclamation-triangle-fill"></i> ${staffT('leave.exceed_balance').replace('{0}',bal)}</span>`
+      : `　<span style="color:var(--green)"><i class="bi bi-check-circle-fill" style="color:var(--green)"></i> ${staffT('leave.sufficient').replace('{0}',bal)}</span>`;
     balInfo.innerHTML = staffT('leave.balance_info').replace('{0}',`<strong>${days} ${staffT('payslip.days_unit')}</strong>`).replace('{1}',`<strong style="color:${color}">${bal} ${staffT('payslip.days_unit')}</strong>`) + warn;
   } else {
     balInfo.innerHTML = '';
@@ -2081,7 +2083,7 @@ function renderPayslipBankInfo() {
   wrap.innerHTML = `
   <div style="background:#fff;border-radius:10px;border:1.5px solid var(--border);padding:12px 14px;display:flex;align-items:center;gap:12px">
     <div style="width:34px;height:34px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-      <span style="color:#fff;font-size:16px">🏦</span>
+      <span style="color:#fff;font-size:16px"><i class="bi bi-bank2"></i></span>
     </div>
     <div style="flex:1;min-width:0">
       <div style="font-size:11px;color:var(--muted);margin-bottom:2px">${staffT('payslip.bank_title')}</div>
@@ -2562,7 +2564,7 @@ async function loadMyAnomalies() {
     if (!list.length) {
       el.innerHTML = `
         <div style="text-align:center;padding:40px">
-          <div style="font-size:32px;margin-bottom:10px">✅</div>
+          <div style="font-size:32px;margin-bottom:10px"><i class="bi bi-check-circle-fill" style="color:var(--green)"></i></div>
           <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:4px">${staffT('anom.no_anom')}</div>
           <div style="font-size:12px;color:var(--muted)">${staffT('anom.good_record')}</div>
         </div>`;
@@ -2724,8 +2726,8 @@ async function loadMyTravel() {
           <div style="font-size:14px;font-weight:700;color:var(--navy)">${esc(t.title)}</div>
           <span style="font-size:11px;font-weight:700;color:${MYT_STATUS_COLOR[t.status]||'#888'}">${MYT_STATUS_LABEL[t.status]||t.status}</span>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">📍 ${esc(t.destination)}　${t.start_date} ~ ${t.end_date}（${days}${staffT('myt.days_sfx')}）</div>
-        ${t.purpose ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px">📝 ${esc(t.purpose)}</div>` : ''}
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px"><i class="bi bi-geo-alt-fill"></i> ${esc(t.destination)}　${t.start_date} ~ ${t.end_date}（${days}${staffT('myt.days_sfx')}）</div>
+        ${t.purpose ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px"><i class="bi bi-pencil-fill"></i> ${esc(t.purpose)}</div>` : ''}
         ${parseFloat(t.advance_amount||0) > 0 ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px">${staffT('myt.advance_pfx')} ${Number(t.advance_amount).toLocaleString()}</div>` : ''}
         ${t.review_note ? `<div style="font-size:12px;color:#c0392b;margin-bottom:6px">${staffT('myt.review_note')}${esc(t.review_note)}</div>` : ''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
@@ -2850,7 +2852,7 @@ async function renderMyExpList() {
           ${r.attachment_name
             ? `<a href="/api/travel/expenses/${r.id}/attachment" target="_blank"
                  style="font-size:12px;color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:4px">
-                 📎 ${esc(r.attachment_name)}
+                 <i class="bi bi-paperclip"></i> ${esc(r.attachment_name)}
                </a>
                <label style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline">
                  ${staffT('myt.reupload')}<input type="file" accept="image/*,application/pdf" style="display:none"
@@ -3042,7 +3044,7 @@ const STAFF_I18N = {
     'att.days':'出勤天數','att.total_hours':'總工時（估）','att.avg_hours':'日均工時',
     'att.detail':'打卡明細',
     'att.punch_types.in':'上班','att.punch_types.out':'下班','att.punch_types.break_out':'休息','att.punch_types.break_in':'回來',
-    'att.manual':'✏️ 補打卡',
+    'att.manual':'<i class="bi bi-pencil-fill"></i> 補打卡',
     'ot.weekday_short':'平日','ot.rest_day_short':'休息日','ot.holiday_short':'國定假日','ot.special_short':'例假日',
     'ot.need_date':'請填寫加班日期','ot.need_start':'請填寫開始時間',
     'ot.need_end':'請填寫結束時間','ot.need_reason':'請填寫加班原因',
@@ -3181,7 +3183,7 @@ const STAFF_I18N = {
     'payslip.leave_pfx':'請假','payslip.unpaid_pfx':'無薪假','payslip.ot_pfx':'加班費',
     'payslip.allowance_total':'支付總額','payslip.deduction_total':'扣除總額','payslip.net_pay':'實領金額',
     'payslip.allowance_items':'津貼項目','payslip.deduction_items':'扣除項目','payslip.subtotal':'合計',
-    'payslip.status_label':'狀態：','payslip.confirmed':'✅ 已確認','payslip.draft':'草稿（待確認）',
+    'payslip.status_label':'狀態：','payslip.confirmed':'<i class="bi bi-check-circle-fill" style="color:var(--green)"></i> 已確認','payslip.draft':'草稿（待確認）',
     'payslip.confirmed_by':'確認人：','payslip.print_pdf':'列印 PDF',
     'payslip.hours_detail':'每日工時明細','payslip.col_date':'日期','payslip.col_in':'上班',
     'payslip.col_out':'下班','payslip.col_break':'休息','payslip.col_hours':'工時',
@@ -3221,7 +3223,7 @@ const STAFF_I18N = {
     'loan.cat.computer':'電腦/3C','loan.cat.vehicle':'車輛',
     'loan.cat.furniture':'辦公家具','loan.cat.tool':'工具設備','loan.cat.other':'其他',
     'loan.no_records':'無記錄','loan.category':'類別：','loan.location':'位置：',
-    'loan.loan_date':'申請日：','loan.expected_return':'預計歸還：','loan.overdue':' ⚠️ 已逾期',
+    'loan.loan_date':'申請日：','loan.expected_return':'預計歸還：','loan.overdue':' <i class="bi bi-exclamation-triangle-fill"></i> 已逾期',
     'loan.actual_return':'實際歸還：','loan.purpose':'用途：','loan.reject_reason':'拒絕原因：',
     'loan.cancel_btn':'取消申請','loan.confirm_cancel':'確定取消此借用申請？',
     'loan.cancelled':'已取消申請','loan.cancel_fail':'取消失敗',
@@ -3279,9 +3281,9 @@ const STAFF_I18N = {
     'leave.used_days':'已用 {0} 天','leave.all_used':'已用完','leave.low_balance':'即將用完',
     'leave.pm_sfx':'（下午）','leave.am_sfx':'（上午）',
     'perf.review_suffix':'考核','perf.score_label':'得分','perf.score_unit':'分',
-    'perf.salary_adj_pfx':'✓ 薪資調整：','perf.salary_adj_unit':' 元','perf.reviewer':'考核人：',
+    'perf.salary_adj_pfx':'<i class="bi bi-check-lg"></i> 薪資調整：','perf.salary_adj_unit':' 元','perf.reviewer':'考核人：',
     'bio.device_android':'Android 裝置','bio.device_default':'此裝置',
-    'myt.reupload':'重新上傳','myt.upload_receipt':'📎 上傳憑證','myt.total':'合計：NT$ {0}',
+    'myt.reupload':'重新上傳','myt.upload_receipt':'<i class="bi bi-paperclip"></i> 上傳憑證','myt.total':'合計：NT$ {0}',
   },
   'en': {
     brand:'Attendance System', loginTitle:'Employee Login', labelUser:'Username', labelPw:'Password',
@@ -3315,7 +3317,7 @@ const STAFF_I18N = {
     'att.days':'Days Present','att.total_hours':'Total Hours (est.)','att.avg_hours':'Avg Hours/Day',
     'att.detail':'Punch Details',
     'att.punch_types.in':'In','att.punch_types.out':'Out','att.punch_types.break_out':'Break','att.punch_types.break_in':'Back',
-    'att.manual':'✏️ Makeup',
+    'att.manual':'<i class="bi bi-pencil-fill"></i> Makeup',
     'ot.weekday_short':'Weekday','ot.rest_day_short':'Rest Day','ot.holiday_short':'Public Holiday','ot.special_short':'Holiday',
     'ot.need_date':'Please enter overtime date','ot.need_start':'Please enter start time',
     'ot.need_end':'Please enter end time','ot.need_reason':'Please enter reason',
@@ -3452,7 +3454,7 @@ const STAFF_I18N = {
     'payslip.leave_pfx':'Leave','payslip.unpaid_pfx':'Unpaid Leave','payslip.ot_pfx':'OT Pay',
     'payslip.allowance_total':'Gross Pay','payslip.deduction_total':'Deductions','payslip.net_pay':'Net Pay',
     'payslip.allowance_items':'Allowances','payslip.deduction_items':'Deductions','payslip.subtotal':'Total',
-    'payslip.status_label':'Status: ','payslip.confirmed':'✅ Confirmed','payslip.draft':'Draft (Pending)',
+    'payslip.status_label':'Status: ','payslip.confirmed':'<i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Confirmed','payslip.draft':'Draft (Pending)',
     'payslip.confirmed_by':'Confirmed by: ','payslip.print_pdf':'Print PDF',
     'payslip.hours_detail':'Daily Hours','payslip.col_date':'Date','payslip.col_in':'In',
     'payslip.col_out':'Out','payslip.col_break':'Break','payslip.col_hours':'Hours',
@@ -3487,7 +3489,7 @@ const STAFF_I18N = {
     'loan.cat.computer':'Computer/Electronics','loan.cat.vehicle':'Vehicle',
     'loan.cat.furniture':'Office Furniture','loan.cat.tool':'Tools/Equipment','loan.cat.other':'Other',
     'loan.no_records':'No records','loan.category':'Category: ','loan.location':'Location: ',
-    'loan.loan_date':'Applied: ','loan.expected_return':'Expected Return: ','loan.overdue':' ⚠️ Overdue',
+    'loan.loan_date':'Applied: ','loan.expected_return':'Expected Return: ','loan.overdue':' <i class="bi bi-exclamation-triangle-fill"></i> Overdue',
     'loan.actual_return':'Returned: ','loan.purpose':'Purpose: ','loan.reject_reason':'Reject Reason: ',
     'loan.cancel_btn':'Cancel Request','loan.confirm_cancel':'Cancel this loan request?',
     'loan.cancelled':'Request cancelled','loan.cancel_fail':'Cancel failed',
@@ -3545,9 +3547,9 @@ const STAFF_I18N = {
     'leave.used_days':'Used: {0} days','leave.all_used':'All used','leave.low_balance':'Low balance',
     'leave.pm_sfx':' (PM)','leave.am_sfx':' (AM)',
     'perf.review_suffix':'Review','perf.score_label':'Score','perf.score_unit':'pts',
-    'perf.salary_adj_pfx':'✓ Salary Adj: ','perf.salary_adj_unit':' ','perf.reviewer':'Reviewer: ',
+    'perf.salary_adj_pfx':'<i class="bi bi-check-lg"></i> Salary Adj: ','perf.salary_adj_unit':' ','perf.reviewer':'Reviewer: ',
     'bio.device_android':'Android Device','bio.device_default':'This Device',
-    'myt.reupload':'Re-upload','myt.upload_receipt':'📎 Upload Receipt','myt.total':'Total: NT$ {0}',
+    'myt.reupload':'Re-upload','myt.upload_receipt':'<i class="bi bi-paperclip"></i> Upload Receipt','myt.total':'Total: NT$ {0}',
   },
   'ja': {
     brand:'勤怠管理システム', loginTitle:'従業員ログイン', labelUser:'ユーザー名', labelPw:'パスワード',
@@ -3581,7 +3583,7 @@ const STAFF_I18N = {
     'att.days':'出勤日数','att.total_hours':'総労働時間（推定）','att.avg_hours':'平均時間/日',
     'att.detail':'打刻詳細',
     'att.punch_types.in':'出勤','att.punch_types.out':'退勤','att.punch_types.break_out':'休憩','att.punch_types.break_in':'復帰',
-    'att.manual':'✏️ 補正打刻',
+    'att.manual':'<i class="bi bi-pencil-fill"></i> 補正打刻',
     'ot.weekday_short':'平日','ot.rest_day_short':'休日','ot.holiday_short':'祝日','ot.special_short':'法定休日',
     'ot.need_date':'残業日を入力してください','ot.need_start':'開始時刻を入力してください',
     'ot.need_end':'終了時刻を入力してください','ot.need_reason':'理由を入力してください',
@@ -3718,7 +3720,7 @@ const STAFF_I18N = {
     'payslip.leave_pfx':'休暇','payslip.unpaid_pfx':'無給休暇','payslip.ot_pfx':'残業代',
     'payslip.allowance_total':'支給合計','payslip.deduction_total':'控除合計','payslip.net_pay':'手取り額',
     'payslip.allowance_items':'支給項目','payslip.deduction_items':'控除項目','payslip.subtotal':'合計',
-    'payslip.status_label':'状態：','payslip.confirmed':'✅ 確認済','payslip.draft':'下書き（確認待ち）',
+    'payslip.status_label':'状態：','payslip.confirmed':'<i class="bi bi-check-circle-fill" style="color:var(--green)"></i> 確認済','payslip.draft':'下書き（確認待ち）',
     'payslip.confirmed_by':'確認者：','payslip.print_pdf':'PDF印刷',
     'payslip.hours_detail':'日別工時明細','payslip.col_date':'日付','payslip.col_in':'出勤',
     'payslip.col_out':'退勤','payslip.col_break':'休憩','payslip.col_hours':'時間',
@@ -3753,7 +3755,7 @@ const STAFF_I18N = {
     'loan.cat.computer':'PC/電子機器','loan.cat.vehicle':'車両',
     'loan.cat.furniture':'オフィス家具','loan.cat.tool':'工具・設備','loan.cat.other':'その他',
     'loan.no_records':'記録なし','loan.category':'カテゴリ：','loan.location':'場所：',
-    'loan.loan_date':'申請日：','loan.expected_return':'返却予定：','loan.overdue':' ⚠️ 延滞',
+    'loan.loan_date':'申請日：','loan.expected_return':'返却予定：','loan.overdue':' <i class="bi bi-exclamation-triangle-fill"></i> 延滞',
     'loan.actual_return':'返却日：','loan.purpose':'用途：','loan.reject_reason':'却下理由：',
     'loan.cancel_btn':'申請取消','loan.confirm_cancel':'この借用申請を取り消しますか？',
     'loan.cancelled':'申請を取り消しました','loan.cancel_fail':'取消失敗',
@@ -3811,9 +3813,9 @@ const STAFF_I18N = {
     'leave.used_days':'使用済み {0} 日','leave.all_used':'使い切り','leave.low_balance':'もうすぐ使い切り',
     'leave.pm_sfx':'（午後）','leave.am_sfx':'（午前）',
     'perf.review_suffix':'考課','perf.score_label':'スコア','perf.score_unit':'点',
-    'perf.salary_adj_pfx':'✓ 給与調整：','perf.salary_adj_unit':'円','perf.reviewer':'考課者：',
+    'perf.salary_adj_pfx':'<i class="bi bi-check-lg"></i> 給与調整：','perf.salary_adj_unit':'円','perf.reviewer':'考課者：',
     'bio.device_android':'Androidデバイス','bio.device_default':'このデバイス',
-    'myt.reupload':'再アップロード','myt.upload_receipt':'📎 領収書アップロード','myt.total':'合計：NT$ {0}',
+    'myt.reupload':'再アップロード','myt.upload_receipt':'<i class="bi bi-paperclip"></i> 領収書アップロード','myt.total':'合計：NT$ {0}',
   },
   'vi': {
     brand:'Hệ thống Chấm công', loginTitle:'Đăng nhập', labelUser:'Tài khoản', labelPw:'Mật khẩu',
@@ -3847,7 +3849,7 @@ const STAFF_I18N = {
     'att.days':'Ngày có mặt','att.total_hours':'Tổng giờ (ước)','att.avg_hours':'Giờ TB/ngày',
     'att.detail':'Chi tiết chấm công',
     'att.punch_types.in':'Vào','att.punch_types.out':'Ra','att.punch_types.break_out':'Nghỉ','att.punch_types.break_in':'Quay lại',
-    'att.manual':'✏️ Chấm bù',
+    'att.manual':'<i class="bi bi-pencil-fill"></i> Chấm bù',
     'ot.weekday_short':'Ngày thường','ot.rest_day_short':'Ngày nghỉ','ot.holiday_short':'Ngày lễ','ot.special_short':'Nghỉ bù',
     'ot.need_date':'Vui lòng nhập ngày tăng ca','ot.need_start':'Vui lòng nhập giờ bắt đầu',
     'ot.need_end':'Vui lòng nhập giờ kết thúc','ot.need_reason':'Vui lòng nhập lý do',
@@ -3984,7 +3986,7 @@ const STAFF_I18N = {
     'payslip.leave_pfx':'Nghỉ phép','payslip.unpaid_pfx':'Nghỉ không lương','payslip.ot_pfx':'Phụ cấp tăng ca',
     'payslip.allowance_total':'Tổng thu nhập','payslip.deduction_total':'Tổng khấu trừ','payslip.net_pay':'Thực nhận',
     'payslip.allowance_items':'Khoản thu nhập','payslip.deduction_items':'Khoản khấu trừ','payslip.subtotal':'Tổng',
-    'payslip.status_label':'Trạng thái: ','payslip.confirmed':'✅ Đã xác nhận','payslip.draft':'Nháp (chờ xác nhận)',
+    'payslip.status_label':'Trạng thái: ','payslip.confirmed':'<i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Đã xác nhận','payslip.draft':'Nháp (chờ xác nhận)',
     'payslip.confirmed_by':'Người xác nhận: ','payslip.print_pdf':'In PDF',
     'payslip.hours_detail':'Chi tiết giờ làm','payslip.col_date':'Ngày','payslip.col_in':'Vào',
     'payslip.col_out':'Ra','payslip.col_break':'Nghỉ','payslip.col_hours':'Giờ',
@@ -4019,7 +4021,7 @@ const STAFF_I18N = {
     'loan.cat.computer':'Máy tính/Thiết bị','loan.cat.vehicle':'Xe',
     'loan.cat.furniture':'Nội thất văn phòng','loan.cat.tool':'Dụng cụ','loan.cat.other':'Khác',
     'loan.no_records':'Không có hồ sơ','loan.category':'Loại: ','loan.location':'Vị trí: ',
-    'loan.loan_date':'Ngày đăng ký: ','loan.expected_return':'Dự kiến trả: ','loan.overdue':' ⚠️ Quá hạn',
+    'loan.loan_date':'Ngày đăng ký: ','loan.expected_return':'Dự kiến trả: ','loan.overdue':' <i class="bi bi-exclamation-triangle-fill"></i> Quá hạn',
     'loan.actual_return':'Ngày trả: ','loan.purpose':'Mục đích: ','loan.reject_reason':'Lý do từ chối: ',
     'loan.cancel_btn':'Hủy đơn','loan.confirm_cancel':'Hủy đơn mượn này?',
     'loan.cancelled':'Đã hủy đơn','loan.cancel_fail':'Hủy thất bại',
@@ -4077,9 +4079,9 @@ const STAFF_I18N = {
     'leave.used_days':'Đã dùng: {0} ngày','leave.all_used':'Đã hết','leave.low_balance':'Sắp hết',
     'leave.pm_sfx':' (Chiều)','leave.am_sfx':' (Sáng)',
     'perf.review_suffix':'Đánh giá','perf.score_label':'Điểm','perf.score_unit':'điểm',
-    'perf.salary_adj_pfx':'✓ Điều chỉnh lương: ','perf.salary_adj_unit':' đ','perf.reviewer':'Người đánh giá: ',
+    'perf.salary_adj_pfx':'<i class="bi bi-check-lg"></i> Điều chỉnh lương: ','perf.salary_adj_unit':' đ','perf.reviewer':'Người đánh giá: ',
     'bio.device_android':'Thiết bị Android','bio.device_default':'Thiết bị này',
-    'myt.reupload':'Tải lại','myt.upload_receipt':'📎 Tải hóa đơn','myt.total':'Tổng cộng: NT$ {0}',
+    'myt.reupload':'Tải lại','myt.upload_receipt':'<i class="bi bi-paperclip"></i> Tải hóa đơn','myt.total':'Tổng cộng: NT$ {0}',
   },
   'th': {
     brand:'ระบบบันทึกเวลา', loginTitle:'เข้าสู่ระบบ', labelUser:'ชื่อผู้ใช้', labelPw:'รหัสผ่าน',
@@ -4113,7 +4115,7 @@ const STAFF_I18N = {
     'att.days':'วันที่มา','att.total_hours':'ชั่วโมงรวม (ประมาณ)','att.avg_hours':'ชั่วโมงเฉลี่ย/วัน',
     'att.detail':'รายละเอียดการบันทึก',
     'att.punch_types.in':'เข้า','att.punch_types.out':'ออก','att.punch_types.break_out':'พัก','att.punch_types.break_in':'กลับ',
-    'att.manual':'✏️ บันทึกชดเชย',
+    'att.manual':'<i class="bi bi-pencil-fill"></i> บันทึกชดเชย',
     'ot.weekday_short':'วันทำงาน','ot.rest_day_short':'วันหยุด','ot.holiday_short':'วันหยุดนักขัตฤกษ์','ot.special_short':'วันหยุดพิเศษ',
     'ot.need_date':'กรุณากรอกวันที่ล่วงเวลา','ot.need_start':'กรุณากรอกเวลาเริ่ม',
     'ot.need_end':'กรุณากรอกเวลาสิ้นสุด','ot.need_reason':'กรุณากรอกเหตุผล',
@@ -4250,7 +4252,7 @@ const STAFF_I18N = {
     'payslip.leave_pfx':'ลา','payslip.unpaid_pfx':'ลาไม่รับเงิน','payslip.ot_pfx':'ค่าล่วงเวลา',
     'payslip.allowance_total':'รายรับรวม','payslip.deduction_total':'รายหักรวม','payslip.net_pay':'รับสุทธิ',
     'payslip.allowance_items':'รายการรายรับ','payslip.deduction_items':'รายการหัก','payslip.subtotal':'รวม',
-    'payslip.status_label':'สถานะ: ','payslip.confirmed':'✅ ยืนยันแล้ว','payslip.draft':'ร่าง (รอยืนยัน)',
+    'payslip.status_label':'สถานะ: ','payslip.confirmed':'<i class="bi bi-check-circle-fill" style="color:var(--green)"></i> ยืนยันแล้ว','payslip.draft':'ร่าง (รอยืนยัน)',
     'payslip.confirmed_by':'ยืนยันโดย: ','payslip.print_pdf':'พิมพ์ PDF',
     'payslip.hours_detail':'รายละเอียดชั่วโมงรายวัน','payslip.col_date':'วันที่','payslip.col_in':'เข้า',
     'payslip.col_out':'ออก','payslip.col_break':'พัก','payslip.col_hours':'ชั่วโมง',
@@ -4285,7 +4287,7 @@ const STAFF_I18N = {
     'loan.cat.computer':'คอมพิวเตอร์/อิเล็กทรอนิกส์','loan.cat.vehicle':'ยานพาหนะ',
     'loan.cat.furniture':'เฟอร์นิเจอร์','loan.cat.tool':'เครื่องมือ','loan.cat.other':'อื่นๆ',
     'loan.no_records':'ไม่มีรายการ','loan.category':'หมวด: ','loan.location':'ที่ตั้ง: ',
-    'loan.loan_date':'วันที่ขอ: ','loan.expected_return':'คืนโดยประมาณ: ','loan.overdue':' ⚠️ เกินกำหนด',
+    'loan.loan_date':'วันที่ขอ: ','loan.expected_return':'คืนโดยประมาณ: ','loan.overdue':' <i class="bi bi-exclamation-triangle-fill"></i> เกินกำหนด',
     'loan.actual_return':'วันคืนจริง: ','loan.purpose':'วัตถุประสงค์: ','loan.reject_reason':'เหตุผลปฏิเสธ: ',
     'loan.cancel_btn':'ยกเลิกคำขอ','loan.confirm_cancel':'ยกเลิกคำขอยืมนี้?',
     'loan.cancelled':'ยกเลิกคำขอแล้ว','loan.cancel_fail':'ยกเลิกล้มเหลว',
@@ -4343,9 +4345,9 @@ const STAFF_I18N = {
     'leave.used_days':'ใช้ไปแล้ว: {0} วัน','leave.all_used':'ใช้หมดแล้ว','leave.low_balance':'ใกล้หมด',
     'leave.pm_sfx':' (บ่าย)','leave.am_sfx':' (เช้า)',
     'perf.review_suffix':'การประเมิน','perf.score_label':'คะแนน','perf.score_unit':'คะแนน',
-    'perf.salary_adj_pfx':'✓ ปรับเงินเดือน: ','perf.salary_adj_unit':' บาท','perf.reviewer':'ผู้ประเมิน: ',
+    'perf.salary_adj_pfx':'<i class="bi bi-check-lg"></i> ปรับเงินเดือน: ','perf.salary_adj_unit':' บาท','perf.reviewer':'ผู้ประเมิน: ',
     'bio.device_android':'อุปกรณ์ Android','bio.device_default':'อุปกรณ์นี้',
-    'myt.reupload':'อัปโหลดใหม่','myt.upload_receipt':'📎 อัปโหลดใบเสร็จ','myt.total':'รวม: NT$ {0}',
+    'myt.reupload':'อัปโหลดใหม่','myt.upload_receipt':'<i class="bi bi-paperclip"></i> อัปโหลดใบเสร็จ','myt.total':'รวม: NT$ {0}',
   },
   'zh-CN': {
     brand:'打卡管理系统', loginTitle:'员工登录', labelUser:'账号', labelPw:'密码',
@@ -4379,7 +4381,7 @@ const STAFF_I18N = {
     'att.days':'出勤天数','att.total_hours':'总工时（估）','att.avg_hours':'日均工时',
     'att.detail':'打卡明细',
     'att.punch_types.in':'上班','att.punch_types.out':'下班','att.punch_types.break_out':'休息','att.punch_types.break_in':'回来',
-    'att.manual':'✏️ 补打卡',
+    'att.manual':'<i class="bi bi-pencil-fill"></i> 补打卡',
     'ot.weekday_short':'平日','ot.rest_day_short':'休息日','ot.holiday_short':'法定节假日','ot.special_short':'例假日',
     'ot.need_date':'请填写加班日期','ot.need_start':'请填写开始时间',
     'ot.need_end':'请填写结束时间','ot.need_reason':'请填写加班原因',
@@ -4515,7 +4517,7 @@ const STAFF_I18N = {
     'payslip.leave_pfx':'请假','payslip.unpaid_pfx':'无薪假','payslip.ot_pfx':'加班费',
     'payslip.allowance_total':'支付总额','payslip.deduction_total':'扣除总额','payslip.net_pay':'实领金额',
     'payslip.allowance_items':'津贴项目','payslip.deduction_items':'扣除项目','payslip.subtotal':'合计',
-    'payslip.status_label':'状态：','payslip.confirmed':'✅ 已确认','payslip.draft':'草稿（待确认）',
+    'payslip.status_label':'状态：','payslip.confirmed':'<i class="bi bi-check-circle-fill" style="color:var(--green)"></i> 已确认','payslip.draft':'草稿（待确认）',
     'payslip.confirmed_by':'确认人：','payslip.print_pdf':'打印 PDF',
     'payslip.hours_detail':'每日工时明细','payslip.col_date':'日期','payslip.col_in':'上班',
     'payslip.col_out':'下班','payslip.col_break':'休息','payslip.col_hours':'工时',
@@ -4550,7 +4552,7 @@ const STAFF_I18N = {
     'loan.cat.computer':'电脑/3C','loan.cat.vehicle':'车辆',
     'loan.cat.furniture':'办公家具','loan.cat.tool':'工具设备','loan.cat.other':'其他',
     'loan.no_records':'无记录','loan.category':'类别：','loan.location':'位置：',
-    'loan.loan_date':'申请日：','loan.expected_return':'预计归还：','loan.overdue':' ⚠️ 已逾期',
+    'loan.loan_date':'申请日：','loan.expected_return':'预计归还：','loan.overdue':' <i class="bi bi-exclamation-triangle-fill"></i> 已逾期',
     'loan.actual_return':'实际归还：','loan.purpose':'用途：','loan.reject_reason':'拒绝原因：',
     'loan.cancel_btn':'取消申请','loan.confirm_cancel':'确定取消此借用申请？',
     'loan.cancelled':'已取消申请','loan.cancel_fail':'取消失败',
@@ -4608,9 +4610,9 @@ const STAFF_I18N = {
     'leave.used_days':'已用 {0} 天','leave.all_used':'已用完','leave.low_balance':'即将用完',
     'leave.pm_sfx':'（下午）','leave.am_sfx':'（上午）',
     'perf.review_suffix':'考核','perf.score_label':'得分','perf.score_unit':'分',
-    'perf.salary_adj_pfx':'✓ 薪资调整：','perf.salary_adj_unit':' 元','perf.reviewer':'考核人：',
+    'perf.salary_adj_pfx':'<i class="bi bi-check-lg"></i> 薪资调整：','perf.salary_adj_unit':' 元','perf.reviewer':'考核人：',
     'bio.device_android':'Android 设备','bio.device_default':'此设备',
-    'myt.reupload':'重新上传','myt.upload_receipt':'📎 上传凭证','myt.total':'合计：NT$ {0}',
+    'myt.reupload':'重新上传','myt.upload_receipt':'<i class="bi bi-paperclip"></i> 上传凭证','myt.total':'合计：NT$ {0}',
   },
   'id': {
     brand:'Sistem Absensi', loginTitle:'Login Karyawan', labelUser:'Username', labelPw:'Kata Sandi',
@@ -4644,7 +4646,7 @@ const STAFF_I18N = {
     'att.days':'Hari Hadir','att.total_hours':'Total Jam (perkiraan)','att.avg_hours':'Rata-rata Jam/Hari',
     'att.detail':'Detail Absensi',
     'att.punch_types.in':'Masuk','att.punch_types.out':'Pulang','att.punch_types.break_out':'Istirahat','att.punch_types.break_in':'Kembali',
-    'att.manual':'✏️ Absen Susulan',
+    'att.manual':'<i class="bi bi-pencil-fill"></i> Absen Susulan',
     'ot.weekday_short':'Hari Kerja','ot.rest_day_short':'Hari Libur','ot.holiday_short':'Hari Raya','ot.special_short':'Hari Libur Khusus',
     'ot.need_date':'Masukkan tanggal lembur','ot.need_start':'Masukkan waktu mulai',
     'ot.need_end':'Masukkan waktu selesai','ot.need_reason':'Masukkan alasan lembur',
@@ -4783,7 +4785,7 @@ const STAFF_I18N = {
     'payslip.leave_pfx':'Cuti','payslip.unpaid_pfx':'Cuti Tidak Dibayar','payslip.ot_pfx':'Upah Lembur',
     'payslip.allowance_total':'Total Pendapatan','payslip.deduction_total':'Total Potongan','payslip.net_pay':'Gaji Bersih',
     'payslip.allowance_items':'Tunjangan','payslip.deduction_items':'Potongan','payslip.subtotal':'Total',
-    'payslip.status_label':'Status: ','payslip.confirmed':'✅ Dikonfirmasi','payslip.draft':'Draf (Menunggu Konfirmasi)',
+    'payslip.status_label':'Status: ','payslip.confirmed':'<i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Dikonfirmasi','payslip.draft':'Draf (Menunggu Konfirmasi)',
     'payslip.confirmed_by':'Dikonfirmasi oleh: ','payslip.print_pdf':'Cetak PDF',
     'payslip.hours_detail':'Detail Jam Harian','payslip.col_date':'Tanggal','payslip.col_in':'Masuk',
     'payslip.col_out':'Pulang','payslip.col_break':'Istirahat','payslip.col_hours':'Jam',
@@ -4823,7 +4825,7 @@ const STAFF_I18N = {
     'loan.cat.computer':'Komputer/Elektronik','loan.cat.vehicle':'Kendaraan',
     'loan.cat.furniture':'Furnitur Kantor','loan.cat.tool':'Alat/Peralatan','loan.cat.other':'Lainnya',
     'loan.no_records':'Tidak ada data','loan.category':'Kategori: ','loan.location':'Lokasi: ',
-    'loan.loan_date':'Tgl Ajuan: ','loan.expected_return':'Perkiraan Kembali: ','loan.overdue':' ⚠️ Terlambat',
+    'loan.loan_date':'Tgl Ajuan: ','loan.expected_return':'Perkiraan Kembali: ','loan.overdue':' <i class="bi bi-exclamation-triangle-fill"></i> Terlambat',
     'loan.actual_return':'Tgl Dikembalikan: ','loan.purpose':'Tujuan: ','loan.reject_reason':'Alasan Penolakan: ',
     'loan.cancel_btn':'Batalkan Permohonan','loan.confirm_cancel':'Batalkan permohonan peminjaman ini?',
     'loan.cancelled':'Permohonan dibatalkan','loan.cancel_fail':'Pembatalan gagal',
@@ -4881,9 +4883,9 @@ const STAFF_I18N = {
     'leave.used_days':'Terpakai: {0} hari','leave.all_used':'Habis','leave.low_balance':'Hampir habis',
     'leave.pm_sfx':' (Sore)','leave.am_sfx':' (Pagi)',
     'perf.review_suffix':'Penilaian','perf.score_label':'Nilai','perf.score_unit':'poin',
-    'perf.salary_adj_pfx':'✓ Penyesuaian Gaji: ','perf.salary_adj_unit':' ','perf.reviewer':'Penilai: ',
+    'perf.salary_adj_pfx':'<i class="bi bi-check-lg"></i> Penyesuaian Gaji: ','perf.salary_adj_unit':' ','perf.reviewer':'Penilai: ',
     'bio.device_android':'Perangkat Android','bio.device_default':'Perangkat Ini',
-    'myt.reupload':'Unggah Ulang','myt.upload_receipt':'📎 Unggah Bukti','myt.total':'Total: NT$ {0}',
+    'myt.reupload':'Unggah Ulang','myt.upload_receipt':'<i class="bi bi-paperclip"></i> Unggah Bukti','myt.total':'Total: NT$ {0}',
   }
 };
 let _staffLang = localStorage.getItem('adminLang') || 'zh-TW';
