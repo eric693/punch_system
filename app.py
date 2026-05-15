@@ -102,6 +102,19 @@ def _cache_del_prefix(prefix: str):
             if k.startswith(prefix):
                 del _cache_store[k]
 
+def _get_active_locs():
+    """Return active punch_locations from cache (TTL 5 min)."""
+    cached = _cache_get('punch:active_locs')
+    if cached is not None:
+        return cached
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM punch_locations WHERE active=TRUE ORDER BY id"
+        ).fetchall()
+    data = [dict(r) for r in rows]
+    _cache_set('punch:active_locs', data, ttl=300)
+    return data
+
 def _month_range(month: str) -> tuple:
     """Return (start_iso, end_exclusive_iso) for a 'YYYY-MM' string."""
     import calendar as _cal_mr
@@ -487,6 +500,9 @@ def init_db():
         "CREATE INDEX IF NOT EXISTS idx_schedule_requests_status     ON schedule_requests(status, month)",
         "CREATE INDEX IF NOT EXISTS idx_punch_requests_status        ON punch_requests(status)",
         "CREATE INDEX IF NOT EXISTS idx_punch_staff_active           ON punch_staff(active)",
+        "CREATE INDEX IF NOT EXISTS idx_punch_staff_line_user_id     ON punch_staff(line_user_id, active) WHERE line_user_id IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS idx_punch_staff_username         ON punch_staff(username, active)",
+        "CREATE INDEX IF NOT EXISTS idx_leave_types_active_name      ON leave_types(active, name)",
         "CREATE INDEX IF NOT EXISTS idx_salary_records_staff_month   ON salary_records(staff_id, month)",
         "CREATE INDEX IF NOT EXISTS idx_salary_records_month         ON salary_records(month)",
         "CREATE INDEX IF NOT EXISTS idx_finance_records_date_type    ON finance_records(record_date, type)",
@@ -1043,6 +1059,7 @@ def api_punch_locations_create():
         ).fetchone()
     _cache_del('punch:settings')
     _cache_del('punch:locations')
+    _cache_del('punch:active_locs')
     return jsonify(loc_row(row)), 201
 
 @app.route('/api/punch/locations/<int:lid>', methods=['PUT'])
@@ -1063,6 +1080,7 @@ def api_punch_locations_update(lid):
         ).fetchone()
     _cache_del('punch:settings')
     _cache_del('punch:locations')
+    _cache_del('punch:active_locs')
     return jsonify(loc_row(row)) if row else ('', 404)
 
 @app.route('/api/punch/locations/<int:lid>', methods=['DELETE'])
@@ -1072,6 +1090,7 @@ def api_punch_locations_delete(lid):
         conn.execute("DELETE FROM punch_locations WHERE id=%s", (lid,))
     _cache_del('punch:settings')
     _cache_del('punch:locations')
+    _cache_del('punch:active_locs')
     return jsonify({'deleted': lid})
 
 # ── Clock In/Out ──────────────────────────────────────────────────
@@ -1098,7 +1117,7 @@ def api_punch_clock():
         if not staff:
             return jsonify({'error': '員工不存在'}), 404
         cfg  = conn.execute("SELECT * FROM punch_config WHERE id=1").fetchone()
-        locs = conn.execute("SELECT * FROM punch_locations WHERE active=TRUE").fetchall()
+    locs = _get_active_locs()
 
     gps_required     = cfg['gps_required'] if cfg else False
     wifi_enabled     = cfg['wifi_enabled'] if cfg else False
@@ -1491,39 +1510,26 @@ def api_punch_record_manual():
         return jsonify({'error': '無效的打卡類型'}), 400
 
     with get_db() as conn:
-        # ── 驗證 1：同日同類型不可重複 ──
-        existing = conn.execute("""
-            SELECT id FROM punch_records
-            WHERE staff_id=%s AND punch_type=%s
+        # ── 一次撈當日所有打卡記錄，再做驗證 ──
+        day_records = conn.execute("""
+            SELECT id, punch_type, punched_at FROM punch_records
+            WHERE staff_id=%s
               AND (punched_at AT TIME ZONE 'Asia/Taipei')::date
                   = (%s::timestamptz AT TIME ZONE 'Asia/Taipei')::date
               AND deleted_at IS NULL
-        """, (staff_id, punch_type, punched_at)).fetchone()
-        if existing:
-            LABEL = {'in':'上班打卡','out':'下班打卡','break_out':'休息開始','break_in':'休息結束'}
-            return jsonify({'error': f'該員工當日已有「{LABEL.get(punch_type,punch_type)}」記錄（id={existing["id"]}），請先刪除再補建'}), 409
+        """, (staff_id, punched_at)).fetchall()
 
-        # ── 驗證 2：in 必須早於 out ──
+        LABEL = {'in':'上班打卡','out':'下班打卡','break_out':'休息開始','break_in':'休息結束'}
+        for rec in day_records:
+            if rec['punch_type'] == punch_type:
+                return jsonify({'error': f'該員工當日已有「{LABEL.get(punch_type,punch_type)}」記錄（id={rec["id"]}），請先刪除再補建'}), 409
+
         if punch_type == 'out':
-            in_rec = conn.execute("""
-                SELECT punched_at FROM punch_records
-                WHERE staff_id=%s AND punch_type='in'
-                  AND (punched_at AT TIME ZONE 'Asia/Taipei')::date
-                      = (%s::timestamptz AT TIME ZONE 'Asia/Taipei')::date
-                  AND deleted_at IS NULL
-                ORDER BY punched_at LIMIT 1
-            """, (staff_id, punched_at)).fetchone()
+            in_rec = next((r for r in day_records if r['punch_type'] == 'in'), None)
             if in_rec and punched_at <= in_rec['punched_at'].isoformat():
                 return jsonify({'error': '下班時間不得早於或等於上班時間'}), 400
         elif punch_type == 'in':
-            out_rec = conn.execute("""
-                SELECT punched_at FROM punch_records
-                WHERE staff_id=%s AND punch_type='out'
-                  AND (punched_at AT TIME ZONE 'Asia/Taipei')::date
-                      = (%s::timestamptz AT TIME ZONE 'Asia/Taipei')::date
-                  AND deleted_at IS NULL
-                ORDER BY punched_at LIMIT 1
-            """, (staff_id, punched_at)).fetchone()
+            out_rec = next((r for r in day_records if r['punch_type'] == 'out'), None)
             if out_rec and punched_at >= out_rec['punched_at'].isoformat():
                 return jsonify({'error': '上班時間不得晚於或等於已存在的下班時間'}), 400
 
@@ -2600,7 +2606,7 @@ def _handle_line_punch_event(event, cfg):
         if punch_type:
             with get_db() as conn:
                 pcfg = conn.execute("SELECT * FROM punch_config WHERE id=1").fetchone()
-                locs = conn.execute("SELECT * FROM punch_locations WHERE active=TRUE").fetchall()
+            locs = _get_active_locs()
             gps_required = pcfg['gps_required'] if pcfg else False
             if gps_required and locs:
                 lang = _lang()
@@ -2686,7 +2692,7 @@ def _do_line_punch(staff, user_id, lat, lng, forced_type, PUNCH_LABEL):
     if lat is not None and lng is not None:
         with get_db() as conn:
             pcfg = conn.execute("SELECT * FROM punch_config WHERE id=1").fetchone()
-            locs = conn.execute("SELECT * FROM punch_locations WHERE active=TRUE").fetchall()
+        locs = _get_active_locs()
         gps_required = pcfg['gps_required'] if pcfg else False
         if locs:
             min_dist = None; min_loc = None
