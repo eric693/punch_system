@@ -265,6 +265,8 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <a href="#" class="nav-item"        id="nav-ecommerce" data-i18n="nav.ecommerce" onclick="showPage('ecommerce',event)">電商串接</a>
     <a href="#" class="nav-item"        id="nav-inventory" data-i18n="nav.inventory" onclick="showPage('inventory',event)">進銷存管理<span class="nav-badge" id="badge-inventory" style="display:none"></span></a>
     <a href="#" class="nav-item"        id="nav-accounting" data-i18n="nav.accounting" onclick="showPage('accounting',event)">會計記帳</a>
+    <a href="#" class="nav-item"        id="nav-approval" onclick="showPage('approval',event)">審批工作流程<span class="nav-badge" id="badge-approval" style="display:none"></span></a>
+    <a href="#" class="nav-item"        id="nav-audit-log" onclick="showPage('audit-log',event)">稽核日誌</a>
     <a href="#" class="nav-item"        id="nav-adminmgr" data-i18n="nav.adminmgr" onclick="showPage('adminmgr',event)" style="display:none">帳號管理</a>
   </nav>
   <div class="sidebar-bottom">
@@ -2354,29 +2356,121 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
   <!-- ── CRM 客戶管理 ── -->
   <div class="page" id="page-crm" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-      <div style="font-size:15px;font-weight:700;color:var(--navy)" data-i18n="page.crm">CRM 客戶管理</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:15px;font-weight:700;color:var(--navy)">CRM 客戶管理</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap" id="crm-header-btns">
         <button class="btn btn-outline btn-sm" onclick="exportCrmExcel()">匯出 Excel</button>
         <button class="btn btn-primary btn-sm" onclick="openCrmCreate()">＋ 新增客戶</button>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px" data-i18n="crm.stat.total">客戶總數</div><div id="crm-stat-total" style="font-size:26px;font-weight:800;color:var(--navy)">—</div></div>
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px" data-i18n="crm.stat.active">活躍客戶</div><div id="crm-stat-active" style="font-size:26px;font-weight:800;color:var(--green)">—</div></div>
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px" data-i18n="crm.stat.vip">VIP 客戶</div><div id="crm-stat-vip" style="font-size:26px;font-weight:800;color:#c8a96e">—</div></div>
-      <div class="card" style="padding:18px"><div style="font-size:11px;color:var(--muted);margin-bottom:6px" data-i18n="crm.stat.interactions">本月互動</div><div id="crm-stat-inter" style="font-size:26px;font-weight:800;color:var(--accent)">—</div></div>
+    <!-- KPI 卡片 -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div class="stat-card"><div class="stat-label">客戶總數</div><div class="stat-value" id="crm-stat-total">—</div></div>
+      <div class="stat-card"><div class="stat-label">本月成交</div><div class="stat-value positive" id="crm-stat-won-mtd">—</div></div>
+      <div class="stat-card"><div class="stat-label">進行中商機</div><div class="stat-value accent" id="crm-stat-opp-active">—</div></div>
+      <div class="stat-card"><div class="stat-label">逾期跟進</div><div class="stat-value negative" id="crm-stat-overdue">—</div></div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-      <select class="filter-input" id="crm-filter-status" onchange="loadCrmList()" style="min-width:110px">
-        <option value="">全部狀態</option>
-        <option value="active" data-i18n="crm.status.active">活躍</option>
-        <option value="vip" data-i18n="crm.status.vip">VIP</option>
-        <option value="inactive" data-i18n="crm.status.inactive">停用</option>
-      </select>
-      <input class="filter-input" id="crm-filter-q" placeholder="搜尋公司/聯絡人/電話…" oninput="loadCrmList()" style="flex:1;min-width:200px">
+    <!-- Tab Bar -->
+    <div class="inv-tab-bar" style="margin-bottom:14px">
+      <button class="inv-tab active" id="crm-tab-customers" onclick="switchCrmTab('customers')">客戶列表</button>
+      <button class="inv-tab"        id="crm-tab-leads"     onclick="switchCrmTab('leads')">Lead 潛在客戶<span class="tab-badge" id="badge-crm-leads" style="display:none"></span></button>
+      <button class="inv-tab"        id="crm-tab-pipeline"  onclick="switchCrmTab('pipeline')">銷售漏斗</button>
+      <button class="inv-tab"        id="crm-tab-followups" onclick="switchCrmTab('followups')">跟進提醒<span class="tab-badge" id="badge-crm-fups" style="display:none"></span></button>
     </div>
-    <div class="card" style="overflow:hidden"><div id="crm-list-wrap" style="padding:0"></div></div>
+
+    <!-- ── 客戶列表 Panel ── -->
+    <div id="crm-panel-customers">
+      <div class="filter-row">
+        <select class="filter-input" id="crm-filter-status" onchange="loadCrmList()" style="min-width:110px">
+          <option value="">全部狀態</option>
+          <option value="active">活躍</option>
+          <option value="vip">VIP</option>
+          <option value="inactive">停用</option>
+        </select>
+        <select class="filter-input" id="crm-filter-assigned" onchange="loadCrmList()" style="min-width:130px">
+          <option value="">全部業務</option>
+        </select>
+        <input class="filter-input" id="crm-filter-industry" placeholder="行業篩選…" oninput="loadCrmList()" style="min-width:120px">
+        <input class="filter-input" id="crm-filter-q" placeholder="搜尋公司/聯絡人/電話…" oninput="loadCrmList()" style="flex:1;min-width:200px">
+        <button class="btn btn-outline btn-sm" onclick="loadCrmList()">篩選</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="crm-list-wrap" style="padding:0"></div></div>
+    </div>
+
+    <!-- ── Lead 潛在客戶 Panel ── -->
+    <div id="crm-panel-leads" style="display:none">
+      <div class="filter-row">
+        <select class="filter-input" id="lead-filter-stage" onchange="loadLeads()" style="min-width:130px">
+          <option value="">全部階段</option>
+          <option value="new">新進 Lead</option>
+          <option value="contacted">已聯繫</option>
+          <option value="qualified">已確認意向</option>
+        </select>
+        <select class="filter-input" id="lead-filter-priority" onchange="loadLeads()" style="min-width:110px">
+          <option value="">全部優先度</option>
+          <option value="high">高</option>
+          <option value="medium">中</option>
+          <option value="low">低</option>
+        </select>
+        <select class="filter-input" id="lead-filter-assigned" onchange="loadLeads()" style="min-width:130px">
+          <option value="">全部業務</option>
+        </select>
+        <select class="filter-input" id="lead-filter-overdue" onchange="loadLeads()" style="min-width:130px">
+          <option value="">全部</option>
+          <option value="1">僅逾期跟進</option>
+        </select>
+        <input class="filter-input" id="lead-filter-q" placeholder="搜尋公司/聯絡人…" oninput="loadLeads()" style="flex:1;min-width:180px">
+        <button class="btn btn-primary btn-sm" onclick="openLeadModal()">＋ 新增 Lead</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="lead-list-wrap" style="padding:0"></div></div>
+    </div>
+
+    <!-- ── 銷售漏斗 Panel ── -->
+    <div id="crm-panel-pipeline" style="display:none">
+      <div class="filter-row">
+        <select class="filter-input" id="opp-filter-stage" onchange="loadOpportunities()" style="min-width:140px">
+          <option value="">全部階段</option>
+          <option value="prospect">初步接觸</option>
+          <option value="proposal">提案中</option>
+          <option value="negotiation">議價中</option>
+          <option value="closed_won">✅ 成交</option>
+          <option value="closed_lost">❌ 流失</option>
+        </select>
+        <select class="filter-input" id="opp-filter-assigned" onchange="loadOpportunities()" style="min-width:130px">
+          <option value="">全部業務</option>
+        </select>
+        <input class="filter-input" id="opp-filter-q" placeholder="搜尋商機標題/客戶…" oninput="loadOpportunities()" style="flex:1;min-width:180px">
+        <button class="btn btn-primary btn-sm" onclick="openOppModal()">＋ 新增商機</button>
+      </div>
+      <!-- 漏斗視覺化 -->
+      <div id="pipeline-funnel" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px"></div>
+      <div class="card" style="overflow:hidden"><div id="opp-list-wrap" style="padding:0"></div></div>
+    </div>
+
+    <!-- ── 跟進提醒 Panel ── -->
+    <div id="crm-panel-followups" style="display:none">
+      <div class="filter-row">
+        <select class="filter-input" id="fup-filter-done" onchange="loadFollowUps()" style="min-width:110px">
+          <option value="0">未完成</option>
+          <option value="1">已完成</option>
+          <option value="">全部</option>
+        </select>
+        <select class="filter-input" id="fup-filter-type" onchange="loadFollowUps()" style="min-width:120px">
+          <option value="">全部類型</option>
+          <option value="crm_lead">Lead</option>
+          <option value="crm_opportunity">商機</option>
+        </select>
+        <input type="date" class="filter-input" id="fup-filter-from" onchange="loadFollowUps()" style="min-width:130px">
+        <input type="date" class="filter-input" id="fup-filter-to" onchange="loadFollowUps()" style="min-width:130px">
+        <select class="filter-input" id="fup-filter-assigned" onchange="loadFollowUps()" style="min-width:130px">
+          <option value="">全部業務</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="loadFollowUps()">篩選</button>
+        <button class="btn btn-primary btn-sm" onclick="openFollowUpModal()">＋ 新增提醒</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="fup-list-wrap" style="padding:0"></div></div>
+    </div>
+
     <!-- slide panel -->
     <div id="crm-panel-backdrop" onclick="closeCrmPanel()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150"></div>
     <div id="crm-panel" style="display:none;position:fixed;top:0;right:0;width:480px;max-width:100vw;height:100vh;background:#fff;z-index:160;overflow-y:auto;box-shadow:-4px 0 24px rgba(0,0,0,.15);padding:28px 28px 40px">
@@ -2488,6 +2582,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- Tab Bar -->
     <div class="inv-tab-bar">
       <button class="inv-tab active" id="inv-tab-stock"        onclick="switchInvTab('stock')">庫存總覽</button>
+      <button class="inv-tab"        id="inv-tab-alerts"       onclick="switchInvTab('alerts')">庫存預警<span class="tab-badge" id="badge-inv-alerts" style="display:none"></span></button>
       <button class="inv-tab"        id="inv-tab-products"     onclick="switchInvTab('products')">商品管理</button>
       <button class="inv-tab"        id="inv-tab-purchase"     onclick="switchInvTab('purchase')">採購管理<span class="tab-badge" id="badge-inv-purchase" style="display:none"></span></button>
       <button class="inv-tab"        id="inv-tab-shipments"    onclick="switchInvTab('shipments')">出貨管理<span class="tab-badge" id="badge-inv-shipments" style="display:none"></span></button>
@@ -2511,6 +2606,34 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <button class="btn btn-outline btn-sm" onclick="openInvTransferModal()" style="white-space:nowrap">倉庫調撥</button>
       </div>
       <div class="card"><div id="inv-stock-wrap"></div></div>
+    </div>
+
+    <!-- 庫存預警 Panel -->
+    <div id="inv-panel-alerts" style="display:none">
+      <div class="filter-row">
+        <select class="filter-input" id="inv-alert-filter-warehouse" onchange="loadInvAlerts()" style="min-width:130px">
+          <option value="">全部倉庫</option>
+        </select>
+        <select class="filter-input" id="inv-alert-filter-level" onchange="filterInvAlerts()" style="min-width:120px">
+          <option value="">全部警示</option>
+          <option value="critical">🔴 嚴重不足</option>
+          <option value="warning">🟡 接近補貨點</option>
+        </select>
+        <input class="filter-input" id="inv-alert-filter-q" placeholder="搜尋 SKU / 商品名稱…" oninput="filterInvAlerts()" style="flex:1;min-width:180px">
+        <button class="btn btn-outline btn-sm" onclick="loadInvAlerts()">重新整理</button>
+        <button class="btn btn-primary btn-sm" onclick="openSuggestPOModal()">自動建議採購單</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div class="stat-card" style="border-left:4px solid var(--red)">
+          <div class="stat-label">🔴 嚴重不足（低於最小庫存）</div>
+          <div class="stat-value negative" id="inv-alert-critical">—</div>
+        </div>
+        <div class="stat-card" style="border-left:4px solid #e8820c">
+          <div class="stat-label">🟡 接近補貨點</div>
+          <div class="stat-value" style="color:#e8820c" id="inv-alert-warning">—</div>
+        </div>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="inv-alert-wrap" style="padding:0"></div></div>
     </div>
 
     <!-- 商品管理 Panel -->
@@ -3501,6 +3624,108 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     </div>
   </div><!-- end page-hr-analysis -->
+
+  <!-- ══ 審批工作流程 ══ -->
+  <div class="page" id="page-approval" style="display:none">
+    <div class="panel-bar" style="margin-bottom:20px">
+      <span class="page-title">審批工作流程</span>
+      <div class="panel-bar-actions">
+        <button class="btn btn-outline btn-sm" onclick="switchApprovalTab('flows')">流程設定</button>
+        <button class="btn btn-primary btn-sm" onclick="switchApprovalTab('instances')">審批列表</button>
+      </div>
+    </div>
+    <!-- KPI -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div class="stat-card"><div class="stat-label">待審中</div><div class="stat-value warning" id="appr-stat-pending">—</div></div>
+      <div class="stat-card"><div class="stat-label">已核准</div><div class="stat-value positive" id="appr-stat-approved">—</div></div>
+      <div class="stat-card"><div class="stat-label">已駁回</div><div class="stat-value negative" id="appr-stat-rejected">—</div></div>
+      <div class="stat-card"><div class="stat-label">流程數</div><div class="stat-value" id="appr-stat-flows">—</div></div>
+    </div>
+    <!-- Tab -->
+    <div class="inv-tab-bar" style="margin-bottom:14px">
+      <button class="inv-tab active" id="appr-tab-instances" onclick="switchApprovalTab('instances')">審批記錄</button>
+      <button class="inv-tab"        id="appr-tab-flows"     onclick="switchApprovalTab('flows')">流程設定</button>
+    </div>
+
+    <!-- 審批記錄 Panel -->
+    <div id="appr-panel-instances">
+      <div class="filter-row">
+        <select class="filter-input" id="appr-filter-module" onchange="loadApprovalInstances()" style="min-width:130px">
+          <option value="">全部模組</option>
+          <option value="leave">請假</option>
+          <option value="overtime">加班</option>
+          <option value="expense">費用申請</option>
+          <option value="travel">差旅申請</option>
+          <option value="assets">資產借用</option>
+          <option value="crm">CRM</option>
+          <option value="inventory">庫存</option>
+          <option value="accounting">會計</option>
+        </select>
+        <select class="filter-input" id="appr-filter-status" onchange="loadApprovalInstances()" style="min-width:110px">
+          <option value="">全部狀態</option>
+          <option value="pending">待審中</option>
+          <option value="approved">已核准</option>
+          <option value="rejected">已駁回</option>
+        </select>
+        <input class="filter-input" id="appr-filter-q" placeholder="搜尋標題/申請人…" oninput="filterApprovalList()" style="flex:1;min-width:180px">
+        <button class="btn btn-outline btn-sm" onclick="loadApprovalInstances()">重新整理</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="appr-instances-wrap" style="padding:0"></div></div>
+    </div>
+
+    <!-- 流程設定 Panel -->
+    <div id="appr-panel-flows" style="display:none">
+      <div class="filter-row" style="margin-bottom:14px">
+        <select class="filter-input" id="appr-flow-filter-module" onchange="loadApprovalFlows()" style="min-width:130px">
+          <option value="">全部模組</option>
+          <option value="leave">請假</option>
+          <option value="overtime">加班</option>
+          <option value="expense">費用申請</option>
+          <option value="travel">差旅申請</option>
+          <option value="assets">資產借用</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openFlowModal()">＋ 新增流程</button>
+      </div>
+      <div class="card" style="overflow:hidden"><div id="appr-flows-wrap" style="padding:0"></div></div>
+    </div>
+  </div><!-- end page-approval -->
+
+  <!-- ══ 稽核日誌 ══ -->
+  <div class="page" id="page-audit-log" style="display:none">
+    <div class="panel-bar" style="margin-bottom:20px">
+      <span class="page-title">系統稽核日誌</span>
+    </div>
+    <div class="filter-row" style="margin-bottom:14px">
+      <select class="filter-input" id="audit-filter-module" onchange="loadAuditLog()" style="min-width:140px">
+        <option value="">全部模組</option>
+        <option value="salary">薪資</option>
+        <option value="performance">績效</option>
+        <option value="inventory">庫存</option>
+        <option value="accounting">會計</option>
+        <option value="crm">CRM</option>
+        <option value="approval">審批</option>
+      </select>
+      <select class="filter-input" id="audit-filter-action" onchange="loadAuditLog()" style="min-width:160px">
+        <option value="">全部操作</option>
+        <option value="update_record">薪資修改</option>
+        <option value="adjust_salary">績效調薪</option>
+        <option value="stock_adjust">庫存調整</option>
+        <option value="stock_transfer">倉庫調撥</option>
+        <option value="post_voucher">傳票過帳</option>
+        <option value="void_voucher">傳票作廢</option>
+        <option value="stage_change_opportunity">商機階段變更</option>
+        <option value="convert_lead">Lead 轉換</option>
+        <option value="approval_approve">審批核准</option>
+        <option value="approval_reject">審批駁回</option>
+      </select>
+      <input class="filter-input" id="audit-filter-actor" placeholder="操作人…" oninput="loadAuditLog()" style="min-width:130px">
+      <input type="date" class="filter-input" id="audit-filter-from" onchange="loadAuditLog()" style="min-width:130px">
+      <input type="date" class="filter-input" id="audit-filter-to" onchange="loadAuditLog()" style="min-width:130px">
+      <button class="btn btn-outline btn-sm" onclick="loadAuditLog()">查詢</button>
+      <button class="btn btn-outline btn-sm" onclick="loadAuditLog(1)">下一頁 ›</button>
+    </div>
+    <div class="card" style="overflow:hidden"><div id="audit-log-wrap" style="padding:0"></div></div>
+  </div><!-- end page-audit-log -->
 
 
 </main>
@@ -12538,9 +12763,14 @@ function showPage(page, e) {
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
   setTimeout(refreshBadges, 600);
-  ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr','expense-review','perf','stores','training','travel','assets','labor-law','insurance','report-center','hr-analysis','crm','orders','ecommerce','inventory','accounting'].forEach(p =>
-    document.getElementById('page-' + p).style.display = p === page ? '' : 'none'
-  );
+  const _allPages = ['dash','punch','sched','leave','salary','ann','holiday','finance','adminmgr',
+    'expense-review','perf','stores','training','travel','assets','labor-law','insurance',
+    'report-center','hr-analysis','crm','orders','ecommerce','inventory','accounting',
+    'approval','audit-log'];
+  _allPages.forEach(p => {
+    const el = document.getElementById('page-' + p);
+    if (el) el.style.display = p === page ? '' : 'none';
+  });
   document.getElementById('page-title').textContent = t('page.' + page) || page;
   if (page === 'dash')            initDash();
   if (page === 'punch')           initPunch();
@@ -12566,6 +12796,8 @@ function showPage(page, e) {
   if (page === 'ecommerce')       initEcommerce();
   if (page === 'inventory')       initInventory();
   if (page === 'accounting')      initAccounting();
+  if (page === 'approval')        initApproval();
+  if (page === 'audit-log')       initAuditLog();
 }
 
 // ── Toast ─────────────────────────────────────────────────────
@@ -19865,32 +20097,24 @@ async function exportInsuranceExcel() {
 let _crmList = [];
 let _crmStaffList = [];
 
-async function initCrm() {
-  await Promise.all([loadCrmStats(), loadCrmList(), _loadCrmStaff()]);
-}
-
 async function _loadCrmStaff() {
   const { ok, data } = await api('/api/punch/staff', {}, true);
   _crmStaffList = ok ? data : [];
 }
 
-async function loadCrmStats() {
-  const { ok, data } = await api('/api/crm/stats', {}, true);
-  if (!ok) return;
-  document.getElementById('crm-stat-total').textContent = data.total;
-  document.getElementById('crm-stat-active').textContent = data.active;
-  document.getElementById('crm-stat-vip').textContent = data.vip;
-  document.getElementById('crm-stat-inter').textContent = data.interactions_this_month;
-}
-
 async function loadCrmList() {
-  const status = document.getElementById('crm-filter-status').value;
-  const q      = document.getElementById('crm-filter-q').value.trim();
+  const status   = document.getElementById('crm-filter-status')?.value || '';
+  const q        = document.getElementById('crm-filter-q')?.value.trim() || '';
+  const assigned = document.getElementById('crm-filter-assigned')?.value || '';
+  const industry = document.getElementById('crm-filter-industry')?.value.trim() || '';
   let url = '/api/crm/customers?';
-  if (status) url += `status=${status}&`;
-  if (q)      url += `q=${encodeURIComponent(q)}&`;
+  if (status)   url += `status=${status}&`;
+  if (q)        url += `q=${encodeURIComponent(q)}&`;
+  if (assigned) url += `assigned_to=${assigned}&`;
   const { ok, data } = await api(url, {}, true);
-  _crmList = ok ? data : [];
+  let list = ok ? data : [];
+  if (industry) list = list.filter(r => (r.industry||'').toLowerCase().includes(industry.toLowerCase()));
+  _crmList = list;
   renderCrmList(_crmList);
 }
 
@@ -20827,24 +21051,7 @@ async function loadInvWarehouses() {
   renderInvWarehousesList();
 }
 
-function switchInvTab(tab) {
-  _invCurrentTab = tab;
-  const tabs = ['stock','products','purchase','shipments','transactions','warehouses','suppliers'];
-  tabs.forEach(t => {
-    const btn   = document.getElementById('inv-tab-' + t);
-    const panel = document.getElementById('inv-panel-' + t);
-    if (btn)   btn.classList.toggle('active', t === tab);
-    if (panel) panel.style.display = t === tab ? '' : 'none';
-  });
-  const addBtn = document.getElementById('inv-header-btns');
-  if (addBtn) addBtn.style.display = tab === 'products' ? '' : 'none';
-  if (tab === 'stock')         loadInvStock();
-  if (tab === 'products')      loadInvProducts();
-  if (tab === 'purchase')      { loadPOStats(); loadPOList(); }
-  if (tab === 'shipments')     { loadShipmentStats(); loadShipmentList(); }
-  if (tab === 'transactions')  loadInvTransactions();
-  if (tab === 'suppliers')     loadSupplierList();
-}
+// switchInvTab moved to bottom of script (includes alerts tab)
 
 // ── 庫存總覽 ─────────────────────────────────────────────────
 
@@ -22273,5 +22480,806 @@ async function loadTaxSummary() {
       </table>
     </div>`;
 }
+
+// ══════════════════════════════════════════════════════════════
+// CRM Pipeline — Lead / 商機 / 跟進提醒
+// ══════════════════════════════════════════════════════════════
+let _crmTab = 'customers';
+let _leadList = [];
+let _oppList  = [];
+let _fupList  = [];
+
+async function initCrm() {
+  await Promise.all([loadCrmStats(), loadCrmList(), _loadCrmStaff()]);
+  _populateCrmStaffSelects();
+}
+
+async function _populateCrmStaffSelects() {
+  const opts = '<option value="">全部業務</option>' +
+    _crmStaffList.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+  ['crm-filter-assigned','lead-filter-assigned','opp-filter-assigned','fup-filter-assigned'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+async function loadCrmStats() {
+  const [statsR, pipeR, overdueR] = await Promise.all([
+    api('/api/crm/stats', {}, true),
+    api('/api/crm/pipeline/stats', {}, true),
+    api('/api/crm/overdue-alerts', {}, true),
+  ]);
+  if (statsR.ok) {
+    document.getElementById('crm-stat-total').textContent = statsR.data.total;
+  }
+  if (pipeR.ok) {
+    document.getElementById('crm-stat-won-mtd').textContent = 'NT$' + Math.round(pipeR.data.won_mtd||0).toLocaleString();
+    const activeOpps = Object.entries(pipeR.data.pipeline||{})
+      .filter(([k]) => !['closed_won','closed_lost'].includes(k))
+      .reduce((s,[,v]) => s + v.count, 0);
+    document.getElementById('crm-stat-opp-active').textContent = activeOpps;
+    // update pipeline funnel
+    renderPipelineFunnel(pipeR.data.pipeline || {});
+  }
+  if (overdueR.ok) {
+    const cnt = (overdueR.data.overdue_leads?.length||0) + (overdueR.data.overdue_follow_ups?.length||0);
+    document.getElementById('crm-stat-overdue').textContent = cnt;
+    const badge = document.getElementById('badge-crm-fups');
+    if (badge) { badge.textContent = cnt; badge.style.display = cnt ? '' : 'none'; }
+  }
+}
+
+function renderPipelineFunnel(pipeline) {
+  const stages = [
+    { key:'prospect',    label:'初步接觸', color:'#4A90D9' },
+    { key:'proposal',    label:'提案中',   color:'#7B68EE' },
+    { key:'negotiation', label:'議價中',   color:'#E8820C' },
+    { key:'closed_won',  label:'✅ 成交',  color:'var(--green)' },
+    { key:'closed_lost', label:'❌ 流失',  color:'#aaa' },
+  ];
+  const wrap = document.getElementById('pipeline-funnel');
+  if (!wrap) return;
+  wrap.innerHTML = stages.map(s => {
+    const d = pipeline[s.key] || { count: 0, value: 0 };
+    return `<div class="stat-card" style="border-top:3px solid ${s.color};cursor:pointer" onclick="document.getElementById('opp-filter-stage').value='${s.key}';loadOpportunities()">
+      <div class="stat-label">${s.label}</div>
+      <div style="font-size:20px;font-weight:800;color:${s.color}">${d.count}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">NT$${Math.round(d.value||0).toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+function switchCrmTab(tab) {
+  _crmTab = tab;
+  ['customers','leads','pipeline','followups'].forEach(t => {
+    const btn   = document.getElementById('crm-tab-' + t);
+    const panel = document.getElementById('crm-panel-' + t);
+    if (btn)   btn.classList.toggle('active', t === tab);
+    if (panel) panel.style.display = t === tab ? '' : 'none';
+  });
+  const headerBtns = document.getElementById('crm-header-btns');
+  if (headerBtns) headerBtns.style.display = tab === 'customers' ? '' : 'none';
+  if (tab === 'customers') loadCrmList();
+  if (tab === 'leads')     loadLeads();
+  if (tab === 'pipeline')  { loadOpportunities(); loadCrmStats(); }
+  if (tab === 'followups') loadFollowUps();
+}
+
+// ── Lead ─────────────────────────────────────────────────────
+const LEAD_STAGE_LABEL = { new:'新進', contacted:'已聯繫', qualified:'已確認', converted:'已轉換' };
+const PRIORITY_COLOR   = { high:'var(--red)', medium:'#e8820c', low:'var(--muted)' };
+const PRIORITY_LABEL   = { high:'高', medium:'中', low:'低' };
+
+async function loadLeads() {
+  const stage  = document.getElementById('lead-filter-stage')?.value || '';
+  const prior  = document.getElementById('lead-filter-priority')?.value || '';
+  const asgn   = document.getElementById('lead-filter-assigned')?.value || '';
+  const over   = document.getElementById('lead-filter-overdue')?.value || '';
+  const q      = document.getElementById('lead-filter-q')?.value.trim() || '';
+  let url = '/api/crm/leads?';
+  if (stage)  url += `stage=${stage}&`;
+  if (asgn)   url += `assigned_to=${asgn}&`;
+  if (over)   url += `overdue=${over}&`;
+  if (q)      url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  _leadList = ok ? data : [];
+  if (prior) _leadList = _leadList.filter(r => r.priority === prior);
+  renderLeads(_leadList);
+  const badge = document.getElementById('badge-crm-leads');
+  if (badge) { const n = _leadList.filter(r=>r.next_follow_up && r.next_follow_up < new Date().toISOString().slice(0,10)).length;
+    badge.textContent = n; badge.style.display = n ? '' : 'none'; }
+}
+
+function renderLeads(list) {
+  const wrap = document.getElementById('lead-list-wrap');
+  if (!list.length) { wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted)">尚無 Lead 資料</div>'; return; }
+  const today = new Date().toISOString().slice(0,10);
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>公司名稱</th><th>聯絡人</th><th>電話</th><th>來源</th><th>預估金額</th>
+    <th>階段</th><th>優先度</th><th>負責業務</th><th>跟進日期</th><th></th>
+  </tr></thead><tbody>${list.map(r => {
+    const overdue = r.next_follow_up && r.next_follow_up < today;
+    return `<tr style="${overdue ? 'background:rgba(220,53,69,.05)' : ''}">
+      <td style="font-weight:600">${escHtml(r.company_name)}</td>
+      <td>${escHtml(r.contact_name||'—')}</td>
+      <td style="font-size:12px">${escHtml(r.phone||'—')}</td>
+      <td style="font-size:12px">${escHtml(r.source||'—')}</td>
+      <td style="text-align:right;font-size:12px">NT$${Math.round(r.estimated_value||0).toLocaleString()}</td>
+      <td><span style="background:var(--navy);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${LEAD_STAGE_LABEL[r.stage]||r.stage}</span></td>
+      <td><span style="color:${PRIORITY_COLOR[r.priority]||'#aaa'};font-weight:700;font-size:12px">${PRIORITY_LABEL[r.priority]||r.priority}</span></td>
+      <td style="font-size:12px">${escHtml(r.assigned_name||'—')}</td>
+      <td style="font-size:12px;color:${overdue?'var(--red)':'var(--muted)'}">${r.next_follow_up||'—'}${overdue?' ⚠️':''}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="openLeadModal(${r.id})">編輯</button>
+        <button class="btn btn-outline btn-sm" onclick="convertLead(${r.id})" title="轉換為客戶">轉換</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteLead(${r.id})">刪除</button>
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+async function openLeadModal(id) {
+  const lead = id ? _leadList.find(r => r.id === id) : null;
+  const staffOpts = _crmStaffList.map(s => `<option value="${s.id}" ${lead?.assigned_to==s.id?'selected':''}>${escHtml(s.name)}</option>`).join('');
+  const html = `
+    <div style="display:grid;gap:12px">
+      <input type="hidden" id="lead-f-id" value="${lead?.id||''}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="grid-column:1/-1"><label class="form-label">公司名稱 *</label><input class="form-input" id="lead-f-company" value="${escHtml(lead?.company_name||'')}"></div>
+        <div><label class="form-label">聯絡人</label><input class="form-input" id="lead-f-contact" value="${escHtml(lead?.contact_name||'')}"></div>
+        <div><label class="form-label">電話</label><input class="form-input" id="lead-f-phone" value="${escHtml(lead?.phone||'')}"></div>
+        <div><label class="form-label">Email</label><input class="form-input" id="lead-f-email" value="${escHtml(lead?.email||'')}"></div>
+        <div><label class="form-label">行業</label><input class="form-input" id="lead-f-industry" value="${escHtml(lead?.industry||'')}"></div>
+        <div><label class="form-label">來源</label><input class="form-input" id="lead-f-source" value="${escHtml(lead?.source||'')}"></div>
+        <div><label class="form-label">預估金額</label><input type="number" class="form-input" id="lead-f-value" value="${lead?.estimated_value||0}"></div>
+        <div><label class="form-label">階段</label>
+          <select class="form-input" id="lead-f-stage">
+            <option value="new" ${lead?.stage==='new'?'selected':''}>新進 Lead</option>
+            <option value="contacted" ${lead?.stage==='contacted'?'selected':''}>已聯繫</option>
+            <option value="qualified" ${lead?.stage==='qualified'?'selected':''}>已確認意向</option>
+          </select></div>
+        <div><label class="form-label">優先度</label>
+          <select class="form-input" id="lead-f-priority">
+            <option value="high" ${lead?.priority==='high'?'selected':''}>高</option>
+            <option value="medium" ${lead?.priority==='medium'?'selected':''}>中</option>
+            <option value="low" ${lead?.priority==='low'?'selected':''}>低</option>
+          </select></div>
+        <div><label class="form-label">負責業務</label><select class="form-input" id="lead-f-assigned"><option value="">—</option>${staffOpts}</select></div>
+        <div><label class="form-label">下次跟進日期</label><input type="date" class="form-input" id="lead-f-followup" value="${lead?.next_follow_up||''}"></div>
+        <div style="grid-column:1/-1"><label class="form-label">備註</label><textarea class="form-input" id="lead-f-notes" rows="2">${escHtml(lead?.notes||'')}</textarea></div>
+      </div>
+    </div>`;
+  openGenericModal(lead ? '編輯 Lead' : '新增 Lead', html, saveLead);
+}
+
+async function saveLead() {
+  const id = document.getElementById('lead-f-id')?.value;
+  const body = {
+    company_name:    document.getElementById('lead-f-company').value.trim(),
+    contact_name:    document.getElementById('lead-f-contact').value.trim(),
+    phone:           document.getElementById('lead-f-phone').value.trim(),
+    email:           document.getElementById('lead-f-email').value.trim(),
+    industry:        document.getElementById('lead-f-industry').value.trim(),
+    source:          document.getElementById('lead-f-source').value.trim(),
+    estimated_value: parseFloat(document.getElementById('lead-f-value').value)||0,
+    stage:           document.getElementById('lead-f-stage').value,
+    priority:        document.getElementById('lead-f-priority').value,
+    assigned_to:     document.getElementById('lead-f-assigned').value||null,
+    next_follow_up:  document.getElementById('lead-f-followup').value||null,
+    notes:           document.getElementById('lead-f-notes').value.trim(),
+  };
+  if (!body.company_name) { showToast('請填寫公司名稱','error'); return; }
+  const url    = id ? `/api/crm/leads/${id}` : '/api/crm/leads';
+  const method = id ? 'PUT' : 'POST';
+  const { ok, data } = await api(url, { method, body: JSON.stringify(body) });
+  if (ok) { showToast(id?'已更新':'已新增','success'); closeGenericModal(); loadLeads(); loadCrmStats(); }
+  else     showToast(data?.error||'錯誤','error');
+}
+
+async function deleteLead(id) {
+  if (!confirm('確定刪除此 Lead？')) return;
+  const { ok } = await api(`/api/crm/leads/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); loadLeads(); }
+}
+
+async function convertLead(id) {
+  if (!confirm('確定將此 Lead 轉換為正式客戶？\n（也會同步建立一筆商機）')) return;
+  const { ok, data } = await api(`/api/crm/leads/${id}/convert`, {
+    method:'POST', body: JSON.stringify({ create_opportunity: true })
+  });
+  if (ok) { showToast(`已轉換！客戶 ID: ${data.customer_id}`,'success'); loadLeads(); loadCrmStats(); }
+  else showToast(data?.error||'轉換失敗','error');
+}
+
+// ── 商機 Pipeline ─────────────────────────────────────────────
+const OPP_STAGE_LABEL = {
+  prospect:'初步接觸', proposal:'提案中', negotiation:'議價中',
+  closed_won:'✅ 成交', closed_lost:'❌ 流失'
+};
+
+async function loadOpportunities() {
+  const stage = document.getElementById('opp-filter-stage')?.value || '';
+  const asgn  = document.getElementById('opp-filter-assigned')?.value || '';
+  const q     = document.getElementById('opp-filter-q')?.value.trim() || '';
+  let url = '/api/crm/opportunities?';
+  if (stage) url += `stage=${stage}&`;
+  if (asgn)  url += `assigned_to=${asgn}&`;
+  if (q)     url += `q=${encodeURIComponent(q)}&`;
+  const { ok, data } = await api(url, {}, true);
+  _oppList = ok ? data : [];
+  renderOpportunities(_oppList);
+}
+
+function renderOpportunities(list) {
+  const wrap = document.getElementById('opp-list-wrap');
+  if (!list.length) { wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted)">尚無商機資料</div>'; return; }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>標題</th><th>客戶</th><th>階段</th><th style="text-align:right">金額</th>
+    <th>成交機率</th><th>預計成交日</th><th>負責業務</th><th></th>
+  </tr></thead><tbody>${list.map(r => {
+    const stageColor = { prospect:'#4A90D9', proposal:'#7B68EE', negotiation:'#e8820c',
+                         closed_won:'var(--green)', closed_lost:'#aaa' };
+    return `<tr>
+      <td style="font-weight:600">${escHtml(r.title)}</td>
+      <td style="font-size:12px">${escHtml(r.customer_name||'—')}</td>
+      <td><span style="background:${stageColor[r.stage]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${OPP_STAGE_LABEL[r.stage]||r.stage}</span></td>
+      <td style="text-align:right;font-weight:600">NT$${Math.round(r.value||0).toLocaleString()}</td>
+      <td style="text-align:center"><div style="background:#eee;border-radius:8px;height:6px;width:60px;display:inline-block;position:relative">
+        <div style="background:var(--green);height:6px;border-radius:8px;width:${r.probability||0}%"></div></div>
+        <span style="font-size:11px;margin-left:6px">${r.probability||0}%</span></td>
+      <td style="font-size:12px;color:var(--muted)">${r.expected_close||'—'}</td>
+      <td style="font-size:12px">${escHtml(r.assigned_name||'—')}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="openOppModal(${r.id})">編輯</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteOpp(${r.id})">刪除</button>
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+async function openOppModal(id) {
+  const opp = id ? _oppList.find(r => r.id === id) : null;
+  const staffOpts = _crmStaffList.map(s => `<option value="${s.id}" ${opp?.assigned_to==s.id?'selected':''}>${escHtml(s.name)}</option>`).join('');
+  const html = `
+    <div style="display:grid;gap:12px">
+      <input type="hidden" id="opp-f-id" value="${opp?.id||''}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="grid-column:1/-1"><label class="form-label">商機標題 *</label><input class="form-input" id="opp-f-title" value="${escHtml(opp?.title||'')}"></div>
+        <div style="grid-column:1/-1"><label class="form-label">客戶名稱</label><input class="form-input" id="opp-f-cname" value="${escHtml(opp?.customer_name||'')}"></div>
+        <div><label class="form-label">階段</label>
+          <select class="form-input" id="opp-f-stage">
+            ${Object.entries(OPP_STAGE_LABEL).map(([k,v]) => `<option value="${k}" ${opp?.stage===k?'selected':''}>${v}</option>`).join('')}
+          </select></div>
+        <div><label class="form-label">成交機率 (%)</label><input type="number" class="form-input" id="opp-f-prob" min="0" max="100" value="${opp?.probability||20}"></div>
+        <div><label class="form-label">預估金額</label><input type="number" class="form-input" id="opp-f-value" value="${opp?.value||0}"></div>
+        <div><label class="form-label">預計成交日</label><input type="date" class="form-input" id="opp-f-close" value="${opp?.expected_close||''}"></div>
+        <div><label class="form-label">負責業務</label><select class="form-input" id="opp-f-assigned"><option value="">—</option>${staffOpts}</select></div>
+        <div><label class="form-label">流失原因（若流失）</label><input class="form-input" id="opp-f-lost" value="${escHtml(opp?.lost_reason||'')}"></div>
+        <div style="grid-column:1/-1"><label class="form-label">備註</label><textarea class="form-input" id="opp-f-notes" rows="2">${escHtml(opp?.notes||'')}</textarea></div>
+      </div>
+    </div>`;
+  openGenericModal(opp ? '編輯商機' : '新增商機', html, saveOpp);
+}
+
+async function saveOpp() {
+  const id = document.getElementById('opp-f-id')?.value;
+  const body = {
+    title:         document.getElementById('opp-f-title').value.trim(),
+    customer_name: document.getElementById('opp-f-cname').value.trim(),
+    stage:         document.getElementById('opp-f-stage').value,
+    probability:   parseInt(document.getElementById('opp-f-prob').value)||20,
+    value:         parseFloat(document.getElementById('opp-f-value').value)||0,
+    expected_close:document.getElementById('opp-f-close').value||null,
+    assigned_to:   document.getElementById('opp-f-assigned').value||null,
+    lost_reason:   document.getElementById('opp-f-lost').value.trim(),
+    notes:         document.getElementById('opp-f-notes').value.trim(),
+  };
+  if (!body.title) { showToast('請填寫商機標題','error'); return; }
+  const url = id ? `/api/crm/opportunities/${id}` : '/api/crm/opportunities';
+  const method = id ? 'PUT' : 'POST';
+  const { ok, data } = await api(url, { method, body: JSON.stringify(body) });
+  if (ok) { showToast(id?'已更新':'已新增','success'); closeGenericModal(); loadOpportunities(); loadCrmStats(); }
+  else     showToast(data?.error||'錯誤','error');
+}
+
+async function deleteOpp(id) {
+  if (!confirm('確定刪除此商機？')) return;
+  const { ok } = await api(`/api/crm/opportunities/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); loadOpportunities(); loadCrmStats(); }
+}
+
+// ── 跟進提醒 ─────────────────────────────────────────────────
+async function loadFollowUps() {
+  const done  = document.getElementById('fup-filter-done')?.value ?? '0';
+  const type  = document.getElementById('fup-filter-type')?.value || '';
+  const asgn  = document.getElementById('fup-filter-assigned')?.value || '';
+  const from  = document.getElementById('fup-filter-from')?.value || '';
+  const to    = document.getElementById('fup-filter-to')?.value || '';
+  let url = '/api/crm/follow-ups?';
+  if (done !== '') url += `done=${done}&`;
+  if (type)  url += `ref_type=${type}&`;
+  if (asgn)  url += `assigned_to=${asgn}&`;
+  if (from)  url += `date_from=${from}&`;
+  if (to)    url += `date_to=${to}&`;
+  const { ok, data } = await api(url, {}, true);
+  _fupList = ok ? data : [];
+  renderFollowUps(_fupList);
+}
+
+function renderFollowUps(list) {
+  const wrap = document.getElementById('fup-list-wrap');
+  const today = new Date().toISOString().slice(0,10);
+  if (!list.length) { wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted)">尚無跟進提醒</div>'; return; }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>跟進日期</th><th>標題</th><th>類型</th><th>負責業務</th><th>內容</th><th>狀態</th><th></th>
+  </tr></thead><tbody>${list.map(r => {
+    const overdue = !r.done && r.follow_up_date < today;
+    return `<tr style="${overdue?'background:rgba(220,53,69,.05)':''}">
+      <td style="font-size:12px;font-weight:600;color:${overdue?'var(--red)':'inherit'}">${r.follow_up_date}${overdue?' ⚠️':''}</td>
+      <td style="font-weight:600">${escHtml(r.title||'—')}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.ref_type==='crm_lead'?'Lead':'商機'}</td>
+      <td style="font-size:12px">${escHtml(r.assigned_name||'—')}</td>
+      <td style="font-size:12px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(r.content||'—')}</td>
+      <td>${r.done ? '<span style="background:var(--green);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">已完成</span>'
+                   : '<span style="background:#e8820c;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">待處理</span>'}</td>
+      <td style="white-space:nowrap">
+        ${!r.done ? `<button class="btn btn-outline btn-sm" onclick="markFupDone(${r.id})">✓ 完成</button>` : ''}
+        <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteFup(${r.id})">刪除</button>
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+async function markFupDone(id) {
+  const { ok } = await api(`/api/crm/follow-ups/${id}/done`, { method:'POST' });
+  if (ok) { showToast('已標記完成','success'); loadFollowUps(); loadCrmStats(); }
+}
+async function deleteFup(id) {
+  if (!confirm('確定刪除此提醒？')) return;
+  const { ok } = await api(`/api/crm/follow-ups/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已刪除','success'); loadFollowUps(); }
+}
+
+async function openFollowUpModal() {
+  const staffOpts = _crmStaffList.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+  const html = `<div style="display:grid;gap:12px">
+    <div><label class="form-label">類型</label>
+      <select class="form-input" id="fup-f-type">
+        <option value="crm_lead">Lead</option>
+        <option value="crm_opportunity">商機</option>
+      </select></div>
+    <div><label class="form-label">關聯 ID</label><input type="number" class="form-input" id="fup-f-refid" placeholder="填入 Lead 或商機的 ID"></div>
+    <div><label class="form-label">跟進日期 *</label><input type="date" class="form-input" id="fup-f-date"></div>
+    <div><label class="form-label">標題</label><input class="form-input" id="fup-f-title"></div>
+    <div><label class="form-label">內容說明</label><textarea class="form-input" id="fup-f-content" rows="2"></textarea></div>
+    <div><label class="form-label">負責業務</label><select class="form-input" id="fup-f-assigned"><option value="">—</option>${staffOpts}</select></div>
+  </div>`;
+  openGenericModal('新增跟進提醒', html, async () => {
+    const body = {
+      ref_type:       document.getElementById('fup-f-type').value,
+      ref_id:         parseInt(document.getElementById('fup-f-refid').value)||0,
+      follow_up_date: document.getElementById('fup-f-date').value,
+      title:          document.getElementById('fup-f-title').value.trim(),
+      content:        document.getElementById('fup-f-content').value.trim(),
+      assigned_to:    document.getElementById('fup-f-assigned').value||null,
+    };
+    if (!body.follow_up_date || !body.ref_id) { showToast('請填寫日期與關聯 ID','error'); return; }
+    const { ok, data } = await api('/api/crm/follow-ups', { method:'POST', body: JSON.stringify(body) });
+    if (ok) { showToast('已新增','success'); closeGenericModal(); loadFollowUps(); loadCrmStats(); }
+    else showToast(data?.error||'錯誤','error');
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// 庫存預警 Alerts
+// ══════════════════════════════════════════════════════════════
+let _invAlerts = [];
+
+async function loadInvAlerts() {
+  const wid = document.getElementById('inv-alert-filter-warehouse')?.value || '';
+  let url = '/api/inventory/alerts?';
+  if (wid) url += `warehouse_id=${wid}&`;
+  const { ok, data } = await api(url, {}, true);
+  _invAlerts = ok ? (data.alerts || []) : [];
+  const summary = ok ? data.summary : {};
+  document.getElementById('inv-alert-critical').textContent = summary.critical || 0;
+  document.getElementById('inv-alert-warning').textContent  = summary.warning  || 0;
+  // update nav badge
+  const badge = document.getElementById('badge-inv-alerts');
+  if (badge) { badge.textContent = summary.critical||0; badge.style.display = (summary.critical||0) > 0 ? '' : 'none'; }
+  filterInvAlerts();
+}
+
+function filterInvAlerts() {
+  const level = document.getElementById('inv-alert-filter-level')?.value || '';
+  const q     = (document.getElementById('inv-alert-filter-q')?.value || '').toLowerCase();
+  const list  = _invAlerts.filter(r =>
+    (!level || r.alert_level === level) &&
+    (!q || r.sku.toLowerCase().includes(q) || r.product_name.toLowerCase().includes(q))
+  );
+  renderInvAlerts(list);
+}
+
+function renderInvAlerts(list) {
+  const wrap = document.getElementById('inv-alert-wrap');
+  if (!list.length) { wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted)">目前無需補貨品項</div>'; return; }
+  const lvlStyle = {
+    critical: { bg:'rgba(220,53,69,.1)', badge:'background:var(--red)', label:'🔴 嚴重不足' },
+    warning:  { bg:'rgba(232,130,12,.08)', badge:'background:#e8820c', label:'🟡 接近補貨點' },
+  };
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>警示等級</th><th>SKU</th><th>商品名稱</th><th>分類</th><th>倉庫</th>
+    <th style="text-align:right">在手庫存</th><th style="text-align:right">最低庫存</th>
+    <th style="text-align:right">補貨點</th><th style="text-align:right">建議補貨量</th><th></th>
+  </tr></thead><tbody>${list.map(r => {
+    const s = lvlStyle[r.alert_level] || lvlStyle.warning;
+    return `<tr style="background:${s.bg}">
+      <td><span style="${s.badge};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${s.label}</span></td>
+      <td style="font-family:monospace;font-size:12px">${escHtml(r.sku)}</td>
+      <td style="font-weight:600">${escHtml(r.product_name)}</td>
+      <td style="font-size:12px;color:var(--muted)">${escHtml(r.category||'—')}</td>
+      <td style="font-size:12px">${escHtml(r.warehouse_name)}</td>
+      <td style="text-align:right;font-weight:700;color:var(--red)">${r.qty_on_hand}</td>
+      <td style="text-align:right;font-size:12px">${r.min_stock}</td>
+      <td style="text-align:right;font-size:12px">${r.reorder_point}</td>
+      <td style="text-align:right;font-weight:600;color:var(--navy)">${r.suggested_order_qty}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="quickSuggestPO(${r.product_id},${r.warehouse_id})">建採購單</button></td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+async function quickSuggestPO(productId, warehouseId) {
+  const { ok, data } = await api('/api/inventory/stock/suggest-po', {
+    method:'POST',
+    body: JSON.stringify({ product_ids: [productId], warehouse_id: warehouseId })
+  });
+  if (ok) showToast(`已建立採購單草稿 ${data.po_no}，共 ${data.items?.length||1} 項，小計 NT$${Math.round(data.subtotal||0).toLocaleString()}`, 'success');
+  else showToast(data?.error||'無法建立採購單','error');
+}
+
+async function openSuggestPOModal() {
+  const checked = _invAlerts.filter(r => r.alert_level === 'critical');
+  if (!checked.length) { showToast('目前無嚴重不足品項','info'); return; }
+  if (!confirm(`確定根據 ${checked.length} 項嚴重不足商品自動建立採購單草稿？`)) return;
+  const { ok, data } = await api('/api/inventory/stock/suggest-po', {
+    method: 'POST',
+    body: JSON.stringify({ product_ids: checked.map(r => r.product_id) })
+  });
+  if (ok) showToast(`採購單 ${data.po_no} 已建立，${data.items?.length||0} 品項，小計 NT$${Math.round(data.subtotal||0).toLocaleString()}`,'success');
+  else showToast(data?.error||'建立失敗','error');
+}
+
+function switchInvTab(tab) {
+  _invCurrentTab = tab;
+  const tabs = ['stock','alerts','products','purchase','shipments','transactions','warehouses','suppliers'];
+  tabs.forEach(t => {
+    const btn   = document.getElementById('inv-tab-' + t);
+    const panel = document.getElementById('inv-panel-' + t);
+    if (btn)   btn.classList.toggle('active', t === tab);
+    if (panel) panel.style.display = t === tab ? '' : 'none';
+  });
+  const addBtn = document.getElementById('inv-header-btns');
+  if (addBtn) addBtn.style.display = tab === 'products' ? '' : 'none';
+  if (tab === 'stock')         loadInvStock();
+  if (tab === 'alerts')        loadInvAlerts();
+  if (tab === 'products')      loadInvProducts();
+  if (tab === 'purchase')      { loadPOStats(); loadPOList(); }
+  if (tab === 'shipments')     { loadShipmentStats(); loadShipmentList(); }
+  if (tab === 'transactions')  loadInvTransactions();
+  if (tab === 'suppliers')     loadSupplierList();
+}
+
+// ══════════════════════════════════════════════════════════════
+// 審批工作流程
+// ══════════════════════════════════════════════════════════════
+let _approvalInstances = [];
+let _approvalFlows     = [];
+
+async function initApproval() {
+  await Promise.all([loadApprovalStats(), loadApprovalInstances(), loadApprovalFlows()]);
+}
+
+async function loadApprovalStats() {
+  const { ok, data } = await api('/api/approval/stats', {}, true);
+  if (!ok) return;
+  let pending = 0, approved = 0, rejected = 0, flows = 0;
+  Object.values(data).forEach(m => {
+    pending  += m.pending  || 0;
+    approved += m.approved || 0;
+    rejected += m.rejected || 0;
+  });
+  document.getElementById('appr-stat-pending').textContent  = pending;
+  document.getElementById('appr-stat-approved').textContent = approved;
+  document.getElementById('appr-stat-rejected').textContent = rejected;
+  const badge = document.getElementById('badge-approval');
+  if (badge) { badge.textContent = pending; badge.style.display = pending > 0 ? '' : 'none'; }
+  // flow count
+  const fr = await api('/api/approval/flows', {}, true);
+  flows = fr.ok ? fr.data.length : 0;
+  document.getElementById('appr-stat-flows').textContent = flows;
+}
+
+async function loadApprovalInstances() {
+  const module = document.getElementById('appr-filter-module')?.value || '';
+  const status = document.getElementById('appr-filter-status')?.value || '';
+  let url = '/api/approval/instances?';
+  if (module) url += `module=${module}&`;
+  if (status) url += `status=${status}&`;
+  const { ok, data } = await api(url, {}, true);
+  _approvalInstances = ok ? data : [];
+  filterApprovalList();
+}
+
+function filterApprovalList() {
+  const q = (document.getElementById('appr-filter-q')?.value || '').toLowerCase();
+  const list = q ? _approvalInstances.filter(r =>
+    (r.title||'').toLowerCase().includes(q) || (r.applicant_name||'').toLowerCase().includes(q)
+  ) : _approvalInstances;
+  renderApprovalInstances(list);
+}
+
+const STATUS_COLOR = { pending:'#e8820c', approved:'var(--green)', rejected:'var(--red)' };
+const STATUS_LABEL = { pending:'待審中', approved:'已核准', rejected:'已駁回' };
+const MODULE_LABEL = { leave:'請假', overtime:'加班', expense:'費用', travel:'差旅',
+                       assets:'資產', crm:'CRM', inventory:'庫存', accounting:'會計', performance:'績效', salary:'薪資' };
+
+function renderApprovalInstances(list) {
+  const wrap = document.getElementById('appr-instances-wrap');
+  if (!list.length) { wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted)">尚無審批記錄</div>'; return; }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>模組</th><th>標題</th><th>申請人</th><th>流程</th>
+    <th>進度</th><th>狀態</th><th>申請時間</th><th></th>
+  </tr></thead><tbody>${list.map(r => `<tr>
+    <td><span style="background:var(--navy);color:#fff;padding:2px 7px;border-radius:8px;font-size:11px">${MODULE_LABEL[r.module]||r.module}</span></td>
+    <td style="font-weight:600">${escHtml(r.title||'—')}</td>
+    <td style="font-size:12px">${escHtml(r.applicant_name||'—')}</td>
+    <td style="font-size:12px;color:var(--muted)">${escHtml(r.flow_name||'—')}</td>
+    <td style="font-size:12px">${r.current_step}/${r.total_steps} 步</td>
+    <td><span style="background:${STATUS_COLOR[r.status]||'#aaa'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${STATUS_LABEL[r.status]||r.status}</span></td>
+    <td style="font-size:12px;color:var(--muted)">${(r.created_at||'').slice(0,16)}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="viewApprovalDetail(${r.id})">查看</button>
+        ${r.status==='pending' ? `<button class="btn btn-outline btn-sm" onclick="quickApprove(${r.id},'approve')">核准</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="quickApprove(${r.id},'reject')">駁回</button>` : ''}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function viewApprovalDetail(id) {
+  const { ok, data } = await api(`/api/approval/instances/${id}`, {}, true);
+  if (!ok) return showToast('讀取失敗','error');
+  const stepsHtml = (data.step_records||[]).map(s => `
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #f0f0f0">
+      <div style="min-width:28px;height:28px;border-radius:50%;background:${STATUS_COLOR[s.action]||'#ddd'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700">${s.step_no}</div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:13px">${escHtml(s.step_name||`步驟 ${s.step_no}`)}</div>
+        <div style="font-size:12px;color:var(--muted)">${escHtml(s.approver_full_name||s.approver_name||'待指派')}</div>
+        ${s.comment ? `<div style="font-size:12px;color:var(--navy);margin-top:4px;background:#f5f5f5;padding:4px 8px;border-radius:4px">${escHtml(s.comment)}</div>` : ''}
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.acted_at ? s.acted_at.slice(0,16) : '待處理'}</div>
+      </div>
+      <span style="background:${STATUS_COLOR[s.action]||'#ddd'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">${STATUS_LABEL[s.action]||s.action}</span>
+    </div>`).join('');
+  const html = `<div style="padding:4px 0">
+    <div style="margin-bottom:12px"><strong>模組：</strong>${MODULE_LABEL[data.module]||data.module} &nbsp;|&nbsp;
+    <strong>申請人：</strong>${escHtml(data.applicant_name||'—')} &nbsp;|&nbsp;
+    <strong>狀態：</strong><span style="color:${STATUS_COLOR[data.status]}">${STATUS_LABEL[data.status]||data.status}</span></div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--navy)">審批步驟記錄</div>
+    ${stepsHtml || '<div style="color:var(--muted)">無步驟記錄</div>'}
+  </div>`;
+  openGenericModal(`審批詳情：${escHtml(data.title||data.ref_type+'#'+data.ref_id)}`, html, null, '關閉');
+}
+
+async function quickApprove(id, action) {
+  const comment = action === 'reject' ? (prompt('駁回原因（可選）') ?? '') : '';
+  const { ok, data } = await api(`/api/approval/instances/${id}/step`, {
+    method:'POST', body: JSON.stringify({ action, comment })
+  });
+  if (ok) { showToast(action==='approve'?'已核准':'已駁回','success'); loadApprovalInstances(); loadApprovalStats(); }
+  else showToast(data?.error||'操作失敗','error');
+}
+
+function switchApprovalTab(tab) {
+  ['instances','flows'].forEach(t => {
+    document.getElementById('appr-tab-'+t)?.classList.toggle('active', t===tab);
+    const p = document.getElementById('appr-panel-'+t);
+    if (p) p.style.display = t===tab ? '' : 'none';
+  });
+  if (tab === 'instances') loadApprovalInstances();
+  if (tab === 'flows')     loadApprovalFlows();
+}
+
+async function loadApprovalFlows() {
+  const module = document.getElementById('appr-flow-filter-module')?.value || '';
+  let url = '/api/approval/flows?';
+  if (module) url += `module=${module}&`;
+  const { ok, data } = await api(url, {}, true);
+  _approvalFlows = ok ? data : [];
+  renderApprovalFlows(_approvalFlows);
+}
+
+function renderApprovalFlows(list) {
+  const wrap = document.getElementById('appr-flows-wrap');
+  if (!list.length) { wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted)">尚無審批流程設定</div>'; return; }
+  wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
+    <th>流程名稱</th><th>模組</th><th>審批步驟數</th><th>說明</th><th>狀態</th><th></th>
+  </tr></thead><tbody>${list.map(r => {
+    const steps = Array.isArray(r.steps) ? r.steps : [];
+    return `<tr>
+      <td style="font-weight:600">${escHtml(r.name)}</td>
+      <td><span style="background:var(--navy);color:#fff;padding:2px 7px;border-radius:8px;font-size:11px">${MODULE_LABEL[r.module]||r.module}</span></td>
+      <td style="text-align:center">${steps.length} 步</td>
+      <td style="font-size:12px;color:var(--muted)">${escHtml(r.description||'—')}</td>
+      <td>${r.active ? '<span style="background:var(--green);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">啟用</span>' : '<span style="background:#aaa;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px">停用</span>'}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="openFlowModal(${r.id})">編輯</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteFlow(${r.id})">刪除</button>
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+async function openFlowModal(id) {
+  const flow = id ? _approvalFlows.find(f => f.id === id) : null;
+  const steps = flow ? (Array.isArray(flow.steps) ? flow.steps : []) : [{ step_no:1, name:'主管審批', approver_ids:[] }];
+  const stepsJson = JSON.stringify(steps);
+  const html = `<div style="display:grid;gap:12px">
+    <input type="hidden" id="flow-f-id" value="${flow?.id||''}">
+    <div><label class="form-label">流程名稱 *</label><input class="form-input" id="flow-f-name" value="${escHtml(flow?.name||'')}"></div>
+    <div><label class="form-label">適用模組 *</label>
+      <select class="form-input" id="flow-f-module">
+        ${Object.entries(MODULE_LABEL).map(([k,v])=>`<option value="${k}" ${flow?.module===k?'selected':''}>${v}</option>`).join('')}
+      </select></div>
+    <div><label class="form-label">說明</label><input class="form-input" id="flow-f-desc" value="${escHtml(flow?.description||'')}"></div>
+    <div><label class="form-label">步驟設定（JSON，格式：[{"step_no":1,"name":"主管","approver_ids":[]}]）</label>
+      <textarea class="form-input" id="flow-f-steps" rows="4" style="font-family:monospace;font-size:12px">${escHtml(stepsJson)}</textarea></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px">
+      <input type="checkbox" id="flow-f-active" ${flow?.active!==false?'checked':''}> 啟用此流程</label>
+  </div>`;
+  openGenericModal(flow ? '編輯審批流程' : '新增審批流程', html, async () => {
+    const fid = document.getElementById('flow-f-id').value;
+    let steps;
+    try { steps = JSON.parse(document.getElementById('flow-f-steps').value); }
+    catch { showToast('步驟 JSON 格式錯誤','error'); return; }
+    const body = {
+      name:        document.getElementById('flow-f-name').value.trim(),
+      module:      document.getElementById('flow-f-module').value,
+      description: document.getElementById('flow-f-desc').value.trim(),
+      steps,
+      active:      document.getElementById('flow-f-active').checked,
+    };
+    if (!body.name || !body.module) { showToast('請填寫流程名稱與模組','error'); return; }
+    const url = fid ? `/api/approval/flows/${fid}` : '/api/approval/flows';
+    const method = fid ? 'PUT' : 'POST';
+    const { ok, data } = await api(url, { method, body: JSON.stringify(body) });
+    if (ok) { showToast(fid?'已更新':'已新增','success'); closeGenericModal(); loadApprovalFlows(); loadApprovalStats(); }
+    else showToast(data?.error||'錯誤','error');
+  });
+}
+
+async function deleteFlow(id) {
+  if (!confirm('確定停用此流程？')) return;
+  const { ok } = await api(`/api/approval/flows/${id}`, { method:'DELETE' });
+  if (ok) { showToast('已停用','success'); loadApprovalFlows(); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// 稽核日誌
+// ══════════════════════════════════════════════════════════════
+let _auditPage = 1;
+
+async function initAuditLog() {
+  _auditPage = 1;
+  loadAuditLog();
+}
+
+async function loadAuditLog(pageOffset) {
+  if (pageOffset === 1)  _auditPage++;
+  if (pageOffset === -1) _auditPage = Math.max(1, _auditPage - 1);
+  const module    = document.getElementById('audit-filter-module')?.value || '';
+  const action    = document.getElementById('audit-filter-action')?.value || '';
+  const actor     = document.getElementById('audit-filter-actor')?.value.trim() || '';
+  const dateFrom  = document.getElementById('audit-filter-from')?.value || '';
+  const dateTo    = document.getElementById('audit-filter-to')?.value || '';
+  let url = `/api/audit-log?page=${_auditPage}&`;
+  if (module)   url += `module=${module}&`;
+  if (action)   url += `action=${action}&`;
+  if (actor)    url += `actor=${encodeURIComponent(actor)}&`;
+  if (dateFrom) url += `date_from=${dateFrom}&`;
+  if (dateTo)   url += `date_to=${dateTo}&`;
+  const { ok, data } = await api(url, {}, true);
+  renderAuditLog(ok ? data : []);
+}
+
+const AUDIT_ACTION_LABEL = {
+  update_record:'薪資修改', adjust_salary:'績效調薪',
+  stock_adjust:'庫存調整', stock_transfer:'倉庫調撥',
+  post_voucher:'傳票過帳', void_voucher:'傳票作廢',
+  create_lead:'新增 Lead', delete_lead:'刪除 Lead',
+  stage_change_lead:'Lead 階段變更', convert_lead:'Lead 轉換',
+  create_opportunity:'新增商機', delete_opportunity:'刪除商機',
+  stage_change_opportunity:'商機階段變更',
+  auto_suggest_po:'自動建議採購單',
+  create_flow:'建立審批流程', approval_start:'啟動審批',
+  approval_approve:'審批核准', approval_reject:'審批駁回',
+  update_review:'績效評分修改',
+};
+
+function renderAuditLog(list) {
+  const wrap = document.getElementById('audit-log-wrap');
+  if (!list.length) { wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted)">尚無稽核記錄</div>'; return; }
+  wrap.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background:#f8f9fa;border-bottom:1px solid #eee">
+    <span style="font-size:12px;color:var(--muted)">第 ${_auditPage} 頁，每頁 50 筆</span>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline btn-sm" onclick="loadAuditLog(-1)" ${_auditPage<=1?'disabled':''}>‹ 上一頁</button>
+      <button class="btn btn-outline btn-sm" onclick="loadAuditLog(1)" ${list.length<50?'disabled':''}>下一頁 ›</button>
+    </div>
+  </div>
+  <table class="data-table" style="margin:0"><thead><tr>
+    <th>時間</th><th>模組</th><th>操作</th><th>對象</th><th>操作人</th><th>IP</th><th>說明</th>
+  </tr></thead><tbody>${list.map(r => {
+    let changeDesc = '';
+    if (r.old_data && r.new_data) {
+      try {
+        const od = typeof r.old_data === 'string' ? JSON.parse(r.old_data) : r.old_data;
+        const nd = typeof r.new_data === 'string' ? JSON.parse(r.new_data) : r.new_data;
+        if (od.net_pay !== undefined) changeDesc = `薪資 $${Math.round(od.net_pay).toLocaleString()} → $${Math.round(nd.net_pay).toLocaleString()}`;
+        else if (od.stage) changeDesc = `${od.stage} → ${nd.stage}`;
+        else if (od.qty !== undefined) changeDesc = `庫存 ${od.qty} → ${nd.qty}（差 ${nd.diff>=0?'+':''}${nd.diff}）`;
+        else if (od.base_salary !== undefined) changeDesc = `底薪 $${Math.round(od.base_salary).toLocaleString()} → $${Math.round(nd.base_salary).toLocaleString()}`;
+        else if (nd.po_no) changeDesc = `採購單 ${nd.po_no}`;
+      } catch {}
+    } else if (r.new_data) {
+      try {
+        const nd = typeof r.new_data === 'string' ? JSON.parse(r.new_data) : r.new_data;
+        changeDesc = Object.entries(nd).slice(0,2).map(([k,v])=>`${k}:${v}`).join(', ');
+      } catch {}
+    }
+    return `<tr>
+      <td style="font-size:11px;color:var(--muted);white-space:nowrap">${(r.created_at||'').slice(0,16)}</td>
+      <td><span style="background:var(--navy);color:#fff;padding:1px 6px;border-radius:6px;font-size:10px">${MODULE_LABEL[r.module]||r.module}</span></td>
+      <td style="font-size:12px;font-weight:600">${AUDIT_ACTION_LABEL[r.action]||r.action}</td>
+      <td style="font-size:11px;color:var(--muted)">${escHtml(r.target_type||'—')} #${r.target_id||'—'}</td>
+      <td style="font-size:12px">${escHtml(r.actor||'—')}</td>
+      <td style="font-size:11px;color:var(--muted)">${escHtml(r.ip_addr||'—')}</td>
+      <td style="font-size:12px;color:var(--navy)">${escHtml(changeDesc||r.note||'—')}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// 通用 Modal（輕量級）
+// ══════════════════════════════════════════════════════════════
+let _genericModalCallback = null;
+
+function openGenericModal(title, bodyHtml, onConfirm, confirmLabel='儲存') {
+  _genericModalCallback = onConfirm;
+  let m = document.getElementById('generic-modal-bg');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'generic-modal-bg';
+    m.className = 'modal-overlay';
+    m.innerHTML = `<div class="modal modal-lg" style="max-height:90vh;overflow-y:auto">
+      <div class="modal-header"><span class="modal-title" id="gm-title"></span><button class="modal-close" onclick="closeGenericModal()">✕</button></div>
+      <div class="modal-body" id="gm-body"></div>
+      <div class="modal-footer" id="gm-footer">
+        <button class="btn btn-outline" onclick="closeGenericModal()">取消</button>
+        <button class="btn btn-primary" id="gm-confirm-btn" onclick="_genericModalCallback && _genericModalCallback()">儲存</button>
+      </div></div>`;
+    document.body.appendChild(m);
+  }
+  document.getElementById('gm-title').textContent = title;
+  document.getElementById('gm-body').innerHTML = bodyHtml;
+  const confirmBtn = document.getElementById('gm-confirm-btn');
+  confirmBtn.textContent = confirmLabel;
+  confirmBtn.style.display = onConfirm ? '' : 'none';
+  document.querySelector('#gm-footer .btn-outline').textContent = onConfirm ? '取消' : '關閉';
+  m.style.display = 'flex';
+}
+
+function closeGenericModal() {
+  const m = document.getElementById('generic-modal-bg');
+  if (m) m.style.display = 'none';
+  _genericModalCallback = null;
+}
+
 </script>
 </html>

@@ -6169,6 +6169,7 @@ def api_salary_record_update(rid):
     b = request.get_json(force=True)
     items_json = _json.dumps(b.get('items', []), ensure_ascii=False)
     with get_db() as conn:
+        old = conn.execute("SELECT net_pay, allowance_total, deduction_total FROM salary_records WHERE id=%s", (rid,)).fetchone()
         row = conn.execute("""
             UPDATE salary_records SET
               allowance_total=%s, deduction_total=%s, net_pay=%s,
@@ -6177,6 +6178,10 @@ def api_salary_record_update(rid):
         """, (float(b.get('allowance_total',0)), float(b.get('deduction_total',0)),
               float(b.get('net_pay',0)), items_json,
               b.get('note',''), rid)).fetchone()
+    if old and row:
+        _sys_audit('salary', 'update_record', 'salary_record', rid,
+                   old_data={'net_pay': float(old['net_pay'] or 0)},
+                   new_data={'net_pay': float(row['net_pay'] or 0)})
     return jsonify(salary_record_row(row)) if row else ('', 404)
 
 @app.route('/api/salary/records/confirm-all', methods=['POST'])
@@ -11230,6 +11235,10 @@ def api_perf_review_update(rid):
             WHERE id=%s RETURNING *
         """, (_json.dumps(scores), round(total,2), round(max_s,2),
               grade, comments, rid)).fetchone()
+    if rev and row:
+        _sys_audit('performance', 'update_review', 'performance_review', rid,
+                   old_data={'grade': rev['grade'], 'total_score': float(rev['total_score'] or 0)},
+                   new_data={'grade': row['grade'], 'total_score': float(row['total_score'] or 0)})
     return jsonify(_perf_review_row(row)) if row else ('', 404)
 
 @app.route('/api/performance/reviews/<int:rid>/adjust-salary', methods=['POST'])
@@ -11267,6 +11276,11 @@ def api_perf_adjust_salary(rid):
            f"新底薪：NT$ {new_salary:,.0f}\n"
            + (f"說明：{note}" if note else ''))
     _notify_staff_line(staff['id'], msg)
+    _sys_audit('performance', 'adjust_salary', 'punch_staff', staff['id'],
+               old_data={'base_salary': float(staff['base_salary'] or 0)},
+               new_data={'base_salary': new_salary, 'delta': delta,
+                         'review_id': rid, 'period': rev['period_label']},
+               note=note)
 
     return jsonify({'ok': True, 'new_salary': new_salary, 'delta': delta})
 
@@ -16842,6 +16856,8 @@ def api_acc_voucher_post(vid):
             "UPDATE acc_vouchers SET status='posted', posted_by=%s, posted_at=NOW(), updated_at=NOW() WHERE id=%s",
             (admin, vid)
         )
+    _sys_audit('accounting', 'post_voucher', 'acc_voucher', vid,
+               new_data={'status': 'posted', 'posted_by': admin})
     return jsonify({'ok': True})
 
 
@@ -16860,6 +16876,8 @@ def api_acc_voucher_void(vid):
             "UPDATE acc_vouchers SET status='void', void_reason=%s, updated_at=NOW() WHERE id=%s",
             (d.get('reason', ''), vid)
         )
+    _sys_audit('accounting', 'void_voucher', 'acc_voucher', vid,
+               new_data={'status': 'void', 'reason': d.get('reason', '')})
     return jsonify({'ok': True})
 
 
@@ -17610,6 +17628,9 @@ def api_inv_stock_adjust():
                VALUES (%s,%s,%s,%s,%s,%s)""",
             (pid, wid, txn_type, abs(diff), note, admin)
         )
+    _sys_audit('inventory', 'stock_adjust', 'inv_product', pid,
+               old_data={'qty': old_qty, 'warehouse_id': wid},
+               new_data={'qty': new_qty, 'diff': diff, 'note': note})
     return jsonify({'ok': True, 'old_qty': old_qty, 'new_qty': new_qty, 'diff': diff})
 
 
@@ -17658,6 +17679,9 @@ def api_inv_stock_transfer():
                VALUES (%s,%s,'transfer_in',%s,%s,%s)""",
             (pid, to_w, qty, note, admin)
         )
+    _sys_audit('inventory', 'stock_transfer', 'inv_product', pid,
+               new_data={'from_warehouse': from_w, 'to_warehouse': to_w,
+                         'qty': qty, 'note': note})
     return jsonify({'ok': True})
 
 
@@ -17759,3 +17783,1583 @@ def api_export_invoices_excel():
         r['status'], r['notes'],
     ] for r in rows]
     return build_excel_response(headers, data, f'invoices_{month or "all"}.xlsx')
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 系統稽核日誌 (System Audit Log)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _init_audit_log_db():
+    with get_db() as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS system_audit_log (
+                id          SERIAL PRIMARY KEY,
+                module      TEXT NOT NULL,
+                action      TEXT NOT NULL,
+                target_type TEXT DEFAULT '',
+                target_id   INT,
+                actor       TEXT DEFAULT '',
+                old_data    JSONB,
+                new_data    JSONB,
+                note        TEXT DEFAULT '',
+                ip_addr     TEXT DEFAULT '',
+                created_at  TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sysaudit_module ON system_audit_log(module, created_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_sysaudit_target ON system_audit_log(target_type, target_id)")
+
+_init_audit_log_db()
+
+
+def _sys_audit(module: str, action: str, target_type: str = '', target_id=None,
+               old_data=None, new_data=None, note: str = ''):
+    try:
+        actor = session.get('admin_display', session.get('admin', '')) or \
+                session.get('punch_name', '')
+        ip    = request.remote_addr or ''
+        with get_db() as conn:
+            conn.execute(
+                """INSERT INTO system_audit_log
+                   (module, action, target_type, target_id, actor,
+                    old_data, new_data, note, ip_addr)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (module, action, target_type, target_id, actor,
+                 _json.dumps(old_data, ensure_ascii=False) if old_data is not None else None,
+                 _json.dumps(new_data, ensure_ascii=False) if new_data is not None else None,
+                 note, ip)
+            )
+    except Exception as _e:
+        print(f"[audit_log] {_e}")
+
+
+@app.route('/api/audit-log', methods=['GET'])
+@login_required
+def api_system_audit_log():
+    module      = request.args.get('module', '').strip()
+    target_type = request.args.get('target_type', '').strip()
+    target_id   = request.args.get('target_id', '').strip()
+    actor       = request.args.get('actor', '').strip()
+    date_from   = request.args.get('date_from', '').strip()
+    date_to     = request.args.get('date_to', '').strip()
+    page        = max(1, int(request.args.get('page', 1)))
+    per_page    = 50
+    sql = "SELECT * FROM system_audit_log WHERE 1=1"
+    params = []
+    if module:
+        sql += " AND module=%s"; params.append(module)
+    if target_type:
+        sql += " AND target_type=%s"; params.append(target_type)
+    if target_id:
+        sql += " AND target_id=%s"; params.append(int(target_id))
+    if actor:
+        sql += " AND actor ILIKE %s"; params.append(f'%{actor}%')
+    if date_from:
+        sql += " AND created_at::date >= %s"; params.append(date_from)
+    if date_to:
+        sql += " AND created_at::date <= %s"; params.append(date_to)
+    sql += " ORDER BY created_at DESC LIMIT %s OFFSET %s"
+    params += [per_page, (page - 1) * per_page]
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        if d.get('created_at'):
+            d['created_at'] = d['created_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CRM 銷售漏斗 — Lead 管理 & 商機 Pipeline
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _init_crm_pipeline_db():
+    migrations = [
+        """CREATE TABLE IF NOT EXISTS crm_leads (
+            id              SERIAL PRIMARY KEY,
+            company_name    TEXT NOT NULL,
+            contact_name    TEXT DEFAULT '',
+            phone           TEXT DEFAULT '',
+            email           TEXT DEFAULT '',
+            source          TEXT DEFAULT '',
+            industry        TEXT DEFAULT '',
+            estimated_value NUMERIC(14,2) DEFAULT 0,
+            stage           TEXT DEFAULT 'new',
+            priority        TEXT DEFAULT 'medium',
+            assigned_to     INT REFERENCES punch_staff(id) ON DELETE SET NULL,
+            notes           TEXT DEFAULT '',
+            next_follow_up  DATE,
+            converted_at    TIMESTAMPTZ,
+            customer_id     INT REFERENCES crm_customers(id) ON DELETE SET NULL,
+            created_by      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS crm_opportunities (
+            id              SERIAL PRIMARY KEY,
+            title           TEXT NOT NULL,
+            customer_id     INT REFERENCES crm_customers(id) ON DELETE SET NULL,
+            customer_name   TEXT DEFAULT '',
+            lead_id         INT REFERENCES crm_leads(id) ON DELETE SET NULL,
+            stage           TEXT DEFAULT 'prospect',
+            value           NUMERIC(14,2) DEFAULT 0,
+            probability     INT DEFAULT 20,
+            expected_close  DATE,
+            assigned_to     INT REFERENCES punch_staff(id) ON DELETE SET NULL,
+            products        TEXT DEFAULT '',
+            notes           TEXT DEFAULT '',
+            lost_reason     TEXT DEFAULT '',
+            quote_id        INT REFERENCES crm_quotes(id) ON DELETE SET NULL,
+            won_at          TIMESTAMPTZ,
+            lost_at         TIMESTAMPTZ,
+            created_by      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS crm_follow_ups (
+            id              SERIAL PRIMARY KEY,
+            ref_type        TEXT NOT NULL,
+            ref_id          INT NOT NULL,
+            follow_up_date  DATE NOT NULL,
+            title           TEXT DEFAULT '',
+            content         TEXT DEFAULT '',
+            done            BOOLEAN DEFAULT FALSE,
+            done_at         TIMESTAMPTZ,
+            assigned_to     INT REFERENCES punch_staff(id) ON DELETE SET NULL,
+            created_by      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_crm_leads_stage ON crm_leads(stage)",
+        "CREATE INDEX IF NOT EXISTS idx_crm_leads_followup ON crm_leads(next_follow_up)",
+        "CREATE INDEX IF NOT EXISTS idx_crm_opps_stage ON crm_opportunities(stage)",
+        "CREATE INDEX IF NOT EXISTS idx_crm_followups_date ON crm_follow_ups(follow_up_date, done)",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[crm_pipeline_init] {str(e)[:120]}")
+
+_init_crm_pipeline_db()
+
+
+# ── Lead 潛在客戶 ──────────────────────────────────────────────────────────
+
+def _lead_row(r):
+    d = dict(r)
+    for f in ('converted_at', 'created_at', 'updated_at'):
+        if d.get(f): d[f] = d[f].isoformat()
+    if d.get('next_follow_up'): d['next_follow_up'] = str(d['next_follow_up'])
+    if d.get('estimated_value'): d['estimated_value'] = float(d['estimated_value'])
+    return d
+
+
+@app.route('/api/crm/leads', methods=['GET'])
+@require_module('crm')
+def api_crm_leads_list():
+    stage       = request.args.get('stage', '').strip()
+    assigned_to = request.args.get('assigned_to', '').strip()
+    q           = request.args.get('q', '').strip()
+    overdue     = request.args.get('overdue', '').strip()
+    sql = """
+        SELECT l.*, s.name AS assigned_name
+        FROM crm_leads l
+        LEFT JOIN punch_staff s ON s.id = l.assigned_to
+        WHERE l.converted_at IS NULL
+    """
+    params = []
+    if stage:
+        sql += " AND l.stage=%s"; params.append(stage)
+    if assigned_to:
+        sql += " AND l.assigned_to=%s"; params.append(int(assigned_to))
+    if q:
+        sql += " AND (l.company_name ILIKE %s OR l.contact_name ILIKE %s OR l.phone ILIKE %s)"
+        params += [f'%{q}%', f'%{q}%', f'%{q}%']
+    if overdue == '1':
+        sql += " AND l.next_follow_up < CURRENT_DATE AND l.next_follow_up IS NOT NULL"
+    sql += " ORDER BY l.priority DESC, l.next_follow_up ASC NULLS LAST, l.updated_at DESC"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return jsonify([_lead_row(r) for r in rows])
+
+
+@app.route('/api/crm/leads', methods=['POST'])
+@require_module('crm')
+def api_crm_lead_create():
+    b     = request.get_json(force=True) or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    if not b.get('company_name', '').strip():
+        return jsonify({'error': '公司名稱為必填'}), 400
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO crm_leads
+              (company_name, contact_name, phone, email, source, industry,
+               estimated_value, stage, priority, assigned_to, notes,
+               next_follow_up, created_by)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING *
+        """, (
+            b['company_name'].strip(),
+            b.get('contact_name',''), b.get('phone',''), b.get('email',''),
+            b.get('source',''), b.get('industry',''),
+            float(b.get('estimated_value', 0)),
+            b.get('stage','new'), b.get('priority','medium'),
+            b.get('assigned_to') or None,
+            b.get('notes',''), b.get('next_follow_up') or None,
+            admin,
+        )).fetchone()
+    _sys_audit('crm', 'create_lead', 'crm_lead', row['id'],
+               new_data={'company': row['company_name'], 'stage': row['stage']})
+    return jsonify(_lead_row(row)), 201
+
+
+@app.route('/api/crm/leads/<int:lid>', methods=['PUT'])
+@require_module('crm')
+def api_crm_lead_update(lid):
+    b = request.get_json(force=True) or {}
+    if not b.get('company_name', '').strip():
+        return jsonify({'error': '公司名稱為必填'}), 400
+    with get_db() as conn:
+        old = conn.execute("SELECT stage FROM crm_leads WHERE id=%s", (lid,)).fetchone()
+        row = conn.execute("""
+            UPDATE crm_leads SET
+              company_name=%s, contact_name=%s, phone=%s, email=%s,
+              source=%s, industry=%s, estimated_value=%s, stage=%s,
+              priority=%s, assigned_to=%s, notes=%s, next_follow_up=%s,
+              updated_at=NOW()
+            WHERE id=%s RETURNING *
+        """, (
+            b['company_name'].strip(),
+            b.get('contact_name',''), b.get('phone',''), b.get('email',''),
+            b.get('source',''), b.get('industry',''),
+            float(b.get('estimated_value', 0)),
+            b.get('stage','new'), b.get('priority','medium'),
+            b.get('assigned_to') or None,
+            b.get('notes',''), b.get('next_follow_up') or None,
+            lid,
+        )).fetchone()
+    if old and row and old['stage'] != row['stage']:
+        _sys_audit('crm', 'stage_change_lead', 'crm_lead', lid,
+                   old_data={'stage': old['stage']},
+                   new_data={'stage': row['stage']})
+    return jsonify(_lead_row(row)) if row else ('', 404)
+
+
+@app.route('/api/crm/leads/<int:lid>/convert', methods=['POST'])
+@require_module('crm')
+def api_crm_lead_convert(lid):
+    """將 Lead 轉換為正式客戶，並可同步建立商機。"""
+    b     = request.get_json(force=True) or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    with get_db() as conn:
+        lead = conn.execute("SELECT * FROM crm_leads WHERE id=%s", (lid,)).fetchone()
+        if not lead: return jsonify({'error': 'Lead 不存在'}), 404
+        if lead['converted_at']: return jsonify({'error': '此 Lead 已轉換'}), 400
+        # 建立或連結客戶
+        if b.get('customer_id'):
+            cid = int(b['customer_id'])
+        else:
+            row = conn.execute("""
+                INSERT INTO crm_customers
+                  (company_name, contact_name, phone, email, industry,
+                   source, status, notes)
+                VALUES (%s,%s,%s,%s,%s,%s,'active',%s)
+                RETURNING id
+            """, (lead['company_name'], lead['contact_name'], lead['phone'],
+                  lead['email'], lead['industry'], lead['source'], lead['notes'])).fetchone()
+            cid = row['id']
+        conn.execute("""
+            UPDATE crm_leads SET converted_at=NOW(), customer_id=%s, stage='converted',
+            updated_at=NOW() WHERE id=%s
+        """, (cid, lid))
+        opp_id = None
+        if b.get('create_opportunity'):
+            opp_row = conn.execute("""
+                INSERT INTO crm_opportunities
+                  (title, customer_id, customer_name, lead_id, stage, value,
+                   probability, expected_close, assigned_to, notes, created_by)
+                VALUES (%s,%s,%s,%s,'prospect',%s,%s,%s,%s,%s,%s)
+                RETURNING id
+            """, (
+                b.get('opp_title') or f"{lead['company_name']} 商機",
+                cid, lead['company_name'], lid,
+                float(b.get('value', lead['estimated_value'] or 0)),
+                int(b.get('probability', 30)),
+                b.get('expected_close') or None,
+                lead['assigned_to'],
+                lead['notes'], admin,
+            )).fetchone()
+            opp_id = opp_row['id']
+    _sys_audit('crm', 'convert_lead', 'crm_lead', lid,
+               new_data={'customer_id': cid, 'opportunity_id': opp_id})
+    return jsonify({'ok': True, 'customer_id': cid, 'opportunity_id': opp_id})
+
+
+@app.route('/api/crm/leads/<int:lid>', methods=['DELETE'])
+@require_module('crm')
+def api_crm_lead_delete(lid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM crm_leads WHERE id=%s", (lid,))
+    _sys_audit('crm', 'delete_lead', 'crm_lead', lid)
+    return jsonify({'ok': True})
+
+
+# ── 商機 Pipeline ───────────────────────────────────────────────────────────
+
+# 階段順序（用於統計與排序）
+CRM_OPP_STAGES = ['prospect', 'proposal', 'negotiation', 'closed_won', 'closed_lost']
+
+def _opp_row(r):
+    d = dict(r)
+    for f in ('won_at', 'lost_at', 'created_at', 'updated_at'):
+        if d.get(f): d[f] = d[f].isoformat()
+    if d.get('expected_close'): d['expected_close'] = str(d['expected_close'])
+    if d.get('value'): d['value'] = float(d['value'])
+    return d
+
+
+@app.route('/api/crm/opportunities', methods=['GET'])
+@require_module('crm')
+def api_crm_opps_list():
+    stage       = request.args.get('stage', '').strip()
+    assigned_to = request.args.get('assigned_to', '').strip()
+    customer_id = request.args.get('customer_id', '').strip()
+    q           = request.args.get('q', '').strip()
+    sql = """
+        SELECT o.*, s.name AS assigned_name
+        FROM crm_opportunities o
+        LEFT JOIN punch_staff s ON s.id = o.assigned_to
+        WHERE 1=1
+    """
+    params = []
+    if stage:
+        sql += " AND o.stage=%s"; params.append(stage)
+    if assigned_to:
+        sql += " AND o.assigned_to=%s"; params.append(int(assigned_to))
+    if customer_id:
+        sql += " AND o.customer_id=%s"; params.append(int(customer_id))
+    if q:
+        sql += " AND (o.title ILIKE %s OR o.customer_name ILIKE %s)"
+        params += [f'%{q}%', f'%{q}%']
+    sql += " ORDER BY o.updated_at DESC LIMIT 500"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return jsonify([_opp_row(r) for r in rows])
+
+
+@app.route('/api/crm/opportunities', methods=['POST'])
+@require_module('crm')
+def api_crm_opp_create():
+    b     = request.get_json(force=True) or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    if not b.get('title', '').strip():
+        return jsonify({'error': '商機標題為必填'}), 400
+    cname = b.get('customer_name', '').strip()
+    if not cname and b.get('customer_id'):
+        with get_db() as conn:
+            c = conn.execute("SELECT company_name FROM crm_customers WHERE id=%s",
+                             (b['customer_id'],)).fetchone()
+            cname = c['company_name'] if c else ''
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO crm_opportunities
+              (title, customer_id, customer_name, lead_id, stage, value,
+               probability, expected_close, assigned_to, products, notes, created_by)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING *
+        """, (
+            b['title'].strip(), b.get('customer_id') or None,
+            cname, b.get('lead_id') or None,
+            b.get('stage','prospect'), float(b.get('value', 0)),
+            int(b.get('probability', 20)), b.get('expected_close') or None,
+            b.get('assigned_to') or None, b.get('products',''),
+            b.get('notes',''), admin,
+        )).fetchone()
+    _sys_audit('crm', 'create_opportunity', 'crm_opportunity', row['id'],
+               new_data={'title': row['title'], 'stage': row['stage'],
+                         'value': float(row['value'] or 0)})
+    return jsonify(_opp_row(row)), 201
+
+
+@app.route('/api/crm/opportunities/<int:oid>', methods=['PUT'])
+@require_module('crm')
+def api_crm_opp_update(oid):
+    b = request.get_json(force=True) or {}
+    if not b.get('title', '').strip():
+        return jsonify({'error': '商機標題為必填'}), 400
+    with get_db() as conn:
+        old = conn.execute(
+            "SELECT stage, value FROM crm_opportunities WHERE id=%s", (oid,)
+        ).fetchone()
+        now_ts = _dt.now(TW_TZ)
+        new_stage = b.get('stage', 'prospect')
+        won_at  = now_ts if new_stage == 'closed_won'  and (not old or old['stage'] != 'closed_won')  else None
+        lost_at = now_ts if new_stage == 'closed_lost' and (not old or old['stage'] != 'closed_lost') else None
+        extra_sets = []
+        extra_vals = []
+        if won_at:
+            extra_sets.append("won_at=%s"); extra_vals.append(won_at)
+        if lost_at:
+            extra_sets.append("lost_at=%s"); extra_vals.append(lost_at)
+        set_clause = ", ".join([
+            "title=%s","customer_id=%s","customer_name=%s","stage=%s","value=%s",
+            "probability=%s","expected_close=%s","assigned_to=%s","products=%s",
+            "notes=%s","lost_reason=%s","quote_id=%s","updated_at=NOW()"
+        ] + extra_sets)
+        row = conn.execute(
+            f"UPDATE crm_opportunities SET {set_clause} WHERE id=%s RETURNING *",
+            [
+                b['title'].strip(), b.get('customer_id') or None,
+                b.get('customer_name',''), new_stage,
+                float(b.get('value', 0)), int(b.get('probability', 20)),
+                b.get('expected_close') or None,
+                b.get('assigned_to') or None,
+                b.get('products',''), b.get('notes',''),
+                b.get('lost_reason',''), b.get('quote_id') or None,
+            ] + extra_vals + [oid]
+        ).fetchone()
+    if old and row and old['stage'] != row['stage']:
+        _sys_audit('crm', 'stage_change_opportunity', 'crm_opportunity', oid,
+                   old_data={'stage': old['stage'], 'value': float(old['value'] or 0)},
+                   new_data={'stage': row['stage'], 'value': float(row['value'] or 0)})
+    return jsonify(_opp_row(row)) if row else ('', 404)
+
+
+@app.route('/api/crm/opportunities/<int:oid>', methods=['DELETE'])
+@require_module('crm')
+def api_crm_opp_delete(oid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM crm_opportunities WHERE id=%s", (oid,))
+    _sys_audit('crm', 'delete_opportunity', 'crm_opportunity', oid)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/crm/pipeline/stats', methods=['GET'])
+@require_module('crm')
+def api_crm_pipeline_stats():
+    with get_db() as conn:
+        stage_rows = conn.execute("""
+            SELECT stage, COUNT(*) AS cnt, COALESCE(SUM(value),0) AS total_value
+            FROM crm_opportunities
+            GROUP BY stage
+        """).fetchall()
+        lead_cnt    = conn.execute("SELECT COUNT(*) AS n FROM crm_leads WHERE converted_at IS NULL").fetchone()['n']
+        overdue_fup = conn.execute("""
+            SELECT COUNT(*) AS n FROM crm_leads
+            WHERE next_follow_up < CURRENT_DATE AND next_follow_up IS NOT NULL
+              AND converted_at IS NULL
+        """).fetchone()['n']
+        won_mtd = conn.execute("""
+            SELECT COALESCE(SUM(value),0) AS v FROM crm_opportunities
+            WHERE stage='closed_won'
+              AND date_trunc('month', won_at) = date_trunc('month', NOW())
+        """).fetchone()['v']
+        win_rate_row = conn.execute("""
+            SELECT
+              COUNT(*) FILTER (WHERE stage='closed_won')  AS won,
+              COUNT(*) FILTER (WHERE stage='closed_lost') AS lost
+            FROM crm_opportunities
+            WHERE won_at >= NOW() - INTERVAL '90 days'
+               OR lost_at >= NOW() - INTERVAL '90 days'
+        """).fetchone()
+    pipeline = {}
+    for r in stage_rows:
+        pipeline[r['stage']] = {'count': r['cnt'], 'value': float(r['total_value'])}
+    won  = win_rate_row['won']  or 0
+    lost = win_rate_row['lost'] or 0
+    win_rate = round(won / (won + lost) * 100, 1) if (won + lost) > 0 else 0
+    return jsonify({
+        'pipeline': pipeline,
+        'lead_count': lead_cnt,
+        'overdue_follow_ups': overdue_fup,
+        'won_mtd': float(won_mtd or 0),
+        'win_rate_90d': win_rate,
+    })
+
+
+# ── 跟進提醒 Follow-ups ─────────────────────────────────────────────────────
+
+@app.route('/api/crm/follow-ups', methods=['GET'])
+@require_module('crm')
+def api_crm_followups_list():
+    ref_type    = request.args.get('ref_type', '').strip()
+    ref_id      = request.args.get('ref_id', '').strip()
+    assigned_to = request.args.get('assigned_to', '').strip()
+    done        = request.args.get('done', '').strip()
+    date_from   = request.args.get('date_from', '').strip()
+    date_to     = request.args.get('date_to', '').strip()
+    sql = "SELECT f.*, s.name AS assigned_name FROM crm_follow_ups f LEFT JOIN punch_staff s ON s.id=f.assigned_to WHERE 1=1"
+    params = []
+    if ref_type: sql += " AND f.ref_type=%s"; params.append(ref_type)
+    if ref_id:   sql += " AND f.ref_id=%s";   params.append(int(ref_id))
+    if assigned_to: sql += " AND f.assigned_to=%s"; params.append(int(assigned_to))
+    if done == '0': sql += " AND f.done=FALSE"
+    elif done == '1': sql += " AND f.done=TRUE"
+    if date_from: sql += " AND f.follow_up_date >= %s"; params.append(date_from)
+    if date_to:   sql += " AND f.follow_up_date <= %s"; params.append(date_to)
+    sql += " ORDER BY f.follow_up_date ASC, f.id DESC LIMIT 200"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        if d.get('follow_up_date'): d['follow_up_date'] = str(d['follow_up_date'])
+        if d.get('done_at'):        d['done_at']  = d['done_at'].isoformat()
+        if d.get('created_at'):     d['created_at'] = d['created_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/crm/follow-ups', methods=['POST'])
+@require_module('crm')
+def api_crm_followup_create():
+    b     = request.get_json(force=True) or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    if not b.get('follow_up_date') or not b.get('ref_type') or not b.get('ref_id'):
+        return jsonify({'error': '缺少必要欄位'}), 400
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO crm_follow_ups
+              (ref_type, ref_id, follow_up_date, title, content, assigned_to, created_by)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+            RETURNING *
+        """, (b['ref_type'], int(b['ref_id']), b['follow_up_date'],
+              b.get('title',''), b.get('content',''),
+              b.get('assigned_to') or None, admin)).fetchone()
+    d = dict(row)
+    if d.get('follow_up_date'): d['follow_up_date'] = str(d['follow_up_date'])
+    if d.get('created_at'):     d['created_at'] = d['created_at'].isoformat()
+    return jsonify(d), 201
+
+
+@app.route('/api/crm/follow-ups/<int:fid>/done', methods=['POST'])
+@require_module('crm')
+def api_crm_followup_done(fid):
+    with get_db() as conn:
+        row = conn.execute("""
+            UPDATE crm_follow_ups SET done=TRUE, done_at=NOW()
+            WHERE id=%s RETURNING id
+        """, (fid,)).fetchone()
+    return jsonify({'ok': True}) if row else ('', 404)
+
+
+@app.route('/api/crm/follow-ups/<int:fid>', methods=['DELETE'])
+@require_module('crm')
+def api_crm_followup_delete(fid):
+    with get_db() as conn:
+        conn.execute("DELETE FROM crm_follow_ups WHERE id=%s", (fid,))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/crm/overdue-alerts', methods=['GET'])
+@require_module('crm')
+def api_crm_overdue_alerts():
+    """返回超過跟進日期的 Lead 與商機，供 dashboard 顯示。"""
+    today = _dt.now(TW_TZ).date()
+    with get_db() as conn:
+        overdue_leads = conn.execute("""
+            SELECT l.id, l.company_name, l.contact_name, l.next_follow_up,
+                   l.stage, l.priority, s.name AS assigned_name,
+                   (CURRENT_DATE - l.next_follow_up) AS days_overdue
+            FROM crm_leads l
+            LEFT JOIN punch_staff s ON s.id=l.assigned_to
+            WHERE l.next_follow_up < CURRENT_DATE
+              AND l.converted_at IS NULL
+            ORDER BY l.next_follow_up ASC LIMIT 50
+        """).fetchall()
+        overdue_fups = conn.execute("""
+            SELECT f.*, s.name AS assigned_name,
+                   (CURRENT_DATE - f.follow_up_date) AS days_overdue
+            FROM crm_follow_ups f
+            LEFT JOIN punch_staff s ON s.id=f.assigned_to
+            WHERE f.follow_up_date < CURRENT_DATE AND f.done=FALSE
+            ORDER BY f.follow_up_date ASC LIMIT 50
+        """).fetchall()
+    leads = []
+    for r in overdue_leads:
+        d = dict(r)
+        if d.get('next_follow_up'): d['next_follow_up'] = str(d['next_follow_up'])
+        leads.append(d)
+    fups = []
+    for r in overdue_fups:
+        d = dict(r)
+        if d.get('follow_up_date'): d['follow_up_date'] = str(d['follow_up_date'])
+        if d.get('created_at'):     d['created_at'] = d['created_at'].isoformat()
+        fups.append(d)
+    return jsonify({'overdue_leads': leads, 'overdue_follow_ups': fups})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 庫存低量預警 & 自動建議採購單
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route('/api/inventory/alerts', methods=['GET'])
+@require_module('inventory')
+def api_inv_alerts():
+    """
+    返回低庫存警報，分三個層級：
+      critical  - qty_on_hand <= min_stock（低於最小庫存）
+      warning   - qty_on_hand <= reorder_point（低於補貨點，但高於最小）
+      ok        - 正常
+    """
+    warehouse_id = request.args.get('warehouse_id', '').strip()
+    sql = """
+        SELECT
+            p.id AS product_id, p.sku, p.name AS product_name,
+            p.unit, p.min_stock, p.reorder_point, p.category,
+            p.cost_price,
+            w.id AS warehouse_id, w.name AS warehouse_name,
+            s.qty_on_hand, s.qty_reserved,
+            (s.qty_on_hand - s.qty_reserved) AS qty_available,
+            CASE
+                WHEN s.qty_on_hand <= p.min_stock AND p.min_stock > 0 THEN 'critical'
+                WHEN s.qty_on_hand <= p.reorder_point AND p.reorder_point > 0 THEN 'warning'
+                ELSE 'ok'
+            END AS alert_level,
+            GREATEST(p.reorder_point * 2 - s.qty_on_hand, 0) AS suggested_order_qty
+        FROM inv_stock s
+        JOIN inv_products p ON p.id = s.product_id
+        JOIN inv_warehouses w ON w.id = s.warehouse_id
+        WHERE p.active = TRUE AND w.active = TRUE
+          AND (p.min_stock > 0 OR p.reorder_point > 0)
+          AND s.qty_on_hand <= p.reorder_point
+    """
+    params = []
+    if warehouse_id:
+        sql += " AND w.id=%s"; params.append(int(warehouse_id))
+    sql += " ORDER BY alert_level, s.qty_on_hand ASC"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        result.append({
+            'product_id':       r['product_id'],
+            'sku':              r['sku'],
+            'product_name':     r['product_name'],
+            'unit':             r['unit'],
+            'category':         r['category'],
+            'warehouse_id':     r['warehouse_id'],
+            'warehouse_name':   r['warehouse_name'],
+            'qty_on_hand':      float(r['qty_on_hand'] or 0),
+            'qty_reserved':     float(r['qty_reserved'] or 0),
+            'qty_available':    float(r['qty_available'] or 0),
+            'min_stock':        float(r['min_stock'] or 0),
+            'reorder_point':    float(r['reorder_point'] or 0),
+            'suggested_order_qty': float(r['suggested_order_qty'] or 0),
+            'cost_price':       float(r['cost_price'] or 0),
+            'alert_level':      r['alert_level'],
+        })
+    summary = {
+        'critical': sum(1 for x in result if x['alert_level'] == 'critical'),
+        'warning':  sum(1 for x in result if x['alert_level'] == 'warning'),
+        'total':    len(result),
+    }
+    return jsonify({'alerts': result, 'summary': summary})
+
+
+@app.route('/api/inventory/stock/suggest-po', methods=['POST'])
+@require_module('inventory')
+def api_inv_suggest_po():
+    """
+    根據低庫存警報自動建立建議採購單（草稿）。
+    可傳入 supplier_id、warehouse_id 做過濾，或由前端選取特定 product_ids。
+    """
+    d           = request.get_json() or {}
+    admin       = session.get('admin_display', session.get('admin', ''))
+    supplier_id = d.get('supplier_id')
+    warehouse_id= d.get('warehouse_id')
+    product_ids = d.get('product_ids', [])
+
+    sql = """
+        SELECT p.id AS product_id, p.sku, p.name AS product_name,
+               p.unit, p.cost_price, p.reorder_point,
+               COALESCE(s.qty_on_hand, 0) AS qty_on_hand,
+               GREATEST(p.reorder_point * 2 - COALESCE(s.qty_on_hand, 0), 1) AS suggest_qty
+        FROM inv_products p
+        LEFT JOIN inv_stock s ON s.product_id = p.id
+          AND s.warehouse_id = %s
+        WHERE p.active = TRUE
+          AND p.reorder_point > 0
+          AND COALESCE(s.qty_on_hand, 0) <= p.reorder_point
+    """
+    params = [int(warehouse_id) if warehouse_id else 1]
+    if product_ids:
+        sql += " AND p.id = ANY(%s)"; params.append(product_ids)
+    sql += " ORDER BY p.name"
+
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+        if not rows:
+            return jsonify({'error': '目前無需補貨的品項'}), 400
+        items = []
+        subtotal = 0.0
+        for r in rows:
+            qty  = float(r['suggest_qty'])
+            cost = float(r['cost_price'] or 0)
+            total_line = qty * cost
+            subtotal  += total_line
+            items.append({
+                'product_id':   r['product_id'],
+                'sku':          r['sku'],
+                'product_name': r['product_name'],
+                'unit':         r['unit'],
+                'qty':          qty,
+                'unit_price':   cost,
+                'total':        total_line,
+            })
+        # 產生採購單號
+        po_no = _next_inv_no('PO', 'inv_purchase_orders', 'po_no')
+        po = conn.execute("""
+            INSERT INTO inv_purchase_orders
+              (po_no, supplier_id, warehouse_id, items, subtotal, total,
+               status, notes, created_by)
+            VALUES (%s,%s,%s,%s::jsonb,%s,%s,'draft','自動建議採購單',%s)
+            RETURNING id, po_no
+        """, (
+            po_no,
+            int(supplier_id) if supplier_id else None,
+            int(warehouse_id) if warehouse_id else None,
+            _json.dumps(items, ensure_ascii=False),
+            round(subtotal, 2), round(subtotal, 2),
+            admin,
+        )).fetchone()
+    _sys_audit('inventory', 'auto_suggest_po', 'inv_purchase_orders', po['id'],
+               new_data={'po_no': po['po_no'], 'items_count': len(items),
+                         'subtotal': round(subtotal, 2)})
+    return jsonify({'ok': True, 'po_id': po['id'], 'po_no': po['po_no'],
+                    'items': items, 'subtotal': round(subtotal, 2)})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PDF 匯出 — 薪資單 / 報價單 / 發票 / 採購訂單
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _pdf_styles():
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import os
+    styles = getSampleStyleSheet()
+    # 嘗試注冊中文字型（若有 NotoSansCJK 或系統字型）
+    cjk_paths = [
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+        '/usr/share/fonts/truetype/arphic/uming.ttc',
+    ]
+    for fpath in cjk_paths:
+        if os.path.exists(fpath):
+            try:
+                pdfmetrics.registerFont(TTFont('CJK', fpath))
+                break
+            except Exception:
+                pass
+    font = 'CJK' if 'CJK' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'
+    return styles, font
+
+
+def _make_pdf_response(pdf_bytes: bytes, filename: str):
+    from flask import make_response
+    resp = make_response(pdf_bytes)
+    resp.headers['Content-Type'] = 'application/pdf'
+    resp.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+    return resp
+
+
+def _build_payslip_pdf(record: dict) -> bytes:
+    """生成薪資單 PDF bytes。"""
+    import io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
+                                    Paragraph, Spacer, HRFlowable)
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+
+    buf = io.BytesIO()
+    _, font = _pdf_styles()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=20*mm, rightMargin=20*mm,
+                            topMargin=20*mm, bottomMargin=20*mm)
+
+    title_style = ParagraphStyle('title', fontName=font, fontSize=16,
+                                 alignment=TA_CENTER, spaceAfter=6)
+    sub_style   = ParagraphStyle('sub',   fontName=font, fontSize=10,
+                                 alignment=TA_CENTER, textColor=colors.grey)
+    label_style = ParagraphStyle('lbl',   fontName=font, fontSize=9)
+    bold_style  = ParagraphStyle('bold',  fontName=font, fontSize=9)
+
+    col_w = [85*mm, 85*mm]
+    blue  = colors.HexColor('#1F4E79')
+    light = colors.HexColor('#DEEAF1')
+
+    def _fmt(v): return f"NT$ {float(v or 0):,.0f}"
+
+    items_raw = record.get('items') or []
+    if isinstance(items_raw, str):
+        try: items_raw = _json.loads(items_raw)
+        except: items_raw = []
+    allowances  = [it for it in items_raw if it.get('type') == 'allowance']
+    deductions  = [it for it in items_raw if it.get('type') == 'deduction']
+
+    story = []
+    story.append(Paragraph(f"{record.get('company_name', '薪資單')}", title_style))
+    story.append(Paragraph(f"{record.get('month','')} 薪資明細", sub_style))
+    story.append(Spacer(1, 5*mm))
+
+    # 員工資訊
+    emp_data = [
+        ['姓名', record.get('staff_name',''), '部門', record.get('department','')],
+        ['員工編號', record.get('employee_code',''), '薪資月份', record.get('month','')],
+        ['底薪', _fmt(record.get('base_salary', 0)), '出勤天數', str(record.get('work_days',''))],
+    ]
+    emp_table = Table(emp_data, colWidths=[30*mm, 60*mm, 30*mm, 50*mm])
+    emp_table.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (-1,-1), font),
+        ('FONTSIZE', (0,0), (-1,-1), 9),
+        ('TEXTCOLOR', (0,0), (0,-1), colors.grey),
+        ('TEXTCOLOR', (2,0), (2,-1), colors.grey),
+        ('BACKGROUND', (0,0), (-1,-1), light),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.grey),
+        ('INNERGRID', (0,0), (-1,-1), 0.25, colors.lightgrey),
+        ('PADDING', (0,0), (-1,-1), 4),
+    ]))
+    story.append(emp_table)
+    story.append(Spacer(1, 4*mm))
+
+    # 加項 / 減項
+    earn_rows = [['加給項目', '金額']] + \
+                [[it.get('name',''), _fmt(it.get('amount',0))] for it in allowances] + \
+                [['底薪', _fmt(record.get('base_salary',0))]]
+    dedu_rows = [['扣除項目', '金額']] + \
+                [[it.get('name',''), _fmt(it.get('amount',0))] for it in deductions]
+
+    def _mini_table(rows):
+        t = Table(rows, colWidths=[50*mm, 35*mm])
+        t.setStyle(TableStyle([
+            ('FONTNAME',   (0,0), (-1,-1), font),
+            ('FONTSIZE',   (0,0), (-1,-1), 9),
+            ('BACKGROUND', (0,0), (-1,0),  blue),
+            ('TEXTCOLOR',  (0,0), (-1,0),  colors.white),
+            ('FONTNAME',   (0,0), (-1,0),  font),
+            ('ALIGN',      (1,0), (1,-1),  'RIGHT'),
+            ('BOX',        (0,0), (-1,-1), 0.5, colors.grey),
+            ('INNERGRID',  (0,0), (-1,-1), 0.25, colors.lightgrey),
+            ('PADDING',    (0,0), (-1,-1), 4),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, light]),
+        ]))
+        return t
+
+    two_col = Table([[_mini_table(earn_rows), _mini_table(dedu_rows)]],
+                    colWidths=[90*mm, 90*mm])
+    story.append(two_col)
+    story.append(Spacer(1, 4*mm))
+
+    # 實領
+    net = float(record.get('net_pay', 0))
+    net_data = [['實領金額', _fmt(net)]]
+    net_table = Table(net_data, colWidths=[85*mm, 85*mm])
+    net_table.setStyle(TableStyle([
+        ('FONTNAME',   (0,0), (-1,-1), font),
+        ('FONTSIZE',   (0,0), (-1,-1), 13),
+        ('FONTNAME',   (0,0), (-1,-1), font),
+        ('BACKGROUND', (0,0), (-1,-1), blue),
+        ('TEXTCOLOR',  (0,0), (-1,-1), colors.white),
+        ('ALIGN',      (1,0), (1,-1),  'RIGHT'),
+        ('PADDING',    (0,0), (-1,-1), 8),
+        ('BOX',        (0,0), (-1,-1), 1, blue),
+    ]))
+    story.append(net_table)
+    story.append(Spacer(1, 6*mm))
+    story.append(Paragraph(
+        f"此薪資單由系統自動產生。確認日期：{_dt.now(TW_TZ).strftime('%Y-%m-%d')}",
+        ParagraphStyle('footer', fontName=font, fontSize=7,
+                       textColor=colors.grey, alignment=TA_CENTER)
+    ))
+    doc.build(story)
+    return buf.getvalue()
+
+
+@app.route('/api/export/payslip-pdf/<int:rid>', methods=['GET'])
+@require_module('salary')
+def api_export_payslip_pdf(rid):
+    with get_db() as conn:
+        row = conn.execute("""
+            SELECT sr.*, ps.name AS staff_name, ps.employee_code, ps.department,
+                   ps.base_salary, ps.hire_date,
+                   a.display_name AS company_name
+            FROM salary_records sr
+            JOIN punch_staff ps ON ps.id = sr.staff_id
+            LEFT JOIN admin_accounts a ON a.account_id = sr.account_id
+            WHERE sr.id = %s
+        """, (rid,)).fetchone()
+    if not row: return ('', 404)
+    record = dict(row)
+    if record.get('base_salary'): record['base_salary'] = float(record['base_salary'])
+    if record.get('net_pay'):     record['net_pay']     = float(record['net_pay'])
+    pdf = _build_payslip_pdf(record)
+    fname = f"payslip_{record.get('staff_name',rid)}_{record.get('month','')}.pdf"
+    return _make_pdf_response(pdf, fname)
+
+
+def _build_quote_pdf(quote: dict) -> bytes:
+    import io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
+                                    Paragraph, Spacer)
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+
+    buf = io.BytesIO()
+    _, font = _pdf_styles()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=20*mm, rightMargin=20*mm,
+                            topMargin=20*mm, bottomMargin=20*mm)
+    blue  = colors.HexColor('#1F4E79')
+    light = colors.HexColor('#DEEAF1')
+
+    def _p(text, size=9, align=TA_LEFT, color=colors.black, bold=False):
+        fn = font
+        return Paragraph(text or '', ParagraphStyle('p', fontName=fn, fontSize=size,
+                                                    alignment=align, textColor=color))
+
+    story = []
+    story.append(_p('報價單 QUOTATION', 18, TA_CENTER, blue))
+    story.append(Spacer(1, 3*mm))
+
+    meta = [
+        ['報價單號', quote.get('quote_no',''), '日期', str(quote.get('created_at',''))[:10]],
+        ['客戶',    quote.get('customer_name',''), '有效天數', f"{quote.get('valid_days',30)} 天"],
+        ['標題',    quote.get('title',''), '狀態', quote.get('status','')],
+    ]
+    meta_t = Table(meta, colWidths=[25*mm, 70*mm, 25*mm, 50*mm])
+    meta_t.setStyle(TableStyle([
+        ('FONTNAME', (0,0),(-1,-1), font), ('FONTSIZE',(0,0),(-1,-1),9),
+        ('TEXTCOLOR',(0,0),(0,-1), colors.grey), ('TEXTCOLOR',(2,0),(2,-1), colors.grey),
+        ('BACKGROUND',(0,0),(-1,-1), light),
+        ('BOX',(0,0),(-1,-1),0.5,colors.grey),
+        ('INNERGRID',(0,0),(-1,-1),0.25,colors.lightgrey),
+        ('PADDING',(0,0),(-1,-1),4),
+    ]))
+    story.append(meta_t)
+    story.append(Spacer(1, 5*mm))
+
+    items_raw = quote.get('items') or []
+    if isinstance(items_raw, str):
+        try: items_raw = _json.loads(items_raw)
+        except: items_raw = []
+
+    item_rows = [['#', '品項名稱', '單位', '數量', '單價', '小計']]
+    for i, it in enumerate(items_raw, 1):
+        qty   = float(it.get('qty', it.get('quantity', 1)))
+        price = float(it.get('unit_price', it.get('price', 0)))
+        total = qty * price
+        item_rows.append([str(i), it.get('name',''), it.get('unit',''), f"{qty:g}",
+                          f"{price:,.0f}", f"{total:,.0f}"])
+    item_rows.append(['', '', '', '', '小計', f"{float(quote.get('subtotal',0)):,.0f}"])
+    item_rows.append(['', '', '', '', f"稅({quote.get('tax_rate',5):.0f}%)",
+                      f"{float(quote.get('tax_amount',0)):,.0f}"])
+    item_rows.append(['', '', '', '', '合計', f"NT$ {float(quote.get('total',0)):,.0f}"])
+
+    item_t = Table(item_rows, colWidths=[10*mm, 65*mm, 15*mm, 15*mm, 30*mm, 35*mm])
+    item_t.setStyle(TableStyle([
+        ('FONTNAME',   (0,0),(-1,-1), font), ('FONTSIZE',(0,0),(-1,-1),9),
+        ('BACKGROUND', (0,0),(-1,0),  blue), ('TEXTCOLOR',(0,0),(-1,0), colors.white),
+        ('ALIGN',      (2,0),(-1,-1), 'RIGHT'),
+        ('BOX',        (0,0),(-1,-1), 0.5, colors.grey),
+        ('INNERGRID',  (0,0),(-1,-1), 0.25, colors.lightgrey),
+        ('ROWBACKGROUNDS',(0,1),(-1,-4),[colors.white, light]),
+        ('FONTNAME',   (0,-1),(-1,-1), font),
+        ('BACKGROUND', (0,-1),(-1,-1), blue), ('TEXTCOLOR',(0,-1),(-1,-1), colors.white),
+        ('PADDING',    (0,0),(-1,-1), 4),
+        ('SPAN',       (0,-1),(3,-1)), ('SPAN',(0,-2),(3,-2)), ('SPAN',(0,-3),(3,-3)),
+    ]))
+    story.append(item_t)
+
+    if quote.get('notes'):
+        story.append(Spacer(1,4*mm))
+        story.append(_p(f"備註：{quote['notes']}", 8, color=colors.grey))
+
+    doc.build(story)
+    return buf.getvalue()
+
+
+@app.route('/api/export/quote-pdf/<int:qid>', methods=['GET'])
+@require_module('crm')
+def api_export_quote_pdf(qid):
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM crm_quotes WHERE id=%s", (qid,)).fetchone()
+    if not row: return ('', 404)
+    quote = dict(row)
+    if quote.get('created_at'): quote['created_at'] = str(quote['created_at'])[:10]
+    pdf   = _build_quote_pdf(quote)
+    fname = f"quote_{quote.get('quote_no', qid)}.pdf"
+    return _make_pdf_response(pdf, fname)
+
+
+def _build_po_pdf(po: dict) -> bytes:
+    import io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
+                                    Paragraph, Spacer)
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
+    buf = io.BytesIO()
+    _, font = _pdf_styles()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=20*mm, rightMargin=20*mm,
+                            topMargin=20*mm, bottomMargin=20*mm)
+    blue  = colors.HexColor('#1F4E79')
+    light = colors.HexColor('#DEEAF1')
+
+    def _p(text, size=9, align=TA_LEFT, color=colors.black):
+        return Paragraph(text or '', ParagraphStyle('p', fontName=font, fontSize=size,
+                                                    alignment=align, textColor=color))
+    story = []
+    story.append(_p('採購訂單 PURCHASE ORDER', 18, TA_CENTER, blue))
+    story.append(Spacer(1, 3*mm))
+
+    meta = [
+        ['採購單號', po.get('po_no',''), '日期', str(po.get('created_at',''))[:10]],
+        ['供應商',   po.get('supplier_name',''), '倉庫', po.get('warehouse_name','')],
+        ['狀態',     po.get('status',''), '備註', po.get('notes','')],
+    ]
+    meta_t = Table(meta, colWidths=[25*mm, 70*mm, 25*mm, 50*mm])
+    meta_t.setStyle(TableStyle([
+        ('FONTNAME',(0,0),(-1,-1),font), ('FONTSIZE',(0,0),(-1,-1),9),
+        ('TEXTCOLOR',(0,0),(0,-1),colors.grey), ('TEXTCOLOR',(2,0),(2,-1),colors.grey),
+        ('BACKGROUND',(0,0),(-1,-1),light),
+        ('BOX',(0,0),(-1,-1),0.5,colors.grey),
+        ('INNERGRID',(0,0),(-1,-1),0.25,colors.lightgrey),
+        ('PADDING',(0,0),(-1,-1),4),
+    ]))
+    story.append(meta_t)
+    story.append(Spacer(1, 5*mm))
+
+    items_raw = po.get('items') or []
+    if isinstance(items_raw, str):
+        try: items_raw = _json.loads(items_raw)
+        except: items_raw = []
+
+    item_rows = [['#', '品項名稱/SKU', '單位', '數量', '單價', '小計']]
+    for i, it in enumerate(items_raw, 1):
+        qty   = float(it.get('qty', 0))
+        price = float(it.get('unit_price', 0))
+        item_rows.append([str(i), f"{it.get('product_name','')}\n{it.get('sku','')}",
+                          it.get('unit',''), f"{qty:g}", f"{price:,.2f}",
+                          f"{qty*price:,.2f}"])
+    item_rows.append(['','','','','合計', f"NT$ {float(po.get('total',0)):,.2f}"])
+
+    item_t = Table(item_rows, colWidths=[10*mm, 65*mm, 15*mm, 15*mm, 30*mm, 35*mm])
+    item_t.setStyle(TableStyle([
+        ('FONTNAME',(0,0),(-1,-1),font), ('FONTSIZE',(0,0),(-1,-1),9),
+        ('BACKGROUND',(0,0),(-1,0),blue), ('TEXTCOLOR',(0,0),(-1,0),colors.white),
+        ('ALIGN',(2,0),(-1,-1),'RIGHT'),
+        ('BOX',(0,0),(-1,-1),0.5,colors.grey),
+        ('INNERGRID',(0,0),(-1,-1),0.25,colors.lightgrey),
+        ('ROWBACKGROUNDS',(0,1),(-1,-2),[colors.white,light]),
+        ('BACKGROUND',(0,-1),(-1,-1),blue), ('TEXTCOLOR',(0,-1),(-1,-1),colors.white),
+        ('FONTNAME',(0,-1),(-1,-1),font),
+        ('SPAN',(0,-1),(3,-1)),
+        ('PADDING',(0,0),(-1,-1),4),
+    ]))
+    story.append(item_t)
+    doc.build(story)
+    return buf.getvalue()
+
+
+@app.route('/api/export/purchase-order-pdf/<int:oid>', methods=['GET'])
+@require_module('inventory')
+def api_export_po_pdf(oid):
+    with get_db() as conn:
+        row = conn.execute("""
+            SELECT p.*, s.company_name AS supplier_name, w.name AS warehouse_name
+            FROM inv_purchase_orders p
+            LEFT JOIN crm_customers s ON s.id = p.supplier_id
+            LEFT JOIN inv_warehouses w ON w.id = p.warehouse_id
+            WHERE p.id = %s
+        """, (oid,)).fetchone()
+    if not row: return ('', 404)
+    po = dict(row)
+    if po.get('created_at'): po['created_at'] = str(po['created_at'])[:10]
+    pdf   = _build_po_pdf(po)
+    fname = f"po_{po.get('po_no', oid)}.pdf"
+    return _make_pdf_response(pdf, fname)
+
+
+def _build_invoice_pdf(inv: dict) -> bytes:
+    import io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
+                                    Paragraph, Spacer)
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
+    buf = io.BytesIO()
+    _, font = _pdf_styles()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=20*mm, rightMargin=20*mm,
+                            topMargin=20*mm, bottomMargin=20*mm)
+    blue  = colors.HexColor('#1F4E79')
+    light = colors.HexColor('#DEEAF1')
+
+    def _p(text, size=9, align=TA_LEFT, color=colors.black):
+        return Paragraph(text or '', ParagraphStyle('p', fontName=font, fontSize=size,
+                                                    alignment=align, textColor=color))
+    type_map = {'sales':'銷售發票','purchase':'進項發票','credit_note':'折讓單'}
+    inv_type = type_map.get(inv.get('invoice_type',''), inv.get('invoice_type',''))
+
+    story = []
+    story.append(_p(f'{inv_type}', 18, TA_CENTER, blue))
+    story.append(Spacer(1, 3*mm))
+
+    meta = [
+        ['發票號碼', inv.get('invoice_no',''), '日期', str(inv.get('invoice_date',''))[:10]],
+        ['賣方',     f"{inv.get('seller_name','')} ({inv.get('seller_ban','')})",
+         '買方',     f"{inv.get('buyer_name','')} ({inv.get('buyer_ban','')})"],
+    ]
+    meta_t = Table(meta, colWidths=[25*mm, 70*mm, 25*mm, 50*mm])
+    meta_t.setStyle(TableStyle([
+        ('FONTNAME',(0,0),(-1,-1),font), ('FONTSIZE',(0,0),(-1,-1),9),
+        ('TEXTCOLOR',(0,0),(0,-1),colors.grey), ('TEXTCOLOR',(2,0),(2,-1),colors.grey),
+        ('BACKGROUND',(0,0),(-1,-1),light),
+        ('BOX',(0,0),(-1,-1),0.5,colors.grey),
+        ('INNERGRID',(0,0),(-1,-1),0.25,colors.lightgrey),
+        ('PADDING',(0,0),(-1,-1),4),
+    ]))
+    story.append(meta_t)
+    story.append(Spacer(1, 5*mm))
+
+    totals = [
+        ['未稅金額', f"NT$ {float(inv.get('subtotal',0)):,.0f}"],
+        [f"稅額 ({float(inv.get('tax_rate',5)):.0f}%)", f"NT$ {float(inv.get('tax_amount',0)):,.0f}"],
+        ['含稅總計', f"NT$ {float(inv.get('total',0)):,.0f}"],
+    ]
+    tot_t = Table(totals, colWidths=[85*mm, 85*mm])
+    tot_t.setStyle(TableStyle([
+        ('FONTNAME',(0,0),(-1,-1),font), ('FONTSIZE',(0,0),(-1,-1),10),
+        ('TEXTCOLOR',(0,0),(0,-2),colors.grey),
+        ('BACKGROUND',(0,-1),(-1,-1),blue), ('TEXTCOLOR',(0,-1),(-1,-1),colors.white),
+        ('FONTNAME',(0,-1),(-1,-1),font), ('FONTSIZE',(0,-1),(-1,-1),12),
+        ('ALIGN',(1,0),(1,-1),'RIGHT'),
+        ('BOX',(0,0),(-1,-1),0.5,colors.grey),
+        ('INNERGRID',(0,0),(-1,-1),0.25,colors.lightgrey),
+        ('PADDING',(0,0),(-1,-1),6),
+    ]))
+    story.append(tot_t)
+    if inv.get('notes'):
+        story.append(Spacer(1,4*mm))
+        story.append(_p(f"備註：{inv['notes']}", 8, color=colors.grey))
+    doc.build(story)
+    return buf.getvalue()
+
+
+@app.route('/api/export/invoice-pdf/<int:iid>', methods=['GET'])
+@require_module('accounting')
+def api_export_invoice_pdf(iid):
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM acc_invoices WHERE id=%s", (iid,)).fetchone()
+    if not row: return ('', 404)
+    inv = dict(row)
+    if inv.get('invoice_date'): inv['invoice_date'] = str(inv['invoice_date'])
+    pdf   = _build_invoice_pdf(inv)
+    fname = f"invoice_{inv.get('invoice_no', iid)}.pdf"
+    return _make_pdf_response(pdf, fname)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 統一審批工作流程 (Unified Approval Workflow)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _init_approval_db():
+    migrations = [
+        """CREATE TABLE IF NOT EXISTS approval_flows (
+            id          SERIAL PRIMARY KEY,
+            name        TEXT NOT NULL,
+            module      TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            steps       JSONB DEFAULT '[]',
+            active      BOOLEAN DEFAULT TRUE,
+            created_by  TEXT DEFAULT '',
+            created_at  TIMESTAMPTZ DEFAULT NOW(),
+            updated_at  TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS approval_instances (
+            id              SERIAL PRIMARY KEY,
+            flow_id         INT REFERENCES approval_flows(id) ON DELETE SET NULL,
+            flow_name       TEXT DEFAULT '',
+            module          TEXT NOT NULL,
+            ref_type        TEXT NOT NULL,
+            ref_id          INT NOT NULL,
+            title           TEXT DEFAULT '',
+            applicant_id    INT REFERENCES punch_staff(id) ON DELETE SET NULL,
+            applicant_name  TEXT DEFAULT '',
+            current_step    INT DEFAULT 0,
+            total_steps     INT DEFAULT 1,
+            status          TEXT DEFAULT 'pending',
+            data            JSONB DEFAULT '{}',
+            final_note      TEXT DEFAULT '',
+            created_at      TIMESTAMPTZ DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS approval_step_records (
+            id              SERIAL PRIMARY KEY,
+            instance_id     INT REFERENCES approval_instances(id) ON DELETE CASCADE,
+            step_no         INT NOT NULL,
+            step_name       TEXT DEFAULT '',
+            approver_id     INT REFERENCES punch_staff(id) ON DELETE SET NULL,
+            approver_name   TEXT DEFAULT '',
+            action          TEXT DEFAULT 'pending',
+            comment         TEXT DEFAULT '',
+            acted_at        TIMESTAMPTZ,
+            created_at      TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_approval_instances_status ON approval_instances(status, module)",
+        "CREATE INDEX IF NOT EXISTS idx_approval_instances_ref ON approval_instances(ref_type, ref_id)",
+        "CREATE INDEX IF NOT EXISTS idx_approval_step_records ON approval_step_records(instance_id, step_no)",
+    ]
+    for sql in migrations:
+        try:
+            with get_db() as conn:
+                conn.execute(sql)
+        except Exception as e:
+            print(f"[approval_init] {str(e)[:120]}")
+
+_init_approval_db()
+
+
+def _instance_row(r):
+    d = dict(r)
+    if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+    if d.get('updated_at'): d['updated_at'] = d['updated_at'].isoformat()
+    return d
+
+
+# ── 審批流程定義 ────────────────────────────────────────────────────────────
+
+@app.route('/api/approval/flows', methods=['GET'])
+@login_required
+def api_approval_flows_list():
+    module = request.args.get('module', '').strip()
+    sql    = "SELECT * FROM approval_flows WHERE active=TRUE"
+    params = []
+    if module:
+        sql += " AND module=%s"; params.append(module)
+    sql += " ORDER BY module, name"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+        if d.get('updated_at'): d['updated_at'] = d['updated_at'].isoformat()
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route('/api/approval/flows', methods=['POST'])
+@login_required
+def api_approval_flow_create():
+    b     = request.get_json(force=True) or {}
+    admin = session.get('admin_display', session.get('admin', ''))
+    name  = (b.get('name') or '').strip()
+    module= (b.get('module') or '').strip()
+    if not name or not module:
+        return jsonify({'error': '流程名稱與模組為必填'}), 400
+    steps = b.get('steps', [])
+    # steps 格式: [{"step_no": 1, "name": "主管審批", "approver_role": "manager", "approver_ids": []}]
+    with get_db() as conn:
+        row = conn.execute("""
+            INSERT INTO approval_flows (name, module, description, steps, created_by)
+            VALUES (%s,%s,%s,%s::jsonb,%s) RETURNING *
+        """, (name, module, b.get('description',''),
+              _json.dumps(steps, ensure_ascii=False), admin)).fetchone()
+    _sys_audit('approval', 'create_flow', 'approval_flow', row['id'],
+               new_data={'name': name, 'module': module})
+    d = dict(row)
+    if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+    if d.get('updated_at'): d['updated_at'] = d['updated_at'].isoformat()
+    return jsonify(d), 201
+
+
+@app.route('/api/approval/flows/<int:fid>', methods=['PUT'])
+@login_required
+def api_approval_flow_update(fid):
+    b = request.get_json(force=True) or {}
+    with get_db() as conn:
+        row = conn.execute("""
+            UPDATE approval_flows
+            SET name=%s, description=%s, steps=%s::jsonb, active=%s, updated_at=NOW()
+            WHERE id=%s RETURNING *
+        """, (b.get('name',''), b.get('description',''),
+              _json.dumps(b.get('steps',[]), ensure_ascii=False),
+              bool(b.get('active', True)), fid)).fetchone()
+    d = dict(row) if row else {}
+    if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+    if d.get('updated_at'): d['updated_at'] = d['updated_at'].isoformat()
+    return jsonify(d) if row else ('', 404)
+
+
+@app.route('/api/approval/flows/<int:fid>', methods=['DELETE'])
+@login_required
+def api_approval_flow_delete(fid):
+    with get_db() as conn:
+        conn.execute("UPDATE approval_flows SET active=FALSE WHERE id=%s", (fid,))
+    return jsonify({'ok': True})
+
+
+# ── 審批實例 ─────────────────────────────────────────────────────────────────
+
+@app.route('/api/approval/instances', methods=['GET'])
+@login_required
+def api_approval_instances_list():
+    module     = request.args.get('module', '').strip()
+    status     = request.args.get('status', '').strip()
+    ref_type   = request.args.get('ref_type', '').strip()
+    approver_id= request.args.get('approver_id', '').strip()
+    sql = """
+        SELECT i.*,
+               (SELECT json_agg(s ORDER BY s.step_no)
+                FROM approval_step_records s WHERE s.instance_id=i.id) AS steps
+        FROM approval_instances i
+        WHERE 1=1
+    """
+    params = []
+    if module:   sql += " AND i.module=%s";   params.append(module)
+    if status:   sql += " AND i.status=%s";   params.append(status)
+    if ref_type: sql += " AND i.ref_type=%s"; params.append(ref_type)
+    if approver_id:
+        sql += """ AND EXISTS (
+            SELECT 1 FROM approval_step_records sr
+            WHERE sr.instance_id=i.id AND sr.approver_id=%s AND sr.action='pending'
+        )"""
+        params.append(int(approver_id))
+    sql += " ORDER BY i.created_at DESC LIMIT 200"
+    with get_db() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return jsonify([_instance_row(r) for r in rows])
+
+
+@app.route('/api/approval/instances', methods=['POST'])
+@login_required
+def api_approval_instance_create():
+    """啟動一個審批流程實例。"""
+    b        = request.get_json(force=True) or {}
+    flow_id  = b.get('flow_id')
+    module   = (b.get('module') or '').strip()
+    ref_type = (b.get('ref_type') or '').strip()
+    ref_id   = b.get('ref_id')
+    title    = (b.get('title') or '').strip()
+    applicant_id   = b.get('applicant_id')
+    applicant_name = (b.get('applicant_name') or '').strip()
+
+    if not module or not ref_type or not ref_id:
+        return jsonify({'error': '缺少 module / ref_type / ref_id'}), 400
+
+    with get_db() as conn:
+        flow  = conn.execute("SELECT * FROM approval_flows WHERE id=%s AND active=TRUE",
+                             (flow_id,)).fetchone() if flow_id else None
+        steps = []
+        flow_name = ''
+        if flow:
+            steps_raw = flow['steps']
+            if isinstance(steps_raw, str):
+                try: steps = _json.loads(steps_raw)
+                except: steps = []
+            else:
+                steps = steps_raw or []
+            flow_name = flow['name']
+
+        total = len(steps) if steps else 1
+        inst = conn.execute("""
+            INSERT INTO approval_instances
+              (flow_id, flow_name, module, ref_type, ref_id, title,
+               applicant_id, applicant_name, current_step, total_steps, data)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,0,%s,%s::jsonb)
+            RETURNING *
+        """, (flow_id or None, flow_name, module, ref_type, int(ref_id),
+              title, applicant_id or None, applicant_name,
+              total, _json.dumps(b.get('data', {}), ensure_ascii=False))).fetchone()
+        iid = inst['id']
+
+        if steps:
+            for s in steps:
+                step_no   = int(s.get('step_no', 1))
+                step_name = s.get('name', f'步驟 {step_no}')
+                approver_ids = s.get('approver_ids', [])
+                if approver_ids:
+                    for aid in approver_ids:
+                        aname = ''
+                        arow  = conn.execute("SELECT name FROM punch_staff WHERE id=%s",
+                                             (aid,)).fetchone()
+                        if arow: aname = arow['name']
+                        conn.execute("""
+                            INSERT INTO approval_step_records
+                              (instance_id, step_no, step_name, approver_id, approver_name, action)
+                            VALUES (%s,%s,%s,%s,%s,'pending')
+                        """, (iid, step_no, step_name, aid, aname))
+                else:
+                    conn.execute("""
+                        INSERT INTO approval_step_records
+                          (instance_id, step_no, step_name, action)
+                        VALUES (%s,%s,%s,'pending')
+                    """, (iid, step_no, step_name))
+        else:
+            conn.execute("""
+                INSERT INTO approval_step_records
+                  (instance_id, step_no, step_name, action)
+                VALUES (%s,1,'審批','pending')
+            """, (iid,))
+
+    _sys_audit(module, 'approval_start', ref_type, int(ref_id),
+               new_data={'instance_id': iid, 'title': title})
+    return jsonify(_instance_row(inst)), 201
+
+
+@app.route('/api/approval/instances/<int:iid>/step', methods=['POST'])
+@login_required
+def api_approval_step_action(iid):
+    """審批人執行審批動作：approve / reject。"""
+    b           = request.get_json(force=True) or {}
+    action      = b.get('action', '').strip()
+    comment     = b.get('comment', '').strip()
+    approver_id = b.get('approver_id')
+    if action not in ('approve', 'reject'):
+        return jsonify({'error': 'action 須為 approve 或 reject'}), 400
+
+    with get_db() as conn:
+        inst = conn.execute(
+            "SELECT * FROM approval_instances WHERE id=%s", (iid,)
+        ).fetchone()
+        if not inst: return ('', 404)
+        if inst['status'] != 'pending':
+            return jsonify({'error': '此審批已結束'}), 400
+
+        # 找到目前步驟的待審記錄
+        step_rec = conn.execute("""
+            SELECT * FROM approval_step_records
+            WHERE instance_id=%s AND step_no=%s AND action='pending'
+            ORDER BY id LIMIT 1
+        """, (iid, inst['current_step'] + 1)).fetchone()
+
+        if not step_rec:
+            return jsonify({'error': '找不到待審步驟'}), 400
+
+        conn.execute("""
+            UPDATE approval_step_records
+            SET action=%s, comment=%s, approver_id=COALESCE(%s, approver_id),
+                acted_at=NOW()
+            WHERE id=%s
+        """, (action, comment, approver_id or None, step_rec['id']))
+
+        if action == 'reject':
+            conn.execute("""
+                UPDATE approval_instances SET status='rejected', final_note=%s,
+                updated_at=NOW() WHERE id=%s
+            """, (comment, iid))
+            new_status = 'rejected'
+        else:
+            next_step = inst['current_step'] + 1
+            pending_next = conn.execute("""
+                SELECT id FROM approval_step_records
+                WHERE instance_id=%s AND step_no=%s AND action='pending'
+                LIMIT 1
+            """, (iid, next_step + 1)).fetchone()
+            if pending_next:
+                conn.execute("""
+                    UPDATE approval_instances SET current_step=%s, updated_at=NOW()
+                    WHERE id=%s
+                """, (next_step, iid))
+                new_status = 'pending'
+            else:
+                conn.execute("""
+                    UPDATE approval_instances SET status='approved',
+                    current_step=%s, updated_at=NOW() WHERE id=%s
+                """, (next_step, iid))
+                new_status = 'approved'
+
+    _sys_audit(inst['module'], f'approval_{action}', inst['ref_type'],
+               inst['ref_id'], note=comment,
+               new_data={'instance_id': iid, 'step': step_rec['step_no']})
+
+    with get_db() as conn:
+        updated = conn.execute(
+            "SELECT * FROM approval_instances WHERE id=%s", (iid,)
+        ).fetchone()
+    return jsonify({'ok': True, 'status': new_status,
+                    'instance': _instance_row(updated)})
+
+
+@app.route('/api/approval/instances/<int:iid>', methods=['GET'])
+@login_required
+def api_approval_instance_get(iid):
+    with get_db() as conn:
+        inst = conn.execute(
+            "SELECT * FROM approval_instances WHERE id=%s", (iid,)
+        ).fetchone()
+        if not inst: return ('', 404)
+        steps = conn.execute("""
+            SELECT s.*, ps.name AS approver_full_name
+            FROM approval_step_records s
+            LEFT JOIN punch_staff ps ON ps.id=s.approver_id
+            WHERE s.instance_id=%s ORDER BY s.step_no, s.id
+        """, (iid,)).fetchall()
+    d = _instance_row(inst)
+    step_list = []
+    for s in steps:
+        sd = dict(s)
+        if sd.get('acted_at'):   sd['acted_at']   = sd['acted_at'].isoformat()
+        if sd.get('created_at'): sd['created_at'] = sd['created_at'].isoformat()
+        step_list.append(sd)
+    d['step_records'] = step_list
+    return jsonify(d)
+
+
+@app.route('/api/approval/my-pending', methods=['GET'])
+def api_approval_my_pending():
+    """員工查詢自己需要審批的項目（staff session）。"""
+    sid = session.get('punch_staff_id')
+    if not sid: return jsonify({'error': 'not logged in'}), 401
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT i.*
+            FROM approval_instances i
+            WHERE i.status='pending'
+              AND EXISTS (
+                  SELECT 1 FROM approval_step_records sr
+                  WHERE sr.instance_id=i.id
+                    AND sr.approver_id=%s
+                    AND sr.action='pending'
+                    AND sr.step_no = i.current_step + 1
+              )
+            ORDER BY i.created_at DESC
+        """, (sid,)).fetchall()
+    return jsonify([_instance_row(r) for r in rows])
+
+
+@app.route('/api/approval/stats', methods=['GET'])
+@login_required
+def api_approval_stats():
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT module, status, COUNT(*) AS cnt
+            FROM approval_instances
+            GROUP BY module, status
+        """).fetchall()
+    result = {}
+    for r in rows:
+        m = r['module']
+        if m not in result: result[m] = {}
+        result[m][r['status']] = r['cnt']
+    return jsonify(result)
