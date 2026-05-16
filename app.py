@@ -10759,6 +10759,272 @@ def api_finance_tax_sync(year, period):
     return jsonify({'created': created, 'tax_payable': tax_payable, 'record_date': record_date})
 
 
+# ── 401 申報書正式格式匯出 ───────────────────────────────────────
+
+@app.route('/api/finance/tax/<int:year>/<int:period>/export-401', methods=['GET'])
+@require_module('finance')
+def api_export_401(year, period):
+    """匯出財政部格式 401 申報書（Excel），含一般稅額計算欄位。"""
+    import openpyxl, io
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
+    from openpyxl.utils import get_column_letter
+
+    if period < 1 or period > 6:
+        return jsonify({'error': '期別需為 1-6'}), 400
+
+    m_start  = (period - 1) * 2 + 1
+    m_end    = m_start + 1
+    months   = [f"{year}-{str(m).zfill(2)}" for m in range(m_start, m_end + 1)]
+    roc_year = year - 1911
+    # Period label: 1=1-2月, 2=3-4月, ...
+    period_labels = ['1-2月', '3-4月', '5-6月', '7-8月', '9-10月', '11-12月']
+    period_label  = period_labels[period - 1]
+
+    with get_db() as conn:
+        rows = conn.execute("""
+            SELECT fr.type, fr.amount, fr.tax_amount, fr.title,
+                   fr.vendor, fr.invoice_no, fr.record_date, fc.name as cat
+            FROM finance_records fr
+            LEFT JOIN finance_categories fc ON fc.id=fr.category_id
+            WHERE TO_CHAR(fr.record_date,'YYYY-MM') = ANY(%s)
+            ORDER BY fr.record_date, fr.type
+        """, (months,)).fetchall()
+
+        # Also get electronic invoices from acc_invoices (sales only)
+        acc_inv = conn.execute("""
+            SELECT invoice_no, gui_number, buyer_name, buyer_ban,
+                   subtotal, tax_amount, total, invoice_date, status
+            FROM acc_invoices
+            WHERE TO_CHAR(invoice_date,'YYYY-MM') = ANY(%s) AND status != 'void'
+            ORDER BY invoice_date, invoice_no
+        """, (months,)).fetchall()
+
+        fs = conn.execute(
+            "SELECT setting_key, setting_value FROM finance_settings WHERE setting_key IN ('company_name','company_tax_id','company_address')"
+        ).fetchall()
+
+    cfg = {r['setting_key']: r['setting_value'] for r in fs}
+    company_name   = cfg.get('company_name', '')
+    company_tax_id = cfg.get('company_tax_id', '')
+    company_addr   = cfg.get('company_address', '')
+
+    sales_rows    = [r for r in rows if r['type'] == 'income']
+    purchase_rows = [r for r in rows if r['type'] == 'expense']
+
+    total_sales_amt = sum(float(r['amount'])          for r in sales_rows)
+    total_sales_tax = sum(float(r['tax_amount'] or 0) for r in sales_rows)
+    total_pur_amt   = sum(float(r['amount'])          for r in purchase_rows)
+    total_pur_tax   = sum(float(r['tax_amount'] or 0) for r in purchase_rows)
+
+    # Also add electronic invoice totals
+    acc_sales_amt = sum(float(r['subtotal'] or 0) for r in acc_inv)
+    acc_sales_tax = sum(float(r['tax_amount'] or 0) for r in acc_inv)
+
+    # Combine: financial records + electronic invoices (deduplicate if needed)
+    combined_sales_amt = max(total_sales_amt, acc_sales_amt)
+    combined_sales_tax = max(total_sales_tax, acc_sales_tax)
+    tax_payable = round(combined_sales_tax - total_pur_tax, 2)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f'401_{roc_year}_{period}'
+
+    # --- Styles ---
+    navy_fill  = PatternFill('solid', fgColor='1F4E79')
+    blue_fill  = PatternFill('solid', fgColor='D0E4F7')
+    yellow_fill= PatternFill('solid', fgColor='FFFDE7')
+    green_fill = PatternFill('solid', fgColor='E8F5E9')
+    red_fill   = PatternFill('solid', fgColor='FFEBEE')
+    grey_fill  = PatternFill('solid', fgColor='F5F5F5')
+    header_font= Font(bold=True, color='FFFFFF', size=10)
+    title_font = Font(bold=True, size=14, color='1F4E79')
+    thin = Side(style='thin', color='AAAAAA')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    med = Side(style='medium', color='1F4E79')
+    med_border = Border(left=med, right=med, top=med, bottom=med)
+
+    def _hdr(ws, row, col, val, fill=navy_fill, font=None, align='center', colspan=1):
+        cell = ws.cell(row=row, column=col, value=val)
+        cell.fill = fill
+        cell.font = font or header_font
+        cell.alignment = Alignment(horizontal=align, vertical='center', wrap_text=True)
+        cell.border = border
+        if colspan > 1:
+            ws.merge_cells(start_row=row, start_column=col, end_row=row, end_column=col+colspan-1)
+        return cell
+
+    def _cell(ws, row, col, val, fmt=None, bold=False, align='center', fill=None, colspan=1):
+        cell = ws.cell(row=row, column=col, value=val)
+        cell.border = border
+        cell.alignment = Alignment(horizontal=align, vertical='center')
+        if fmt: cell.number_format = fmt
+        if bold: cell.font = Font(bold=True, size=10)
+        if fill: cell.fill = fill
+        return cell
+
+    # ── 申報書抬頭 ──
+    ws.row_dimensions[1].height = 30
+    ws.merge_cells('A1:L1')
+    ws['A1'] = f'營業稅申報書（一般稅額計算 - 401表格）'
+    ws['A1'].font = title_font
+    ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    ws['A1'].fill = blue_fill
+
+    # Row 2: 申報人基本資訊
+    ws.row_dimensions[2].height = 18
+    ws.merge_cells('A2:D2'); ws['A2'] = f'統一編號：{company_tax_id}'
+    ws.merge_cells('E2:H2'); ws['E2'] = f'營業人名稱：{company_name}'
+    ws.merge_cells('I2:L2'); ws['I2'] = f'地址：{company_addr}'
+    for cell in [ws['A2'], ws['E2'], ws['I2']]:
+        cell.font = Font(size=10); cell.fill = grey_fill; cell.border = border
+
+    ws.merge_cells('A3:D3'); ws['A3'] = f'申報期別：民國 {roc_year} 年 {period_label}'
+    ws.merge_cells('E3:H3'); ws['E3'] = f'申報日期：{_dwh.today().isoformat()}'
+    ws.merge_cells('I3:L3'); ws['I3'] = f'申報方式：自行申報'
+    for cell in [ws['A3'], ws['E3'], ws['I3']]:
+        cell.font = Font(size=10, bold=True); cell.fill = grey_fill; cell.border = border
+
+    # ── 一、銷售額 ──
+    r = 5
+    ws.merge_cells(f'A{r}:L{r}')
+    ws[f'A{r}'] = '壹、本期銷售額（銷項）'
+    ws[f'A{r}'].font = Font(bold=True, size=11, color='1F4E79')
+    ws[f'A{r}'].fill = blue_fill
+    ws[f'A{r}'].border = border
+
+    r += 1
+    _hdr(ws, r, 1, '項目', blue_fill, Font(bold=True, size=9, color='1F4E79'))
+    _hdr(ws, r, 2, '應稅（一般稅率）銷售額', blue_fill, Font(bold=True, size=9, color='1F4E79'), colspan=3)
+    _hdr(ws, r, 5, '稅額', blue_fill, Font(bold=True, size=9, color='1F4E79'), colspan=2)
+    _hdr(ws, r, 7, '零稅率銷售額', blue_fill, Font(bold=True, size=9, color='1F4E79'), colspan=2)
+    _hdr(ws, r, 9, '免稅銷售額', blue_fill, Font(bold=True, size=9, color='1F4E79'), colspan=2)
+    _hdr(ws, r, 11, '備考', blue_fill, Font(bold=True, size=9, color='1F4E79'), colspan=2)
+
+    r += 1
+    _cell(ws, r, 1, '三聯式、電子計算機(統一發票)', align='left')
+    _cell(ws, r, 2, round(acc_sales_amt, 0), '#,##0', bold=True, colspan=3)
+    ws.merge_cells(f'B{r}:D{r}')
+    _cell(ws, r, 5, round(acc_sales_tax, 0), '#,##0', colspan=2)
+    ws.merge_cells(f'E{r}:F{r}')
+    _cell(ws, r, 7, 0, '#,##0', colspan=2); ws.merge_cells(f'G{r}:H{r}')
+    _cell(ws, r, 9, 0, '#,##0', colspan=2); ws.merge_cells(f'I{r}:J{r}')
+    _cell(ws, r, 11, '含電子發票', align='left', colspan=2); ws.merge_cells(f'K{r}:L{r}')
+
+    r += 1
+    _cell(ws, r, 1, '其他（財務記帳銷項）', align='left')
+    _cell(ws, r, 2, round(total_sales_amt, 0), '#,##0', colspan=3); ws.merge_cells(f'B{r}:D{r}')
+    _cell(ws, r, 5, round(total_sales_tax, 0), '#,##0', colspan=2); ws.merge_cells(f'E{r}:F{r}')
+    _cell(ws, r, 7, 0, '#,##0', colspan=2); ws.merge_cells(f'G{r}:H{r}')
+    _cell(ws, r, 9, 0, '#,##0', colspan=2); ws.merge_cells(f'I{r}:J{r}')
+    _cell(ws, r, 11, '', colspan=2); ws.merge_cells(f'K{r}:L{r}')
+
+    r += 1
+    ws.merge_cells(f'A{r}:A{r}'); _cell(ws, r, 1, '合計（取最高值）', bold=True, fill=green_fill, align='left')
+    _cell(ws, r, 2, round(combined_sales_amt, 0), '#,##0', bold=True, fill=green_fill, colspan=3); ws.merge_cells(f'B{r}:D{r}')
+    _cell(ws, r, 5, round(combined_sales_tax, 0), '#,##0', bold=True, fill=green_fill, colspan=2); ws.merge_cells(f'E{r}:F{r}')
+    _cell(ws, r, 7, 0, '#,##0', fill=green_fill, colspan=2); ws.merge_cells(f'G{r}:H{r}')
+    _cell(ws, r, 9, 0, '#,##0', fill=green_fill, colspan=2); ws.merge_cells(f'I{r}:J{r}')
+    _cell(ws, r, 11, '', fill=green_fill, colspan=2); ws.merge_cells(f'K{r}:L{r}')
+
+    # ── 二、進貨及費用 ──
+    r += 2
+    ws.merge_cells(f'A{r}:L{r}')
+    ws[f'A{r}'] = '貳、本期進項憑證（進項）'
+    ws[f'A{r}'].font = Font(bold=True, size=11, color='1F4E79')
+    ws[f'A{r}'].fill = blue_fill; ws[f'A{r}'].border = border
+
+    r += 1
+    _hdr(ws, r, 1, '項目', blue_fill, Font(bold=True, size=9, color='1F4E79'))
+    _hdr(ws, r, 2, '憑證金額', blue_fill, Font(bold=True, size=9, color='1F4E79'), colspan=3)
+    _hdr(ws, r, 5, '可扣抵稅額', blue_fill, Font(bold=True, size=9, color='1F4E79'), colspan=2)
+    _hdr(ws, r, 7, '不可扣抵稅額', blue_fill, Font(bold=True, size=9, color='1F4E79'), colspan=2)
+    _hdr(ws, r, 9, '', blue_fill, Font(bold=True, size=9, color='1F4E79'), colspan=4)
+
+    r += 1
+    _cell(ws, r, 1, '三聯式統一發票及一般稅額計算之電子計算機統一發票', align='left')
+    _cell(ws, r, 2, round(total_pur_amt, 0), '#,##0', colspan=3); ws.merge_cells(f'B{r}:D{r}')
+    _cell(ws, r, 5, round(total_pur_tax, 0), '#,##0', colspan=2); ws.merge_cells(f'E{r}:F{r}')
+    _cell(ws, r, 7, 0, '#,##0', colspan=2); ws.merge_cells(f'G{r}:H{r}')
+    _cell(ws, r, 9, '', colspan=4); ws.merge_cells(f'I{r}:L{r}')
+
+    r += 1
+    _cell(ws, r, 1, '合計', bold=True, fill=green_fill, align='left')
+    _cell(ws, r, 2, round(total_pur_amt, 0), '#,##0', bold=True, fill=green_fill, colspan=3); ws.merge_cells(f'B{r}:D{r}')
+    _cell(ws, r, 5, round(total_pur_tax, 0), '#,##0', bold=True, fill=green_fill, colspan=2); ws.merge_cells(f'E{r}:F{r}')
+    _cell(ws, r, 7, 0, '#,##0', fill=green_fill, colspan=2); ws.merge_cells(f'G{r}:H{r}')
+    _cell(ws, r, 9, '', fill=green_fill, colspan=4); ws.merge_cells(f'I{r}:L{r}')
+
+    # ── 三、稅額計算 ──
+    r += 2
+    ws.merge_cells(f'A{r}:L{r}')
+    ws[f'A{r}'] = '參、本期應納（退）稅額'
+    ws[f'A{r}'].font = Font(bold=True, size=11, color='1F4E79')
+    ws[f'A{r}'].fill = blue_fill; ws[f'A{r}'].border = border
+
+    items_401 = [
+        ('銷項稅額（①）',  round(combined_sales_tax, 0), False),
+        ('進項稅額（②）',  round(total_pur_tax, 0),      False),
+        ('應納稅額（①-②）', round(tax_payable, 0),      True),
+    ]
+    for label, val, is_total in items_401:
+        r += 1
+        fill_use = (red_fill if val < 0 and is_total else yellow_fill) if is_total else None
+        _cell(ws, r, 1, label, bold=is_total, align='left', fill=fill_use)
+        _cell(ws, r, 2, val, '#,##0', bold=is_total, fill=fill_use, colspan=3); ws.merge_cells(f'B{r}:D{r}')
+        remark = ''
+        if is_total:
+            remark = '⚠ 退稅' if val < 0 else ('應繳稅款' if val > 0 else '免繳')
+        _cell(ws, r, 5, remark, fill=fill_use, colspan=8); ws.merge_cells(f'E{r}:L{r}')
+
+    # ── 四、電子發票明細 ──
+    r += 2
+    ws.merge_cells(f'A{r}:L{r}')
+    ws[f'A{r}'] = '肆、電子發票明細（本期開立）'
+    ws[f'A{r}'].font = Font(bold=True, size=11, color='1F4E79')
+    ws[f'A{r}'].fill = blue_fill; ws[f'A{r}'].border = border
+
+    r += 1
+    for ci, h in enumerate(['字軌號碼','開票日期','買方名稱','買方統編','稅前金額','稅額','含稅金額'], 1):
+        c = ws.cell(row=r, column=ci, value=h)
+        c.font = Font(bold=True, size=9, color='FFFFFF'); c.fill = navy_fill
+        c.border = border; c.alignment = Alignment(horizontal='center')
+
+    col_widths_inv = [14, 12, 22, 12, 14, 12, 14]
+    for ci, w in enumerate(col_widths_inv, 1):
+        ws.column_dimensions[get_column_letter(ci)].width = w
+
+    for inv_row in acc_inv:
+        r += 1
+        _cell(ws, r, 1, inv_row['gui_number'] or inv_row['invoice_no'], align='center')
+        _cell(ws, r, 2, str(inv_row['invoice_date'])[:10] if inv_row['invoice_date'] else '', align='center')
+        _cell(ws, r, 3, inv_row['buyer_name'] or '', align='left')
+        _cell(ws, r, 4, inv_row['buyer_ban'] or '', align='center')
+        _cell(ws, r, 5, float(inv_row['subtotal'] or 0),  '#,##0', align='right')
+        _cell(ws, r, 6, float(inv_row['tax_amount'] or 0), '#,##0', align='right')
+        _cell(ws, r, 7, float(inv_row['total'] or 0),     '#,##0', bold=True, align='right')
+
+    # ── 五、申報說明 ──
+    r += 2
+    ws.merge_cells(f'A{r}:L{r}')
+    ws[f'A{r}'] = f'※ 本申報書依財務記帳資料產生，實際申報請以財政部申報系統（eGUI）為準。申報期限：次期開始後15日內（{roc_year+1911}年{"3月 / 5月 / 7月 / 9月 / 11月 / 隔年1月".split(" / ")[period-1]}15日前）'
+    ws[f'A{r}'].font = Font(size=9, color='888888')
+    ws.merge_cells(f'A{r+1}:L{r+1}')
+    ws[f'A{r+1}'] = f'※ 如適用簡易稅額計算（401A）或有特殊進項，請另行核算。製表：{company_name}　製表日期：{_dwh.today().isoformat()}'
+    ws[f'A{r+1}'].font = Font(size=9, color='888888')
+
+    # Set first 12 columns width
+    for ci, w in enumerate([18,14,14,14,14,14,14,14,14,14,14,14], 1):
+        ws.column_dimensions[get_column_letter(ci)].width = w
+    ws.sheet_view.showGridLines = False
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    fname = f'VAT401_{roc_year}_{period_label}.xlsx'
+    return send_file(buf, as_attachment=True, download_name=fname,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
 # ═══════════════════════════════════════════════════════════════════
 # LINE Broadcast Helper
 # ═══════════════════════════════════════════════════════════════════
@@ -17501,6 +17767,8 @@ def init_invoice_db():
         "CREATE INDEX IF NOT EXISTS idx_acc_invoices_date   ON acc_invoices(invoice_date, invoice_type)",
         "CREATE INDEX IF NOT EXISTS idx_acc_invoices_cust   ON acc_invoices(customer_id)",
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_acc_tax_period ON acc_tax_filings(filing_type, period)",
+        "ALTER TABLE acc_invoices ADD COLUMN IF NOT EXISTS gui_number TEXT DEFAULT ''",
+        "ALTER TABLE acc_invoices ADD COLUMN IF NOT EXISTS invoice_format TEXT DEFAULT 'electronic'",
     ]
     for sql in migrations:
         try:
@@ -17509,12 +17777,25 @@ def init_invoice_db():
         except Exception as e:
             print(f"[invoice_init] {str(e)[:120]}")
 
+    # Seed GUI number settings
+    for k, v in [('gui_prefix', 'AB'), ('gui_start', '00000001'), ('gui_end', '00000050')]:
+        try:
+            with get_db() as conn:
+                conn.execute(
+                    "INSERT INTO finance_settings (setting_key, setting_value) VALUES (%s,%s) ON CONFLICT (setting_key) DO NOTHING",
+                    (k, v)
+                )
+        except Exception:
+            pass
+
 init_invoice_db()
 
 
 def _invoice_row(r):
     return {
         'id': r['id'], 'invoice_no': r['invoice_no'],
+        'gui_number': r['gui_number'] if 'gui_number' in r.keys() else '',
+        'invoice_format': r['invoice_format'] if 'invoice_format' in r.keys() else 'electronic',
         'invoice_type': r['invoice_type'],
         'invoice_date': str(r['invoice_date']) if r['invoice_date'] else None,
         'seller_name': r['seller_name'], 'seller_ban': r['seller_ban'],
@@ -17531,6 +17812,34 @@ def _invoice_row(r):
         'notes': r['notes'], 'created_by': r['created_by'],
         'created_at': str(r['created_at'])[:10] if r['created_at'] else None,
     }
+
+
+def _next_gui_number() -> str:
+    """Generate next sequential GUI (統一發票字軌) number from finance_settings."""
+    import re
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT setting_key, setting_value FROM finance_settings WHERE setting_key IN ('gui_prefix','gui_start','gui_end')"
+        ).fetchall()
+    cfg = {r['setting_key']: r['setting_value'] for r in rows}
+    prefix = (cfg.get('gui_prefix') or 'AB').strip().upper()[:2]
+    # Find the highest existing GUI number for this prefix
+    with get_db() as conn:
+        last = conn.execute(
+            "SELECT gui_number FROM acc_invoices WHERE gui_number LIKE %s AND status != 'void' ORDER BY gui_number DESC LIMIT 1",
+            (f'{prefix}%',)
+        ).fetchone()
+    if last and last['gui_number']:
+        m = re.search(r'\d+$', last['gui_number'])
+        next_num = int(m.group()) + 1 if m else 1
+    else:
+        start_str = cfg.get('gui_start') or '00000001'
+        next_num  = int(re.sub(r'\D', '', start_str) or '1')
+    end_str  = cfg.get('gui_end') or '00000050'
+    end_num  = int(re.sub(r'\D', '', end_str) or '50')
+    if next_num > end_num:
+        raise ValueError(f'本期字軌 {prefix} 已用完（{end_num}）。請更新字軌設定。')
+    return f'{prefix}{str(next_num).zfill(8)}'
 
 
 # ── 發票 CRUD ─────────────────────────────────────────────────
@@ -17574,6 +17883,14 @@ def api_acc_invoice_create():
     tax_amount = round(subtotal * tax_rate / 100, 2)
     total      = round(subtotal + tax_amount, 2)
     inv_date   = d.get('invoice_date') or str(_dt.date.today())
+    inv_fmt    = d.get('invoice_format', 'electronic')
+    # Auto-generate GUI number for sales invoices in electronic format
+    gui_no = d.get('gui_number', '').strip()
+    if not gui_no and d.get('invoice_type', 'sales') == 'sales' and inv_fmt == 'electronic':
+        try:
+            gui_no = _next_gui_number()
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
     with get_db() as conn:
         inv_no = _next_acc_no('INV', 'acc_invoices', 'invoice_no')
         row = conn.execute(
@@ -17582,8 +17899,9 @@ def api_acc_invoice_create():
                 seller_ban, seller_name, buyer_ban, buyer_name,
                 customer_id, order_id, shipment_id, po_id,
                 subtotal, tax_rate, tax_amount, total, items,
-                carrier_type, carrier_id, npc_code, notes, created_by)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                carrier_type, carrier_id, npc_code, notes, created_by,
+                gui_number, invoice_format)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                RETURNING *""",
             (inv_no, d.get('invoice_type', 'sales'), inv_date,
              d.get('seller_ban', ''), d.get('seller_name', ''),
@@ -17593,7 +17911,8 @@ def api_acc_invoice_create():
              subtotal, tax_rate, tax_amount, total,
              _json.dumps(items),
              d.get('carrier_type', ''), d.get('carrier_id', ''),
-             d.get('npc_code', ''), d.get('notes', ''), admin)
+             d.get('npc_code', ''), d.get('notes', ''), admin,
+             gui_no, inv_fmt)
         ).fetchone()
     return jsonify(_invoice_row(row)), 201
 
@@ -19197,13 +19516,26 @@ def _build_invoice_pdf(inv: dict) -> bytes:
     inv_type = type_map.get(inv.get('invoice_type',''), inv.get('invoice_type',''))
 
     story = []
-    story.append(_p(f'{inv_type}', 18, TA_CENTER, blue))
+    # Header row: invoice type + GUI number
+    gui_no = inv.get('gui_number', '')
+    gui_display = f'  統一發票號碼：{gui_no}' if gui_no else ''
+    story.append(_p(f'{inv_type}{gui_display}', 16, TA_CENTER, blue))
     story.append(Spacer(1, 3*mm))
 
+    # ROC year date
+    import re as _re
+    inv_date_str = str(inv.get('invoice_date',''))[:10]
+    try:
+        yy, mm2, dd = inv_date_str.split('-')
+        roc_date = f'中華民國 {int(yy)-1911} 年 {int(mm2)} 月 {int(dd)} 日'
+    except Exception:
+        roc_date = inv_date_str
+
     meta = [
-        ['發票號碼', inv.get('invoice_no',''), '日期', str(inv.get('invoice_date',''))[:10]],
-        ['賣方',     f"{inv.get('seller_name','')} ({inv.get('seller_ban','')})",
-         '買方',     f"{inv.get('buyer_name','')} ({inv.get('buyer_ban','')})"],
+        ['系統編號', inv.get('invoice_no',''), '開立日期', roc_date],
+        ['字軌號碼', gui_no or '（非電子發票）', '發票格式', '電子發票' if inv.get('invoice_format','electronic')=='electronic' else '紙本'],
+        ['賣方',     f"{inv.get('seller_name','')}（統編：{inv.get('seller_ban','') or '—'}）",
+         '買方',     f"{inv.get('buyer_name','')}（統編：{inv.get('buyer_ban','') or '—'}）"],
     ]
     meta_t = Table(meta, colWidths=[25*mm, 70*mm, 25*mm, 50*mm])
     meta_t.setStyle(TableStyle([
@@ -20843,3 +21175,277 @@ def api_inv_batches_expiry_alerts():
         d['qty'] = float(d.get('qty') or 0)
         result.append(d)
     return jsonify(result)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 電子發票字軌設定 (GUI Number Series Management)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/accounting/gui-settings', methods=['GET'])
+@require_module('accounting')
+def api_gui_settings_get():
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT setting_key, setting_value FROM finance_settings WHERE setting_key IN ('gui_prefix','gui_start','gui_end')"
+        ).fetchall()
+    cfg = {r['setting_key']: r['setting_value'] for r in rows}
+    # Also return current usage count
+    prefix = cfg.get('gui_prefix', 'AB')
+    with get_db() as conn:
+        used = conn.execute(
+            "SELECT COUNT(*) as c FROM acc_invoices WHERE gui_number LIKE %s AND status != 'void'",
+            (f'{prefix}%',)
+        ).fetchone()['c']
+        last = conn.execute(
+            "SELECT gui_number FROM acc_invoices WHERE gui_number LIKE %s AND status != 'void' ORDER BY gui_number DESC LIMIT 1",
+            (f'{prefix}%',)
+        ).fetchone()
+    import re
+    next_num = 1
+    if last and last['gui_number']:
+        m = re.search(r'\d+$', last['gui_number'])
+        if m: next_num = int(m.group()) + 1
+    else:
+        start_str = cfg.get('gui_start', '00000001')
+        next_num = int(re.sub(r'\D', '', start_str) or '1')
+    end_str = cfg.get('gui_end', '00000050')
+    end_num = int(re.sub(r'\D', '', end_str) or '50')
+    return jsonify({
+        'gui_prefix': cfg.get('gui_prefix', 'AB'),
+        'gui_start':  cfg.get('gui_start', '00000001'),
+        'gui_end':    cfg.get('gui_end', '00000050'),
+        'used_count': used,
+        'remaining':  max(0, end_num - next_num + 1),
+        'next_gui':   f"{prefix}{str(next_num).zfill(8)}",
+    })
+
+
+@app.route('/api/accounting/gui-settings', methods=['POST'])
+@require_module('accounting')
+def api_gui_settings_save():
+    d = request.get_json() or {}
+    import re
+    prefix = (d.get('gui_prefix') or 'AB').strip().upper()[:2]
+    if not re.fullmatch(r'[A-Z]{2}', prefix):
+        return jsonify({'error': '字軌前綴須為2個大寫英文字母'}), 400
+    start = str(d.get('gui_start') or '00000001').strip().zfill(8)
+    end   = str(d.get('gui_end')   or '00000050').strip().zfill(8)
+    with get_db() as conn:
+        for k, v in [('gui_prefix', prefix), ('gui_start', start), ('gui_end', end)]:
+            conn.execute(
+                "INSERT INTO finance_settings (setting_key, setting_value) VALUES (%s,%s) ON CONFLICT (setting_key) DO UPDATE SET setting_value=EXCLUDED.setting_value",
+                (k, v)
+            )
+    return jsonify({'ok': True, 'gui_prefix': prefix, 'gui_start': start, 'gui_end': end})
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 勞基法加班時數警示 (Overtime Law Compliance Check)
+# Taiwan Labor Standards Act Art.32: ≤46 h/month (≤54 with consent)
+#   3-month rolling total ≤138 h
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/overtime/law-check', methods=['GET'])
+@login_required
+def api_overtime_law_check():
+    month        = request.args.get('month', '') or _dt.now(TW_TZ).strftime('%Y-%m')
+    monthly_warn = int(request.args.get('monthly_warn', 40))   # warning threshold
+    monthly_max  = int(request.args.get('monthly_max',  46))   # legal monthly limit
+    quarterly_max= int(request.args.get('quarterly_max',138))  # legal 3-month limit
+
+    # Determine the 3-month window ending with this month
+    import datetime as dt
+    try:
+        y, m = int(month[:4]), int(month[5:7])
+    except Exception:
+        return jsonify({'error': 'invalid month'}), 400
+    months_3 = []
+    for delta in range(2, -1, -1):
+        mm = m - delta
+        yy = y
+        while mm <= 0:
+            mm += 12; yy -= 1
+        months_3.append(f'{yy}-{str(mm).zfill(2)}')
+
+    with get_db() as conn:
+        # Current month approved OT per staff
+        monthly_rows = conn.execute("""
+            SELECT ps.id as staff_id, ps.name as staff_name, ps.role as staff_role,
+                   COALESCE(SUM(r.ot_hours) FILTER (WHERE r.status='approved'), 0) AS approved_hours,
+                   COALESCE(SUM(r.ot_hours) FILTER (WHERE r.status='pending'),  0) AS pending_hours
+            FROM punch_staff ps
+            LEFT JOIN overtime_requests r
+                   ON r.staff_id = ps.id AND to_char(r.request_date,'YYYY-MM') = %s
+            WHERE ps.active = TRUE
+            GROUP BY ps.id, ps.name, ps.role
+        """, (month,)).fetchall()
+
+        # 3-month approved OT per staff
+        quarterly_rows = conn.execute("""
+            SELECT staff_id,
+                   COALESCE(SUM(ot_hours) FILTER (WHERE status='approved'), 0) AS approved_hours
+            FROM overtime_requests
+            WHERE to_char(request_date,'YYYY-MM') = ANY(%s)
+            GROUP BY staff_id
+        """, (months_3,)).fetchall()
+
+    quarterly_map = {r['staff_id']: float(r['approved_hours'] or 0) for r in quarterly_rows}
+
+    result = []
+    for r in monthly_rows:
+        sid       = r['staff_id']
+        mo_hrs    = float(r['approved_hours'] or 0)
+        pend_hrs  = float(r['pending_hours'] or 0)
+        q3_hrs    = quarterly_map.get(sid, mo_hrs)  # includes current month
+
+        if mo_hrs >= monthly_max:
+            mo_status = 'over'
+        elif mo_hrs >= monthly_warn:
+            mo_status = 'warning'
+        else:
+            mo_status = 'ok'
+
+        if q3_hrs >= quarterly_max:
+            q_status = 'over'
+        elif q3_hrs >= quarterly_max * 0.85:
+            q_status = 'warning'
+        else:
+            q_status = 'ok'
+
+        overall = 'over' if 'over' in (mo_status, q_status) else ('warning' if 'warning' in (mo_status, q_status) else 'ok')
+
+        result.append({
+            'staff_id':      sid,
+            'staff_name':    r['staff_name'],
+            'staff_role':    r['staff_role'] or '',
+            'month':         month,
+            'monthly_approved': round(mo_hrs, 2),
+            'monthly_pending':  round(pend_hrs, 2),
+            'monthly_status':   mo_status,
+            'monthly_limit':    monthly_max,
+            'quarterly_approved': round(q3_hrs, 2),
+            'quarterly_months':   months_3,
+            'quarterly_status':   q_status,
+            'quarterly_limit':    quarterly_max,
+            'status':        overall,
+        })
+
+    result.sort(key=lambda x: -x['monthly_approved'])
+    return jsonify(result)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 勞退提撥 6% 明細報表 (Labor Pension 6% Contribution Report)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.route('/api/export/labor-pension', methods=['GET'])
+@login_required
+def api_export_labor_pension():
+    import openpyxl, io
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    year  = request.args.get('year', str(_dt.now(TW_TZ).year))
+    month = request.args.get('month', '')  # optional: YYYY-MM filter
+
+    with get_db() as conn:
+        if month:
+            months_filter = [month]
+        else:
+            months_filter = [f'{year}-{str(m).zfill(2)}' for m in range(1, 13)]
+
+        # Get salary records with staff info
+        rows = conn.execute("""
+            SELECT sr.month, sr.base_salary, sr.insured_salary, sr.net_pay,
+                   ps.name, ps.national_id, ps.role, ps.hire_date
+            FROM salary_records sr
+            JOIN punch_staff ps ON ps.id = sr.staff_id
+            WHERE sr.month = ANY(%s) AND sr.status != 'cancelled'
+            ORDER BY sr.month, ps.name
+        """, (months_filter,)).fetchall()
+
+        fs = conn.execute(
+            "SELECT setting_key, setting_value FROM finance_settings WHERE setting_key IN ('company_name','company_tax_id')"
+        ).fetchall()
+
+    cfg = {r['setting_key']: r['setting_value'] for r in fs}
+    company_name   = cfg.get('company_name', '')
+    company_tax_id = cfg.get('company_tax_id', '')
+
+    RATE = 0.06
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    roc_year = int(year) - 1911
+    title_month = f'（{month[5:7]}月）' if month else '（全年）'
+    ws.title = f'{roc_year}年勞退提撥'
+
+    # Title
+    ws.merge_cells('A1:I1')
+    ws['A1'] = f'勞工退休金雇主提撥明細表　{roc_year}年{title_month}'
+    ws['A1'].font = Font(size=14, bold=True)
+    ws['A1'].alignment = Alignment(horizontal='center')
+
+    ws.merge_cells('A2:I2')
+    ws['A2'] = f'雇主名稱：{company_name}　　統一編號：{company_tax_id}　　提撥費率：6%'
+    ws['A2'].alignment = Alignment(horizontal='left')
+    ws['A2'].font = Font(size=10)
+
+    hdr_fill = PatternFill('solid', fgColor='1F4E79')
+    hdr_font = Font(bold=True, color='FFFFFF', size=10)
+    thin_side = Side(style='thin', color='AAAAAA')
+    thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+
+    headers = ['月份', '員工姓名', '身分證字號', '職稱', '到職日', '月薪', '投保薪資', '提撥金額(6%)', '備註']
+    col_widths = [12, 14, 14, 14, 14, 14, 14, 16, 12]
+    for ci, (h, w) in enumerate(zip(headers, col_widths), 1):
+        cell = ws.cell(row=3, column=ci, value=h)
+        cell.font = hdr_font
+        cell.fill = hdr_fill
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = thin_border
+        ws.column_dimensions[get_column_letter(ci)].width = w
+
+    total_pension = 0.0
+    for ri, r in enumerate(rows, 4):
+        insured = float(r['insured_salary'] or r['base_salary'] or 0)
+        pension = round(insured * RATE)
+        total_pension += pension
+        row_data = [
+            r['month'],
+            r['name'],
+            r['national_id'] or '',
+            r['role'] or '',
+            str(r['hire_date'])[:10] if r['hire_date'] else '',
+            float(r['base_salary'] or 0),
+            insured,
+            pension,
+            '',
+        ]
+        alt_fill = PatternFill('solid', fgColor='EEF4FF') if ri % 2 == 0 else None
+        for ci, val in enumerate(row_data, 1):
+            cell = ws.cell(row=ri, column=ci, value=val)
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal='center' if ci != 2 else 'left')
+            if ci in (6, 7, 8):
+                cell.number_format = '#,##0'
+            if alt_fill:
+                cell.fill = alt_fill
+
+    # Summary row
+    sum_row = len(rows) + 4
+    ws.cell(row=sum_row, column=1, value='合計').font = Font(bold=True)
+    for ci in range(1, 10):
+        ws.cell(row=sum_row, column=ci).border = thin_border
+        ws.cell(row=sum_row, column=ci).fill = PatternFill('solid', fgColor='D6E4F0')
+    ws.cell(row=sum_row, column=8, value=round(total_pension)).number_format = '#,##0'
+    ws.cell(row=sum_row, column=8).font = Font(bold=True)
+    ws.cell(row=sum_row+1, column=1, value=f'※ 提撥金額依投保薪資 × 6% 計算，雇主每月需繳至勞保局個人帳戶。')
+    ws.cell(row=sum_row+1, column=1).font = Font(size=9, color='666666')
+    ws.merge_cells(f'A{sum_row+1}:I{sum_row+1}')
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    fname = f'labor_pension_{year}{("_"+month[5:7]) if month else ""}.xlsx'
+    return send_file(buf, as_attachment=True, download_name=fname,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

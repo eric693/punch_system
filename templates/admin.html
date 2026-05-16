@@ -623,6 +623,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <div style="display:flex;gap:4px">
           <button class="btn btn-sm" id="ot-view-list-btn" onclick="setOTView('list')" style="background:var(--navy);color:#fff;border:none">申請列表</button>
           <button class="btn btn-sm btn-outline" id="ot-view-summary-btn" onclick="setOTView('summary')">月統計</button>
+          <button class="btn btn-sm btn-outline" id="ot-view-law-btn" onclick="setOTView('law')" style="border-color:#ef4444;color:#ef4444">⚖ 法令稽核</button>
         </div>
         <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text)" data-i18n="btn.select_all">
           <input type="checkbox" id="ot-select-all" onchange="selectAllBatch('ot',this.checked)">全選
@@ -649,6 +650,45 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
                 <tr><td colspan="7" class="empty-state"><div class="empty-state-text">載入中...</div></td></tr>
               </tbody>
               <tfoot id="ot-summary-tfoot"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 勞基法加班上限稽核面板 -->
+      <div id="ot-law-wrap" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+          <span style="font-weight:700;font-size:15px">⚖ 勞基法加班上限稽核</span>
+          <span style="font-size:12px;color:var(--muted)">勞基法第 32 條：每月上限 46 小時；任意三個月不超過 138 小時</span>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <select id="ot-law-month" class="filter-input" style="min-width:130px" onchange="loadOTLawCheck()">
+              <option value="">當月</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="loadOTLawCheck()">重新檢查</button>
+          </div>
+        </div>
+        <div class="kpi-grid-4" style="margin-bottom:14px">
+          <div class="stat-card" style="border-left:4px solid var(--red)"><div class="stat-label">超限人數</div><div class="stat-value negative" id="ot-law-over">0</div></div>
+          <div class="stat-card" style="border-left:4px solid #f59e0b"><div class="stat-label">警告人數</div><div class="stat-value" style="color:#d97706" id="ot-law-warn">0</div></div>
+          <div class="stat-card" style="border-left:4px solid var(--green)"><div class="stat-label">合規人數</div><div class="stat-value positive" id="ot-law-ok">0</div></div>
+          <div class="stat-card" style="border-left:4px solid var(--navy)"><div class="stat-label">最高月加班</div><div class="stat-value accent" id="ot-law-max">0 hrs</div></div>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table id="ot-law-table">
+              <thead><tr>
+                <th>員工</th><th>職稱</th>
+                <th style="text-align:center">本月核准(hrs)</th>
+                <th style="text-align:center">本月上限</th>
+                <th style="text-align:center">月狀態</th>
+                <th style="text-align:center">三個月累計</th>
+                <th style="text-align:center">季上限(138h)</th>
+                <th style="text-align:center">季狀態</th>
+                <th style="text-align:center">整體</th>
+              </tr></thead>
+              <tbody id="ot-law-tbody">
+                <tr><td colspan="9" class="empty-state"><div class="empty-state-text">請選擇月份後執行檢查</div></td></tr>
+              </tbody>
             </table>
           </div>
         </div>
@@ -1116,6 +1156,18 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="filter-bar">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="sal-month" onchange="loadSalaryRecords()">
+        <div class="filter-divider"></div>
+        <span class="filter-label">部門</span>
+        <select class="filter-input" id="sal-filter-dept" onchange="filterSalaryTable()" style="min-width:110px">
+          <option value="">全部部門</option>
+        </select>
+        <span class="filter-label">薪資類型</span>
+        <select class="filter-input" id="sal-filter-type" onchange="filterSalaryTable()" style="min-width:100px">
+          <option value="">全部</option>
+          <option value="monthly">月薪</option>
+          <option value="hourly">時薪</option>
+        </select>
+        <input class="filter-input" id="sal-filter-q" placeholder="搜尋員工姓名…" oninput="filterSalaryTable()" style="min-width:140px">
         <button class="btn btn-outline btn-sm" onclick="previewSalary()">預覽計算明細</button>
         <button class="btn btn-primary btn-sm" onclick="generateSalary()" data-i18n="btn.gen_salary">自動產生薪資</button>
         <button class="btn btn-outline btn-sm" id="sal-confirm-all-btn" onclick="confirmAllSalary()" style="display:none">全部確認</button>
@@ -1337,6 +1389,13 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <option value="active" data-i18n="opt.published">上架中</option>
         <option value="inactive" data-i18n="opt.unpublished">已下架</option>
       </select>
+      <select class="filter-input" id="ann-filter-priority" onchange="loadAnnList()" style="min-width:110px">
+        <option value="">全部優先度</option>
+        <option value="urgent">緊急</option>
+        <option value="high">高</option>
+        <option value="normal">一般</option>
+      </select>
+      <input class="filter-input" id="ann-filter-q" placeholder="搜尋標題/內容…" oninput="loadAnnList()" style="min-width:180px;flex:1">
     </div>
     <div id="ann-list">
       <div class="empty-state"><div class="empty-state-text">載入中...</div></div>
@@ -1347,6 +1406,15 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <div class="filter-bar">
       <span class="filter-label" data-i18n="label.year">年度</span>
       <select class="filter-input" id="holiday-year" onchange="loadHolidays()" style="min-width:100px"></select>
+      <div class="filter-divider"></div>
+      <span class="filter-label">假日類型</span>
+      <select class="filter-input" id="holiday-filter-type" onchange="filterHolidayList()" style="min-width:120px">
+        <option value="">全部類型</option>
+        <option value="national">國定假日</option>
+        <option value="makeup">補班日</option>
+        <option value="custom">自訂假日</option>
+      </select>
+      <input class="filter-input" id="holiday-filter-q" placeholder="搜尋假日名稱…" oninput="filterHolidayList()" style="min-width:150px">
       <button class="btn btn-outline btn-sm" onclick="loadHolidays()">重新整理</button>
       <span style="flex:1"></span>
       <button class="btn btn-outline btn-sm" onclick="exportHolidaysExcel()">匯出 Excel</button>
@@ -1784,12 +1852,21 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
   <!-- ── 門市管理 ── -->
   <div class="page" id="page-stores" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <span style="font-size:13px;color:var(--muted)" data-i18n="stores.desc">管理多個門市，並為員工指派所屬門市</span>
       <div style="display:flex;gap:8px">
         <button class="btn btn-outline btn-sm" onclick="exportStoresExcel()" data-i18n="btn.export_excel">匯出 Excel</button>
         <button class="btn btn-primary btn-sm" onclick="openStoreModal()" data-i18n="btn.add_store">新增門市</button>
       </div>
+    </div>
+    <div class="filter-bar" style="margin-bottom:16px">
+      <span class="filter-label">狀態</span>
+      <select class="filter-input" id="store-filter-status" onchange="filterStoreList()" style="min-width:100px">
+        <option value="">全部狀態</option>
+        <option value="active">啟用中</option>
+        <option value="inactive">已停用</option>
+      </select>
+      <input class="filter-input" id="store-filter-q" placeholder="搜尋門市名稱/代碼/地址…" oninput="filterStoreList()" style="min-width:200px;flex:1">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
       <!-- 門市列表 -->
@@ -1840,6 +1917,18 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     <!-- 人員概覽 -->
     <div id="training-panel-overview">
       <div class="filter-bar" style="margin-bottom:16px">
+        <span class="filter-label">部門</span>
+        <select class="filter-input" id="training-overview-dept" onchange="filterTrainingSummary()" style="min-width:110px">
+          <option value="">全部部門</option>
+        </select>
+        <span class="filter-label">狀態篩選</span>
+        <select class="filter-input" id="training-overview-status" onchange="filterTrainingSummary()" style="min-width:120px">
+          <option value="">全部人員</option>
+          <option value="expired">有過期訓練</option>
+          <option value="expiring">即將到期</option>
+          <option value="ok">全部有效</option>
+        </select>
+        <input class="filter-input" id="training-overview-q" placeholder="搜尋員工姓名…" oninput="filterTrainingSummary()" style="min-width:150px">
         <button class="btn btn-primary btn-sm" onclick="openTrainingModal()" data-i18n="modal.add_training">新增訓練記錄</button>
         <button class="btn btn-outline btn-sm" onclick="loadTrainingSummary()">重新整理</button>
         <span style="flex:1"></span>
@@ -1924,6 +2013,23 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <option value="approved" data-i18n="req.status.approved">已核准</option>
         <option value="rejected" data-i18n="req.status.rejected">已退回</option>
         <option value="" data-i18n="status.all">全部</option>
+      </select>
+      <div class="filter-divider"></div>
+      <span class="filter-label">月份</span>
+      <input type="month" id="exp-review-month" class="filter-input" onchange="loadExpenseReview()" style="min-width:130px">
+      <div class="filter-divider"></div>
+      <span class="filter-label">員工</span>
+      <select id="exp-review-staff" class="filter-input" style="min-width:120px" onchange="loadExpenseReview()">
+        <option value="">全部員工</option>
+      </select>
+      <div class="filter-divider"></div>
+      <span class="filter-label">費用類型</span>
+      <select id="exp-review-cat" class="filter-input" style="min-width:110px" onchange="loadExpenseReview()">
+        <option value="">全部類型</option>
+        <option value="travel">差旅</option>
+        <option value="meal">餐費</option>
+        <option value="office">辦公用品</option>
+        <option value="other">其他</option>
       </select>
       <button class="btn btn-outline btn-sm" onclick="exportExpenseClaimsExcel()">匯出 Excel</button>
       <button class="btn btn-outline btn-sm" onclick="loadExpenseReview()">重新整理</button>
@@ -2179,6 +2285,13 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <button class="btn btn-primary btn-sm" onclick="laborLawReset()" data-i18n="labor_law.btn_reset">重新整理</button>
       </div>
     </div>
+    <div class="filter-bar" style="margin-bottom:16px">
+      <span class="filter-label">年度篩選</span>
+      <select class="filter-input" id="ll-filter-year" onchange="filterLaborLawRecords()" style="min-width:100px">
+        <option value="">全部年度</option>
+      </select>
+      <input class="filter-input" id="ll-filter-q" placeholder="搜尋修正內容…" oninput="filterLaborLawRecords()" style="min-width:200px">
+    </div>
 
     <!-- Stats cards -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
@@ -2226,6 +2339,17 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <span class="page-title" data-i18n="page.insurance">勞健保明細</span>
       <div class="panel-bar-actions">
         <button class="btn btn-outline btn-sm" onclick="exportInsuranceExcel()" data-i18n="ins.btn_export">匯出 Excel</button>
+        <div style="display:flex;align-items:center;gap:6px">
+          <select id="pension-report-year" class="filter-input" style="min-width:80px"></select>
+          <select id="pension-report-month" class="filter-input" style="min-width:90px">
+            <option value="">全年</option>
+            <option value="01">1月</option><option value="02">2月</option><option value="03">3月</option>
+            <option value="04">4月</option><option value="05">5月</option><option value="06">6月</option>
+            <option value="07">7月</option><option value="08">8月</option><option value="09">9月</option>
+            <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="exportPensionReport()" style="white-space:nowrap">🏦 勞退提撥報表</button>
+        </div>
       </div>
     </div>
 
@@ -2256,6 +2380,18 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
       <!-- Tab: 投保明細 -->
       <div id="ins-panel-detail">
+        <div class="filter-bar" style="margin-bottom:14px">
+          <span class="filter-label">員工搜尋</span>
+          <input class="filter-input" id="ins-filter-q" placeholder="搜尋姓名/部門…" oninput="filterInsDetail()" style="min-width:180px">
+          <div class="filter-divider"></div>
+          <span class="filter-label">排序</span>
+          <select class="filter-input" id="ins-filter-sort" onchange="filterInsDetail()" style="min-width:140px">
+            <option value="">預設排序</option>
+            <option value="salary_desc">投保薪資（高→低）</option>
+            <option value="salary_asc">投保薪資（低→高）</option>
+            <option value="cost_desc">雇主成本（高→低）</option>
+          </select>
+        </div>
         <div id="ins-detail-wrap">
           <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>
         </div>
@@ -3494,6 +3630,13 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
     <!-- 發票管理 Panel -->
     <div id="acc-panel-invoices" style="display:none">
+      <!-- 字軌狀態列 -->
+      <div id="gui-status-bar" style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--surface-alt,#f0f4ff);border-radius:8px;margin-bottom:10px;font-size:12px;color:var(--text)">
+        <span>📋 本期字軌：<strong id="gui-prefix-display">—</strong></span>
+        <span>下一張：<strong id="gui-next-display">—</strong></span>
+        <span id="gui-remaining-badge" style="padding:2px 8px;border-radius:10px;font-size:11px;background:#e8f5e9;color:#2e7d32">剩餘 — 張</span>
+        <button class="btn btn-outline btn-sm" style="margin-left:auto;font-size:11px" onclick="openGuiSettingsModal()">⚙ 字軌設定</button>
+      </div>
       <div class="filter-row">
         <select class="filter-input" id="inv-filter-type" onchange="loadInvoices()" style="min-width:110px">
           <option value="">全部類型</option>
@@ -3506,7 +3649,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <option value="void">作廢</option>
         </select>
         <input class="filter-input" id="inv-filter-month" type="month" onchange="loadInvoices()" style="min-width:130px" placeholder="年月">
-        <input class="filter-input" id="inv-filter-q" placeholder="搜尋發票號 / 客戶…" oninput="loadInvoices()" style="flex:1;min-width:160px">
+        <input class="filter-input" id="inv-filter-q" placeholder="搜尋發票號 / 字軌 / 客戶…" oninput="loadInvoices()" style="flex:1;min-width:160px">
         <button class="btn btn-primary btn-sm" onclick="openInvoiceModal()">＋ 新增發票</button>
         <a class="btn btn-outline btn-sm" id="inv-export-btn" href="/api/export/invoices-excel" target="_blank">匯出 Excel</a>
       </div>
@@ -3565,9 +3708,13 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
 
       <!-- 稅務申報 -->
       <div id="rpt-panel-tax" style="display:none">
+        <div style="background:#FFF8E1;border:1px solid #FFD54F;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#5D4037">
+          📋 <strong>401 申報週期：</strong>雙月制（1-2月、3-4月、5-6月、7-8月、9-10月、11-12月），申報期限為次期開始後 15 日內。
+        </div>
         <div class="filter-row" style="margin-bottom:14px">
           <input type="month" id="rpt-tax-month" class="filter-input" style="min-width:130px">
           <button class="btn btn-primary btn-sm" onclick="loadTaxSummary()">查詢</button>
+          <button class="btn btn-outline btn-sm" onclick="export401Excel()" style="border-color:#1565C0;color:#1565C0">📄 匯出 401 申報書（Excel）</button>
         </div>
         <div id="rpt-tax-wrap">
           <div class="empty-state"><div class="empty-state-text">請選擇月份後點擊「查詢」</div></div>
@@ -3903,6 +4050,37 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
     </div>
   </div>
 
+  <!-- 字軌設定 Modal -->
+  <div id="gui-settings-modal-bg" class="modal-overlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <span class="modal-title">電子發票字軌設定</span>
+        <button class="modal-close" onclick="closeGuiSettingsModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px">依財政部規定，統一發票字軌格式為2碼大寫英文字母 + 8位數字（如 <strong>AB00000001</strong>）。每期字軌由國稅局核發，請依核發內容設定。</p>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">字軌前綴（2碼英文）*</label>
+            <input class="form-input mono" id="gui-set-prefix" maxlength="2" placeholder="AB" style="text-transform:uppercase"></div>
+          <div class="form-group"><label class="form-label">起始號碼 *</label>
+            <input class="form-input mono" id="gui-set-start" placeholder="00000001"></div>
+          <div class="form-group"><label class="form-label">結束號碼 *</label>
+            <input class="form-input mono" id="gui-set-end" placeholder="00000050"></div>
+          <div class="form-group"><label class="form-label">本期已使用</label>
+            <div style="padding:8px 12px;background:var(--surface-alt,#f5f5f5);border-radius:6px;font-size:14px;font-weight:600"><span id="gui-set-used">0</span> 張</div></div>
+          <div class="form-group"><label class="form-label">剩餘可用</label>
+            <div style="padding:8px 12px;background:var(--surface-alt,#f5f5f5);border-radius:6px;font-size:14px;font-weight:600;color:var(--green)"><span id="gui-set-remaining">0</span> 張</div></div>
+          <div class="form-group full-width"><label class="form-label">下一張字軌號碼</label>
+            <div style="padding:8px 12px;background:var(--surface-alt,#f5f5f5);border-radius:6px;font-size:16px;font-weight:700;font-family:'DM Mono',monospace;color:var(--navy);letter-spacing:2px"><span id="gui-set-next">—</span></div></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeGuiSettingsModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveGuiSettings()">儲存字軌設定</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══════════════════════════════════════════════════════════════ -->
   <!-- 報表中心 -->
   <!-- ══════════════════════════════════════════════════════════════ -->
@@ -3996,7 +4174,18 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap">
         <label style="font-size:13px;color:var(--muted)" data-i18n="label.year">年度</label>
         <select class="form-input" id="hra-year" style="width:100px" onchange="loadHrOverview()"></select>
+        <label style="font-size:13px;color:var(--muted)">部門</label>
+        <select class="form-input" id="hra-filter-dept" style="min-width:120px" onchange="loadHrOverview()">
+          <option value="">全部部門</option>
+        </select>
+        <label style="font-size:13px;color:var(--muted)">薪資類型</label>
+        <select class="form-input" id="hra-filter-type" style="min-width:100px" onchange="loadHrOverview()">
+          <option value="">全部</option>
+          <option value="monthly">月薪</option>
+          <option value="hourly">時薪</option>
+        </select>
         <button class="btn btn-outline btn-sm" onclick="loadHrOverview()" data-i18n="btn.search">查詢</button>
+        <button class="btn btn-outline btn-sm" onclick="exportHrAnalysisExcel()">匯出 Excel</button>
       </div>
 
       <div class="stats-row" style="margin-bottom:24px">
@@ -4111,6 +4300,9 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
           <option value="approved">已核准</option>
           <option value="rejected">已駁回</option>
         </select>
+        <input type="date" class="filter-input" id="appr-filter-from" onchange="filterApprovalList()" style="min-width:130px">
+        <span style="color:var(--muted);font-size:12px">—</span>
+        <input type="date" class="filter-input" id="appr-filter-to" onchange="filterApprovalList()" style="min-width:130px">
         <input class="filter-input" id="appr-filter-q" placeholder="搜尋標題/申請人…" oninput="filterApprovalList()" style="flex:1;min-width:180px">
         <button class="btn btn-outline btn-sm" onclick="loadApprovalInstances()">重新整理</button>
       </div>
@@ -4143,6 +4335,7 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       </div>
     </div>
     <div class="filter-row" style="margin-bottom:14px">
+      <input class="filter-input" id="audit-filter-q" placeholder="搜尋關鍵字…" oninput="loadAuditLog()" style="min-width:160px">
       <select class="filter-input" id="audit-filter-module" onchange="loadAuditLog()" style="min-width:140px">
         <option value="">全部模組</option>
         <option value="salary">薪資</option>
@@ -13295,7 +13488,7 @@ function showPage(page, e) {
   if (page === 'holiday')         initHoliday();
   if (page === 'finance')         initFinance();
   if (page === 'adminmgr')        loadAdminAccounts();
-  if (page === 'expense-review')  loadExpenseReview();
+  if (page === 'expense-review')  initExpenseReview();
   if (page === 'perf')            initPerf();
   if (page === 'stores')          loadStores();
   if (page === 'training')        initTraining();
@@ -14048,25 +14241,77 @@ function setOTView(view) {
   otCurrentView = view;
   document.getElementById('ot-req-list').style.display      = view === 'list'    ? '' : 'none';
   document.getElementById('ot-summary-wrap').style.display  = view === 'summary' ? '' : 'none';
-  document.getElementById('ot-filter-status').closest('select') || document.getElementById('ot-filter-status');
+  document.getElementById('ot-law-wrap').style.display      = view === 'law'     ? '' : 'none';
   const listBtn    = document.getElementById('ot-view-list-btn');
   const summaryBtn = document.getElementById('ot-view-summary-btn');
+  const lawBtn     = document.getElementById('ot-view-law-btn');
+  [listBtn, summaryBtn, lawBtn].forEach(b => { if (b) { b.className = 'btn btn-sm btn-outline'; b.style.cssText = ''; } });
   if (view === 'list') {
-    listBtn.style.cssText    = 'background:var(--navy);color:#fff;border:none';
-    summaryBtn.className     = 'btn btn-sm btn-outline';
-    summaryBtn.style.cssText = '';
+    listBtn.style.cssText = 'background:var(--navy);color:#fff;border:none';
     document.getElementById('ot-filter-status').parentElement.style.display = '';
     loadOTRequests();
-  } else {
-    listBtn.style.cssText    = '';
-    listBtn.className        = 'btn btn-sm btn-outline';
+  } else if (view === 'summary') {
     summaryBtn.style.cssText = 'background:var(--navy);color:#fff;border:none';
     document.getElementById('ot-filter-status').parentElement.style.display = 'none';
     document.getElementById('ot-req-count').textContent = '';
     document.getElementById('ot-batch-approve').style.display = 'none';
     document.getElementById('ot-batch-reject').style.display  = 'none';
     loadOTMonthlySummary();
+  } else {
+    lawBtn.style.cssText = 'background:#ef4444;color:#fff;border-color:#ef4444';
+    document.getElementById('ot-filter-status').parentElement.style.display = 'none';
+    document.getElementById('ot-req-count').textContent = '';
+    document.getElementById('ot-batch-approve').style.display = 'none';
+    document.getElementById('ot-batch-reject').style.display  = 'none';
+    initOTLawMonthDropdown();
+    loadOTLawCheck();
   }
+}
+
+function initOTLawMonthDropdown() {
+  const sel = document.getElementById('ot-law-month');
+  if (sel.options.length > 1) return;
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = val; if (i === 0) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+async function loadOTLawCheck() {
+  const month = document.getElementById('ot-law-month').value;
+  const url   = '/api/overtime/law-check' + (month ? `?month=${month}` : '');
+  const { ok, data } = await api(url, {}, true);
+  if (!ok || !Array.isArray(data)) return;
+
+  let overCount = 0, warnCount = 0, okCount = 0, maxHrs = 0;
+  const statusLabel = { over: '<span style="color:#ef4444;font-weight:700">🔴 超限</span>', warning: '<span style="color:#f59e0b;font-weight:700">🟡 警告</span>', ok: '<span style="color:#22c55e">🟢 合規</span>' };
+  const rows = data.map(r => {
+    if (r.status === 'over') overCount++;
+    else if (r.status === 'warning') warnCount++;
+    else okCount++;
+    if (r.monthly_approved > maxHrs) maxHrs = r.monthly_approved;
+    return `<tr>
+      <td>${r.staff_name}</td>
+      <td>${r.staff_role}</td>
+      <td style="text-align:center;font-weight:600;color:${r.monthly_approved>=r.monthly_limit?'#ef4444':r.monthly_approved>=40?'#f59e0b':'inherit'}">${r.monthly_approved}</td>
+      <td style="text-align:center">${r.monthly_limit} h</td>
+      <td style="text-align:center">${statusLabel[r.monthly_status]||r.monthly_status}</td>
+      <td style="text-align:center;font-weight:600;color:${r.quarterly_approved>=r.quarterly_limit?'#ef4444':r.quarterly_approved>=117?'#f59e0b':'inherit'}">${r.quarterly_approved}</td>
+      <td style="text-align:center">${r.quarterly_limit} h</td>
+      <td style="text-align:center">${statusLabel[r.quarterly_status]||r.quarterly_status}</td>
+      <td style="text-align:center">${statusLabel[r.status]||r.status}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('ot-law-over').textContent = overCount;
+  document.getElementById('ot-law-warn').textContent = warnCount;
+  document.getElementById('ot-law-ok').textContent   = okCount;
+  document.getElementById('ot-law-max').textContent  = maxHrs + ' hrs';
+  document.getElementById('ot-law-tbody').innerHTML  = rows || '<tr><td colspan="9" class="empty-state">無加班記錄</td></tr>';
 }
 
 function otFilterChanged() {
@@ -15530,23 +15775,42 @@ async function loadSalaryRecords() {
   tb.innerHTML = Array(4).fill(0).map(() => `<tr class="skeleton-row">${Array(8).fill(0).map((_,i)=>`<td><span class="skel" style="width:${[80,60,60,50,60,60,60,80][i]}px"></span></td>`).join('')}</tr>`).join('');
   const {ok,data} = await api(`/api/salary/records?month=${month}`,{},true);
   salaryRecords = ok?data:[];
-  document.getElementById('sal-count').textContent=tf('salary.count_status', salaryRecords.length, salaryRecords.filter(r=>r.status==='confirmed').length);
-  if (!salaryRecords.length) {
-    tb.innerHTML=`<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('salary.no_records')}</div></td></tr>`;
-    document.getElementById('sal-total-row').style.display='none'; return;
+  // 填充部門下拉
+  const deptSel = document.getElementById('sal-filter-dept');
+  if (deptSel) {
+    const depts = [...new Set(salaryRecords.map(r=>r.department||'').filter(Boolean))].sort();
+    const cur = deptSel.value;
+    deptSel.innerHTML = '<option value="">全部部門</option>' + depts.map(d=>`<option value="${escHtml(d)}">${escHtml(d)}</option>`).join('');
+    if (cur) deptSel.value = cur;
   }
-  let totAllow=0,totDeduct=0,totNet=0;
-  const hasDraft = salaryRecords.some(r=>r.status==='draft');
+  filterSalaryTable();
+}
+
+function filterSalaryTable() {
+  const dept  = document.getElementById('sal-filter-dept')?.value || '';
+  const type  = document.getElementById('sal-filter-type')?.value || '';
+  const q     = (document.getElementById('sal-filter-q')?.value || '').toLowerCase();
+  const hasDraft     = salaryRecords.some(r=>r.status==='draft');
   const hasConfirmed = salaryRecords.some(r=>r.status==='confirmed');
   document.getElementById('sal-confirm-all-btn').style.display = hasDraft ? '' : 'none';
   document.getElementById('sal-bulk-print-btn').style.display  = hasConfirmed ? '' : 'none';
-  tb.innerHTML = salaryRecords.map(r=>{
+  let list = salaryRecords;
+  if (dept) list = list.filter(r => (r.department||'') === dept);
+  if (type) list = list.filter(r => r.salary_type === type);
+  if (q)    list = list.filter(r => (r.staff_name||'').toLowerCase().includes(q) || (r.employee_code||'').toLowerCase().includes(q));
+  document.getElementById('sal-count').textContent = tf('salary.count_status', list.length, list.filter(r=>r.status==='confirmed').length);
+  const tb = document.getElementById('sal-tbody');
+  if (!list.length) {
+    tb.innerHTML=`<tr><td colspan="9" class="empty-state"><div class="empty-state-text">${t('salary.no_records')}</div></td></tr>`;
+    document.getElementById('sal-total-row').style.display='none'; return;
+  }
+  let totAllow=0,totDeduct=0,totNet=0;
+  tb.innerHTML = list.map(r=>{
     totAllow  += r.allowance_total||0;
     totDeduct += r.deduction_total||0;
     totNet    += r.net_pay||0;
     const sc = r.status==='confirmed'?'var(--green)':'var(--muted)';
     const sl = r.status==='confirmed'?'已確認':'草稿';
-    // 出勤異常偵測
     const unaccounted = Math.max(0, (r.work_days||0) - (r.actual_days||0) - (r.leave_days||0));
     let anomalyBadge = '';
     if (r.salary_type==='hourly') {
@@ -16151,14 +16415,23 @@ async function loadHolidays() {
   const year = document.getElementById('holiday-year').value;
   const { ok, data } = await api(`/api/holidays?year=${year}`, {}, true);
   holidayList = ok ? data : [];
-  document.getElementById('holiday-count').textContent = t('holiday.count').replace('{0}', holidayList.length);
+  filterHolidayList();
+}
+
+function filterHolidayList() {
+  const typeFilter = document.getElementById('holiday-filter-type')?.value || '';
+  const q = (document.getElementById('holiday-filter-q')?.value || '').toLowerCase();
+  let list = holidayList;
+  if (typeFilter) list = list.filter(h => h.holiday_type === typeFilter);
+  if (q) list = list.filter(h => (h.name||'').toLowerCase().includes(q));
+  document.getElementById('holiday-count').textContent = t('holiday.count').replace('{0}', list.length);
   const tb = document.getElementById('holiday-tbody');
-  if (!holidayList.length) {
+  if (!list.length) {
     tb.innerHTML = `<tr><td colspan="5" class="empty-state"><div class="empty-state-text">${t('holiday.no_holidays')}</div></td></tr>`;
     return;
   }
   const wdArr = _WEEKDAY_LABELS[_currentLang] || _WEEKDAY_LABELS['zh-TW'];
-  tb.innerHTML = holidayList.map(h => {
+  tb.innerHTML = list.map(h => {
     const dt  = new Date(h.date + 'T00:00:00');
     const wd  = wdArr[dt.getDay()];
     const tc  = HOLIDAY_TYPE_COLOR[h.holiday_type] || 'var(--muted)';
@@ -16449,14 +16722,18 @@ function initAnn() {
 }
 
 async function loadAnnList() {
-  const catFilter    = document.getElementById('ann-filter-cat').value;
-  const statusFilter = document.getElementById('ann-filter-status').value;
+  const catFilter      = document.getElementById('ann-filter-cat')?.value || '';
+  const statusFilter   = document.getElementById('ann-filter-status')?.value || '';
+  const priorityFilter = document.getElementById('ann-filter-priority')?.value || '';
+  const q              = (document.getElementById('ann-filter-q')?.value || '').toLowerCase();
   const { ok, data } = await api('/api/announcements', {}, true);
   if (!ok) return;
   let list = data;
-  if (catFilter)    list = list.filter(a => a.category === catFilter);
+  if (catFilter)      list = list.filter(a => a.category === catFilter);
+  if (priorityFilter) list = list.filter(a => a.priority === priorityFilter);
   if (statusFilter === 'active')   list = list.filter(a => a.active && (!a.expires_at || new Date(a.expires_at) > new Date()));
   if (statusFilter === 'inactive') list = list.filter(a => !a.active || (a.expires_at && new Date(a.expires_at) <= new Date()));
+  if (q) list = list.filter(a => (a.title||'').toLowerCase().includes(q) || (a.content||'').toLowerCase().includes(q));
   annList = list;
   renderAnnList();
 }
@@ -18380,14 +18657,32 @@ async function deleteAdminAcc(id, name) {
 }
 
 // ── 費用審核模組 ───────────────────────────────────────────────
+async function initExpenseReview() {
+  const staffSel = document.getElementById('exp-review-staff');
+  if (staffSel && staffSel.options.length <= 1) {
+    const { ok, data } = await api('/api/punch/staff', {}, true);
+    if (ok) {
+      staffSel.innerHTML = '<option value="">全部員工</option>' +
+        data.filter(s => s.active !== false).map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+    }
+  }
+  loadExpenseReview();
+}
+
 async function loadExpenseReview() {
-  const status = document.getElementById('exp-review-status')?.value ?? 'pending';
+  const status  = document.getElementById('exp-review-status')?.value ?? 'pending';
+  const month   = document.getElementById('exp-review-month')?.value || '';
+  const staffId = document.getElementById('exp-review-staff')?.value || '';
+  const cat     = document.getElementById('exp-review-cat')?.value || '';
   const tbody = document.getElementById('exp-review-tbody');
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('expense.loading')}</div></td></tr>`;
-  const qs = status ? `?status=${status}` : '';
+  let qs = status ? `?status=${status}` : '?';
+  if (month)   qs += `&month=${month}`;
+  if (staffId) qs += `&staff_id=${staffId}`;
   const {ok, data} = await api(`/api/expense/claims${qs}`, {}, true);
-  const claims = Array.isArray(data) ? data : [];
+  let claims = Array.isArray(data) ? data : [];
+  if (cat) claims = claims.filter(c => (c.category||'').toLowerCase() === cat);
   if (!ok || !claims.length) {
     tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><div class="empty-state-text">${t('expense.no_data')}</div></td></tr>`;
     setBadge('badge-expense-review', 0);
@@ -19205,14 +19500,37 @@ function downloadEdi(type, eventType) {
 /* =====================================================================
    門市管理 (Store Management) functions
    ===================================================================== */
+let _storesData = [];
 async function loadStores() {
   const r = await api('/api/stores');
   if (!r.ok) { showToast(t('store.load_fail'), 'error'); return; }
+  _storesData = r.data || [];
+  filterStoreList();
+
+  // Populate store selectors in assignment panel
+  const storeSel = document.getElementById('store-assign-store');
+  const targetSel = document.getElementById('store-assign-target');
+  const opts = `<option value="">${t('opt.choose_store')}</option>` +
+    _storesData.filter(s => s.active).map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+  if (storeSel)  storeSel.innerHTML  = opts;
+  if (targetSel) targetSel.innerHTML = opts;
+
+  // Populate staff selector for assignment
+  await loadAllStaffForAssign();
+}
+
+function filterStoreList() {
+  const status = document.getElementById('store-filter-status')?.value || '';
+  const q = (document.getElementById('store-filter-q')?.value || '').toLowerCase();
+  let list = _storesData;
+  if (status === 'active')   list = list.filter(s => s.active);
+  if (status === 'inactive') list = list.filter(s => !s.active);
+  if (q) list = list.filter(s => (s.name||'').toLowerCase().includes(q) || (s.code||'').toLowerCase().includes(q) || (s.address||'').toLowerCase().includes(q));
   const tbody = document.getElementById('stores-tbody');
   if (!tbody) return;
-  tbody.innerHTML = r.data.length === 0
+  tbody.innerHTML = list.length === 0
     ? `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">${t('store.no_stores')}</td></tr>`
-    : r.data.map(s => `
+    : list.map(s => `
       <tr>
         <td>${escHtml(s.name)}</td>
         <td>${escHtml(s.code || '')}</td>
@@ -19223,17 +19541,6 @@ async function loadStores() {
           <button class="btn btn-sm" onclick="loadStoreStaff(${s.id})">${t('btn.view_staff')}</button>
         </td>
       </tr>`).join('');
-
-  // Populate store selectors in assignment panel
-  const storeSel = document.getElementById('store-assign-store');
-  const targetSel = document.getElementById('store-assign-target');
-  const opts = `<option value="">${t('opt.choose_store')}</option>` +
-    r.data.filter(s => s.active).map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
-  if (storeSel)  storeSel.innerHTML  = opts;
-  if (targetSel) targetSel.innerHTML = opts;
-
-  // Populate staff selector for assignment
-  await loadAllStaffForAssign();
 }
 
 function openStoreModal(store) {
@@ -19367,27 +19674,50 @@ async function loadTrainingStaffFilter() {
   }
 }
 
+let _trainingSummaryData = [];
 async function loadTrainingSummary() {
   const tbody = document.getElementById('training-summary-tbody');
   const alertBar = document.getElementById('training-alert-bar');
   tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('training.loading')}</div></td></tr>`;
   const r = await api('/api/training/summary');
   if (!r.ok) { tbody.innerHTML = `<tr><td colspan="7" style="color:var(--red)">${t('training.load_fail')}</td></tr>`; return; }
-  const data = r.data;
+  _trainingSummaryData = r.data || [];
 
   // Show alert if any expiring soon / expired
-  const urgentCount = data.reduce((s, d) => s + d.expiring_soon + d.expired, 0);
+  const urgentCount = _trainingSummaryData.reduce((s, d) => s + d.expiring_soon + d.expired, 0);
   if (urgentCount > 0) {
     alertBar.style.display = '';
-    const expiredCount  = data.reduce((s, d) => s + d.expired, 0);
-    const expiringCount = data.reduce((s, d) => s + d.expiring_soon, 0);
+    const expiredCount  = _trainingSummaryData.reduce((s, d) => s + d.expired, 0);
+    const expiringCount = _trainingSummaryData.reduce((s, d) => s + d.expiring_soon, 0);
     alertBar.innerHTML = tf('training.expire_alert', `<strong>${expiredCount}</strong>`, `<strong>${expiringCount}</strong>`, 60);
   } else {
     alertBar.style.display = 'none';
   }
 
-  if (!data.length) { tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('training.no_data')}</div></td></tr>`; return; }
-  tbody.innerHTML = data.map(d => `
+  // 填充部門下拉
+  const deptSel = document.getElementById('training-overview-dept');
+  if (deptSel) {
+    const depts = [...new Set(_trainingSummaryData.map(d=>d.department||'').filter(Boolean))].sort();
+    const cur = deptSel.value;
+    deptSel.innerHTML = '<option value="">全部部門</option>' + depts.map(d=>`<option value="${escHtml(d)}">${escHtml(d)}</option>`).join('');
+    if (cur) deptSel.value = cur;
+  }
+  filterTrainingSummary();
+}
+
+function filterTrainingSummary() {
+  const dept   = document.getElementById('training-overview-dept')?.value || '';
+  const status = document.getElementById('training-overview-status')?.value || '';
+  const q      = (document.getElementById('training-overview-q')?.value || '').toLowerCase();
+  let list = _trainingSummaryData;
+  if (dept)   list = list.filter(d => (d.department||'') === dept);
+  if (status === 'expired')  list = list.filter(d => d.expired > 0);
+  if (status === 'expiring') list = list.filter(d => d.expiring_soon > 0);
+  if (status === 'ok')       list = list.filter(d => d.expired === 0 && d.expiring_soon === 0);
+  if (q) list = list.filter(d => (d.name||'').toLowerCase().includes(q));
+  const tbody = document.getElementById('training-summary-tbody');
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><div class="empty-state-text">${t('training.no_data')}</div></td></tr>`; return; }
+  tbody.innerHTML = list.map(d => `
     <tr>
       <td>${escHtml(d.name)}</td>
       <td style="color:var(--muted)">${escHtml(d.department||'')}</td>
@@ -20157,21 +20487,43 @@ async function loadLaborLawStats() {
   }
 }
 
+let _laborLawRecords = [];
 async function loadLaborLawRecords() {
   const wrap = document.getElementById('ll-records-wrap');
   wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">載入中…</div>`;
   const { ok, data } = await api('/api/labor-law/records', {}, true);
   if (!ok || !data.length) {
     wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">${t('labor_law.no_records')}</div>`;
+    _laborLawRecords = [];
     return;
   }
+  _laborLawRecords = data;
+  // 填充年份下拉
+  const yearSel = document.getElementById('ll-filter-year');
+  if (yearSel) {
+    const years = [...new Set(data.map(r => (r.amendment_date||'').slice(0,4)).filter(Boolean))].sort((a,b)=>b-a);
+    const cur = yearSel.value;
+    yearSel.innerHTML = '<option value="">全部年度</option>' + years.map(y=>`<option value="${y}">${y}</option>`).join('');
+    if (cur) yearSel.value = cur;
+  }
+  filterLaborLawRecords();
+}
+
+function filterLaborLawRecords() {
+  const year = document.getElementById('ll-filter-year')?.value || '';
+  const q = (document.getElementById('ll-filter-q')?.value || '').toLowerCase();
+  let list = _laborLawRecords;
+  if (year) list = list.filter(r => (r.amendment_date||'').startsWith(year));
+  if (q)    list = list.filter(r => (r.description||'').toLowerCase().includes(q) || (r.amendment_date||'').includes(q));
+  const wrap = document.getElementById('ll-records-wrap');
+  if (!list.length) { wrap.innerHTML = `<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">${t('labor_law.no_records')}</div>`; return; }
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
     <th>${t('labor_law.col_date')}</th>
     <th>${t('labor_law.col_desc')}</th>
     <th>${t('labor_law.col_ann_status')}</th>
     <th>${t('labor_law.col_recorded')}</th>
     <th>${t('labor_law.col_source')}</th>
-  </tr></thead><tbody>${data.map(r => {
+  </tr></thead><tbody>${list.map(r => {
     const statusLabel = r.ann_status === 'announced'
       ? `<span style="color:var(--green);font-weight:600">${t('labor_law.ann_announced')}</span>`
       : `<span style="color:var(--orange)">${t('labor_law.ann_pending')}</span>`;
@@ -20293,9 +20645,28 @@ async function initHrAnalysis() {
   await Promise.all([loadHrOverview(), loadHrBreakdown()]);
 }
 
+function exportHrAnalysisExcel() {
+  const year = document.getElementById('hra-year')?.value || new Date().getFullYear();
+  window.location.href = `/api/export/hr-analysis-excel?year=${year}`;
+}
+
 async function loadHrOverview() {
   const year = document.getElementById('hra-year').value;
-  const { ok, data } = await api(`/api/hr-analysis/overview?year=${year}`, {}, true);
+  const dept = document.getElementById('hra-filter-dept')?.value || '';
+  const type = document.getElementById('hra-filter-type')?.value || '';
+  // 填充部門下拉（首次）
+  const deptSel = document.getElementById('hra-filter-dept');
+  if (deptSel && deptSel.options.length <= 1) {
+    const { ok: sok, data: staffData } = await api('/api/punch/staff', {}, true);
+    if (sok) {
+      const depts = [...new Set(staffData.map(s=>s.department||'').filter(Boolean))].sort();
+      deptSel.innerHTML = '<option value="">全部部門</option>' + depts.map(d=>`<option value="${escHtml(d)}">${escHtml(d)}</option>`).join('');
+    }
+  }
+  let url = `/api/hr-analysis/overview?year=${year}`;
+  if (dept) url += `&department=${encodeURIComponent(dept)}`;
+  if (type) url += `&salary_type=${type}`;
+  const { ok, data } = await api(url, {}, true);
   if (!ok) return;
 
   const fmt = v => '$' + Math.round(v).toLocaleString();
@@ -20424,6 +20795,17 @@ let _insTab = 'detail';
 let _insData = [];
 
 async function initInsurance() {
+  // Populate year dropdown for pension report
+  const yearSel = document.getElementById('pension-report-year');
+  if (yearSel && yearSel.options.length === 0) {
+    const curYear = new Date().getFullYear();
+    for (let y = curYear; y >= curYear - 5; y--) {
+      const opt = document.createElement('option');
+      opt.value = y; opt.textContent = y + ' 年';
+      if (y === curYear) opt.selected = true;
+      yearSel.appendChild(opt);
+    }
+  }
   switchInsTab(_insTab);
 }
 
@@ -20459,6 +20841,17 @@ async function loadInsDetail() {
     document.getElementById('ins-stat-pension').textContent = 'NT$' + (s.total_pension || 0).toLocaleString();
   }
   renderInsDetail(_insData);
+}
+
+function filterInsDetail() {
+  const q    = (document.getElementById('ins-filter-q')?.value || '').toLowerCase();
+  const sort = document.getElementById('ins-filter-sort')?.value || '';
+  let list = [...(_insData || [])];
+  if (q) list = list.filter(s => (s.name||'').toLowerCase().includes(q) || (s.department||s.role||'').toLowerCase().includes(q));
+  if (sort === 'salary_desc') list.sort((a,b) => b.insured_salary - a.insured_salary);
+  if (sort === 'salary_asc')  list.sort((a,b) => a.insured_salary - b.insured_salary);
+  if (sort === 'cost_desc')   list.sort((a,b) => (b.labor_emp2||0)+(b.health_emp2||0)+(b.pension||0) - ((a.labor_emp2||0)+(a.health_emp2||0)+(a.pension||0)));
+  renderInsDetail(list);
 }
 
 function renderInsDetail(list) {
@@ -20601,6 +20994,15 @@ function showInsChangeForm() {
 
 async function exportInsuranceExcel() {
   window.location.href = '/api/export/insurance-excel';
+}
+
+function exportPensionReport() {
+  const year  = document.getElementById('pension-report-year').value;
+  const month = document.getElementById('pension-report-month').value;
+  if (!year) { showToast('請選擇年份', 'error'); return; }
+  let url = `/api/export/labor-pension?year=${year}`;
+  if (month) url += `&month=${year}-${month}`;
+  window.location.href = url;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -22815,6 +23217,7 @@ const INV_TYPE_LABEL   = { sales:'銷項', purchase:'進項' };
 const INV_STATUS_LABEL = { issued:'有效', void:'作廢' };
 
 async function loadInvoices() {
+  loadGuiStatus();
   const type   = document.getElementById('inv-filter-type')?.value   || '';
   const status = document.getElementById('inv-filter-status')?.value || '';
   const month  = document.getElementById('inv-filter-month')?.value  || '';
@@ -22846,13 +23249,15 @@ async function loadInvoices() {
     wrap.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:13px">尚無發票資料</div>'; return;
   }
   wrap.innerHTML = `<table class="data-table" style="margin:0"><thead><tr>
-    <th>發票號碼</th><th>類型</th><th>開票日期</th><th>買方</th><th>統編</th>
-    <th style="text-align:right">稅前金額</th><th style="text-align:right">稅額</th>
+    <th>字軌號碼</th><th>系統編號</th><th>類型</th><th>開票日期</th><th>買方</th><th>統編</th>
+    <th style="text-align:right">稅前金額</th><th style="text-align:right">稅額(5%)</th>
     <th style="text-align:right">含稅總額</th><th>狀態</th><th>操作</th>
   </tr></thead><tbody>${data.map(r=>{
     const isVoid = r.status==='void';
+    const guiDisplay = r.gui_number ? `<span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--navy);letter-spacing:1px">${escHtml(r.gui_number)}</span>` : '<span style="color:var(--muted);font-size:11px">—</span>';
     return `<tr style="${isVoid?'opacity:.5':''}">
-      <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600">${escHtml(r.invoice_no)}</td>
+      <td>${guiDisplay}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${escHtml(r.invoice_no)}</td>
       <td><span style="background:${r.invoice_type==='sales'?'var(--green)':'var(--navy)'};color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">${INV_TYPE_LABEL[r.invoice_type]||r.invoice_type}</span></td>
       <td style="font-size:12px">${r.invoice_date||'—'}</td>
       <td style="font-size:12px">${escHtml(r.buyer_name||'—')}</td>
@@ -22863,6 +23268,7 @@ async function loadInvoices() {
       <td><span style="background:${isVoid?'var(--muted)':'var(--green)'};color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">${INV_STATUS_LABEL[r.status]||r.status}</span></td>
       <td style="white-space:nowrap">
         ${!isVoid ? `<button class="btn btn-outline btn-sm" onclick="openInvoiceModal(${r.id})">編輯</button>
+        <a class="btn btn-outline btn-sm" href="/api/export/invoice-pdf/${r.id}" target="_blank">PDF</a>
         <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="voidInvoice(${r.id},'${escHtml(r.invoice_no)}')">作廢</button>` : '—'}
       </td>
     </tr>`;
@@ -22942,6 +23348,45 @@ async function voidInvoice(id, no) {
   if (!ok) { showToast(data?.error||'作廢失敗','error'); return; }
   showToast('發票已作廢','success');
   loadInvoices();
+}
+
+// ── 電子發票字軌設定 ─────────────────────────────────────────
+async function loadGuiStatus() {
+  const { ok, data } = await api('/api/accounting/gui-settings', {}, true);
+  if (!ok) return;
+  document.getElementById('gui-prefix-display').textContent = data.gui_prefix || '—';
+  document.getElementById('gui-next-display').textContent   = data.next_gui   || '—';
+  const rem = data.remaining ?? 0;
+  const badge = document.getElementById('gui-remaining-badge');
+  badge.textContent = `剩餘 ${rem} 張`;
+  badge.style.background = rem <= 5 ? '#fff3e0' : '#e8f5e9';
+  badge.style.color      = rem <= 5 ? '#e65100' : '#2e7d32';
+}
+
+async function openGuiSettingsModal() {
+  const { ok, data } = await api('/api/accounting/gui-settings', {}, true);
+  if (!ok) { showToast('無法載入字軌設定','error'); return; }
+  document.getElementById('gui-set-prefix').value = data.gui_prefix || 'AB';
+  document.getElementById('gui-set-start').value  = data.gui_start  || '00000001';
+  document.getElementById('gui-set-end').value    = data.gui_end    || '00000050';
+  document.getElementById('gui-set-used').textContent      = data.used_count ?? 0;
+  document.getElementById('gui-set-remaining').textContent = data.remaining  ?? 0;
+  document.getElementById('gui-set-next').textContent      = data.next_gui   || '—';
+  document.getElementById('gui-settings-modal-bg').classList.add('open');
+}
+function closeGuiSettingsModal() { document.getElementById('gui-settings-modal-bg').classList.remove('open'); }
+async function saveGuiSettings() {
+  const payload = {
+    gui_prefix: document.getElementById('gui-set-prefix').value.trim().toUpperCase(),
+    gui_start:  document.getElementById('gui-set-start').value.trim(),
+    gui_end:    document.getElementById('gui-set-end').value.trim(),
+  };
+  if (!/^[A-Z]{2}$/.test(payload.gui_prefix)) { showToast('字軌前綴須為2個大寫英文字母 (如 AB)','warning'); return; }
+  const { ok, data } = await api('/api/accounting/gui-settings', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  if (!ok) { showToast(data?.error||'儲存失敗','error'); return; }
+  showToast('字軌設定已更新','success');
+  closeGuiSettingsModal();
+  loadGuiStatus();
 }
 
 // ── 財務報表 ─────────────────────────────────────────────────
@@ -23042,6 +23487,15 @@ async function loadBalanceSheet() {
       ${section('股東權益',equity,'var(--navy)')}
     </tbody>
   </table>`;
+}
+
+function export401Excel() {
+  const month = document.getElementById('rpt-tax-month').value;
+  if (!month) { showToast('請先選擇月份','warning'); return; }
+  const year   = month.slice(0, 4);
+  const m      = parseInt(month.slice(5, 7), 10);
+  const period = Math.ceil(m / 2);
+  window.location.href = `/api/finance/tax/${year}/${period}/export-401`;
 }
 
 async function loadTaxSummary() {
@@ -23644,10 +24098,13 @@ async function loadApprovalInstances() {
 }
 
 function filterApprovalList() {
-  const q = (document.getElementById('appr-filter-q')?.value || '').toLowerCase();
-  const list = q ? _approvalInstances.filter(r =>
-    (r.title||'').toLowerCase().includes(q) || (r.applicant_name||'').toLowerCase().includes(q)
-  ) : _approvalInstances;
+  const q    = (document.getElementById('appr-filter-q')?.value || '').toLowerCase();
+  const from = document.getElementById('appr-filter-from')?.value || '';
+  const to   = document.getElementById('appr-filter-to')?.value || '';
+  let list = _approvalInstances;
+  if (q)    list = list.filter(r => (r.title||'').toLowerCase().includes(q) || (r.applicant_name||'').toLowerCase().includes(q));
+  if (from) list = list.filter(r => (r.created_at||'') >= from);
+  if (to)   list = list.filter(r => (r.created_at||'').slice(0,10) <= to);
   renderApprovalInstances(list);
 }
 
@@ -23857,12 +24314,14 @@ async function initAuditLog() {
 async function loadAuditLog(pageOffset) {
   if (pageOffset === 1)  _auditPage++;
   if (pageOffset === -1) _auditPage = Math.max(1, _auditPage - 1);
-  const module    = document.getElementById('audit-filter-module')?.value || '';
-  const action    = document.getElementById('audit-filter-action')?.value || '';
-  const actor     = document.getElementById('audit-filter-actor')?.value.trim() || '';
-  const dateFrom  = document.getElementById('audit-filter-from')?.value || '';
-  const dateTo    = document.getElementById('audit-filter-to')?.value || '';
+  const q        = (document.getElementById('audit-filter-q')?.value || '').trim();
+  const module   = document.getElementById('audit-filter-module')?.value || '';
+  const action   = document.getElementById('audit-filter-action')?.value || '';
+  const actor    = document.getElementById('audit-filter-actor')?.value.trim() || '';
+  const dateFrom = document.getElementById('audit-filter-from')?.value || '';
+  const dateTo   = document.getElementById('audit-filter-to')?.value || '';
   let url = `/api/audit-log?page=${_auditPage}&`;
+  if (q)        url += `q=${encodeURIComponent(q)}&`;
   if (module)   url += `module=${module}&`;
   if (action)   url += `action=${action}&`;
   if (actor)    url += `actor=${encodeURIComponent(actor)}&`;
