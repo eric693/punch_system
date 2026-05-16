@@ -10879,7 +10879,7 @@ def api_export_401(year, period):
         cell.font = Font(size=10); cell.fill = grey_fill; cell.border = border
 
     ws.merge_cells('A3:D3'); ws['A3'] = f'申報期別：民國 {roc_year} 年 {period_label}'
-    ws.merge_cells('E3:H3'); ws['E3'] = f'申報日期：{_dwh.today().isoformat()}'
+    ws.merge_cells('E3:H3'); ws['E3'] = f'申報日期：{date.today().isoformat()}'
     ws.merge_cells('I3:L3'); ws['I3'] = f'申報方式：自行申報'
     for cell in [ws['A3'], ws['E3'], ws['I3']]:
         cell.font = Font(size=10, bold=True); cell.fill = grey_fill; cell.border = border
@@ -11009,7 +11009,7 @@ def api_export_401(year, period):
     ws[f'A{r}'] = f'※ 本申報書依財務記帳資料產生，實際申報請以財政部申報系統（eGUI）為準。申報期限：次期開始後15日內（{roc_year+1911}年{"3月 / 5月 / 7月 / 9月 / 11月 / 隔年1月".split(" / ")[period-1]}15日前）'
     ws[f'A{r}'].font = Font(size=9, color='888888')
     ws.merge_cells(f'A{r+1}:L{r+1}')
-    ws[f'A{r+1}'] = f'※ 如適用簡易稅額計算（401A）或有特殊進項，請另行核算。製表：{company_name}　製表日期：{_dwh.today().isoformat()}'
+    ws[f'A{r+1}'] = f'※ 如適用簡易稅額計算（401A）或有特殊進項，請另行核算。製表：{company_name}　製表日期：{date.today().isoformat()}'
     ws[f'A{r+1}'].font = Font(size=9, color='888888')
 
     # Set first 12 columns width

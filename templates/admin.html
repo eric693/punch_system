@@ -613,12 +613,14 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <div class="filter-bar">
         <span class="filter-label" data-i18n="label.month">月份</span>
         <input class="filter-input" type="month" id="ot-filter-month" onchange="otFilterChanged()">
-        <div class="filter-divider"></div>
-        <span class="filter-label" data-i18n="label.status">狀態</span>
-        <select class="filter-input" id="ot-filter-status" onchange="loadOTRequests()" style="min-width:120px">
-          <option value="pending" data-i18n="req.status.pending">待審核</option><option value="" data-i18n="status.all">全部</option>
-          <option value="approved" data-i18n="req.status.approved">已核准</option><option value="rejected" data-i18n="req.status.rejected">已退回</option>
-        </select>
+        <div id="ot-status-filter-group" style="display:flex;align-items:center;gap:8px">
+          <div class="filter-divider"></div>
+          <span class="filter-label" data-i18n="label.status">狀態</span>
+          <select class="filter-input" id="ot-filter-status" onchange="loadOTRequests()" style="min-width:120px">
+            <option value="pending" data-i18n="req.status.pending">待審核</option><option value="" data-i18n="status.all">全部</option>
+            <option value="approved" data-i18n="req.status.approved">已核准</option><option value="rejected" data-i18n="req.status.rejected">已退回</option>
+          </select>
+        </div>
         <div class="filter-divider"></div>
         <div style="display:flex;gap:4px">
           <button class="btn btn-sm" id="ot-view-list-btn" onclick="setOTView('list')" style="background:var(--navy);color:#fff;border:none">申請列表</button>
@@ -4028,11 +4030,13 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         <input type="hidden" id="inv-modal-id">
         <div class="form-grid">
           <div class="form-group"><label class="form-label">發票類型 *</label>
-            <select class="form-input" id="inv-modal-type">
-              <option value="sales">銷項發票</option>
+            <select class="form-input" id="inv-modal-type" onchange="onInvTypeChange()">
+              <option value="sales">銷項發票（電子）</option>
+              <option value="sales_paper">銷項發票（紙本）</option>
               <option value="purchase">進項發票</option>
             </select></div>
-          <div class="form-group"><label class="form-label">發票號碼 *</label><input class="form-input mono" id="inv-modal-no" placeholder="例：AB12345678"></div>
+          <div class="form-group"><label class="form-label">字軌號碼<span id="inv-modal-gui-hint" style="color:var(--green);font-size:11px;margin-left:4px">（自動產生）</span></label>
+            <input class="form-input mono" id="inv-modal-gui" placeholder="自動產生，或手動輸入" style="letter-spacing:1px"></div>
           <div class="form-group"><label class="form-label">開票日期 *</label><input class="form-input" type="date" id="inv-modal-date"></div>
           <div class="form-group"><label class="form-label">買方名稱</label><input class="form-input" id="inv-modal-buyer-name" placeholder="公司名稱"></div>
           <div class="form-group"><label class="form-label">買方統一編號</label><input class="form-input mono" id="inv-modal-buyer-ban" placeholder="統一編號（選填）"></div>
@@ -14248,18 +14252,18 @@ function setOTView(view) {
   [listBtn, summaryBtn, lawBtn].forEach(b => { if (b) { b.className = 'btn btn-sm btn-outline'; b.style.cssText = ''; } });
   if (view === 'list') {
     listBtn.style.cssText = 'background:var(--navy);color:#fff;border:none';
-    document.getElementById('ot-filter-status').parentElement.style.display = '';
+    document.getElementById('ot-status-filter-group').style.display = 'flex';
     loadOTRequests();
   } else if (view === 'summary') {
     summaryBtn.style.cssText = 'background:var(--navy);color:#fff;border:none';
-    document.getElementById('ot-filter-status').parentElement.style.display = 'none';
+    document.getElementById('ot-status-filter-group').style.display = 'none';
     document.getElementById('ot-req-count').textContent = '';
     document.getElementById('ot-batch-approve').style.display = 'none';
     document.getElementById('ot-batch-reject').style.display  = 'none';
     loadOTMonthlySummary();
   } else {
     lawBtn.style.cssText = 'background:#ef4444;color:#fff;border-color:#ef4444';
-    document.getElementById('ot-filter-status').parentElement.style.display = 'none';
+    document.getElementById('ot-status-filter-group').style.display = 'none';
     document.getElementById('ot-req-count').textContent = '';
     document.getElementById('ot-batch-approve').style.display = 'none';
     document.getElementById('ot-batch-reject').style.display  = 'none';
@@ -23213,7 +23217,8 @@ function renderAccAccountsTable() {
 
 // ── 發票管理 ─────────────────────────────────────────────────
 
-const INV_TYPE_LABEL   = { sales:'銷項', purchase:'進項' };
+const INV_TYPE_LABEL   = { sales:'銷項', purchase:'進項', credit_note:'折讓' };
+const INV_FMT_LABEL    = { electronic:'電子', paper:'紙本' };
 const INV_STATUS_LABEL = { issued:'有效', void:'作廢' };
 
 async function loadInvoices() {
@@ -23258,7 +23263,7 @@ async function loadInvoices() {
     return `<tr style="${isVoid?'opacity:.5':''}">
       <td>${guiDisplay}</td>
       <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${escHtml(r.invoice_no)}</td>
-      <td><span style="background:${r.invoice_type==='sales'?'var(--green)':'var(--navy)'};color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">${INV_TYPE_LABEL[r.invoice_type]||r.invoice_type}</span></td>
+      <td><span style="background:${r.invoice_type==='sales'?'var(--green)':'var(--navy)'};color:#fff;padding:2px 7px;border-radius:10px;font-size:11px">${INV_TYPE_LABEL[r.invoice_type]||r.invoice_type}</span>${r.invoice_format==='paper'?'<span style="margin-left:4px;font-size:10px;color:var(--muted)">紙本</span>':''}</td>
       <td style="font-size:12px">${r.invoice_date||'—'}</td>
       <td style="font-size:12px">${escHtml(r.buyer_name||'—')}</td>
       <td style="font-size:12px;font-family:'DM Mono',monospace">${escHtml(r.buyer_ban||'—')}</td>
@@ -23278,7 +23283,6 @@ async function loadInvoices() {
 function openInvoiceModal(id) {
   document.getElementById('inv-modal-id').value          = id || '';
   document.getElementById('inv-modal-title').textContent = id ? '編輯發票' : '新增發票';
-  document.getElementById('inv-modal-no').value          = '';
   document.getElementById('inv-modal-type').value        = 'sales';
   document.getElementById('inv-modal-date').value        = new Date().toISOString().slice(0,10);
   document.getElementById('inv-modal-buyer-name').value  = '';
@@ -23289,11 +23293,13 @@ function openInvoiceModal(id) {
   document.getElementById('inv-modal-total').value       = '';
   document.getElementById('inv-modal-note').value        = '';
 
+  document.getElementById('inv-modal-gui').value = '';
+  onInvTypeChange();
   if (id) {
     api(`/api/accounting/invoices/${id}`, {}, true).then(({ok, data}) => {
       if (!ok) return;
-      document.getElementById('inv-modal-no').value         = data.invoice_no   || '';
       document.getElementById('inv-modal-type').value       = data.invoice_type || 'sales';
+      document.getElementById('inv-modal-gui').value        = data.gui_number   || '';
       document.getElementById('inv-modal-date').value       = data.invoice_date || '';
       document.getElementById('inv-modal-buyer-name').value = data.buyer_name   || '';
       document.getElementById('inv-modal-buyer-ban').value  = data.buyer_ban    || '';
@@ -23302,11 +23308,31 @@ function openInvoiceModal(id) {
       document.getElementById('inv-modal-tax-amount').value = data.tax_amount   || '';
       document.getElementById('inv-modal-total').value      = data.total        || '';
       document.getElementById('inv-modal-note').value       = data.notes        || '';
+      onInvTypeChange();
     });
   }
   document.getElementById('inv-modal-bg').classList.add('open');
 }
 function closeInvoiceModal() { document.getElementById('inv-modal-bg').classList.remove('open'); }
+
+function onInvTypeChange() {
+  const type = document.getElementById('inv-modal-type').value;
+  const hint = document.getElementById('inv-modal-gui-hint');
+  const gui  = document.getElementById('inv-modal-gui');
+  if (type === 'sales') {
+    hint.textContent = '（銷項電子發票 — 留空自動產生）';
+    hint.style.color = 'var(--green)';
+    gui.placeholder  = '留空自動產生，或手動輸入覆蓋';
+  } else if (type === 'sales_paper') {
+    hint.textContent = '（紙本發票 — 請手動填入）';
+    hint.style.color = '#f59e0b';
+    gui.placeholder  = '請輸入紙本發票字軌號碼';
+  } else {
+    hint.textContent = '（進項發票不產生字軌）';
+    hint.style.color = 'var(--muted)';
+    gui.placeholder  = '（進項無需填寫）';
+  }
+}
 
 function calcInvTax() {
   const sub  = parseFloat(document.getElementById('inv-modal-subtotal').value) || 0;
@@ -23318,19 +23344,23 @@ function calcInvTax() {
 
 async function saveInvoice() {
   const id      = document.getElementById('inv-modal-id').value;
-  const no      = document.getElementById('inv-modal-no').value.trim();
   const subtotal= parseFloat(document.getElementById('inv-modal-subtotal').value);
   if (isNaN(subtotal)) { showToast('請填寫稅前金額','warning'); return; }
+  const invType = document.getElementById('inv-modal-type').value;
+  // Normalize paper type → backend uses 'sales'
+  const backendType = invType === 'sales_paper' ? 'sales' : invType;
+  const invFormat   = invType === 'sales' ? 'electronic' : (invType === 'sales_paper' ? 'paper' : 'purchase');
 
   const payload = {
-    invoice_no:   no,
-    invoice_type: document.getElementById('inv-modal-type').value,
-    invoice_date: document.getElementById('inv-modal-date').value,
-    buyer_name:   document.getElementById('inv-modal-buyer-name').value.trim(),
-    buyer_ban:    document.getElementById('inv-modal-buyer-ban').value.trim(),
+    invoice_type:   backendType,
+    invoice_format: invFormat,
+    gui_number:     document.getElementById('inv-modal-gui').value.trim().toUpperCase(),
+    invoice_date:   document.getElementById('inv-modal-date').value,
+    buyer_name:     document.getElementById('inv-modal-buyer-name').value.trim(),
+    buyer_ban:      document.getElementById('inv-modal-buyer-ban').value.trim(),
     subtotal,
-    tax_rate:     parseFloat(document.getElementById('inv-modal-tax-rate').value)||0,
-    notes:        document.getElementById('inv-modal-note').value.trim(),
+    tax_rate:       parseFloat(document.getElementById('inv-modal-tax-rate').value)||0,
+    notes:          document.getElementById('inv-modal-note').value.trim(),
   };
 
   const url    = id ? `/api/accounting/invoices/${id}` : '/api/accounting/invoices';
