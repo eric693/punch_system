@@ -4934,15 +4934,15 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
       <button class="modal-close" onclick="document.getElementById('training-modal').style.display='none'">&times;</button>
     </div>
     <div class="modal-body">
-      <input type="hidden" id="tm-id">
+      <input type="hidden" id="train-id">
       <div class="form-grid">
         <div class="form-group">
           <label class="form-label">員工 *</label>
-          <select class="form-input" id="tm-staff"></select>
+          <select class="form-input" id="train-staff"></select>
         </div>
         <div class="form-group">
           <label class="form-label">類別 *</label>
-          <select class="form-input" id="tm-category">
+          <select class="form-input" id="train-category">
             <option value="food_safety" data-i18n="training.cat.food_safety">食品安全</option>
             <option value="fire_safety" data-i18n="training.cat.fire_safety">消防安全</option>
             <option value="first_aid" data-i18n="training.cat.first_aid">急救訓練</option>
@@ -4955,23 +4955,23 @@ tbody td.date-cell { font-family: 'Noto Sans TC', sans-serif; font-weight: 500; 
         </div>
         <div class="form-group full-width">
           <label class="form-label">課程名稱 *</label>
-          <input class="form-input" id="tm-course" placeholder="例：食品安全衛生管理人員訓練">
+          <input class="form-input" id="train-course" placeholder="例：食品安全衛生管理人員訓練">
         </div>
         <div class="form-group">
           <label class="form-label">完成日期</label>
-          <input type="date" class="form-input" id="tm-completed">
+          <input type="date" class="form-input" id="train-completed">
         </div>
         <div class="form-group">
           <label class="form-label">到期日期</label>
-          <input type="date" class="form-input" id="tm-expiry">
+          <input type="date" class="form-input" id="train-expiry">
         </div>
         <div class="form-group">
           <label class="form-label">證書號碼</label>
-          <input class="form-input" id="tm-cert" placeholder="選填">
+          <input class="form-input" id="train-cert" placeholder="選填">
         </div>
         <div class="form-group full-width">
           <label class="form-label">備註</label>
-          <textarea class="form-input" id="tm-note" rows="2"></textarea>
+          <textarea class="form-input" id="train-note" rows="2"></textarea>
         </div>
       </div>
     </div>
@@ -19671,8 +19671,8 @@ async function loadTrainingStaffFilter() {
     sel.innerHTML = '<option value="">全部員工</option>' +
       r.data.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
   }
-  // Also populate the modal staff selector
-  const tmSel = document.getElementById('tm-staff');
+  // Also populate the training modal staff selector
+  const tmSel = document.getElementById('train-staff');
   if (tmSel && r.ok) {
     tmSel.innerHTML = r.data.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
   }
@@ -19812,28 +19812,28 @@ function viewStaffTraining(staffId, name) {
 
 function openTrainingModal(rec, presetStaffId) {
   document.getElementById('training-modal-title').textContent = rec ? t('modal.edit_training') : t('modal.add_training');
-  document.getElementById('tm-id').value          = rec?.id || '';
-  document.getElementById('tm-course').value      = rec?.course_name || '';
-  document.getElementById('tm-category').value    = rec?.category || 'food_safety';
-  document.getElementById('tm-completed').value   = rec?.completed_date || '';
-  document.getElementById('tm-expiry').value      = rec?.expiry_date || '';
-  document.getElementById('tm-cert').value        = rec?.certificate_no || '';
-  document.getElementById('tm-note').value        = rec?.note || '';
-  if (rec?.staff_id) document.getElementById('tm-staff').value = rec.staff_id;
-  else if (presetStaffId) document.getElementById('tm-staff').value = presetStaffId;
+  document.getElementById('train-id').value          = rec?.id || '';
+  document.getElementById('train-course').value      = rec?.course_name || '';
+  document.getElementById('train-category').value    = rec?.category || 'food_safety';
+  document.getElementById('train-completed').value   = rec?.completed_date || '';
+  document.getElementById('train-expiry').value      = rec?.expiry_date || '';
+  document.getElementById('train-cert').value        = rec?.certificate_no || '';
+  document.getElementById('train-note').value        = rec?.note || '';
+  if (rec?.staff_id) document.getElementById('train-staff').value = rec.staff_id;
+  else if (presetStaffId) document.getElementById('train-staff').value = presetStaffId;
   document.getElementById('training-modal').style.display = 'flex';
 }
 
 async function saveTrainingRecord() {
-  const id = document.getElementById('tm-id').value;
+  const id = document.getElementById('train-id').value;
   const body = {
-    staff_id:       document.getElementById('tm-staff').value,
-    course_name:    document.getElementById('tm-course').value.trim(),
-    category:       document.getElementById('tm-category').value,
-    completed_date: document.getElementById('tm-completed').value || null,
-    expiry_date:    document.getElementById('tm-expiry').value    || null,
-    certificate_no: document.getElementById('tm-cert').value.trim(),
-    note:           document.getElementById('tm-note').value.trim(),
+    staff_id:       document.getElementById('train-staff').value,
+    course_name:    document.getElementById('train-course').value.trim(),
+    category:       document.getElementById('train-category').value,
+    completed_date: document.getElementById('train-completed').value || null,
+    expiry_date:    document.getElementById('train-expiry').value    || null,
+    certificate_no: document.getElementById('train-cert').value.trim(),
+    note:           document.getElementById('train-note').value.trim(),
   };
   if (!body.staff_id || !body.course_name) { showToast('請填寫員工與課程名稱', 'error'); return; }
   const r = id
